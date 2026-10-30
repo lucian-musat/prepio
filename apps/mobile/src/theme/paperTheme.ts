@@ -1,13 +1,7 @@
 import { MD3LightTheme, configureFonts, type MD3Theme } from 'react-native-paper';
-import { colors, fonts, radius } from '@prepio/shared';
+import { colors, radius } from '@prepio/shared';
+import { fontFamily } from './fonts';
 
-/** Loaded font family names (see app/_layout.tsx). */
-export const fontFamily = {
-  heading: fonts.heading,
-  headingBold: `${fonts.heading}-Bold`,
-  body: fonts.body,
-  bodyBold: `${fonts.body}-Bold`,
-} as const;
 
 export const paperTheme: MD3Theme = {
   ...MD3LightTheme,
