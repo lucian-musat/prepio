@@ -10,7 +10,13 @@ import type { SeedNode } from './types';
 const IMAGES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../images');
 const BUCKET = 'images';
 
-export type SeedOptions = { adminEmail?: string; adminPassword?: string };
+export type SeedOptions = {
+  adminEmail?: string;
+  adminPassword?: string;
+  /** Replace all content (deletes every node, cascading to owner-authored lessons). */
+  reset?: boolean;
+};
+export type SeedResult = { contentSeeded: true; nodes: number; lessons: number } | { contentSeeded: false };
 
 function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
@@ -52,10 +58,38 @@ async function ensureAdmin(client: SupabaseClient, email: string, password: stri
   if (created.error) throw new Error(`create admin: ${created.error.message}`);
 }
 
-/** Replaces the content tree and lessons with the content package. Idempotent; keeps owner-edited settings. */
-export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Promise<{ nodes: number; lessons: number }> {
+/**
+ * Loads the content package. Non-destructive by default: when any lesson already exists the content is left
+ * untouched unless `reset` is set (then the whole tree is replaced; idempotent). Always uploads the seed images,
+ * inserts missing settings rows (never overwrites the owner's edits) and ensures the admin user.
+ */
+export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Promise<SeedResult> {
   await uploadImages(client);
 
+  const existing = await client.from('lessons').select('id', { count: 'exact', head: true });
+  if (existing.error) throw new Error(`count lessons: ${existing.error.message}`);
+  const result: SeedResult =
+    opts.reset || !existing.count ? { contentSeeded: true, ...(await replaceContent(client)) } : { contentSeeded: false };
+
+  // Only create when missing: never overwrite the owner's edits.
+  check(
+    await client.from('settings').upsert({ id: 1, welcome_message: welcomeMessage }, { onConflict: 'id', ignoreDuplicates: true }),
+    'settings',
+  );
+  check(
+    await client.from('ai_settings').upsert(
+      { id: 1, rules: aiDefaults.rules, grade_min: aiDefaults.gradeMin, grade_max: aiDefaults.gradeMax, model: aiDefaults.model },
+      { onConflict: 'id', ignoreDuplicates: true },
+    ),
+    'ai_settings',
+  );
+
+  if (opts.adminEmail && opts.adminPassword) await ensureAdmin(client, opts.adminEmail, opts.adminPassword);
+
+  return result;
+}
+
+async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; lessons: number }> {
   // Cascades to lessons, cards, questions and writing_exercises.
   check(await client.from('nodes').delete().not('id', 'is', null), 'clear nodes');
 
@@ -117,21 +151,6 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
     }
   }
 
-  // Only create when missing: never overwrite the owner's edits.
-  check(
-    await client.from('settings').upsert({ id: 1, welcome_message: welcomeMessage }, { onConflict: 'id', ignoreDuplicates: true }),
-    'settings',
-  );
-  check(
-    await client.from('ai_settings').upsert(
-      { id: 1, rules: aiDefaults.rules, grade_min: aiDefaults.gradeMin, grade_max: aiDefaults.gradeMax, model: aiDefaults.model },
-      { onConflict: 'id', ignoreDuplicates: true },
-    ),
-    'ai_settings',
-  );
-
-  if (opts.adminEmail && opts.adminPassword) await ensureAdmin(client, opts.adminEmail, opts.adminPassword);
-
   return { nodes: nodeRows.length, lessons: lessons.length };
 }
 
@@ -141,9 +160,21 @@ async function main(): Promise<void> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set (see .env.example)');
+  const reset = process.env.SEED_RESET === '1' || process.argv.includes('--reset');
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const result = await seed(client, { adminEmail: process.env.ADMIN_EMAIL, adminPassword: process.env.ADMIN_PASSWORD });
-  console.log(`Seeded ${result.nodes} nodes and ${result.lessons} lessons.`);
+  const result = await seed(client, {
+    adminEmail: process.env.ADMIN_EMAIL,
+    adminPassword: process.env.ADMIN_PASSWORD,
+    reset,
+  });
+  if (result.contentSeeded) {
+    console.log(`Seeded ${result.nodes} nodes and ${result.lessons} lessons${reset ? ' (reset)' : ''}.`);
+  } else {
+    console.log(
+      'Lessons already exist: content left untouched (images, settings and admin user ensured). ' +
+        'Run with SEED_RESET=1 (or --reset) to replace ALL content, including lessons written in the admin.',
+    );
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

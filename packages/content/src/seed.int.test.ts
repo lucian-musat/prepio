@@ -11,6 +11,15 @@ const countNodes = (nodes: typeof tree): number =>
   nodes.reduce((n, node) => n + 1 + countNodes(node.children ?? []), 0);
 
 const ADMIN = { adminEmail: 'seed-test-admin@prepio.local', adminPassword: 'seed-test-password' };
+const ADMIN2 = { adminEmail: 'seed-test-admin2@prepio.local', adminPassword: 'seed-test-password2' };
+
+const EXPECTED = {
+  nodes: 14,
+  lessons: 3,
+  cards: lessons.reduce((n, l) => n + l.cards.length, 0),
+  questions: lessons.reduce((n, l) => n + l.questions.length, 0),
+  writing_exercises: lessons.reduce((n, l) => n + l.exercises.length, 0),
+};
 
 async function count(client: SupabaseClient, table: string): Promise<number> {
   const { count: c, error } = await client.from(table).select('*', { count: 'exact', head: true });
@@ -18,38 +27,50 @@ async function count(client: SupabaseClient, table: string): Promise<number> {
   return c ?? 0;
 }
 
+async function userId(client: SupabaseClient, email: string): Promise<string | undefined> {
+  const { data } = await client.auth.admin.listUsers({ perPage: 1000 });
+  return data?.users.find((u) => u.email === email)?.id;
+}
+
 describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
   let client: SupabaseClient;
-  let userId: string | undefined;
+
+  const snapshot = async () => ({
+    nodes: await count(client, 'nodes'),
+    lessons: await count(client, 'lessons'),
+    cards: await count(client, 'cards'),
+    questions: await count(client, 'questions'),
+    writing_exercises: await count(client, 'writing_exercises'),
+  });
 
   beforeAll(() => {
     client = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
   });
 
   afterAll(async () => {
-    if (userId) await client.auth.admin.deleteUser(userId);
+    for (const email of [ADMIN.adminEmail, ADMIN2.adminEmail]) {
+      const id = await userId(client, email);
+      if (id) await client.auth.admin.deleteUser(id);
+    }
+    await client.from('nodes').delete().like('title', '[test]%');
   });
 
-  it('loads the content package and is idempotent', async () => {
-    const result = await seed(client, ADMIN);
-    expect(result).toEqual({ nodes: 14, lessons: 3 });
-    expect(countNodes(tree)).toBe(14);
+  it('seeds an empty database without needing reset', async () => {
+    const del = await client.from('nodes').delete().not('id', 'is', null);
+    expect(del.error).toBeNull();
+    expect(await count(client, 'lessons')).toBe(0);
 
-    const snapshot = async () => ({
-      nodes: await count(client, 'nodes'),
-      lessons: await count(client, 'lessons'),
-      cards: await count(client, 'cards'),
-      questions: await count(client, 'questions'),
-      writing_exercises: await count(client, 'writing_exercises'),
-    });
+    const result = await seed(client);
+    expect(result).toEqual({ contentSeeded: true, nodes: 14, lessons: 3 });
+    expect(countNodes(tree)).toBe(14);
+    expect(await snapshot()).toEqual(EXPECTED);
+  });
+
+  it('with reset replaces the content and is idempotent', async () => {
+    const result = await seed(client, { ...ADMIN, reset: true });
+    expect(result).toEqual({ contentSeeded: true, nodes: 14, lessons: 3 });
     const first = await snapshot();
-    expect(first).toEqual({
-      nodes: 14,
-      lessons: 3,
-      cards: lessons.reduce((n, l) => n + l.cards.length, 0),
-      questions: lessons.reduce((n, l) => n + l.questions.length, 0),
-      writing_exercises: lessons.reduce((n, l) => n + l.exercises.length, 0),
-    });
+    expect(first).toEqual(EXPECTED);
 
     const { data: dbLessons, error } = await client
       .from('lessons')
@@ -64,8 +85,52 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       expect(row!.writing_exercises).toHaveLength(l.exercises.length);
     }
 
-    await seed(client);
+    expect(await seed(client, { reset: true })).toEqual({ contentSeeded: true, nodes: 14, lessons: 3 });
     expect(await snapshot()).toEqual(first);
+  });
+
+  it('without reset leaves existing content (incl. owner-authored lessons) untouched', async () => {
+    const node = await client.from('nodes').insert({ title: '[test] owner node' }).select('id').single();
+    if (node.error) throw node.error;
+    const lesson = await client
+      .from('lessons')
+      .insert({ node_id: node.data.id, title: '[test] owner lesson', status: 'draft' })
+      .select('id')
+      .single();
+    if (lesson.error) throw lesson.error;
+    const before = await snapshot();
+    const { data: idsBefore } = await client.from('lessons').select('id').order('id');
+
+    // Missing settings rows and a missing image must still be restored without reset.
+    const { data: settingsRow } = await client.from('settings').select('*').eq('id', 1).single();
+    const { data: aiRow } = await client.from('ai_settings').select('*').eq('id', 1).single();
+    expect((await client.from('settings').delete().eq('id', 1)).error).toBeNull();
+    expect((await client.from('ai_settings').delete().eq('id', 1)).error).toBeNull();
+    expect((await client.storage.from('images').remove(['seed/cuza.jpg'])).error).toBeNull();
+
+    try {
+      const result = await seed(client, ADMIN2);
+      expect(result).toEqual({ contentSeeded: false });
+
+      expect(await snapshot()).toEqual(before);
+      const { data: idsAfter } = await client.from('lessons').select('id').order('id');
+      expect(idsAfter).toEqual(idsBefore);
+      const { data: owner } = await client.from('lessons').select('title').eq('id', lesson.data.id).single();
+      expect(owner?.title).toBe('[test] owner lesson');
+
+      const { data: s } = await client.from('settings').select('welcome_message').eq('id', 1).single();
+      expect(s?.welcome_message).toBe(welcomeMessage);
+      const { data: ai } = await client.from('ai_settings').select('model').eq('id', 1).single();
+      expect(ai?.model).toBe(aiDefaults.model);
+      const img = await client.storage.from('images').download('seed/cuza.jpg');
+      expect(img.error).toBeNull();
+      expect(await userId(client, ADMIN2.adminEmail)).toBeDefined();
+    } finally {
+      await client.from('nodes').delete().eq('id', node.data.id);
+      if (settingsRow) await client.from('settings').upsert(settingsRow);
+      if (aiRow) await client.from('ai_settings').upsert(aiRow);
+    }
+    expect(await snapshot()).toEqual(EXPECTED);
   });
 
   it('sets settings and ai_settings without overwriting existing values', async () => {
@@ -80,7 +145,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     });
 
     await client.from('settings').update({ welcome_message: 'Mesaj editat' }).eq('id', 1);
-    await seed(client);
+    await seed(client, { reset: true });
     const { data: after } = await client.from('settings').select('*').eq('id', 1).single();
     expect(after?.welcome_message).toBe('Mesaj editat');
     await client.from('settings').update({ welcome_message: welcomeMessage }).eq('id', 1);
@@ -99,10 +164,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
   });
 
   it('creates the admin user who can sign in', async () => {
-    const { data: list } = await client.auth.admin.listUsers({ perPage: 1000 });
-    const user = list?.users.find((u) => u.email === ADMIN.adminEmail);
-    expect(user).toBeDefined();
-    userId = user?.id;
+    expect(await userId(client, ADMIN.adminEmail)).toBeDefined();
 
     const authClient = createClient(url!, anonKey ?? serviceKey!, { auth: { persistSession: false } });
     const { data, error } = await authClient.auth.signInWithPassword({

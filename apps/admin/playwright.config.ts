@@ -1,6 +1,17 @@
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { assertLocalSupabase } from '../../packages/shared/src/localSupabase';
 
 // Needs local Supabase running (`pnpm db:start`) and the seeded admin user. Reuses a dev server on :3000 if present.
+config({ path: [resolve(__dirname, '.env.local'), resolve(__dirname, '../../.env')], quiet: true });
+// The specs create and delete rows: refuse to run against anything but a local Supabase.
+assertLocalSupabase(
+  '@prepio/admin e2e',
+  [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL],
+  { required: true },
+);
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
