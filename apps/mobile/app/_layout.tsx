@@ -34,6 +34,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ title: 'Prepio' }} />
+          <Stack.Screen name="lesson/[id]" options={{ title: 'Lecție' }} />
         </Stack>
       </PaperProvider>
     </SafeAreaProvider>
