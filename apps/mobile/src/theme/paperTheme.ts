@@ -40,7 +40,8 @@ export const paperTheme: MD3Theme = {
   },
   fonts: configureFonts({
     config: {
-      ...Object.fromEntries(Object.keys(MD3LightTheme.fonts).map((k) => [k, { fontFamily: fontFamily.body }])),
+      ...Object.fromEntries(Object.entries(MD3LightTheme.fonts).map(([k, v]) => [k, { ...v, fontFamily: fontFamily.body }])),
+      default: { ...MD3LightTheme.fonts.default, fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26 },
       bodyLarge: { ...MD3LightTheme.fonts.bodyLarge, fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26 },
       bodyMedium: { ...MD3LightTheme.fonts.bodyMedium, fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26 },
       titleLarge: { ...MD3LightTheme.fonts.titleLarge, fontFamily: fontFamily.headingBold, fontWeight: '400', fontSize: 24, lineHeight: 32 },
