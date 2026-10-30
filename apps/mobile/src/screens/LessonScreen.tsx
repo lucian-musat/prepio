@@ -138,7 +138,7 @@ export default function LessonScreen() {
           </Text>
           <WritingExercise key={exercise.id} exercise={exercise} />
           <Button mode="contained" onPress={nextExercise}>
-            Continuă
+            {eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
           </Button>
         </View>
       ) : null}
