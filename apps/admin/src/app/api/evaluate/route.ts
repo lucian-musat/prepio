@@ -5,6 +5,8 @@ import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 
 export const dynamic = 'force-dynamic';
+/** Vercel's default (10 s on Hobby) would kill the function before the 30 s OpenAI timeout. */
+export const maxDuration = 60;
 
 function reply(status: number, json: unknown, request: Request) {
   return Response.json(json, {
@@ -13,11 +15,27 @@ function reply(status: number, json: unknown, request: Request) {
   });
 }
 
+function isJson(request: Request): boolean {
+  const type = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+  return type === 'application/json';
+}
+
 export function OPTIONS(request: Request) {
   return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('origin'), allowedOrigins()) });
 }
 
 export async function POST(request: Request) {
+  // Browsers always send Origin on cross-origin POSTs; only our student web origins may call us.
+  // Requests without Origin (the native app) are allowed.
+  const origin = request.headers.get('origin');
+  if (origin && !allowedOrigins().includes(origin)) {
+    return reply(403, { error: 'bad_request', message: 'Cerere nepermisă.' }, request);
+  }
+  // Rejects "simple" cross-site form/text posts that skip the CORS preflight.
+  if (!isJson(request)) {
+    return reply(415, { error: 'bad_request', message: 'Cerere invalidă.' }, request);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -26,18 +44,24 @@ export async function POST(request: Request) {
     return reply(r.status, r.json, request);
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  const db = createAdminClient();
-  const apiKey = process.env.OPENAI_API_KEY;
-  const deps: Deps = {
-    db,
-    rateLimit: createRateLimit(db),
-    evaluate: apiKey
-      ? createOpenAIEvaluator(apiKey)
-      : async () => {
-          throw new Error('OPENAI_API_KEY is not configured');
-        },
-  };
-  const r = await handleEvaluate(body, ip, deps);
-  return reply(r.status, r.json, request);
+  try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const db = createAdminClient();
+    const apiKey = process.env.OPENAI_API_KEY;
+    const deps: Deps = {
+      db,
+      rateLimit: createRateLimit(db),
+      evaluate: apiKey
+        ? createOpenAIEvaluator(apiKey)
+        : async () => {
+            throw new Error('OPENAI_API_KEY is not configured');
+          },
+    };
+    const r = await handleEvaluate(body, ip, deps);
+    return reply(r.status, r.json, request);
+  } catch (e) {
+    console.error('[evaluate] unexpected failure:', e);
+    const r = errorResult('ai_failed');
+    return reply(r.status, r.json, request);
+  }
 }

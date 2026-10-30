@@ -46,7 +46,7 @@ describe('handleEvaluate', () => {
     const r = await handleEvaluate(ok(), '1.2.3.4', d);
     expect(r.status).toBe(200);
     expect(r.json).toEqual({ grade: 7, gradeMin: 1, gradeMax: 10, summary: 'Bine.', suggestions: ['Adaugă date.'] });
-    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:1.2.3.4');
+    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:1.2.3.4', 10, 3600);
     expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5-mini' }));
   });
 
@@ -101,6 +101,39 @@ describe('handleEvaluate', () => {
       message: 'Ai atins limita de evaluări pentru moment. Încearcă din nou peste o oră.',
     });
     expect(d.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('consumes the global daily quota after the per-IP check', async () => {
+    const d = deps();
+    await handleEvaluate(ok(), '1.2.3.4', d);
+    expect(vi.mocked(d.rateLimit).mock.calls).toEqual([
+      ['evaluate:1.2.3.4', 10, 3600],
+      ['evaluate:global', 300, 86400],
+    ]);
+  });
+
+  it('returns 429 with the busy-day message when the global quota is exhausted', async () => {
+    const d = deps({ rateLimit: vi.fn(async (key: string) => key !== 'evaluate:global') });
+    const r = await handleEvaluate(ok(), 'ip', d);
+    expect(r.status).toBe(429);
+    expect(r.json).toEqual({
+      error: 'rate_limited',
+      message: 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.',
+    });
+    expect(d.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('does not touch the global quota when the per-IP limit is hit', async () => {
+    const d = deps({ rateLimit: vi.fn(async () => false) });
+    await handleEvaluate(ok(), 'ip', d);
+    expect(d.rateLimit).toHaveBeenCalledTimes(1);
+    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:ip', 10, 3600);
+  });
+
+  it('caps the per-IP key at 64 characters of IP', async () => {
+    const d = deps();
+    await handleEvaluate(ok(), 'a'.repeat(500), d);
+    expect(d.rateLimit).toHaveBeenNthCalledWith(1, `evaluate:${'a'.repeat(64)}`, 10, 3600);
   });
 
   it('does not consume quota for invalid requests', async () => {
