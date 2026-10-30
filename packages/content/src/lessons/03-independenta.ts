@@ -30,8 +30,8 @@ export const independenta: SeedLesson = {
       title: 'Proclamarea independenței (9 mai 1877)',
       body:
         'La 9 mai 1877, în Adunarea Deputaților, ministrul de externe Mihail Kogălniceanu a declarat: ' +
-        '„Suntem independenți; suntem o națiune de sine stătătoare”. A doua zi, independența a fost votată ' +
-        'și de Senat și a fost sancționată de domnitorul Carol. Tributul datorat Porții a fost redirecționat ' +
+        '„Suntem independenți; suntem o națiune de sine stătătoare”. În aceeași zi, Senatul a adoptat o ' +
+        'moțiune asemănătoare, iar la 10 mai 1877 actul a fost sancționat de domnitorul Carol. Tributul datorat Porții a fost redirecționat ' +
         'către armată. Independența proclamată trebuia însă apărată pe câmpul de luptă și recunoscută de ' +
         'marile puteri.',
       imageCredit: null,
@@ -242,7 +242,8 @@ export const independenta: SeedLesson = {
         { id: 'd', text: 'Armata română era angajată în Războaiele Balcanice.', correct: false },
       ],
       explanation:
-        'Deoarece România nu fusese atacată și nu fusese consultată, obligația de alianță nu se aplica. ' +
+        'Deoarece Austro-Ungaria nu fusese atacată, ci declanșase ea războiul, fără să consulte România, ' +
+        'tratatul defensiv nu obliga România să intre în război. ' +
         'Carol I dorea, de fapt, intrarea alături de Puterile Centrale, tratatul cu Antanta a fost semnat ' +
         'abia în 1916, iar Războaiele Balcanice se încheiaseră în 1913.',
     },
