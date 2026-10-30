@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#F7F1E3",
     "android": {
-      "package": "ro.prepio.app",
+      "package": "dev.musat.prepio",
       "adaptiveIcon": {
         "backgroundColor": "#7A1F2B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
