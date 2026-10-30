@@ -6,7 +6,7 @@
 
 **Architecture:** pnpm monorepo. The student app reads published content straight from Supabase (anon key + RLS). The Next.js admin does content CRUD through Supabase (authenticated owner) and hosts `POST /api/evaluate`, the only place the OpenAI key lives. Pure domain logic (types, answer checking, validation) lives in `packages/shared`; seed content lives in `packages/content`.
 
-**Tech Stack:** TypeScript, pnpm workspaces, Expo (latest SDK, Expo Router, react-native-web), Next.js (latest, App Router, Tailwind), Supabase (Postgres, Auth, Storage, CLI + Docker for local), `@supabase/supabase-js`, `@supabase/ssr`, `openai` (Responses API, structured output), `zod`, Vitest, jest-expo + @testing-library/react-native, pgTAP (`supabase test db`).
+**Tech Stack:** TypeScript, pnpm workspaces, Expo (latest SDK, Expo Router, react-native-web, **React Native Paper**, `@expo-google-fonts/lora` + `@expo-google-fonts/source-sans-3`), Next.js (latest, App Router, **Bootstrap 5 + react-bootstrap**, no Tailwind), Supabase (Postgres, Auth, Storage, CLI + Docker for local), `@supabase/supabase-js`, `@supabase/ssr`, `openai` (Responses API, structured output), `zod`, Vitest, jest-expo + @testing-library/react-native, pgTAP (`supabase test db`).
 
 **Spec:** `docs/superpowers/specs/2026-10-30-prepio-poc-design.md`
 
@@ -24,6 +24,15 @@
 - Lesson status `draft | published`; students only ever see `published`.
 - Wide screens: student content centered, max width 720px.
 - Free tiers only. Commit after each task (conventional commits, ending with the `Co-Authored-By` trailer).
+- **Component libraries (owner's request):** admin uses Bootstrap 5 via `react-bootstrap` (+ `bootstrap` CSS); student app uses React Native Paper (Bootstrap doesn't run in React Native). Prefer library components over hand-rolled ones.
+- **Visual design — "archive / old book" theme, simple and calm.** Tokens live in `packages/shared/src/theme.ts` and are used by both apps:
+  - `parchment` `#F7F1E3` (page background), `paper` `#FFFDF7` (cards/surfaces), `ink` `#2B2118` (text), `inkMuted` `#6B5D4F`, `bordeaux` `#7A1F2B` (primary), `gold` `#B8893B` (accent, highlights, focus), `border` `#E3D8C3`, `success` `#2F6B3A`, `error` `#A12C2C`.
+  - Difficulty badge colours: ușor `#2F6B3A`, mediu `#B8893B`, dificil `#7A1F2B`.
+  - Typography: headings in **Lora** (serif), body in **Source Sans 3**; body 17px (app) / 16px (admin), line-height 1.5.
+  - Shapes: radius 12px, soft shadow on cards, generous spacing; learning cards look like index cards (paper surface, thin gold top border, year/label chip when relevant).
+  - App bar in bordeaux with parchment text and the wordmark „Prepio” in Lora. Admin: Bootstrap theme overridden via CSS variables (`--bs-primary` = bordeaux, `--bs-body-bg` = parchment, `--bs-body-font-family`, headings in Lora via `next/font/google`), navbar bordeaux.
+  - No dark mode in the POC. Must remain readable at 360px wide (phones) and centered ≤ 720px on desktop (app).
+- **Browser verification (owner's request):** every task with UI ends with a browser check done by the controller (main session) in Chrome via the Claude-in-Chrome extension against the local dev servers (student web `http://localhost:8081`, admin `http://localhost:3000`): walk the task's flows, check the console for errors, check 360px and desktop widths, and take screenshots. Problems found go back to the implementer before the task is marked done.
 
 ## Review Focus
 
@@ -71,7 +80,7 @@ apps/admin/           Next.js app
 
 **Files:**
 - Create: `package.json`, `pnpm-workspace.yaml` (`apps/*`, `packages/*`), `.npmrc`, `tsconfig.base.json`
-- Create: `packages/shared/{package.json,tsconfig.json,vitest.config.ts}`, `packages/shared/src/{types,answers,validation,index}.ts`
+- Create: `packages/shared/{package.json,tsconfig.json,vitest.config.ts}`, `packages/shared/src/{types,answers,validation,theme,index}.ts`
 - Test: `packages/shared/src/answers.test.ts`, `packages/shared/src/validation.test.ts`
 
 **Interfaces:**
@@ -102,6 +111,10 @@ apps/admin/           Next.js app
   function shuffleForDisplay<T extends { id: string }>(items: T[], rng?: () => number): T[];
   function validateQuestion(q: Question): string[];   // Romanian error messages, [] if valid
   function validateLesson(l: Lesson): string[];       // structural rules only (see Step 3)
+  const colors: { parchment; paper; ink; inkMuted; bordeaux; gold; border; success; error: string };
+  const difficultyColors: Record<Difficulty, string>;
+  const radius = 12;
+  const fonts: { heading: 'Lora'; body: 'Source Sans 3' };  // values from Global Constraints
   ```
 
 - [ ] **Step 1: Scaffold root.** Root `package.json` (private, `packageManager: pnpm@9`), scripts: `test` = `pnpm -r test`, `typecheck` = `pnpm -r typecheck`. `.npmrc` with `node-linker=hoisted`. `tsconfig.base.json` strict, `moduleResolution: bundler`. Shared package exports `src/index.ts` directly (no build step; `"main": "src/index.ts"`), uses Vitest.
@@ -266,9 +279,9 @@ apps/admin/           Next.js app
 
 - [ ] **Step 2: Run** `pnpm --filter @prepio/mobile test` → FAIL.
 
-- [ ] **Step 3: Implement** the data layer and home screen. Plain React Native `StyleSheet`, a small calm palette, readable 16–18px body text.
+- [ ] **Step 3: Implement** the data layer and home screen. Set up React Native Paper: `PaperProvider` in `app/_layout.tsx` with an MD3 light theme built from `@prepio/shared` `colors`/`fonts` (`src/theme/paperTheme.ts`), load Lora + Source Sans 3 with `useFonts` (splash held until loaded), bordeaux app bar with the „Prepio” wordmark. Home: welcome message in a Paper `Card`, domains as section headers (Lora), lessons as `List.Item`/`Card` rows with a chevron.
 
-- [ ] **Step 4: Run** tests → PASS. Then manual check: `pnpm db:start && pnpm seed`, `pnpm --filter @prepio/mobile web` — home shows the welcome message and three lessons grouped by domain.
+- [ ] **Step 4: Run** tests → PASS. Then: `pnpm db:start && pnpm seed`, `pnpm --filter @prepio/mobile web` (port 8081) — **browser verification** (Global Constraints): home shows the welcome message and three lessons grouped by domain, theme applied, no console errors, OK at 360px and desktop.
 
 - [ ] **Step 5: Commit** `feat(mobile): Expo app scaffold and home screen`.
 
@@ -293,7 +306,7 @@ Behaviour: cards one at a time with „Înapoi”/„Următorul” and a counter
 
 - [ ] **Step 2: Run** → FAIL.
 - [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run** tests → PASS; manual web check of all three seeded lessons.
+- [ ] **Step 4: Run** tests → PASS; **browser verification** of all three seeded lessons: every card, every question type answered both right and wrong, summary screen; index-card look and difficulty badges per the design tokens.
 - [ ] **Step 5: Commit** `feat(mobile): lesson cards and questions`.
 
 ---
@@ -301,7 +314,7 @@ Behaviour: cards one at a time with „Înapoi”/„Următorul” and a counter
 ### Task 7: Admin scaffold and owner authentication
 
 **Files:**
-- Create: `apps/admin` via `pnpm create next-app@latest apps/admin --ts --tailwind --app --src-dir --eslint --use-pnpm`, `src/lib/supabase/{server,client,admin}.ts`, `src/middleware.ts`, `src/app/login/page.tsx`, `src/app/login/actions.ts`, `src/app/(admin)/layout.tsx`, `apps/admin/.env.example`
+- Create: `apps/admin` via `pnpm create next-app@latest apps/admin --ts --no-tailwind --app --src-dir --eslint --use-pnpm`, add `bootstrap` + `react-bootstrap`, `src/app/theme.css` (Bootstrap CSS-variable overrides from the design tokens; Lora/Source Sans 3 via `next/font/google`), `src/lib/supabase/{server,client,admin}.ts`, `src/middleware.ts`, `src/app/login/page.tsx`, `src/app/login/actions.ts`, `src/app/(admin)/layout.tsx`, `apps/admin/.env.example`
 - Test: `apps/admin/src/middleware.test.ts`, `apps/admin/e2e/auth.spec.ts` (Playwright)
 
 **Interfaces:**
@@ -311,7 +324,7 @@ Behaviour: cards one at a time with „Înapoi”/„Următorul” and a counter
 - [ ] **Step 1: Write failing tests:** middleware unit test (no session → 307 to `/login`; `/api/evaluate` passes through; session present → passes). Playwright: wrong password shows „Email sau parolă greșită”; correct credentials (seeded admin) land on `/`; „Ieșire” returns to `/login`.
 - [ ] **Step 2: Run** `pnpm --filter @prepio/admin test` and `pnpm --filter @prepio/admin e2e` → FAIL.
 - [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run** → PASS.
+- [ ] **Step 4: Run** → PASS; **browser verification**: login page (centered Bootstrap card, bordeaux button, Lora heading), wrong/right password, logout.
 - [ ] **Step 5: Commit** `feat(admin): Next.js scaffold and owner login`.
 
 ---
@@ -330,7 +343,7 @@ Behaviour: cards one at a time with „Înapoi”/„Următorul” and a counter
 UI: nested tree; each node has add-child / rename / up / down / delete; lessons listed under their node with status pill („Ciornă”/„Publicată”), publish toggle, up/down, edit link, delete. Deleting a node asks for confirmation stating how many sub-nodes and lessons will be deleted.
 
 - [ ] **Step 1: Write failing tests:** action tests against local Supabase (authenticated test user): create/rename; move up at top is a no-op; delete renumbers siblings; publish toggles status. Playwright: create a node and lesson, publish it, see the pill change; delete-node confirm text shows the counts.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement** (Bootstrap `ListGroup`, `Button`, `Badge`, `Modal` for confirmations). **Step 4: Run** → PASS; **browser verification** of every tree/lesson action.
 - [ ] **Step 5: Commit** `feat(admin): content tree and lessons management`.
 
 ---
@@ -348,7 +361,7 @@ UI: nested tree; each node has add-child / rename / up / down / delete; lessons 
 UI: three tabs „Carduri” / „Întrebări” / „Exerciții de redactare”. Card form: title (optional), body (textarea; plain text with blank-line paragraphs), image upload with preview + credit field + remove. Question form adapts to type: choice options with add/remove and correct checkbox (radio for single); order items listed in correct order with optional year label and up/down. Exercise form: prompt + criteria (textarea, one criterion per line hint).
 
 - [ ] **Step 1: Write failing tests:** QuestionForm switching type resets options appropriately; single-choice with two correct shows the validation error and does not call save; action tests: upload rejects >5 MB and non-image; save/delete/move round-trip. Playwright: add a card with an image, a question of each type and an exercise; publish; the lesson appears in the student app's `fetchLesson` result.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement** (Bootstrap `Tabs`, `Form`, `Card`, `Alert`). **Step 4: Run** → PASS; **browser verification**: create a full lesson in the admin, publish it, open it in the student web app.
 - [ ] **Step 5: Commit** `feat(admin): lesson editor for cards, questions and exercises`.
 
 ---
@@ -365,7 +378,7 @@ UI: three tabs „Carduri” / „Întrebări” / „Exerciții de redactare”
 UI: „Mesaj de bun venit” textarea; section „Evaluare AI”: rules textarea (large), grade min/max inputs, model input with hint.
 
 - [ ] **Step 1: Write failing tests:** saving persists both rows; `gradeMin >= gradeMax` → error, nothing saved; unauthenticated call throws.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; **browser verification**: change the welcome message and see it in the student web app; invalid grade range shows the error.
 - [ ] **Step 5: Commit** `feat(admin): settings for welcome message and AI rules`.
 
 ---
@@ -422,7 +435,7 @@ Order of checks: shape → empty → length → exercise lookup → rate limit �
 UI: prompt, multiline input with live counter („1234 / 3000”), „Trimite pentru evaluare” (disabled when empty or over limit), loading state („Se evaluează…”), result card with grade („Nota: 8 / 10”), summary and suggestions list; text stays editable and „Retrimite” re-evaluates; errors shown inline using the server's Romanian message. Multiple exercises in a lesson are shown one at a time with „Următorul exercițiu”.
 
 - [ ] **Step 1: Write failing tests:** `api.test.ts` with mocked `fetch`: 200 → parsed response; 429 → `EvaluateApiError('rate_limited')`; network reject → `ai_failed` with the connection message. Component: button disabled for empty / 3001-char text; success renders grade and each suggestion; error renders message and keeps text; resubmit sends edited text.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; manual end-to-end on web with local admin running.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; **browser verification** end-to-end on the student web app with the local admin API running (real OpenAI key if provided; otherwise the error path and the rate-limit message).
 - [ ] **Step 5: Commit** `feat(mobile): writing exercises with AI feedback`.
 
 ---
@@ -437,6 +450,6 @@ This task needs the owner. **Stop and ask** before creating any account, and ask
 
 - [ ] **Step 1: Supabase cloud.** Create project (region EU, e.g. Frankfurt); `supabase link`, `supabase db push`; disable sign-ups in Auth settings; run `pnpm seed` with cloud env and owner's admin credentials. Verify: anon REST call returns 3 published lessons.
 - [ ] **Step 2: Admin on Vercel.** Import GitHub repo, root `apps/admin`, env vars from Task 7 (`STUDENT_WEB_ORIGINS` = student web URL, set after Step 3). Verify: login works on the production URL.
-- [ ] **Step 3: Student web on Vercel.** Second project, root `apps/mobile`, build `pnpm expo export -p web`, output `dist`, `EXPO_PUBLIC_*` env vars. Verify: lessons load; a writing exercise returns an evaluation (CORS OK).
+- [ ] **Step 3: Student web on Vercel.** Second project, root `apps/mobile`, build `pnpm expo export -p web`, output `dist`, `EXPO_PUBLIC_*` env vars. Verify in the browser: lessons load; a writing exercise returns an evaluation (CORS OK); admin production URL works end to end.
 - [ ] **Step 4: Android APK.** `eas.json` profile `preview`: `android.buildType: "apk"`, `distribution: "internal"`, env `EXPO_PUBLIC_*` (production URLs). `pnpm dlx eas-cli build -p android --profile preview`. Verify: install link works on a real Android phone; lessons and evaluation work.
 - [ ] **Step 5: Document** URLs, env vars and the rebuild/redeploy commands in `docs/deploy.md`; commit `chore: deployment config and docs`; push to `origin/main` after the owner confirms.
