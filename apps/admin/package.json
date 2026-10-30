@@ -1,0 +1,36 @@
+{
+  "name": "@prepio/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@prepio/shared": "workspace:^",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "bootstrap": "^5.3.8",
+    "next": "16.4.3",
+    "react": "19.3.0",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.3",
+    "typescript": "^5",
+    "vitest": "^2.1.0"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

@@ -1,0 +1,57 @@
+/* Structural overrides; colour/radius variables come from theme.ts (shared design tokens). */
+body {
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+  --bs-body-font-family: var(--font-source-sans), system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6, .brand {
+  font-family: var(--font-lora), Georgia, serif;
+  --bs-heading-color: var(--bs-body-color);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--prepio-bordeaux);
+  --bs-btn-border-color: var(--prepio-bordeaux);
+  --bs-btn-hover-bg: #621822;
+  --bs-btn-hover-border-color: #621822;
+  --bs-btn-active-bg: #531420;
+  --bs-btn-active-border-color: #531420;
+  --bs-btn-disabled-bg: var(--prepio-bordeaux);
+  --bs-btn-disabled-border-color: var(--prepio-bordeaux);
+  --bs-btn-focus-shadow-rgb: 184, 137, 59;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--prepio-bordeaux);
+  --bs-btn-border-color: var(--prepio-bordeaux);
+  --bs-btn-hover-bg: var(--prepio-bordeaux);
+  --bs-btn-hover-border-color: var(--prepio-bordeaux);
+  --bs-btn-active-bg: var(--prepio-bordeaux);
+  --bs-btn-active-border-color: var(--prepio-bordeaux);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--prepio-gold);
+  box-shadow: 0 0 0 0.25rem rgba(184, 137, 59, 0.25);
+}
+
+.card {
+  --bs-card-bg: var(--prepio-paper);
+  box-shadow: 0 2px 8px rgba(43, 33, 24, 0.08);
+}
+
+.navbar-prepio {
+  background-color: var(--prepio-bordeaux);
+  color: var(--prepio-parchment);
+}
+.navbar-prepio .brand { color: var(--prepio-parchment); font-size: 1.4rem; text-decoration: none; }
+
+.sidebar .nav-link {
+  color: var(--bs-body-color);
+  border-radius: var(--bs-border-radius);
+}
+.sidebar .nav-link.active, .sidebar .nav-link:hover {
+  background-color: var(--prepio-paper);
+  color: var(--prepio-bordeaux);
+}
+.sidebar .nav-link.btn-link { text-align: left; text-decoration: none; width: 100%; }
