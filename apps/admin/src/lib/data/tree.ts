@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LessonStatus } from '@prepio/shared';
+import { UserError, check, checkAffected, renumber, siblings as groupRows, swapInGroup, type Direction } from './db';
 
-export type Direction = 'up' | 'down';
+export { UserError };
+export type { Direction };
 
 export type TreeLesson = { id: string; node_id: string; title: string; position: number; status: LessonStatus };
 export type TreeNode = {
@@ -12,28 +14,6 @@ export type TreeNode = {
   children: TreeNode[];
   lessons: TreeLesson[];
 };
-
-/** Error whose message is a Romanian text that is safe to show to the owner. */
-export class UserError extends Error {}
-
-const GENERIC_ERROR = 'Operația a eșuat. Încearcă din nou.';
-
-function check<T>(res: { data: T; error: { message: string } | null }): T {
-  if (res.error) {
-    console.error('[tree] database error:', res.error);
-    throw new UserError(GENERIC_ERROR);
-  }
-  return res.data;
-}
-
-/** For update/delete: RLS denials return no error but also no rows, so zero affected rows is a failure. */
-function checkAffected(res: { data: { id: string }[] | null; error: { message: string } | null }) {
-  const rows = check(res);
-  if (!rows || rows.length === 0) {
-    console.error('[tree] no rows affected (missing row or access denied)');
-    throw new UserError(GENERIC_ERROR);
-  }
-}
 
 /** Whole content tree: nodes nested by parent, each with its lessons, all ordered by position. */
 export async function getTree(db: SupabaseClient): Promise<TreeNode[]> {
@@ -51,11 +31,7 @@ type Table = 'nodes' | 'lessons';
 // nodes are siblings by parent_id (nullable), lessons by node_id
 const GROUP_COL = { nodes: 'parent_id', lessons: 'node_id' } as const;
 
-async function siblings(db: SupabaseClient, table: Table, groupId: string | null) {
-  const q = db.from(table).select('id,position').order('position').order('id');
-  const res = await (groupId === null ? q.is(GROUP_COL[table], null) : q.eq(GROUP_COL[table], groupId));
-  return check(res) as { id: string; position: number }[];
-}
+const siblings = (db: SupabaseClient, table: Table, groupId: string | null) => groupRows(db, table, GROUP_COL[table], groupId);
 
 async function nextPosition(db: SupabaseClient, table: Table, groupId: string | null) {
   const rows = await siblings(db, table, groupId);
@@ -69,21 +45,7 @@ async function groupOf(db: SupabaseClient, table: Table, id: string): Promise<st
 
 async function move(db: SupabaseClient, table: Table, id: string, direction: Direction) {
   const rows = await siblings(db, table, await groupOf(db, table, id));
-  const i = rows.findIndex((r) => r.id === id);
-  const j = direction === 'up' ? i - 1 : i + 1;
-  if (i < 0 || j < 0 || j >= rows.length) return;
-  // Re-number the whole group contiguously with the two rows swapped.
-  const order = rows.map((r) => r.id);
-  [order[i], order[j]] = [order[j], order[i]];
-  await renumber(db, table, order, rows);
-}
-
-async function renumber(db: SupabaseClient, table: Table, order: string[], current: { id: string; position: number }[]) {
-  const pos = new Map(current.map((r) => [r.id, r.position]));
-  for (let p = 0; p < order.length; p++) {
-    if (pos.get(order[p]) === p) continue;
-    checkAffected(await db.from(table).update({ position: p }).eq('id', order[p]).select('id'));
-  }
+  await swapInGroup(db, table, rows, id, direction);
 }
 
 async function remove(db: SupabaseClient, table: Table, id: string) {
