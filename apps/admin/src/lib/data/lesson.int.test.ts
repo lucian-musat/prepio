@@ -152,6 +152,18 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
     ).rejects.toThrow('Sunt acceptate doar imagini JPEG, PNG sau WebP.');
   });
 
+  it('refuses to upload for a non-UUID or unknown lesson id and stores nothing', async () => {
+    const png = () => new File([PNG], 'x.png', { type: 'image/png' });
+    const before = (await db.storage.from('images').list('lessons')).data?.length ?? 0;
+    for (const bad of ['foo/bar', '../x', 'not-a-uuid', '00000000-0000-0000-0000-000000000000']) {
+      const err = await uploadCardImage(db, bad, png()).then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(UserError);
+      expect((err as Error).message).toBe('Lecția nu există.');
+    }
+    expect((await db.storage.from('images').list('lessons')).data?.length ?? 0).toBe(before);
+    expect((await db.storage.from('images').list('lessons/foo')).data ?? []).toHaveLength(0);
+  });
+
   it('fails with a Romanian error when RLS denies writes (anon)', async () => {
     const anonDb = createClient(url!, anon!, { auth: { persistSession: false } });
     const card = await saveCard(db, lessonId, { body: 'rls' });

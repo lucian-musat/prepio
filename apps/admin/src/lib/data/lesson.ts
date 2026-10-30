@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateQuestion, type DistributiveOmit, type LessonStatus, type Question } from '@prepio/shared';
-import { GENERIC_ERROR, UserError, check, checkAffected, siblings, swapInGroup, renumber, type Direction } from './db';
+import { GENERIC_ERROR, UserError, check, isUuid, checkAffected, siblings, swapInGroup, renumber, type Direction } from './db';
 
 export { UserError };
 
@@ -128,6 +128,10 @@ export async function uploadCardImage(db: SupabaseClient, lessonId: string, file
   const ext = IMAGE_EXT[file.type];
   if (!ext) throw new UserError('Sunt acceptate doar imagini JPEG, PNG sau WebP.');
   if (file.size > MAX_IMAGE_BYTES) throw new UserError('Imaginea depășește 5 MB.');
+  // lessonId comes from the browser: it must be a real lesson before it may shape a storage path.
+  if (!isUuid(lessonId)) throw new UserError('Lecția nu există.');
+  const exists = check(await db.from('lessons').select('id').eq('id', lessonId).maybeSingle());
+  if (!exists) throw new UserError('Lecția nu există.');
   const path = `lessons/${lessonId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await db.storage.from('images').upload(path, file, { contentType: file.type, upsert: false });
   if (error) {
