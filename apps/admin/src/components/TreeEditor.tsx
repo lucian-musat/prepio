@@ -7,15 +7,16 @@ import type { LessonStatus } from '@prepio/shared';
 import {
   createLesson, createNode, deleteLesson, deleteNode, moveLesson, moveNode, renameNode, setLessonStatus,
 } from '@/app/(admin)/actions/tree';
+import type { ActionResult } from '@/lib/actionResult';
 import type { TreeLesson, TreeNode } from '@/lib/data/tree';
 
 type Dialog =
-  | { kind: 'title'; heading: string; initial: string; submit: string; onSubmit: (title: string) => Promise<unknown> }
-  | { kind: 'confirm'; heading: string; body: string; onConfirm: () => Promise<unknown> }
+  | { kind: 'title'; heading: string; initial: string; submit: string; onSubmit: (title: string) => Promise<ActionResult<unknown>> }
+  | { kind: 'confirm'; heading: string; body: string; onConfirm: () => Promise<ActionResult<unknown>> }
   | null;
 
 type Ask = (d: NonNullable<Dialog>) => void;
-type Run = (fn: () => Promise<unknown>) => void;
+type Run = (fn: () => Promise<ActionResult<unknown>>) => void;
 
 function countDescendants(node: TreeNode): { nodes: number; lessons: number } {
   let nodes = 0;
@@ -144,9 +145,10 @@ export default function TreeEditor({ tree }: { tree: TreeNode[] }) {
     setError(null);
     startTransition(async () => {
       try {
-        await fn();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'A apărut o eroare');
+        const res = await fn();
+        if (!res.ok) setError(res.error);
+      } catch {
+        setError('Operația a eșuat. Încearcă din nou.');
       }
     });
   };

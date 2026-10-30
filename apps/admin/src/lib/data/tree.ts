@@ -13,9 +13,26 @@ export type TreeNode = {
   lessons: TreeLesson[];
 };
 
+/** Error whose message is a Romanian text that is safe to show to the owner. */
+export class UserError extends Error {}
+
+const GENERIC_ERROR = 'Operația a eșuat. Încearcă din nou.';
+
 function check<T>(res: { data: T; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message);
+  if (res.error) {
+    console.error('[tree] database error:', res.error);
+    throw new UserError(GENERIC_ERROR);
+  }
   return res.data;
+}
+
+/** For update/delete: RLS denials return no error but also no rows, so zero affected rows is a failure. */
+function checkAffected(res: { data: { id: string }[] | null; error: { message: string } | null }) {
+  const rows = check(res);
+  if (!rows || rows.length === 0) {
+    console.error('[tree] no rows affected (missing row or access denied)');
+    throw new UserError(GENERIC_ERROR);
+  }
 }
 
 /** Whole content tree: nodes nested by parent, each with its lessons, all ordered by position. */
@@ -65,20 +82,20 @@ async function renumber(db: SupabaseClient, table: Table, order: string[], curre
   const pos = new Map(current.map((r) => [r.id, r.position]));
   for (let p = 0; p < order.length; p++) {
     if (pos.get(order[p]) === p) continue;
-    check(await db.from(table).update({ position: p }).eq('id', order[p]));
+    checkAffected(await db.from(table).update({ position: p }).eq('id', order[p]).select('id'));
   }
 }
 
 async function remove(db: SupabaseClient, table: Table, id: string) {
   const group = await groupOf(db, table, id);
-  check(await db.from(table).delete().eq('id', id));
+  checkAffected(await db.from(table).delete().eq('id', id).select('id'));
   const rows = await siblings(db, table, group);
   await renumber(db, table, rows.map((r) => r.id), rows);
 }
 
 function cleanTitle(title: string) {
   const t = title.trim();
-  if (!t) throw new Error('Titlul nu poate fi gol');
+  if (!t) throw new UserError('Titlul nu poate fi gol');
   return t;
 }
 
@@ -91,7 +108,7 @@ export async function createNode(db: SupabaseClient, parentId: string | null, ti
 }
 
 export async function renameNode(db: SupabaseClient, id: string, title: string) {
-  check(await db.from('nodes').update({ title: cleanTitle(title) }).eq('id', id));
+  checkAffected(await db.from('nodes').update({ title: cleanTitle(title) }).eq('id', id).select('id'));
 }
 
 export const moveNode = (db: SupabaseClient, id: string, direction: Direction) => move(db, 'nodes', id, direction);
@@ -109,5 +126,5 @@ export const moveLesson = (db: SupabaseClient, id: string, direction: Direction)
 export const deleteLesson = (db: SupabaseClient, id: string) => remove(db, 'lessons', id);
 
 export async function setLessonStatus(db: SupabaseClient, id: string, status: LessonStatus) {
-  check(await db.from('lessons').update({ status }).eq('id', id));
+  checkAffected(await db.from('lessons').update({ status }).eq('id', id).select('id'));
 }

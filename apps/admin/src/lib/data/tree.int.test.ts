@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  createLesson, createNode, deleteLesson, deleteNode, getTree, moveLesson, moveNode, renameNode, setLessonStatus,
+  UserError, createLesson, createNode, deleteLesson, deleteNode, getTree, moveLesson, moveNode, renameNode, setLessonStatus,
 } from './tree';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
@@ -108,5 +108,31 @@ describe.skipIf(!url || !anon)('tree data functions (local Supabase)', () => {
     expect(t1.lessons.map((x) => x.title)).toEqual(['T1-lesson']);
     expect(tree.length).toBeGreaterThan(1); // seeded content is present too
     await deleteNode(db, n.id);
+  });
+
+  it('fails with a Romanian error instead of silently no-oping when RLS denies the write', async () => {
+    const n = await createNode(db, rootId, 'RLS-node');
+    const l = await createLesson(db, n.id, 'RLS-lesson');
+    const c1 = await createNode(db, n.id, 'RLS-child-1');
+    await createNode(db, n.id, 'RLS-child-2');
+    const anonDb = createClient(url!, anon!, { auth: { persistSession: false } });
+    for (const call of [
+      () => renameNode(anonDb, n.id, 'hacked'),
+      () => setLessonStatus(anonDb, l.id, 'published'),
+      () => moveNode(anonDb, c1.id, 'down'),
+      () => deleteNode(anonDb, n.id),
+      () => deleteLesson(anonDb, l.id),
+    ]) {
+      const err = await call().then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(UserError);
+      expect((err as Error).message).toBe('Operația a eșuat. Încearcă din nou.');
+    }
+    expect((await db.from('nodes').select('title').eq('id', n.id).single()).data?.title).toBe('RLS-node');
+    expect((await db.from('lessons').select('status').eq('id', l.id).single()).data?.status).toBe('draft');
+    await deleteNode(db, n.id);
+  });
+
+  it('rejects an empty title with a Romanian message', async () => {
+    await expect(createNode(db, rootId, '   ')).rejects.toThrow('Titlul nu poate fi gol');
   });
 });
