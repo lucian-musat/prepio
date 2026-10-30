@@ -1,7 +1,7 @@
 begin;
 select plan(18);
 
--- Fixtures (as postgres)
+-- Fixtures (as postgres). Every assertion is scoped to these ids so the suite also passes on a seeded DB.
 insert into nodes (id, parent_id, title) values
   ('00000000-0000-0000-0000-0000000000a1', null, 'Root'),
   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a1', 'Child');
@@ -21,22 +21,37 @@ insert into writing_exercises (lesson_id, prompt, criteria) values
   ('00000000-0000-0000-0000-0000000000b2', 'draft w', 'c');
 
 insert into settings (id, welcome_message) values (1, 'Bun venit')
-  on conflict (id) do nothing;
+  on conflict (id) do update set welcome_message = excluded.welcome_message;
 insert into ai_settings (id, rules) values (1, 'rules')
-  on conflict (id) do nothing;
+  on conflict (id) do update set rules = excluded.rules;
 
 -- Anonymous
 set local role anon;
 
-select is((select count(*)::int from nodes), 2, 'anon sees nodes');
-select is((select count(*)::int from settings), 1, 'anon sees settings');
+select is((select count(*)::int from nodes
+            where id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2')),
+          2, 'anon sees fixture nodes');
+select is((select welcome_message from settings where id = 1), 'Bun venit', 'anon sees settings row 1');
 select results_eq(
-  $$ select title from lessons order by title $$,
+  $$ select title from lessons
+      where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
   $$ values ('Published'::text) $$,
-  'anon sees only the published lesson');
-select is((select count(*)::int from cards), 1, 'anon sees only published cards');
-select is((select count(*)::int from questions), 1, 'anon sees only published questions');
-select is((select count(*)::int from writing_exercises), 1, 'anon sees only published exercises');
+  'anon sees only the published fixture lesson');
+select results_eq(
+  $$ select body from cards
+      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
+  $$ values ('pub card'::text) $$,
+  'anon sees only published fixture cards');
+select results_eq(
+  $$ select prompt from questions
+      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
+  $$ values ('pub q'::text) $$,
+  'anon sees only published fixture questions');
+select results_eq(
+  $$ select prompt from writing_exercises
+      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
+  $$ values ('pub w'::text) $$,
+  'anon sees only published fixture exercises');
 select is((select count(*)::int from ai_settings), 0, 'anon cannot read ai_settings');
 select throws_ok(
   $$ insert into lessons (node_id, title) values ('00000000-0000-0000-0000-0000000000a2', 'x') $$,
@@ -49,8 +64,10 @@ select throws_ok(
 reset role;
 set local role authenticated;
 
-select is((select count(*)::int from lessons), 2, 'authenticated sees draft lessons too');
-select is((select count(*)::int from ai_settings), 1, 'authenticated reads ai_settings');
+select is((select count(*)::int from lessons
+            where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')),
+          2, 'authenticated sees draft lessons too');
+select is((select rules from ai_settings where id = 1), 'rules', 'authenticated reads ai_settings');
 select lives_ok(
   $$ insert into lessons (id, node_id, title) values ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000a2', 'New') $$,
   'authenticated inserts lesson');
@@ -75,8 +92,16 @@ select throws_ok(
 
 delete from nodes where id = '00000000-0000-0000-0000-0000000000a1';
 select is(
-  (select (select count(*) from nodes) + (select count(*) from lessons) + (select count(*) from cards)
-        + (select count(*) from questions) + (select count(*) from writing_exercises))::int,
+  (select (select count(*) from nodes
+            where id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2'))
+        + (select count(*) from lessons
+            where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from cards
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from questions
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from writing_exercises
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')))::int,
   0, 'deleting a node cascades to children, lessons and their content');
 
 select * from finish();

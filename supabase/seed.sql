@@ -1,1 +1,1 @@
--- Local seed data lives here (added in later tasks).
+-- Intentionally empty: local data is seeded by packages/content/src/seed.ts, not SQL.
