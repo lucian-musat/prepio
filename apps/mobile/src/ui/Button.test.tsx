@@ -25,3 +25,10 @@ it('does not call onPress while loading', async () => {
   await fireEvent.press(button);
   expect(onPress).not.toHaveBeenCalled();
 });
+
+it('uses accessibilityLabel as the accessible name when given, keeping the visible label', async () => {
+  await render(<Button label="Înapoi" accessibilityLabel="Înapoi la cartonașul anterior" onPress={jest.fn()} />);
+  expect(screen.getByRole('button', { name: 'Înapoi la cartonașul anterior' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Înapoi' })).toBeNull();
+  expect(screen.getByText('Înapoi')).toBeTruthy();
+});

@@ -1,3 +1,4 @@
+import { AccessibilityInfo } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import type { Question } from '@prepio/shared';
@@ -5,7 +6,7 @@ import QuestionView from './QuestionView';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: () => false } }));
 
-const base = { id: 'q', position: 1, prompt: 'Întrebare?', difficulty: 'medium' as const, explanation: 'Explicația. A doua frază.' };
+const base = { id: 'q', position: 1, prompt: 'Întrebare?', difficulty: 'medium' as const, explanation: 'Explicația pe larg aici. A doua frază.' };
 const single: Question = {
   ...base,
   type: 'single_choice',
@@ -86,8 +87,8 @@ describe('single choice', () => {
     await fireEvent.press(screen.getByText('Varianta B'));
     await fireEvent.press(verify());
     expect(bar().getByText('Corect, bravo!')).toBeTruthy();
-    expect(bar().getByText('Explicația.')).toBeTruthy();
-    expect(screen.getByText('Explicația. A doua frază.')).toBeTruthy();
+    expect(bar().getByText('Explicația pe larg aici.')).toBeTruthy();
+    expect(screen.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(onAnswered).toHaveBeenCalledWith(true);
     await fireEvent.press(bar().getByRole('button', { name: 'Următoarea întrebare' }));
     expect(onNext).toHaveBeenCalledTimes(1);
@@ -98,9 +99,53 @@ describe('single choice', () => {
     await fireEvent.press(screen.getByText('Varianta A'));
     await fireEvent.press(verify());
     expect(screen.getByText('Nu chiar.')).toBeTruthy();
-    expect(screen.getByText('Răspuns corect: Varianta B')).toBeTruthy();
-    expect(screen.getByText('Explicația. A doua frază.')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-content')).getByText('Răspuns corect: Varianta B')).toBeTruthy();
+    expect(screen.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(onAnswered).toHaveBeenCalledWith(false);
+  });
+
+  it('announces the verdict and its line once to screen readers', async () => {
+    // RN's jest setup already mocks AccessibilityInfo, so spyOn returns that mock with earlier calls: clear it.
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockClear().mockImplementation(() => {});
+    try {
+      await renderQ(single);
+      await fireEvent.press(screen.getByText('Varianta A'));
+      await fireEvent.press(verify());
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith('Nu chiar. Răspuns corect: Varianta B');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('announces a correct verdict without a line when there is no explanation', async () => {
+    // RN's jest setup already mocks AccessibilityInfo, so spyOn returns that mock with earlier calls: clear it.
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockClear().mockImplementation(() => {});
+    try {
+      await renderQ({ ...single, explanation: null });
+      await fireEvent.press(screen.getByText('Varianta B'));
+      await fireEvent.press(verify());
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith('Corect, bravo!');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('the bar line does not cut the explanation at abbreviations', async () => {
+    const explanation = 'Al. I. Cuza a fost ales în ian. 1859. Apoi a urmat Unirea.';
+    await renderQ({ ...single, explanation });
+    await fireEvent.press(screen.getByText('Varianta B'));
+    await fireEvent.press(verify());
+    expect(bar().getByText('Al. I. Cuza a fost ales în ian. 1859.')).toBeTruthy();
+  });
+
+  it('the bar line uses the whole explanation when no sentence end leaves 20 characters', async () => {
+    const explanation = 'Vezi Al. Cuza. Atât.';
+    await renderQ({ ...single, explanation });
+    await fireEvent.press(screen.getByText('Varianta B'));
+    await fireEvent.press(verify());
+    expect(bar().getByText('Vezi Al. Cuza. Atât.')).toBeTruthy();
   });
 
   it('explanation and correct answers render in the content, verdict in the action bar', async () => {
@@ -108,13 +153,12 @@ describe('single choice', () => {
     await fireEvent.press(screen.getByText('Varianta A'));
     await fireEvent.press(verify());
     expect(bar().getByText('Nu chiar.')).toBeTruthy();
-    expect(bar().queryByText('Explicația. A doua frază.')).toBeNull();
-    expect(bar().queryByText('Răspuns corect: Varianta B')).toBeNull();
+    expect(bar().queryByText('Explicația pe larg aici. A doua frază.')).toBeNull();
     const content = within(screen.getByTestId('screen-content'));
-    expect(content.getByText('Explicația. A doua frază.')).toBeTruthy();
+    expect(content.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(content.getByText('Răspuns corect: Varianta B')).toBeTruthy();
-    // A short single correct answer is repeated in the bar.
-    expect(bar().getByText('Răspunsul corect: Varianta B')).toBeTruthy();
+    // A short single correct answer is repeated in the bar, in the same words.
+    expect(bar().getByText('Răspuns corect: Varianta B')).toBeTruthy();
   });
 
   it('long correct answer shows the short hint in the bar', async () => {
@@ -238,7 +282,7 @@ describe('chronological order', () => {
     expect(content.getByText('Ordinea corectă:')).toBeTruthy();
     expect(content.getByText('1000')).toBeTruthy();
     expect(content.getByText('1200')).toBeTruthy();
-    expect(content.getByText('Explicația. A doua frază.')).toBeTruthy();
+    expect(content.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(onAnswered).toHaveBeenCalledWith(false);
   });
 });

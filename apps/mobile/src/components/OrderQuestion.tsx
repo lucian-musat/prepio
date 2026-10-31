@@ -9,8 +9,6 @@ type Props = {
   /** Items in the correct order. */
   items: OrderItem[];
   answered: boolean;
-  /** Set once answered. */
-  correct: boolean | null;
   onMove: (index: number, delta: -1 | 1) => void;
 };
 

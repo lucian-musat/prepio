@@ -7,6 +7,8 @@ import { easing, timing } from './motion';
 
 type Props = {
   label: string;
+  /** Accessible name when the visible label is ambiguous on its screen (defaults to label). */
+  accessibilityLabel?: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
   disabled?: boolean;
@@ -33,7 +35,7 @@ const DISABLED_OPACITY = 0.45;
  * The shade is a separate layer offset below the face (not a box-shadow), so pressing only animates
  * the face's translateY and works the same on web and native.
  */
-export default function Button({ label, onPress, variant = 'primary', disabled = false, loading = false, tone = 'primary', flex = false }: Props) {
+export default function Button({ label, accessibilityLabel, onPress, variant = 'primary', disabled = false, loading = false, tone = 'primary', flex = false }: Props) {
   const ghost = variant === 'secondary';
   const depth = ghost ? GHOST_DEPTH : PRIMARY_DEPTH;
   const blocked = disabled || loading;
@@ -50,7 +52,7 @@ export default function Button({ label, onPress, variant = 'primary', disabled =
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: blocked, busy: loading }}
       disabled={blocked}
       onPress={() => {

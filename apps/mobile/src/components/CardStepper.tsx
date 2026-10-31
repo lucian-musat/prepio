@@ -93,7 +93,14 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
       scrollRef={scrollRef}
       actions={
         <>
-          <Button flex variant="secondary" label="Înapoi" disabled={index === 0} onPress={() => index > 0 && go(index - 1)} />
+          <Button
+            flex
+            variant="secondary"
+            label="Înapoi"
+            accessibilityLabel="Înapoi la cartonașul anterior"
+            disabled={index === 0}
+            onPress={() => index > 0 && go(index - 1)}
+          />
           <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
         </>
       }

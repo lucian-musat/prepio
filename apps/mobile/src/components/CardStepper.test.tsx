@@ -30,6 +30,7 @@ const renderStepper = async (cards: Card[], props: { onFinish?: jest.Mock; finis
 };
 
 const bar = () => within(screen.getByTestId('action-bar'));
+const PREV = 'Înapoi la cartonașul anterior';
 const isDisabled = (el: any) => !!el.props.accessibilityState?.disabled || !!el.props['aria-disabled'];
 
 it('shows the first card with a counter and steps through the cards within bounds', async () => {
@@ -42,7 +43,7 @@ it('shows the first card with a counter and steps through the cards within bound
   expect(screen.getByText('Cartonaș 2 din 3')).toBeTruthy();
   expect(onIndexChange).toHaveBeenLastCalledWith(1);
 
-  await fireEvent.press(bar().getByRole('button', { name: 'Înapoi' }));
+  await fireEvent.press(bar().getByRole('button', { name: PREV }));
   expect(screen.getByText('Cartonaș 1 din 3')).toBeTruthy();
   expect(onIndexChange).toHaveBeenLastCalledWith(0);
 
@@ -56,9 +57,9 @@ it('shows the first card with a counter and steps through the cards within bound
 
 it('back disabled on first card', async () => {
   await renderStepper([card(1), card(2)]);
-  expect(isDisabled(bar().getByRole('button', { name: 'Înapoi' }))).toBe(true);
+  expect(isDisabled(bar().getByRole('button', { name: PREV }))).toBe(true);
   await fireEvent.press(bar().getByRole('button', { name: 'Continuă' }));
-  expect(isDisabled(bar().getByRole('button', { name: 'Înapoi' }))).toBe(false);
+  expect(isDisabled(bar().getByRole('button', { name: PREV }))).toBe(false);
 });
 
 it('last card defaults to Continuă', async () => {
@@ -89,4 +90,11 @@ it('renders text only when the card has no image', async () => {
   await renderStepper([card(1)]);
   expect(screen.queryByLabelText('Titlu 1 – ilustrație')).toBeNull();
   expect(screen.getByText('Corp 1')).toBeTruthy();
+});
+
+it('the two back buttons have distinct accessible names', async () => {
+  await renderStepper([card(1), card(2)]);
+  expect(within(screen.getByTestId('top-bar')).getByRole('button', { name: 'Înapoi' })).toBeTruthy();
+  expect(bar().getByRole('button', { name: PREV })).toBeTruthy();
+  expect(bar().getByText('Înapoi')).toBeTruthy();
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -53,10 +53,22 @@ const POP_FROM = 0.6;
 const POP_PEAK = 1.18;
 const POP_PEAK_AT = 0.6;
 
+// A sentence end that leaves less than this is most likely an abbreviation ("Al. I. Cuza").
+const MIN_SENTENCE = 20;
+// Sentence end: punctuation followed by whitespace and a capital letter (so "ian. 1859" doesn't count).
+const SENTENCE_END = /[.!?…](?=\s+[A-ZĂÂÎȘȚŞŢ])/g;
+
+/** First sentence of the explanation for the action bar, or the whole text when no safe cut exists. */
 function firstSentence(text: string) {
   const t = text.trim();
-  return t.match(/^[\s\S]*?[.!?…](?=\s|$)/)?.[0] ?? t;
+  for (const m of t.matchAll(SENTENCE_END)) {
+    const end = m.index + 1;
+    if (end >= MIN_SENTENCE) return t.slice(0, end);
+  }
+  return t;
 }
+
+const verdictText = (good: boolean) => (good ? 'Corect, bravo!' : 'Nu chiar.');
 
 /** Verdict icon in a circle that pops in (prototype `.feedback .ic`). */
 function VerdictIcon({ good }: { good: boolean }) {
@@ -81,11 +93,11 @@ function VerdictIcon({ good }: { good: boolean }) {
 function Verdict({ good, line }: { good: boolean; line: string | null }) {
   const tint = { color: good ? feedbackText.good : feedbackText.wrong };
   return (
-    <View style={styles.verdict} accessibilityLiveRegion="polite">
+    <View style={styles.verdict}>
       <VerdictIcon good={good} />
       <View style={styles.verdictText}>
         <AppText role="bodyStrong" style={tint}>
-          {good ? 'Corect, bravo!' : 'Nu chiar.'}
+          {verdictText(good)}
         </AppText>
         {line ? (
           <AppText role="small" style={tint} numberOfLines={2}>
@@ -112,6 +124,15 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const nextRef = useRef(false);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const scrolledRef = useRef(false);
+
+  const correctTexts = question.type === 'chronological_order' ? [] : question.options.filter((o) => o.correct).map((o) => o.text);
+
+  /** Second line of the verdict in the action bar. */
+  const barLine = (ok: boolean): string | null => {
+    if (ok) return question.explanation ? firstSentence(question.explanation) : null;
+    const only = correctTexts.length === 1 ? correctTexts[0]! : null;
+    return only && only.length <= SHORT_ANSWER_MAX ? `Răspuns corect: ${only}` : SEE_ABOVE;
+  };
 
   const toggle = (id: string) => {
     if (answered) return;
@@ -143,6 +164,8 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
     const ok = checkAnswer(question, answer);
     setCorrect(ok);
     onAnswered(ok);
+    // An explicit announcement: a live region on the freshly mounted feedback slot is unreliable.
+    AccessibilityInfo.announceForAccessibility(`${verdictText(ok)} ${barLine(ok) ?? ''}`.trim());
   };
 
   const next = () => {
@@ -158,14 +181,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
     scrollRef.current?.scrollTo({ y: e.nativeEvent.layout.y, animated: true });
   };
 
-  const correctTexts = question.type === 'chronological_order' ? [] : question.options.filter((o) => o.correct).map((o) => o.text);
-
-  let line: string | null = null;
-  if (correct) line = question.explanation ? firstSentence(question.explanation) : null;
-  else if (correct === false) {
-    const only = correctTexts.length === 1 ? correctTexts[0]! : null;
-    line = only && only.length <= SHORT_ANSWER_MAX ? `Răspunsul corect: ${only}` : SEE_ABOVE;
-  }
+  const line = correct === null ? null : barLine(correct);
 
   const canCheck = isOrder || selected.length > 0;
   const showCorrectChoice = correct === false && correctTexts.length > 0;
@@ -201,7 +217,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
               {question.prompt}
             </AppText>
             {question.type === 'chronological_order' ? (
-              <OrderQuestion order={order} items={question.options} answered={answered} correct={correct} onMove={move} />
+              <OrderQuestion order={order} items={question.options} answered={answered} onMove={move} />
             ) : (
               <ChoiceQuestion
                 options={question.options}
