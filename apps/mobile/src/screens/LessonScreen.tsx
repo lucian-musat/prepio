@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Button, Card, Text } from 'react-native-paper';
-import { colors, radius, type Lesson } from '@prepio/shared';
+import { legacyColors, legacyRadius, type Lesson } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView from '../components/QuestionView';
 import Screen from '../components/Screen';
@@ -164,14 +164,14 @@ export default function LessonScreen() {
 
 const styles = StyleSheet.create({
   box: {
-    backgroundColor: colors.paper,
-    borderRadius: radius,
+    backgroundColor: legacyColors.paper,
+    borderRadius: legacyRadius,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: legacyColors.border,
   },
   gap: { gap: 12 },
   loader: { marginTop: 48 },
-  title: { fontFamily: fontFamily.headingBold, color: colors.bordeaux },
-  progress: { fontFamily: fontFamily.body, color: colors.inkMuted },
-  summary: { fontFamily: fontFamily.body, fontSize: 17, color: colors.ink },
+  title: { fontFamily: fontFamily.headingBold, color: legacyColors.bordeaux },
+  progress: { fontFamily: fontFamily.body, color: legacyColors.inkMuted },
+  summary: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink },
 });

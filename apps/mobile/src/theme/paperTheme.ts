@@ -1,35 +1,35 @@
 import { MD3LightTheme, configureFonts, type MD3Theme } from 'react-native-paper';
-import { colors, radius } from '@prepio/shared';
+import { legacyColors, legacyRadius } from '@prepio/shared';
 import { fontFamily } from './fonts';
 
 
 export const paperTheme: MD3Theme = {
   ...MD3LightTheme,
-  roundness: radius,
+  roundness: legacyRadius,
   colors: {
     ...MD3LightTheme.colors,
-    primary: colors.bordeaux,
-    onPrimary: colors.parchment,
-    primaryContainer: colors.parchment,
-    onPrimaryContainer: colors.bordeaux,
-    secondary: colors.gold,
-    onSecondary: colors.ink,
-    background: colors.parchment,
-    onBackground: colors.ink,
-    surface: colors.paper,
-    onSurface: colors.ink,
-    surfaceVariant: colors.paper,
-    onSurfaceVariant: colors.inkMuted,
-    outline: colors.border,
-    outlineVariant: colors.border,
-    error: colors.error,
+    primary: legacyColors.bordeaux,
+    onPrimary: legacyColors.parchment,
+    primaryContainer: legacyColors.parchment,
+    onPrimaryContainer: legacyColors.bordeaux,
+    secondary: legacyColors.gold,
+    onSecondary: legacyColors.ink,
+    background: legacyColors.parchment,
+    onBackground: legacyColors.ink,
+    surface: legacyColors.paper,
+    onSurface: legacyColors.ink,
+    surfaceVariant: legacyColors.paper,
+    onSurfaceVariant: legacyColors.inkMuted,
+    outline: legacyColors.border,
+    outlineVariant: legacyColors.border,
+    error: legacyColors.error,
     elevation: {
       level0: 'transparent',
-      level1: colors.paper,
-      level2: colors.paper,
-      level3: colors.paper,
-      level4: colors.paper,
-      level5: colors.paper,
+      level1: legacyColors.paper,
+      level2: legacyColors.paper,
+      level3: legacyColors.paper,
+      level4: legacyColors.paper,
+      level5: legacyColors.paper,
     },
   },
   fonts: configureFonts({

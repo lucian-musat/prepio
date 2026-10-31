@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@prepio/shared';
+import { legacyColors } from '@prepio/shared';
 
 export const MAX_CONTENT_WIDTH = 720;
 
@@ -17,7 +17,7 @@ export default function Screen({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.parchment },
+  safe: { flex: 1, backgroundColor: legacyColors.parchment },
   scroll: { flexGrow: 1, alignItems: 'center' },
   content: { width: '100%', maxWidth: MAX_CONTENT_WIDTH, padding: 16, gap: 16 },
 });

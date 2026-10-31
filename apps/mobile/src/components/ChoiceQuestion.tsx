@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Checkbox, RadioButton } from 'react-native-paper';
-import { colors, radius, type Answer, type ChoiceOption } from '@prepio/shared';
+import { legacyColors, legacyRadius, type Answer, type ChoiceOption } from '@prepio/shared';
 import { fontFamily } from '../theme/fonts';
 
 type Props = {
@@ -38,7 +38,7 @@ export default function ChoiceQuestion({ type, options, answered, onSubmit }: Pr
           disabled: answered,
           style: rowStyle,
           labelStyle: styles.label,
-          color: colors.bordeaux,
+          color: legacyColors.bordeaux,
           position: 'leading' as const,
         };
         return multiple ? (
@@ -63,12 +63,12 @@ export default function ChoiceQuestion({ type, options, answered, onSubmit }: Pr
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
   row: {
-    backgroundColor: colors.paper,
+    backgroundColor: legacyColors.paper,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius,
+    borderColor: legacyColors.border,
+    borderRadius: legacyRadius,
   },
-  rowCorrect: { borderColor: colors.success, backgroundColor: '#E6F0E4', borderWidth: 2 },
-  rowWrong: { borderColor: colors.error, backgroundColor: '#F6E3E1', borderWidth: 2 },
-  label: { fontFamily: fontFamily.body, fontSize: 17, color: colors.ink, textAlign: 'left' },
+  rowCorrect: { borderColor: legacyColors.success, backgroundColor: '#E6F0E4', borderWidth: 2 },
+  rowWrong: { borderColor: legacyColors.error, backgroundColor: '#F6E3E1', borderWidth: 2 },
+  label: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink, textAlign: 'left' },
 });

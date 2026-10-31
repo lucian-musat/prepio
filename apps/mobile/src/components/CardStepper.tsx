@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
-import { colors, radius, type Card } from '@prepio/shared';
+import { legacyColors, legacyRadius, type Card } from '@prepio/shared';
 import { imageUrl } from '../lib/content';
 import { fontFamily } from '../theme/fonts';
 
@@ -61,25 +61,25 @@ export default function CardStepper({ cards, onFinish }: Props) {
 const styles = StyleSheet.create({
   wrap: { gap: 16 },
   card: {
-    backgroundColor: colors.paper,
-    borderRadius: radius,
+    backgroundColor: legacyColors.paper,
+    borderRadius: legacyRadius,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: legacyColors.border,
     borderTopWidth: 3,
-    borderTopColor: colors.gold,
+    borderTopColor: legacyColors.gold,
     padding: 20,
     gap: 12,
-    shadowColor: colors.ink,
+    shadowColor: legacyColors.ink,
     shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  title: { fontFamily: fontFamily.headingBold, color: colors.bordeaux },
+  title: { fontFamily: fontFamily.headingBold, color: legacyColors.bordeaux },
   figure: { gap: 4 },
   image: { width: '100%', height: 200, borderRadius: 8 },
-  credit: { fontSize: 12, color: colors.inkMuted, fontFamily: fontFamily.body },
-  body: { fontSize: 17, lineHeight: 26, color: colors.ink, fontFamily: fontFamily.body },
-  counter: { textAlign: 'center', color: colors.inkMuted, fontFamily: fontFamily.body },
+  credit: { fontSize: 12, color: legacyColors.inkMuted, fontFamily: fontFamily.body },
+  body: { fontSize: 17, lineHeight: 26, color: legacyColors.ink, fontFamily: fontFamily.body },
+  counter: { textAlign: 'center', color: legacyColors.inkMuted, fontFamily: fontFamily.body },
   nav: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
 });

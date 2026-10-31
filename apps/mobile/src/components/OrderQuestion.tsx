@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, IconButton, Text } from 'react-native-paper';
-import { colors, radius, shuffleForDisplay, type Answer, type OrderItem } from '@prepio/shared';
+import { legacyColors, legacyRadius, shuffleForDisplay, type Answer, type OrderItem } from '@prepio/shared';
 import { fontFamily } from '../theme/fonts';
 
 type Props = {
@@ -83,24 +83,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingLeft: 12,
-    backgroundColor: colors.paper,
+    backgroundColor: legacyColors.paper,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius,
+    borderColor: legacyColors.border,
+    borderRadius: legacyRadius,
   },
-  index: { fontFamily: fontFamily.bodyBold, color: colors.inkMuted, fontSize: 17 },
-  text: { flex: 1, fontFamily: fontFamily.body, fontSize: 17, color: colors.ink, paddingVertical: 8 },
+  index: { fontFamily: fontFamily.bodyBold, color: legacyColors.inkMuted, fontSize: 17 },
+  text: { flex: 1, fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink, paddingVertical: 8 },
   buttons: { flexDirection: 'row' },
   correctBox: {
     gap: 6,
     padding: 12,
-    borderRadius: radius,
+    borderRadius: legacyRadius,
     borderWidth: 2,
-    borderColor: colors.success,
+    borderColor: legacyColors.success,
     backgroundColor: '#E6F0E4',
   },
-  correctTitle: { fontFamily: fontFamily.bodyBold, color: colors.success, fontSize: 17 },
+  correctTitle: { fontFamily: fontFamily.bodyBold, color: legacyColors.success, fontSize: 17 },
   correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chip: { backgroundColor: colors.gold, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
-  chipText: { color: colors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  chip: { backgroundColor: legacyColors.gold, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
+  chipText: { color: legacyColors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
 });

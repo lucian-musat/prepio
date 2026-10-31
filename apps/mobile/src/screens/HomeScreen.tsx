@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { ActivityIndicator, Button, Card, List, Text } from 'react-native-paper';
-import { colors, radius } from '@prepio/shared';
+import { legacyColors, legacyRadius } from '@prepio/shared';
 import Screen from '../components/Screen';
 import { fetchHome, type HomeData } from '../lib/content';
 import { fontFamily } from '../theme/fonts';
@@ -81,15 +81,15 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.paper,
-    borderRadius: radius,
+    backgroundColor: legacyColors.paper,
+    borderRadius: legacyRadius,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: legacyColors.border,
   },
   gap: { gap: 12 },
   loader: { marginTop: 48 },
   section: { gap: 8 },
-  header: { fontFamily: fontFamily.headingBold, color: colors.bordeaux },
-  lessonTitle: { fontFamily: fontFamily.body, fontSize: 17, color: colors.ink },
-  divider: { borderTopWidth: 1, borderTopColor: colors.border },
+  header: { fontFamily: fontFamily.headingBold, color: legacyColors.bordeaux },
+  lessonTitle: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink },
+  divider: { borderTopWidth: 1, borderTopColor: legacyColors.border },
 });

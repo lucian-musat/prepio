@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '@prepio/shared';
+import { legacyColors } from '@prepio/shared';
 import { fontFamily, fontFiles } from '../src/theme/fonts';
 import { paperTheme } from '../src/theme/paperTheme';
 
@@ -27,10 +27,10 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: colors.bordeaux },
-            headerTintColor: colors.parchment,
+            headerStyle: { backgroundColor: legacyColors.bordeaux },
+            headerTintColor: legacyColors.parchment,
             headerTitleStyle: { fontFamily: fontFamily.headingBold },
-            contentStyle: { backgroundColor: colors.parchment },
+            contentStyle: { backgroundColor: legacyColors.parchment },
           }}
         >
           <Stack.Screen name="index" options={{ title: 'Prepio' }} />

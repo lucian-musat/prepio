@@ -1,11 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { DIFFICULTY_LABELS, colors, difficultyColors, type Difficulty } from '@prepio/shared';
+import { DIFFICULTY_LABELS, legacyColors, legacyDifficultyColors, type Difficulty } from '@prepio/shared';
 import { fontFamily } from '../theme/fonts';
 
 export default function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
   return (
-    <View style={[styles.badge, { backgroundColor: difficultyColors[difficulty] }]}>
+    <View style={[styles.badge, { backgroundColor: legacyDifficultyColors[difficulty] }]}>
       <Text style={styles.text}>{DIFFICULTY_LABELS[difficulty]}</Text>
     </View>
   );
@@ -13,5 +13,5 @@ export default function DifficultyBadge({ difficulty }: { difficulty: Difficulty
 
 const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 2 },
-  text: { color: colors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  text: { color: legacyColors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
 });

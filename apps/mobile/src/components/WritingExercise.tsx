@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text, TextInput } from 'react-native-paper';
 import {
-  colors,
+  legacyColors,
   MAX_ESSAY_CHARS,
-  radius,
+  legacyRadius,
   type EvaluateResponse,
   type WritingExercise as WritingExerciseData,
 } from '@prepio/shared';
@@ -49,7 +49,7 @@ export function WritingExercise({ exercise }: { exercise: WritingExerciseData })
         placeholder="Scrie răspunsul tău aici"
         style={styles.input}
       />
-      <Text style={[styles.counter, count > MAX_ESSAY_CHARS && { color: colors.error }]}>
+      <Text style={[styles.counter, count > MAX_ESSAY_CHARS && { color: legacyColors.error }]}>
         {count} / {MAX_ESSAY_CHARS}
       </Text>
 
@@ -91,20 +91,20 @@ export function WritingExercise({ exercise }: { exercise: WritingExerciseData })
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
   card: {
-    backgroundColor: colors.paper,
-    borderRadius: radius,
+    backgroundColor: legacyColors.paper,
+    borderRadius: legacyRadius,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: legacyColors.border,
     padding: 16,
     gap: 8,
   },
-  prompt: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: colors.ink },
-  input: { minHeight: 200, fontFamily: fontFamily.body, fontSize: 17, backgroundColor: colors.paper },
-  counter: { fontFamily: fontFamily.body, fontSize: 15, color: colors.inkMuted, textAlign: 'right' },
-  error: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: colors.error },
+  prompt: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
+  input: { minHeight: 200, fontFamily: fontFamily.body, fontSize: 17, backgroundColor: legacyColors.paper },
+  counter: { fontFamily: fontFamily.body, fontSize: 15, color: legacyColors.inkMuted, textAlign: 'right' },
+  error: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: legacyColors.error },
   loading: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'center' },
   bullet: { flexDirection: 'row', gap: 8 },
   bulletText: { flex: 1 },
-  grade: { fontFamily: fontFamily.headingBold, fontSize: 22, color: colors.bordeaux },
-  body: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: colors.ink },
+  grade: { fontFamily: fontFamily.headingBold, fontSize: 22, color: legacyColors.bordeaux },
+  body: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
 });
