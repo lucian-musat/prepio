@@ -15,7 +15,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-vh-100 d-flex flex-column">
       <Navbar className="navbar-prepio px-3">
         <Link href="/" className="brand navbar-brand mb-0">
-          Prepio <span className="fs-6 opacity-75">admin</span>
+          <span className="brand-mark" aria-hidden="true">P</span>
+          <span>Prepio</span>
+          <span className="brand-sub">admin</span>
         </Link>
       </Navbar>
       <Container fluid className="flex-grow-1">

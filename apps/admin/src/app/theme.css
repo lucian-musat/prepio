@@ -1,57 +1,92 @@
 /* Structural overrides; colour/radius variables come from theme.ts (shared design tokens). */
 body {
-  font-family: var(--font-source-sans), system-ui, sans-serif;
-  --bs-body-font-family: var(--font-source-sans), system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
+  --bs-body-font-family: var(--font-body), system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6, .brand {
-  font-family: var(--font-lora), Georgia, serif;
+  font-family: var(--font-head), system-ui, sans-serif;
+  font-weight: 800;
   --bs-heading-color: var(--bs-body-color);
 }
 
+a, .btn, .nav-link, .form-control, .form-select {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
 .btn-primary {
-  --bs-btn-bg: var(--prepio-bordeaux);
-  --bs-btn-border-color: var(--prepio-bordeaux);
-  --bs-btn-hover-bg: #621822;
-  --bs-btn-hover-border-color: #621822;
-  --bs-btn-active-bg: #531420;
-  --bs-btn-active-border-color: #531420;
-  --bs-btn-disabled-bg: var(--prepio-bordeaux);
-  --bs-btn-disabled-border-color: var(--prepio-bordeaux);
-  --bs-btn-focus-shadow-rgb: 184, 137, 59;
+  --bs-btn-bg: var(--prepio-primary);
+  --bs-btn-border-color: var(--prepio-primary);
+  --bs-btn-hover-bg: var(--prepio-primary-strong);
+  --bs-btn-hover-border-color: var(--prepio-primary-strong);
+  --bs-btn-active-bg: var(--prepio-primary-strong);
+  --bs-btn-active-border-color: var(--prepio-primary-strong);
+  --bs-btn-disabled-bg: var(--prepio-primary);
+  --bs-btn-disabled-border-color: var(--prepio-primary);
+  --bs-btn-focus-shadow-rgb: var(--prepio-primary-rgb);
 }
 
 .btn-outline-primary {
-  --bs-btn-color: var(--prepio-bordeaux);
-  --bs-btn-border-color: var(--prepio-bordeaux);
-  --bs-btn-hover-bg: var(--prepio-bordeaux);
-  --bs-btn-hover-border-color: var(--prepio-bordeaux);
-  --bs-btn-active-bg: var(--prepio-bordeaux);
-  --bs-btn-active-border-color: var(--prepio-bordeaux);
+  --bs-btn-color: var(--prepio-primary-strong);
+  --bs-btn-border-color: var(--prepio-primary);
+  --bs-btn-hover-bg: var(--prepio-primary);
+  --bs-btn-hover-border-color: var(--prepio-primary);
+  --bs-btn-active-bg: var(--prepio-primary-strong);
+  --bs-btn-active-border-color: var(--prepio-primary-strong);
+  --bs-btn-focus-shadow-rgb: var(--prepio-primary-rgb);
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: var(--prepio-gold);
-  box-shadow: 0 0 0 0.25rem rgba(184, 137, 59, 0.25);
+  border-color: var(--prepio-primary);
+  box-shadow: 0 0 0 4px rgba(var(--prepio-primary-rgb), 0.18);
 }
 
 .card {
-  --bs-card-bg: var(--prepio-paper);
-  box-shadow: 0 2px 8px rgba(43, 33, 24, 0.08);
+  --bs-card-bg: var(--prepio-surface);
+  --bs-card-border-color: var(--prepio-border);
+  box-shadow: none;
 }
 
 .navbar-prepio {
-  background-color: var(--prepio-bordeaux);
-  color: var(--prepio-parchment);
+  background-color: var(--prepio-surface);
+  border-bottom: 1px solid var(--prepio-border);
+  color: var(--prepio-text);
 }
-.navbar-prepio .brand { color: var(--prepio-parchment); font-size: 1.4rem; text-decoration: none; }
+.navbar-prepio .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--prepio-text);
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--prepio-hero-from), var(--prepio-hero-mid) 55%, var(--prepio-hero-to));
+  color: var(--prepio-on-primary);
+  font-family: var(--font-head), system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 1rem;
+  line-height: 1;
+}
+.navbar-prepio .brand-sub {
+  color: var(--prepio-text-muted);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
 
 .sidebar .nav-link {
   color: var(--bs-body-color);
   border-radius: var(--bs-border-radius);
 }
 .sidebar .nav-link.active, .sidebar .nav-link:hover {
-  background-color: var(--prepio-paper);
-  color: var(--prepio-bordeaux);
+  background-color: var(--prepio-primary-subtle);
+  color: var(--prepio-primary-strong);
 }
 .sidebar .nav-link.btn-link { text-align: left; text-decoration: none; width: 100%; }
