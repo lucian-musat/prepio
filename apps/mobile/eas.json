@@ -6,7 +6,7 @@
   "build": {
     "preview": {
       "distribution": "internal",
-      "node": "22.11.0",
+      "node": "22.13.1",
       "android": { "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pienbjvwjgnzmnjzmrbh.supabase.co",
@@ -15,7 +15,7 @@
       }
     },
     "production": {
-      "node": "22.11.0",
+      "node": "22.13.1",
       "android": { "buildType": "app-bundle" },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pienbjvwjgnzmnjzmrbh.supabase.co",
