@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { Easing, Keyframe, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import {
+  Easing, Keyframe, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming,
+} from 'react-native-reanimated';
 import { motion } from '@prepio/shared';
 
 const { duration: dur, easing: curves } = motion;
@@ -150,14 +152,17 @@ export function cardOut(direction: CardDirection) {
  * frozen size about 5x the duration after they start (cleanup in layoutReanimation/web).
  */
 export function useEnter(
-  c: { duration: number; translateX?: number; translateY?: number },
+  c: { duration: number; delay?: number; translateX?: number; translateY?: number },
   curve: typeof easing.standard = easing.out,
 ) {
   const reduced = useReducedMotion();
   const p = useSharedValue(reduced ? 1 : 0);
-  const { duration, translateX = 0, translateY = 0 } = c;
+  const { duration, delay = 0, translateX = 0, translateY = 0 } = c;
   useEffect(() => {
-    if (!reduced) p.value = withTiming(1, timing(duration, curve));
+    if (!reduced) {
+      const run = withTiming(1, timing(duration, curve));
+      p.value = delay ? withDelay(delay, run) : run;
+    }
     // Mount-only by design: replaying is done by remounting.
   }, []);
   return useAnimatedStyle(() => ({
