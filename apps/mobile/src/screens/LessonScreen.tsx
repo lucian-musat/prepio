@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import { space, type Lesson } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { WritingExercise } from '../components/WritingExercise';
 import { fetchLesson } from '../lib/content';
-import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import { AppText, Button, Confetti, Enter, ScreenLayout, Spinner, Surface, easing, goBackOrHome, timing } from '../ui';
 
 export type Phase = 'cards' | 'questions' | 'exercises' | 'done';
 
@@ -142,45 +143,101 @@ export default function LessonScreen() {
     );
   }
 
-  // Exercises and done keep their old content for now (Task 7 restyles them) inside the lesson frame.
   if (phase === 'exercises' && exercise) {
-    const f = frame(`Exercițiul ${eIndex + 1} din ${lesson.exercises.length}`);
     return (
-      <ScreenLayout
+      <WritingExercise
         key={exercise.id}
-        title={f.title}
-        progress={f.progress}
-        onBack={f.onBack}
-        actions={
-          <Button flex label={eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'} onPress={nextExercise} />
-        }
-      >
-        <WritingExercise exercise={exercise} />
-      </ScreenLayout>
+        exercise={exercise}
+        frame={frame(`Exercițiul ${eIndex + 1} din ${lesson.exercises.length}`)}
+        nextLabel={eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
+        onNext={nextExercise}
+      />
     );
   }
 
+  return <LessonDone title={lesson.title} correct={correctCount} total={lesson.questions.length} />;
+}
+
+/** 🎓 that pops in (prototype `.done-wrap .big`: `pop 600ms` spring). */
+function Cap() {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(reduced ? 1 : POP_FROM);
+  useEffect(() => {
+    if (reduced) return;
+    scale.value = withSequence(
+      withTiming(POP_PEAK, timing(POP_MS * POP_PEAK_AT, easing.pop)),
+      withTiming(1, timing(POP_MS * (1 - POP_PEAK_AT), easing.pop)),
+    );
+  }, []);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <ScreenLayout
-      title="Lecție terminată"
-      progress={1}
-      onBack={goBackOrHome}
-      actions={<Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />}
-    >
-      <Surface style={styles.message}>
-        <AppText role="display">Lecție terminată</AppText>
-        <AppText role="small" color="textMuted">
-          {lesson.title}
-        </AppText>
-        <AppText role="bodyStrong">
-          {correctCount} din {lesson.questions.length} întrebări corecte
-        </AppText>
-      </Surface>
-    </ScreenLayout>
+    <Animated.View style={style} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      <Text style={styles.cap}>🎓</Text>
+    </Animated.View>
   );
 }
+
+/** Lesson done (prototype `finish()`): centred cap, heading, lesson title, score; confetti on enter. */
+function LessonDone({ title, correct, total }: { title: string; correct: number; total: number }) {
+  const [burst, setBurst] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <View style={styles.fill}>
+      <ScreenLayout
+        title="Lecție terminată"
+        progress={1}
+        onBack={goBackOrHome}
+        actions={<Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />}
+      >
+        <View style={styles.done}>
+          <Enter index={0}>
+            <Cap />
+          </Enter>
+          <Enter index={1}>
+            <AppText role="display" accessibilityRole="header" style={styles.doneTitle}>
+              Ai terminat lecția!
+            </AppText>
+          </Enter>
+          <Enter index={2}>
+            <AppText role="body" color="textMuted" style={styles.centre}>
+              {title}
+            </AppText>
+          </Enter>
+          {total > 0 ? (
+            <Enter index={3}>
+              <AppText role="bodyStrong" style={[styles.centre, styles.score]}>
+                {correct} din {total} întrebări corecte
+              </AppText>
+            </Enter>
+          ) : null}
+        </View>
+      </ScreenLayout>
+      <Confetti trigger={burst} />
+    </View>
+  );
+}
+
+// Prototype `.done-wrap`: 56 px emoji, padding 30px 8px, h2 margin 10px 0 6px; confetti 200 ms after mount.
+const CAP_SIZE = 56;
+const CAP_LINE_HEIGHT = 68; // ~1.2 x CAP_SIZE, so the glyph isn't clipped
+const DONE_PAD_V = 30;
+const CONFETTI_DELAY_MS = 200;
+const POP_MS = 600;
+const POP_FROM = 0.6;
+const POP_PEAK = 1.18;
+const POP_PEAK_AT = 0.6;
 
 const styles = StyleSheet.create({
   message: { gap: space[3] },
   loader: { paddingTop: space[12], alignItems: 'center' },
+  fill: { flex: 1 },
+  done: { alignItems: 'center', paddingVertical: DONE_PAD_V, paddingHorizontal: space[2] },
+  // The emoji has no font role: the system emoji font at the prototype's size.
+  cap: { fontSize: CAP_SIZE, lineHeight: CAP_LINE_HEIGHT, textAlign: 'center' },
+  doneTitle: { marginTop: space[2.5], marginBottom: space[1.5], textAlign: 'center' },
+  centre: { textAlign: 'center' },
+  score: { marginTop: space[5] },
 });

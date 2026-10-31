@@ -1,110 +1,209 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Text, TextInput } from 'react-native-paper';
+import { useRef, useState } from 'react';
+import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import Animated from 'react-native-reanimated';
 import {
-  legacyColors,
+  color,
   MAX_ESSAY_CHARS,
-  legacyRadius,
+  radius,
+  space,
   type EvaluateResponse,
   type WritingExercise as WritingExerciseData,
 } from '@prepio/shared';
 import { evaluateEssay } from '../lib/api';
-import { fontFamily } from '../theme/fonts';
+import { AppText, Button, Enter, ScoreRing, ScreenLayout, Skeleton, Surface, TextArea } from '../ui';
+import type { LessonFrame } from './QuestionView';
 
-export function WritingExercise({ exercise }: { exercise: WritingExerciseData }) {
+type Props = {
+  exercise: WritingExerciseData;
+  frame: LessonFrame;
+  /** Label of the secondary action that moves on (allowed at any time: the exercise can be skipped). */
+  nextLabel: string;
+  onNext: () => void;
+};
+
+// Prototype `.skel .l` widths.
+const SKELETON_LINES = [90, 75, 60];
+// Prototype `.counter` side margin.
+const COUNTER_INSET = 2;
+// Below this window width the two action labels don't fit side by side (360 px phone: the submit
+// label truncated), so the actions stack, the primary one last, where it sits on every other screen.
+const STACK_ACTIONS_BELOW = 480;
+
+function Result({ result }: { result: EvaluateResponse }) {
+  return (
+    <Surface padding={4.5} radius="xl">
+      <Enter index={0} style={styles.grade}>
+        <ScoreRing value={result.grade} min={result.gradeMin} max={result.gradeMax} />
+        <View style={styles.gradeText}>
+          <AppText role="section" accessibilityRole="header">
+            Nota ta
+          </AppText>
+          <AppText role="small" color="textMuted">
+            {result.summary}
+          </AppText>
+        </View>
+      </Enter>
+      {result.suggestions.length > 0 ? (
+        <>
+          <Enter index={1}>
+            <AppText role="eyebrow" color="textMuted" style={styles.suggLabel}>
+              Ce poți îmbunătăți
+            </AppText>
+          </Enter>
+          <View style={styles.sugg}>
+            {result.suggestions.map((s, i) => (
+              <Enter key={i} index={i + 2} style={styles.suggRow}>
+                <AppText role="bodyStrong" color="primary" importantForAccessibility="no" accessibilityElementsHidden>
+                  →
+                </AppText>
+                <AppText role="small" style={styles.suggText}>
+                  {s}
+                </AppText>
+              </Enter>
+            ))}
+          </View>
+        </>
+      ) : null}
+    </Surface>
+  );
+}
+
+/**
+ * Writing exercise screen (prototype `writing()`): the prompt and answer field in a card; the
+ * skeleton and then the AI evaluation appear under the counter and scroll into view. The action bar
+ * holds "move on" (always available) and submit / resubmit.
+ */
+export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<EvaluateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Ref, not state: two presses in the same frame must still submit once.
+  const busyRef = useRef(false);
+  // Count of attempts and of results: each new skeleton and each new result scrolls into view once.
+  const [attempt, setAttempt] = useState(0);
+  const [results, setResults] = useState(0);
+  const scrollRef = useRef<Animated.ScrollView>(null);
+  const cardY = useRef(0);
+  const scrolledKey = useRef<string | null>(null);
 
+  const stacked = useWindowDimensions().width < STACK_ACTIONS_BELOW;
   const count = [...text].length;
-  const canSubmit = !loading && text.trim().length > 0 && count <= MAX_ESSAY_CHARS;
+  const over = count > MAX_ESSAY_CHARS;
+  const canSubmit = !loading && text.trim().length > 0 && !over;
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (busyRef.current || !canSubmit) return;
+    busyRef.current = true;
+    setAttempt((n) => n + 1);
     setLoading(true);
     setError(null);
     try {
       setResult(await evaluateEssay({ exerciseId: exercise.id, text }));
+      setResults((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Evaluarea nu a reușit. Încearcă din nou.');
     } finally {
+      busyRef.current = false;
       setLoading(false);
     }
   };
 
+  // Bring the skeleton, then the result, into view once each (only the content scroll view moves).
+  const outKey = loading ? `loading-${attempt}` : result ? `result-${results}` : null;
+  const onOutLayout = (e: LayoutChangeEvent) => {
+    if (!outKey || scrolledKey.current === outKey) return;
+    scrolledKey.current = outKey;
+    scrollRef.current?.scrollTo({ y: cardY.current + e.nativeEvent.layout.y, animated: true });
+  };
+
   return (
-    <View style={styles.wrap}>
-      <View style={styles.card}>
-        <Text style={styles.prompt}>{exercise.prompt}</Text>
-      </View>
-
-      <TextInput
-        mode="outlined"
-        multiline
-        numberOfLines={10}
-        value={text}
-        onChangeText={setText}
-        accessibilityLabel="Răspunsul tău"
-        placeholder="Scrie răspunsul tău aici"
-        style={styles.input}
-      />
-      <Text style={[styles.counter, count > MAX_ESSAY_CHARS && { color: legacyColors.error }]}>
-        {count} / {MAX_ESSAY_CHARS}
-      </Text>
-
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
-
-      {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator />
-          <Text style={styles.body}>Se evaluează…</Text>
+    <ScreenLayout
+      title={frame.title}
+      progress={frame.progress}
+      onBack={frame.onBack}
+      scrollRef={scrollRef}
+      actions={
+        <View testID="writing-actions" style={[styles.actions, stacked && styles.actionsStacked]}>
+          <Button variant="secondary" label={nextLabel} onPress={onNext} />
+          <Button
+            flex={!stacked}
+            label={result ? 'Retrimite' : 'Trimite pentru evaluare'}
+            loading={loading}
+            disabled={!loading && !canSubmit}
+            onPress={() => void submit()}
+          />
         </View>
-      ) : (
-        <Button mode="contained" onPress={() => void submit()} disabled={!canSubmit}>
-          {result ? 'Retrimite' : 'Trimite pentru evaluare'}
-        </Button>
-      )}
+      }
+    >
+      <View onLayout={(e) => (cardY.current = e.nativeEvent.layout.y)}>
+        <Surface padding={5} radius="xl">
+          <AppText role="eyebrow" color="primary">
+            Exercițiu de scriere · evaluat cu AI
+          </AppText>
+          <AppText role="question" style={styles.prompt}>
+            {exercise.prompt}
+          </AppText>
+          <TextArea
+            value={text}
+            onChangeText={setText}
+            accessibilityLabel="Răspunsul tău"
+            placeholder="Scrie răspunsul tău aici…"
+            invalid={over}
+          />
+          <View style={styles.counter}>
+            <View />
+            <AppText role="caption" color={over ? 'danger' : 'textMuted'}>
+              {count} / {MAX_ESSAY_CHARS}
+            </AppText>
+          </View>
 
-      {result ? (
-        <View style={styles.card}>
-          <Text style={styles.grade}>
-            Nota: {result.grade} / {result.gradeMax}
-          </Text>
-          <Text style={styles.body}>{result.summary}</Text>
-          {result.suggestions.map((s, i) => (
-            <View key={i} style={styles.bullet}>
-              <Text style={styles.body}>•</Text>
-              <Text style={[styles.body, styles.bulletText]}>{s}</Text>
+          {error ? (
+            <View accessible accessibilityRole="alert" style={styles.error}>
+              <AppText role="small" color="danger">
+                {error}
+              </AppText>
             </View>
-          ))}
-        </View>
-      ) : null}
-    </View>
+          ) : null}
+          {/* A direct child of the card, so its layout y + the card's y is its offset in the scroll content. */}
+          {outKey ? (
+            <View key={outKey} onLayout={onOutLayout}>
+              {loading ? <Skeleton lines={SKELETON_LINES} /> : result ? <Result result={result} /> : null}
+            </View>
+          ) : null}
+        </Surface>
+      </View>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 12 },
-  card: {
-    backgroundColor: legacyColors.paper,
-    borderRadius: legacyRadius,
-    borderWidth: 1,
-    borderColor: legacyColors.border,
-    padding: 16,
-    gap: 8,
+  // Prototype `.qcard h2` margins.
+  prompt: { marginTop: space[1.5], marginBottom: space[4] },
+  // Prototype `.counter`: margin 8px 2px 14px.
+  counter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: space[2],
+    marginHorizontal: COUNTER_INSET,
+    marginBottom: space[3.5],
   },
-  prompt: { fontFamily: fontFamily.legacyBody, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
-  input: { minHeight: 200, fontFamily: fontFamily.legacyBody, fontSize: 17, backgroundColor: legacyColors.paper },
-  counter: { fontFamily: fontFamily.legacyBody, fontSize: 15, color: legacyColors.inkMuted, textAlign: 'right' },
-  error: { fontFamily: fontFamily.legacyBody, fontSize: 17, lineHeight: 26, color: legacyColors.error },
-  loading: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'center' },
-  bullet: { flexDirection: 'row', gap: 8 },
-  bulletText: { flex: 1 },
-  grade: { fontFamily: fontFamily.legacyHeadingBold, fontSize: 22, color: legacyColors.bordeaux },
-  body: { fontFamily: fontFamily.legacyBody, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
+  // Same gap as the action bar row.
+  actions: { flex: 1, flexDirection: 'row', gap: space[2.5] },
+  actionsStacked: { flexDirection: 'column' },
+  error: { padding: space[3], marginBottom: space[3.5], borderRadius: radius.md, backgroundColor: color.dangerSubtle },
+  grade: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  gradeText: { flex: 1, gap: space[1] },
+  // Prototype `.label-sm`: margin 18px 0 8px.
+  suggLabel: { marginTop: space[4.5], marginBottom: space[2] },
+  sugg: { gap: space[2] },
+  suggRow: {
+    flexDirection: 'row',
+    gap: space[2.5],
+    paddingVertical: space[2.5],
+    paddingHorizontal: space[3],
+    borderRadius: radius.md,
+    backgroundColor: color.surfaceMuted,
+  },
+  suggText: { flex: 1 },
 });

@@ -167,7 +167,43 @@ it('goes from cards to exercises when there are no questions', async () => {
 it('last card says Continuă when only the summary follows', async () => {
   await renderLesson(lesson({ questions: [], exercises: [] }));
   await press('Continuă');
-  expect(await screen.findByText('0 din 0 întrebări corecte')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
+  // No questions, no score line.
+  expect(screen.queryByText(/întrebări corecte/)).toBeNull();
+});
+
+it('done shows the score and goes home', async () => {
+  await renderLesson(lesson({ cards: [], exercises: [] }));
+  await fireEvent.press(await screen.findByText('Da'));
+  await press('Verifică');
+  await press('Continuă');
+  const content = within(await screen.findByTestId('screen-content'));
+  expect(content.getByText('Ai terminat lecția!')).toBeTruthy();
+  expect(content.getByText('Lecția test')).toBeTruthy();
+  expect(content.getByText('1 din 1 întrebări corecte')).toBeTruthy();
+  expect(screen.getByText('Lecție terminată')).toBeTruthy();
+  expect(screen.getByRole('progressbar')).toBeTruthy();
+  await press('Înapoi la lecții');
+  expect(mockReplace).toHaveBeenCalledWith('/');
+});
+
+it('exercise skip label is Următorul exercițiu until the last one', async () => {
+  await renderLesson(
+    lesson({
+      cards: [],
+      questions: [],
+      exercises: [
+        { id: 'e1', position: 1, prompt: 'Primul eseu', criteria: 'c' },
+        { id: 'e2', position: 2, prompt: 'Al doilea eseu', criteria: 'c' },
+      ],
+    }),
+  );
+  expect(await screen.findByText('Primul eseu')).toBeTruthy();
+  expect(screen.getByText('Exercițiul 1 din 2')).toBeTruthy();
+  await press('Următorul exercițiu');
+  expect(await screen.findByText('Al doilea eseu')).toBeTruthy();
+  await press('Continuă');
+  expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
 });
 
 it('ends at the summary when there are no exercises', async () => {
@@ -181,5 +217,5 @@ it('ends at the summary when there are no exercises', async () => {
 
 it('does not crash on a lesson with nothing in it', async () => {
   await renderLesson(lesson({ cards: [], questions: [], exercises: [] }));
-  expect(await screen.findByText('0 din 0 întrebări corecte')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
 });
