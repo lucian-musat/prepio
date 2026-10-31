@@ -49,7 +49,7 @@ Any change that touches the frontend — admin (`apps/admin`), student web or mo
 - Walk the changed flows end to end (happy path and the relevant error/empty states), check the browser console for errors, and check the student app at phone width (360px) and desktop width.
 - Admin flows use the local test admin from `apps/admin/.env.example`; test data is created with a `[test]` prefix and removed afterwards; seeded content must stay intact.
 - Report what was checked in the browser (screens, flows, console) when declaring the work done; if something could not be verified in the browser, say so explicitly.
-- Native-only behaviour (keyboard, Android back button, safe areas, native modules, fonts/images on device) can't be fully validated on web. Before a new APK build or when a change adds native dependencies, also validate on an Android emulator (adb + Maestro) — setup pending; until it exists, flag these changes so the owner tests them on the phone.
+- Native-only behaviour (keyboard, Android back button, safe areas, native modules, fonts/images on device) can't be fully validated on web. There is no emulator setup (owner decided against it for now): when a change affects native behaviour or adds native dependencies, say so explicitly and list what the owner should test on the phone with the next APK.
 
 ## Conventions
 

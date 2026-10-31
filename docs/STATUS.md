@@ -33,7 +33,7 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
 
 ### Owner actions
 - [ ] Review the 3 lessons for historical accuracy. Known simplifications: universal-suffrage dates inconsistent across lessons (principle 1917 / decree-law Nov 1918 / first applied 1919); 1918 peace card says Romania "lost Dobrogea" (Cadrilater + south to Bulgaria, rest under Central Powers administration); L3 exercise 1 examples Plevna/Grivița overlap (could be credited as two facts); L2 card 6 "democratice" → "liberale"; L3 card 6 repeats "a aderat".
-- [ ] Decide on the Android emulator setup (needs: Windows RAM, Android Studio installed?) — see "Testing and validation" in `CLAUDE.md`.
+- Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX
 - [ ] AI output sometimes uses cedilla ş/ţ — add a rule in admin Settings → AI rules, or normalise server-side.
