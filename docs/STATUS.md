@@ -38,6 +38,7 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
   - Edge shadows (`boxShadow`) on the top bar / action bar when content scrolls under them, and the progress-bar inner shadow, render on Android.
   - Back button: 48 px touch target, press-scale feedback; Android hardware back still navigates; screen transition is `slide_from_right`.
   - Home and Lesson screens have no native header until they are migrated (Tasks 5–7) — expected in between.
+  - Home (Task 5): hero gradient angle/colours and the floating circle (8 s loop, static with "Remove animations" on), lesson-row press scale on touch, emoji in the "📚 n lecții" chip, list content clears the gesture/nav bar at the bottom.
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX

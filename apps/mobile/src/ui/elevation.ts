@@ -22,3 +22,10 @@ export function withAlpha(hex: string, alpha: number): string {
   const channel = (i: number) => parseInt(hex.slice(i, i + 2), 16);
   return `rgba(${channel(1)}, ${channel(3)}, ${channel(5)}, ${alpha})`;
 }
+
+/** CSS `color-mix(in srgb, a <weight>, b)` for two #RRGGBB token colours, as #RRGGBB. */
+export function mixColors(a: string, b: string, weight: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
+  const mixed = [1, 3, 5].map((i) => Math.round(channel(a, i) * weight + channel(b, i) * (1 - weight)));
+  return `#${mixed.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}

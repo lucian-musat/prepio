@@ -15,5 +15,7 @@ export { default as ScoreRing } from './ScoreRing';
 export { default as Confetti } from './Confetti';
 export { default as TextArea } from './TextArea';
 export { default as Spinner } from './Spinner';
+export { default as Hero } from './Hero';
+export { default as LessonListItem } from './LessonListItem';
 export { type } from './typography';
 export * from './motion';
