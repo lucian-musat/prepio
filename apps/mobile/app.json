@@ -2,6 +2,7 @@
   "expo": {
     "name": "Prepio",
     "slug": "prepio",
+    "owner": "lucianm91s-team",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -21,6 +22,11 @@
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "706d0198-4bc6-4079-90f5-6a1ffbde3ef3"
+      }
     },
     "plugins": [
       "expo-router",
