@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, layout, space } from '@prepio/shared';
-import { easing, feedbackConfig, useEnter } from './motion';
+import Enter from './Enter';
+import { easing, feedbackConfig } from './motion';
 import { raisedShadow } from './elevation';
 
 export type ActionTone = 'neutral' | 'good' | 'wrong';
@@ -17,8 +17,11 @@ type Props = {
 
 // Mounted only while there is feedback, so the slide-up plays each time feedback appears.
 function Feedback({ children }: { children: ReactNode }) {
-  const enter = useEnter('feedback', feedbackConfig, easing.standard);
-  return <Animated.View style={[styles.slot, enter]}>{children}</Animated.View>;
+  return (
+    <Enter config={feedbackConfig} curve={easing.standard} style={styles.slot}>
+      {children}
+    </Enter>
+  );
 }
 
 /** Fixed bottom bar holding the screen's primary action(s), with an optional feedback slot above them. */

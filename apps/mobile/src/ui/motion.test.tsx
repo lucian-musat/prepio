@@ -1,9 +1,17 @@
 import { act, render, screen } from '@testing-library/react-native';
-import Animated, * as Reanimated from 'react-native-reanimated';
+import * as Reanimated from 'react-native-reanimated';
 import { ReduceMotion } from 'react-native-reanimated';
 import {
-  cardIn, cardInConfig, cardOut, cardOutConfig, enterScreen, enterStagger, feedbackConfig, screenConfig, staggerConfig, timing, useEnter,
+  cardIn, cardInConfig, cardOut, cardOutConfig, enterScreen, enterStagger, feedbackConfig, screenConfig, staggerConfig, timing,
 } from './motion';
+import Enter from './Enter';
+
+let mockReducedMotion = false;
+jest.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  ...jest.requireActual('react-native-reanimated'),
+  useReducedMotion: () => mockReducedMotion,
+}));
 
 // Reanimated keeps builder settings in fields its typings don't expose.
 const inspect = (p: unknown) => p as { durationV?: number; delayV?: number; reduceMotionV: ReduceMotion; definitions: Record<string, { opacity: number }> };
@@ -37,30 +45,46 @@ it('feedback slides up 14 px over the slow duration and respects reduce motion',
 });
 
 // Reanimated's jest helpers; the public typings only describe the no-op production stubs.
-const { advanceAnimationByTime, getAnimatedStyle } = Reanimated as unknown as {
-  advanceAnimationByTime: (ms: number) => void;
+const { getAnimatedStyle } = Reanimated as unknown as {
   getAnimatedStyle: (node: unknown) => { opacity: number; transform: { translateY: number }[] };
 };
 
 function Probe({ k }: { k: string }) {
-  return <Animated.View testID="probe" style={useEnter(k, feedbackConfig)} />;
+  return <Enter key={k} testID="probe" config={feedbackConfig} />;
 }
 
-describe('useEnter', () => {
-  beforeEach(() => jest.useFakeTimers());
+describe('Enter / useEnter', () => {
+  beforeEach(() => {
+    mockReducedMotion = false;
+    jest.useFakeTimers();
+  });
   afterEach(() => jest.useRealTimers());
 
   const style = () => getAnimatedStyle(screen.getByTestId('probe'));
 
-  it('starts hidden and offset, settles at rest, and replays when the key changes', async () => {
+  it('starts hidden and offset, then settles at rest', async () => {
     await render(<Probe k="a" />);
     expect(style().opacity).toBe(0);
     expect(style().transform[0].translateY).toBe(14);
-    await act(async () => advanceAnimationByTime(600));
+    await act(async () => jest.advanceTimersByTime(600));
     expect(style().opacity).toBe(1);
     expect(style().transform[0].translateY).toBe(0);
+  });
+
+  it('a key change starts the new content hidden on its first render, then replays', async () => {
+    await render(<Probe k="a" />);
+    await act(async () => jest.advanceTimersByTime(600));
     await screen.rerender(<Probe k="b" />);
-    await act(async () => advanceAnimationByTime(16));
-    expect(style().opacity).toBeLessThan(1);
+    expect(style().opacity).toBe(0);
+    expect(style().transform[0].translateY).toBe(14);
+    await act(async () => jest.advanceTimersByTime(600));
+    expect(style().opacity).toBe(1);
+  });
+
+  it('with reduced motion renders at rest immediately', async () => {
+    mockReducedMotion = true;
+    await render(<Probe k="a" />);
+    expect(style().opacity).toBe(1);
+    expect(style().transform[0].translateY).toBe(0);
   });
 });

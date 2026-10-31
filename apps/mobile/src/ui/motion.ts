@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Easing, Keyframe, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Easing, Keyframe, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { motion } from '@prepio/shared';
 
 const { duration: dur, easing: curves } = motion;
@@ -140,22 +140,26 @@ export function cardOut(direction: CardDirection) {
 }
 
 /**
- * Fade + slide in from an offset, replayed whenever `key` changes; returns an animated style.
+ * Fade + slide in from an offset when the calling component mounts; returns an animated style.
+ * To replay it, remount the component (give it a new `key`, e.g. via <Enter key=...>): the
+ * shared value is created at the hidden pose, so the first frame of new content is never the
+ * previous content's resting pose. With OS reduce-motion on, it starts at rest and never animates.
+ *
  * Use this instead of a Keyframe `entering` for anything that stays in layout flow: on
  * react-native-web, Reanimated 4.7 pins Keyframe-entering elements to position:absolute with a
  * frozen size about 5x the duration after they start (cleanup in layoutReanimation/web).
  */
 export function useEnter(
-  key: string | number | undefined,
   c: { duration: number; translateX?: number; translateY?: number },
   curve: typeof easing.standard = easing.out,
 ) {
-  const p = useSharedValue(0);
+  const reduced = useReducedMotion();
+  const p = useSharedValue(reduced ? 1 : 0);
   const { duration, translateX = 0, translateY = 0 } = c;
   useEffect(() => {
-    p.value = 0;
-    p.value = withTiming(1, timing(duration, curve));
-  }, [key, p, duration, curve]);
+    if (!reduced) p.value = withTiming(1, timing(duration, curve));
+    // Mount-only by design: replaying is done by remounting.
+  }, []);
   return useAnimatedStyle(() => ({
     opacity: p.value,
     transform: translateY ? [{ translateY: (1 - p.value) * translateY }] : [{ translateX: (1 - p.value) * translateX }],

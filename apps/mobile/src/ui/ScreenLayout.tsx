@@ -10,11 +10,12 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, layout, space } from '@prepio/shared';
 import TopBar from './TopBar';
 import ActionBar, { type ActionTone } from './ActionBar';
-import { screenConfig, useEnter } from './motion';
+import Enter from './Enter';
+import { screenConfig } from './motion';
 
 type Props = {
   title?: string;
@@ -32,6 +33,9 @@ type Props = {
 
 // Edge shadows appear only once content is actually hidden under a bar (prototype: 4 px tolerance).
 const EDGE = space[1];
+
+// Same values as enterScreen('forward'), run as a shared-value animation (Keyframe entering breaks layout on web, see useEnter).
+const SCREEN_ENTER = screenConfig('forward');
 
 /**
  * Every student screen: fixed TopBar, scrolling content (max 720 px, centred), fixed ActionBar.
@@ -53,8 +57,9 @@ export default function ScreenLayout({
   const m = useRef({ y: 0, viewH: 0, contentH: 0 });
   const [topRaised, setTopRaised] = useState(false);
   const [bottomRaised, setBottomRaised] = useState(false);
-  // Same values as enterScreen('forward'); a shared-value animation because Keyframe entering breaks layout on web (see useEnter).
-  const enter = useEnter(contentKey, screenConfig('forward'));
+  const { bottom } = useSafeAreaInsets();
+  // Without an action bar nothing else clears the gesture bar / home indicator, so the content does.
+  const insetPad = !actions && bottom ? { paddingBottom: (wide ? space[10] : space[6]) + bottom } : null;
 
   const update = useCallback(() => {
     const { y, viewH, contentH } = m.current;
@@ -92,7 +97,7 @@ export default function ScreenLayout({
           ref={scrollRef}
           testID="screen-scroll"
           style={styles.fill}
-          contentContainerStyle={[styles.content, wide && styles.contentWide]}
+          contentContainerStyle={[styles.content, wide && styles.contentWide, insetPad]}
           onScroll={onScroll}
           onLayout={onLayout}
           onContentSizeChange={onContentSizeChange}
@@ -100,9 +105,10 @@ export default function ScreenLayout({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View key={contentKey} style={[styles.inner, wide && styles.innerWide, enter]}>
+          {/* Keyed: new content remounts with a fresh, hidden enter animation. */}
+          <Enter key={contentKey} testID="screen-content" config={SCREEN_ENTER} style={[styles.inner, wide && styles.innerWide]}>
             {children}
-          </Animated.View>
+          </Enter>
         </Animated.ScrollView>
         {actions ? (
           <ActionBar feedback={feedback} tone={tone} raised={bottomRaised}>
