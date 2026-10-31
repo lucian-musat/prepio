@@ -1,0 +1,73 @@
+# Deploy runbook
+
+## Services
+
+| Service | Where | URL / id |
+| --- | --- | --- |
+| Database + Auth + Storage | Supabase (eu-west-2, London) | `https://pienbjvwjgnzmnjzmrbh.supabase.co` |
+| Admin + `/api/evaluate` | Vercel project `prepio-admin`, root `apps/admin` | `https://prepio-admin.vercel.app` |
+| Student web | Vercel project `prepio-web`, root `apps/mobile` | `https://prepio-web.vercel.app` |
+| Android APK | Expo EAS, owner `lucianm91s-team`, slug `prepio` | projectId `706d0198-4bc6-4079-90f5-6a1ffbde3ef3`, package `dev.musat.prepio` |
+
+Both Vercel projects deploy from `main` of the GitHub repo. Config lives in `apps/admin/vercel.json` (region `lhr1`, next to Supabase) and `apps/mobile/vercel.json` (pnpm install from the repo root, `expo export -p web`, SPA rewrite).
+
+## Environment variables
+
+Admin (Vercel project `prepio-admin`):
+
+- `NEXT_PUBLIC_SUPABASE_URL` = Supabase URL above
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable key (`sb_publishable_...`, public)
+- `SUPABASE_SERVICE_ROLE_KEY` - secret, server only
+- `OPENAI_API_KEY` - secret, server only (set a monthly spend limit in the OpenAI dashboard)
+- `STUDENT_WEB_ORIGINS` = `https://prepio-web.vercel.app` (comma-separated CORS allow-list for `/api/evaluate`)
+
+Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, profiles `preview` and `production`):
+
+- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://prepio-admin.vercel.app`
+
+`EXPO_PUBLIC_*` values are inlined at build time, so changing them needs a rebuild/redeploy. For the APK they are committed in `eas.json` (all public values).
+
+## Schema and content
+
+- Schema: run the files in `supabase/migrations/` in order in the Supabase SQL editor (or `supabase link` + `supabase db push`).
+- Content: `pnpm seed` against the cloud project. Pass credentials inline, never through a `.env` file:
+
+  ```bash
+  SUPABASE_URL=https://pienbjvwjgnzmnjzmrbh.supabase.co \
+  SUPABASE_SERVICE_ROLE_KEY=<secret> \
+  ADMIN_EMAIL=<admin email> ADMIN_PASSWORD=<admin password> \
+  pnpm seed
+  ```
+
+  `SEED_RESET` semantics: by default the seed only inserts lessons when none exist; otherwise it leaves content untouched (images, settings and the admin user are still ensured). `SEED_RESET=1` (or `--reset`) replaces ALL content, including lessons written in the admin. Do not use it on production after real editing has started.
+
+## Auth settings (Supabase dashboard)
+
+- Email sign-ups: OFF. Anonymous sign-ins: OFF.
+- The admin user is created manually in Authentication > Users with "Auto Confirm User" checked.
+
+## Android APK
+
+Config: `apps/mobile/eas.json` (`preview`: internal distribution, APK; `production`: app bundle). `appVersionSource` is `local` so no EAS login is needed to read the config; bump `version` in `app.json` when needed.
+
+- From the expo.dev dashboard: project `prepio` > Builds > connect GitHub, build Android with profile `preview`.
+- Or from the CLI: `cd apps/mobile && eas login && pnpm dlx eas-cli build -p android --profile preview`.
+
+Share the internal-distribution install link from the build page; the phone must allow installing from unknown sources.
+
+## Redeploy
+
+- Admin / student web: push to `main` (Vercel auto-deploys), or "Redeploy" in the Vercel dashboard after changing env vars.
+- APK: run a new `preview` build as above.
+- Schema change: add a migration, apply it in the SQL editor, commit it.
+
+## Verification checklist
+
+1. Sign-up is blocked (expect HTTP 422):
+   `curl -s -o /dev/null -w "%{http_code}" -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"email":"x@example.com","password":"password123"}'`
+2. Anonymous cannot read `ai_settings` (empty array or 401/403, never rows):
+   `curl -s "$SUPABASE_URL/rest/v1/ai_settings?select=*" -H "apikey: $ANON"`
+3. Anonymous sees the published lessons: `curl -s "$SUPABASE_URL/rest/v1/lessons?select=id" -H "apikey: $ANON"`.
+4. Evaluate CORS preflight from the student origin returns the `Access-Control-Allow-Origin` header:
+   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST"`
+5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and a writing exercise returns an evaluation.

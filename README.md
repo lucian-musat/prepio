@@ -1,5 +1,30 @@
 # Prepio
 
-Mobile app, web app, and admin panel for content management.
+Proof of concept for exam-prep lessons: a student app (Expo, Android + web), an admin panel (Next.js) for managing content, and Supabase (Postgres, Auth, Storage).
 
-> Early stage — stack and structure to be defined.
+## Layout
+
+- `apps/mobile` - student app (Expo / React Native, expo-router; also exported as a web app)
+- `apps/admin` - admin panel (Next.js) and the `/api/evaluate` endpoint (OpenAI writing evaluation)
+- `packages/shared` - shared types and validation (`@prepio/shared`)
+- `packages/content` - seed content and the `pnpm seed` script
+- `supabase` - migrations, RLS tests, local config
+
+## Local development
+
+Requires Node 22, pnpm 9 and Docker.
+
+```bash
+pnpm install
+pnpm db:start            # local Supabase (prints keys; copy .env.example files to .env.local)
+pnpm seed                # seed lessons + local admin user (needs SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)
+pnpm --filter @prepio/admin dev      # admin on :3000
+pnpm --filter @prepio/mobile web     # student web on :8081 (or `android`)
+pnpm test                # unit tests in all packages
+pnpm typecheck
+pnpm db:test             # database (RLS) tests
+```
+
+## Deployment
+
+See [docs/deploy.md](docs/deploy.md).
