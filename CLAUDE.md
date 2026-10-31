@@ -35,6 +35,16 @@ This project uses the [superpowers](https://github.com/obra/superpowers) plugin 
 7. **Before claiming done** → `superpowers:verification-before-completion`, then `superpowers:requesting-code-review`.
 8. **Wrapping up a branch** → `superpowers:finishing-a-development-branch`.
 
+## Testing and validation (owner's rule)
+
+Any change that touches the frontend — admin (`apps/admin`), student web or mobile app (`apps/mobile`) — is not done until it has been tested and validated in the browser (Claude in Chrome), in addition to the automated tests:
+
+- Run the local stack: Supabase (`pnpm db:start`), admin `pnpm --filter @prepio/admin dev` (:3000), student web `pnpm --filter @prepio/mobile web` (:8081). Start dev servers detached so they survive the session.
+- Walk the changed flows end to end (happy path and the relevant error/empty states), check the browser console for errors, and check the student app at phone width (360px) and desktop width.
+- Admin flows use the local test admin from `apps/admin/.env.example`; test data is created with a `[test]` prefix and removed afterwards; seeded content must stay intact.
+- Report what was checked in the browser (screens, flows, console) when declaring the work done; if something could not be verified in the browser, say so explicitly.
+- Native-only behaviour (keyboard, Android back button, safe areas, native modules, fonts/images on device) can't be fully validated on web. Before a new APK build or when a change adds native dependencies, also validate on an Android emulator (adb + Maestro) — setup pending; until it exists, flag these changes so the owner tests them on the phone.
+
 ## Conventions
 
 - Communication with the owner may be in Romanian; code, comments, commit messages, and docs are in English.
