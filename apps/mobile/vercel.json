@@ -3,5 +3,5 @@
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "pnpm exec expo export -p web",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!_expo/|assets/|.*\..*).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!_expo/|assets/|.*[.].*).*)", "destination": "/index.html" }]
 }
