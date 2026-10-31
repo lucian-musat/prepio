@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
-import { color, type WritingExercise as WritingExerciseData } from '@prepio/shared';
+import { color, feedbackText, type WritingExercise as WritingExerciseData } from '@prepio/shared';
 import { EvaluateApiError, evaluateEssay } from '../lib/api';
 import { WritingExercise } from './WritingExercise';
 
@@ -49,7 +49,7 @@ it('renders the frame, eyebrow, prompt, field and an empty counter, with submit 
 it('disables submit and turns the counter red over the limit (counts code points)', async () => {
   await setup();
   await fireEvent.changeText(input(), 'a'.repeat(3001));
-  expect(textColor(screen.getByText('3001 / 3000'))).toBe(color.danger);
+  expect(textColor(screen.getByText('3001 / 3000'))).toBe(feedbackText.wrong);
   expect(isDisabled(submitBtn())).toBe(true);
   await fireEvent.changeText(input(), '😀'.repeat(3000));
   expect(textColor(screen.getByText('3000 / 3000'))).toBe(color.textMuted);
@@ -118,7 +118,10 @@ it('shows the error inline as an alert and keeps the text', async () => {
   await fireEvent.changeText(input(), 'Eseul meu');
   await fireEvent.press(submitBtn());
   const alert = await content().findByRole('alert');
-  expect(within(alert).getByText('Evaluarea nu a reușit. Încearcă din nou.')).toBeTruthy();
+  const message = within(alert).getByText('Evaluarea nu a reușit. Încearcă din nou.');
+  // AA text tone on the danger-subtle box.
+  expect(textColor(message)).toBe(feedbackText.wrong);
+  expect(StyleSheet.flatten(alert.props.style).backgroundColor).toBe(color.dangerSubtle);
   expect(input().props.value).toBe('Eseul meu');
   expect(isDisabled(submitBtn())).toBe(false);
 });
@@ -147,4 +150,29 @@ it('stacks the two actions on a narrow phone so neither label truncates', async 
   }
   await setup();
   expect(StyleSheet.flatten(screen.getByTestId('writing-actions').props.style).flexDirection).toBe('row');
+});
+
+it('scrolls the content to the skeleton when loading starts and to the result when it arrives, once each', async () => {
+  const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {});
+  try {
+    let resolve!: (v: typeof result) => void;
+    mockEvaluate.mockReturnValue(new Promise((r) => (resolve = r)));
+    await setup();
+    await fireEvent(screen.getByTestId('writing-card'), 'layout', { nativeEvent: { layout: { x: 0, y: 10, width: 320, height: 400 } } });
+    await fireEvent.changeText(input(), 'Eseul meu');
+    await fireEvent.press(submitBtn());
+    const slotLayout = (y: number) => ({ nativeEvent: { layout: { x: 0, y, width: 300, height: 120 } } });
+    await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(300));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 310, animated: true });
+    // A later layout of the same skeleton (e.g. a resize) doesn't scroll again.
+    await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(300));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    await act(async () => resolve(result));
+    await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(320));
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 330, animated: true });
+  } finally {
+    scrollTo.mockRestore();
+  }
 });

@@ -3,6 +3,7 @@ import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'r
 import Animated from 'react-native-reanimated';
 import {
   color,
+  feedbackText,
   MAX_ESSAY_CHARS,
   radius,
   space,
@@ -136,7 +137,7 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
         </View>
       }
     >
-      <View onLayout={(e) => (cardY.current = e.nativeEvent.layout.y)}>
+      <View testID="writing-card" onLayout={(e) => (cardY.current = e.nativeEvent.layout.y)}>
         <Surface padding={5} radius="xl">
           <AppText role="eyebrow" color="primary">
             Exercițiu de scriere · evaluat cu AI
@@ -153,21 +154,21 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
           />
           <View style={styles.counter}>
             <View />
-            <AppText role="caption" color={over ? 'danger' : 'textMuted'}>
+            <AppText role="caption" color="textMuted" style={over && styles.dangerText}>
               {count} / {MAX_ESSAY_CHARS}
             </AppText>
           </View>
 
           {error ? (
             <View accessible accessibilityRole="alert" style={styles.error}>
-              <AppText role="small" color="danger">
+              <AppText role="small" style={styles.dangerText}>
                 {error}
               </AppText>
             </View>
           ) : null}
           {/* A direct child of the card, so its layout y + the card's y is its offset in the scroll content. */}
           {outKey ? (
-            <View key={outKey} onLayout={onOutLayout}>
+            <View key={outKey} testID="evaluation-slot" onLayout={onOutLayout}>
               {loading ? <Skeleton lines={SKELETON_LINES} /> : result ? <Result result={result} /> : null}
             </View>
           ) : null}
@@ -191,6 +192,8 @@ const styles = StyleSheet.create({
   // Same gap as the action bar row.
   actions: { flex: 1, flexDirection: 'row', gap: space[2.5] },
   actionsStacked: { flexDirection: 'column' },
+  // feedbackText.wrong, not danger: AA contrast (danger is ~3.4:1 on dangerSubtle, ~3.9:1 on white).
+  dangerText: { color: feedbackText.wrong },
   error: { padding: space[3], marginBottom: space[3.5], borderRadius: radius.md, backgroundColor: color.dangerSubtle },
   grade: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   gradeText: { flex: 1, gap: space[1] },
