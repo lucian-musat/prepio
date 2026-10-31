@@ -18,3 +18,6 @@ coverage/
 # Claude Code local-only files
 .claude/settings.local.json
 .worktrees/
+
+# Superpowers brainstorm sessions (visual companion)
+.superpowers/
