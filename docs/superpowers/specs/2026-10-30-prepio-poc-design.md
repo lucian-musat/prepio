@@ -1,7 +1,7 @@
 # Prepio POC — Design
 
 Date: 2026-10-30
-Status: draft, pending owner approval
+Status: approved 2026-10-30; implemented and deployed 2026-10-31. Decisions taken during implementation that refine this spec are listed in `docs/STATUS.md`.
 
 ## 1. Intent
 

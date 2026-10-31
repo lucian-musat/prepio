@@ -6,7 +6,13 @@ Prepio is a multi-platform product made of three apps:
 - **Web app** — end-user application in the browser
 - **Admin** — back-office for managing content
 
-Stack, layout and commands: see `README.md`. Design spec and plan: `docs/superpowers/`. Deploy: `docs/deploy.md`.
+## Start of every session
+
+1. Read `docs/STATUS.md` — where the project is, decisions taken, and the prioritised backlog. Update it whenever work changes the status or completes/adds backlog items.
+2. The POC spec and plan in `docs/superpowers/` are **done** — don't re-execute that plan. New work gets its own spec and plan (see "Workflow — Superpowers" below), saved as `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`.
+3. Before implementing, ask the owner whether to work on a branch or directly on `main` (the POC was built on `main` by the owner's choice; that was a one-off answer).
+
+Stack, layout and commands: see `README.md`. Deploy: `docs/deploy.md`. Database changes: `docs/database-migrations.md`.
 
 - The repo lives in WSL (`~/projects/prepio_new`); run commands with nvm loaded: `wsl -d Ubuntu-22.04 -- bash -ic "cd ~/projects/prepio_new && <cmd>"`.
 - Production: student web https://prepio-web.vercel.app, admin https://prepio-admin.vercel.app, Supabase project `pienbjvwjgnzmnjzmrbh`, Expo `lucianm91s-team/prepio`.

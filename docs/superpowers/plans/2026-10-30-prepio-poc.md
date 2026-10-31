@@ -1,5 +1,7 @@
 # Prepio POC Implementation Plan
 
+> **Status: COMPLETED 2026-10-31 — all 13 tasks implemented, reviewed and deployed. Do not re-execute.** The unchecked boxes below are the original plan; current state and follow-ups are in `docs/STATUS.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A working POC of Prepio — Expo student app (Android APK + web), Next.js admin with an OpenAI essay-evaluation endpoint, Supabase backend — seeded with three real BAC history lessons.
