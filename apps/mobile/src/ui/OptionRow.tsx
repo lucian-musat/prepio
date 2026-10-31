@@ -26,6 +26,8 @@ type Props = {
   disabled?: boolean;
   /** Screen-reader checked state; defaults to "the learner picked it" (selected, or marked after checking). */
   checked?: boolean;
+  /** Screen-reader name; defaults to the label (e.g. add the result after checking). */
+  accessibilityLabel?: string;
 };
 
 // Row and key colours per state (prototype `.opt`, `.opt.sel`, `.opt.ok`, `.opt.bad`).
@@ -48,10 +50,8 @@ const SHAKE_PX = 5;
 const PRESSED_SCALE = 0.98;
 const BORDER = 2;
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 /** One answer option (prototype B `.opt`), animating between idle / selected / correct / wrong. */
-export default function OptionRow({ label, marker, state, onPress, disabled = false, checked }: Props) {
+export default function OptionRow({ label, marker, state, onPress, disabled = false, checked, accessibilityLabel }: Props) {
   const reduced = useReducedMotion();
   const target = look[state];
   const interactive = !!onPress && !disabled;
@@ -116,29 +116,36 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
   const isChecked = checked ?? state !== 'idle';
 
   return (
-    <AnimatedPressable
+    // Static Pressable around an Animated.View (like Button / IconButton): an animated Pressable's
+    // press transform does not update on react-native-web.
+    <Pressable
       accessibilityRole={marker === 'checkbox' ? 'checkbox' : 'radio'}
-      accessibilityLabel={label}
-      accessibilityState={{ checked: isChecked, disabled: !interactive }}
-      disabled={!interactive}
-      onPress={onPress}
+      accessibilityLabel={accessibilityLabel ?? label}
+      // Only an explicitly disabled row is announced as disabled; a display-only row (no onPress) is not.
+      accessibilityState={{ checked: isChecked, disabled }}
+      // react-native-web 0.21 ignores accessibilityState; the aria props reach the DOM.
+      aria-checked={isChecked}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onPress={interactive ? onPress : undefined}
       onPressIn={press(PRESSED_SCALE)}
       onPressOut={press(1)}
-      style={[styles.row, rowStyle]}
     >
-      <Animated.View style={[styles.key, keyStyle]}>
-        {icon ? (
-          <View testID={`option-icon-${icon}`}>
-            <Icon name={icon} size={KEY_ICON} stroke={KEY_ICON_STROKE} tint={color.onPrimary} />
-          </View>
-        ) : marker === 'checkbox' ? null : (
-          <AppText style={[styles.keyText, { color: target.keyText }]}>{marker}</AppText>
-        )}
+      <Animated.View testID="option-face" style={[styles.row, rowStyle]}>
+        <Animated.View style={[styles.key, keyStyle]}>
+          {icon ? (
+            <View testID={`option-icon-${icon}`}>
+              <Icon name={icon} size={KEY_ICON} stroke={KEY_ICON_STROKE} tint={color.onPrimary} />
+            </View>
+          ) : marker === 'checkbox' ? null : (
+            <AppText style={[styles.keyText, { color: target.keyText }]}>{marker}</AppText>
+          )}
+        </Animated.View>
+        <AppText role="option" style={styles.label}>
+          {label}
+        </AppText>
       </Animated.View>
-      <AppText role="option" style={styles.label}>
-        {label}
-      </AppText>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

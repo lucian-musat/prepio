@@ -37,7 +37,22 @@ it('wrong state shows the close icon and correct state the check icon', async ()
 it('correct state renders final colours with reduce motion on', async () => {
   mockReducedMotion = true;
   await render(<OptionRow label="1859" marker="B" state="correct" />);
-  const style = StyleSheet.flatten(screen.getByRole('radio', { name: /1859/ }).props.style);
+  const style = StyleSheet.flatten(screen.getByTestId('option-face').props.style);
   expect(style.backgroundColor).toBe(color.successSubtle);
   expect(style.borderColor).toBe(color.success);
+});
+
+it('a display-only row (no onPress) is not announced as disabled', async () => {
+  await render(<OptionRow label="1859" marker="B" state="correct" checked={false} />);
+  expect(screen.getByRole('radio', { name: /1859/ }).props.accessibilityState).toMatchObject({ checked: false, disabled: false });
+});
+
+it('an explicitly disabled row is announced as disabled', async () => {
+  await render(<OptionRow label="1859" marker="B" state="idle" onPress={() => {}} disabled />);
+  expect(screen.getByRole('radio', { name: /1859/ }).props.accessibilityState).toMatchObject({ disabled: true });
+});
+
+it('uses the accessibility label override', async () => {
+  await render(<OptionRow label="1859" marker="B" state="correct" accessibilityLabel="1859, corect" />);
+  expect(screen.getByRole('radio', { name: '1859, corect' })).toBeTruthy();
 });

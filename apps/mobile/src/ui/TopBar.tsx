@@ -48,8 +48,12 @@ export default function TopBar({ title, logo = false, progress, onBack, raised }
         </AppText>
       ) : null}
       {progress !== undefined ? (
-        <View style={styles.progress}>
-          <ProgressBar value={progress} accessibilityLabel="Progres" />
+        // Full-width row so it always wraps under the title; the bar inside is capped at 720 px and centred.
+        // (A max-width on the flex item itself lets it fit next to the title on wide screens.)
+        <View style={styles.progressRow}>
+          <View style={styles.progress}>
+            <ProgressBar value={progress} accessibilityLabel="Progres" />
+          </View>
         </View>
       ) : null}
     </View>
@@ -74,13 +78,8 @@ const styles = StyleSheet.create({
   wide: { paddingTop: space[4.5], paddingHorizontal: layout.gutterWide, paddingBottom: space[3.5] },
   raised: { borderBottomColor: color.border, boxShadow: raisedShadow('down') },
   title: { flex: 1 },
-  progress: {
-    flexBasis: '100%',
-    width: '100%',
-    maxWidth: layout.maxContentWidth,
-    marginHorizontal: 'auto', // centred at 720 px on desktop, like the prototype
-    marginTop: space[1.5],
-  },
+  progressRow: { flexBasis: '100%', width: '100%', marginTop: space[1.5] },
+  progress: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center' }, // centred at 720 px on desktop, like the prototype
   logo: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   mark: { width: LOGO_MARK, height: LOGO_MARK, borderRadius: radius.xs, alignItems: 'center', justifyContent: 'center' },
 });

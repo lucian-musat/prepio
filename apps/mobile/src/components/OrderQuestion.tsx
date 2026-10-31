@@ -1,106 +1,103 @@
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, IconButton, Text } from 'react-native-paper';
-import { legacyColors, legacyRadius, shuffleForDisplay, type Answer, type OrderItem } from '@prepio/shared';
-import { fontFamily } from '../theme/fonts';
+import { color, elevation, feedbackText, radius, space, type OrderItem } from '@prepio/shared';
+import { AppText, Chip, Enter, IconButton } from '../ui';
+import { solidShadow } from '../ui/elevation';
 
 type Props = {
-  /** Items in the correct order; shuffled here for display. */
+  /** Items in the learner's current order (owned by QuestionView). */
+  order: OrderItem[];
+  /** Items in the correct order. */
   items: OrderItem[];
   answered: boolean;
   /** Set once answered. */
   correct: boolean | null;
-  onSubmit: (answer: Answer) => void;
+  onMove: (index: number, delta: -1 | 1) => void;
 };
 
-export default function OrderQuestion({ items, answered, correct, onSubmit }: Props) {
-  const [order, setOrder] = useState(() => shuffleForDisplay(items));
+const BORDER = 2;
 
-  const move = (i: number, delta: -1 | 1) => {
-    const j = i + delta;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order];
-    [next[i], next[j]] = [next[j]!, next[i]!];
-    setOrder(next);
-  };
-
+/** Chronological order question: rows with up/down buttons; once answered each row shows whether it's in place. */
+export default function OrderQuestion({ order, items, answered, onMove }: Props) {
   return (
-    <View style={styles.wrap}>
-      {order.map((item, i) => (
-        <View key={item.id} style={styles.row}>
-          <Text style={styles.index}>{i + 1}.</Text>
-          <Text testID="order-item-text" style={styles.text}>
-            {item.text}
-          </Text>
-          {!answered ? (
-            <View style={styles.buttons}>
-              <IconButton
-                icon="chevron-up"
-                size={22}
-                disabled={i === 0}
-                accessibilityLabel={`Mută în sus: ${item.text}`}
-                onPress={() => move(i, -1)}
-              />
-              <IconButton
-                icon="chevron-down"
-                size={22}
-                disabled={i === order.length - 1}
-                accessibilityLabel={`Mută în jos: ${item.text}`}
-                onPress={() => move(i, 1)}
-              />
-            </View>
-          ) : null}
-        </View>
-      ))}
-      {!answered ? (
-        <Button mode="contained" onPress={() => onSubmit({ type: 'chronological_order', order: order.map((o) => o.id) })}>
-          Verifică
-        </Button>
-      ) : null}
-      {answered && correct === false ? (
-        <View style={styles.correctBox}>
-          <Text style={styles.correctTitle}>Ordinea corectă:</Text>
-          {items.map((item) => (
-            <View key={item.id} style={styles.correctRow}>
-              {item.label ? (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{item.label}</Text>
+    <View style={styles.list}>
+      {order.map((item, i) => {
+        const inPlace = items[i]?.id === item.id;
+        return (
+          <Enter key={item.id} index={i}>
+            <View style={[styles.row, answered && (inPlace ? styles.rowOk : styles.rowBad)]}>
+              <AppText role="bodyStrong" color="textMuted" style={styles.index}>
+                {i + 1}.
+              </AppText>
+              <AppText testID="order-item-text" role="option" style={styles.text}>
+                {item.text}
+              </AppText>
+              {!answered ? (
+                <View style={styles.buttons}>
+                  <IconButton icon="up" disabled={i === 0} accessibilityLabel={`Mută în sus: ${item.text}`} onPress={() => onMove(i, -1)} />
+                  <IconButton
+                    icon="down"
+                    disabled={i === order.length - 1}
+                    accessibilityLabel={`Mută în jos: ${item.text}`}
+                    onPress={() => onMove(i, 1)}
+                  />
                 </View>
               ) : null}
-              <Text style={styles.text}>{item.text}</Text>
             </View>
-          ))}
+          </Enter>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Success-tinted box with the correct sequence (and year labels), shown in the content after a wrong order. */
+export function CorrectOrder({ items }: { items: OrderItem[] }) {
+  return (
+    <View style={styles.correctBox}>
+      <AppText role="bodyStrong" style={styles.correctTitle}>
+        Ordinea corectă:
+      </AppText>
+      {items.map((item) => (
+        <View key={item.id} style={styles.correctRow}>
+          {item.label ? <Chip label={item.label} fg={feedbackText.good} bg={color.surface} /> : null}
+          <AppText role="small" style={styles.text}>
+            {item.text}
+          </AppText>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
+  list: { gap: space[2.5] },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 12,
-    backgroundColor: legacyColors.paper,
-    borderWidth: 1,
-    borderColor: legacyColors.border,
-    borderRadius: legacyRadius,
+    gap: space[3],
+    minHeight: space[12],
+    paddingVertical: space[2],
+    paddingLeft: space[3.5],
+    paddingRight: space[2.5],
+    backgroundColor: color.surface,
+    borderWidth: BORDER,
+    borderColor: color.border,
+    borderRadius: radius.lg,
+    boxShadow: solidShadow(elevation.optionRest.offsetY, elevation.optionRest.color),
   },
-  index: { fontFamily: fontFamily.legacyBodyBold, color: legacyColors.inkMuted, fontSize: 17 },
-  text: { flex: 1, fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink, paddingVertical: 8 },
-  buttons: { flexDirection: 'row' },
+  rowOk: { borderColor: color.success, backgroundColor: color.successSubtle },
+  rowBad: { borderColor: color.danger, backgroundColor: color.dangerSubtle },
+  index: { minWidth: space[5] },
+  text: { flex: 1 },
+  buttons: { flexDirection: 'row', gap: space[2] },
   correctBox: {
-    gap: 6,
-    padding: 12,
-    borderRadius: legacyRadius,
-    borderWidth: 2,
-    borderColor: legacyColors.success,
-    backgroundColor: '#E6F0E4',
+    gap: space[2],
+    padding: space[3.5],
+    borderRadius: radius.lg,
+    borderWidth: BORDER,
+    borderColor: color.success,
+    backgroundColor: color.successSubtle,
   },
-  correctTitle: { fontFamily: fontFamily.legacyBodyBold, color: legacyColors.success, fontSize: 17 },
-  correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chip: { backgroundColor: legacyColors.gold, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
-  chipText: { color: legacyColors.paper, fontFamily: fontFamily.legacyBodyBold, fontSize: 14 },
+  correctTitle: { color: feedbackText.good },
+  correctRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
 });

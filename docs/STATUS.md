@@ -39,11 +39,12 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
   - Back button: 48 px touch target, press-scale feedback; Android hardware back still navigates; screen transition is `slide_from_right`.
   - Home and Lesson screens have no native header until they are migrated (Tasks 5–7) — expected in between.
   - Home (Task 5): hero gradient angle/colours and the floating circle (8 s loop, static with "Remove animations" on), lesson-row press scale on touch, emoji in the "📚 n lecții" chip, list content clears the gesture/nav bar at the bottom.
+  - Lesson cards/questions (Task 6): card slide + tilt transition and dot width animation; option press scale, pop on the correct key, shake on a wrong row; verdict icon pop and the tinted action bar; confetti on a correct answer; content scrolls smoothly to the revealed answer/explanation; TalkBack reads options as "…, corect" / "…, greșit, ai ales-o" with the right checked state; long card/question keeps the progress bar and action bar on screen.
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX
 - [ ] AI output sometimes uses cedilla ş/ţ — add a rule in admin Settings → AI rules, or normalise server-side.
-- [ ] Student web: opening `/lesson/<id>` directly has no back button in the header.
+- [x] Student web: opening `/lesson/<id>` directly has no back button in the header (fixed: the lesson top bar back goes Home without history, design-system Task 6).
 - [ ] Student app: no fetch-error test/retry on the lesson screen; English fallback label `'Card'` in `CardStepper`; result card stays visible next to a new error after resubmit.
 - [ ] Admin: login form clears the email after a failed attempt; logged-in user can still see `/login`; all login errors shown as "wrong password" (also when Supabase is down); row buttons not disabled while an action is pending; modal closes before the action result.
 - [ ] Admin wording: „cartonaș” vs „card”; missing period in „Titlul nu poate fi gol”.

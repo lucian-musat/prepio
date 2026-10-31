@@ -1,19 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
-import { legacyColors, legacyRadius, type Card } from '@prepio/shared';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { color, motion, radius, space, type Card } from '@prepio/shared';
 import { imageUrl } from '../lib/content';
-import { fontFamily } from '../theme/fonts';
+import { AppText, Button, CardTransition, ScreenLayout, Surface, timing } from '../ui';
+import type { LessonFrame } from './QuestionView';
 
-function CardView({ card }: { card: Card }) {
+// Prototype `.dots i` / `.dots i.on`, and the card image height.
+const DOT = 7;
+const DOT_ACTIVE = 22;
+const IMAGE_HEIGHT = 200;
+
+function Dot({ active }: { active: boolean }) {
+  const width = useSharedValue(active ? DOT_ACTIVE : DOT);
+  const bg = useSharedValue<string>(active ? color.primary : color.border);
+  useEffect(() => {
+    const t = timing(motion.duration.base);
+    width.value = withTiming(active ? DOT_ACTIVE : DOT, t);
+    bg.value = withTiming(active ? color.primary : color.border, t);
+  }, [active]);
+  const style = useAnimatedStyle(() => ({ width: width.value, backgroundColor: bg.value }));
+  return <Animated.View style={[styles.dot, style]} />;
+}
+
+function CardView({ card, eyebrow }: { card: Card; eyebrow: string }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = !!card.imagePath && !imageFailed;
   return (
-    <View style={styles.card}>
+    <Surface padding={5} radius="xl">
+      <AppText role="eyebrow" color="primary">
+        {eyebrow}
+      </AppText>
       {card.title ? (
-        <Text variant="titleLarge" style={styles.title}>
+        <AppText role="title" accessibilityRole="header" style={styles.title}>
           {card.title}
-        </Text>
+        </AppText>
       ) : null}
       {showImage ? (
         <View style={styles.figure}>
@@ -24,62 +45,76 @@ function CardView({ card }: { card: Card }) {
             style={styles.image}
             onError={() => setImageFailed(true)}
           />
-          {card.imageCredit ? <Text style={styles.credit}>{card.imageCredit}</Text> : null}
+          {card.imageCredit ? (
+            <AppText role="caption" color="textMuted">
+              {card.imageCredit}
+            </AppText>
+          ) : null}
         </View>
       ) : null}
-      <Text style={styles.body}>{card.body}</Text>
-    </View>
+      <AppText role="body" style={!card.title && !showImage ? styles.bodyOnly : undefined}>
+        {card.body}
+      </AppText>
+    </Surface>
   );
 }
 
-type Props = { cards: Card[]; onFinish: () => void };
+type Props = {
+  cards: Card[];
+  onFinish: () => void;
+  frame: LessonFrame;
+  /** Label of the button on the last card: "La exerciții" when questions/exercises follow. */
+  finishLabel?: string;
+  /** Reports the current card so the lesson can update its progress bar. */
+  onIndexChange?: (index: number) => void;
+};
 
-/** Shows learning cards one at a time. On the last card "Următorul" becomes "Continuă". */
-export default function CardStepper({ cards, onFinish }: Props) {
+/** Learning cards one at a time (prototype `.stepper`): slide transition, dots, Înapoi / Continuă in the action bar. */
+export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Continuă', onIndexChange }: Props) {
   const [index, setIndex] = useState(0);
-  const last = index === cards.length - 1;
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const scrollRef = useRef<Animated.ScrollView>(null);
   const card = cards[index];
   if (!card) return null;
+  const last = index === cards.length - 1;
+
+  const go = (to: number) => {
+    setDirection(to > index ? 'next' : 'prev');
+    setIndex(to);
+    onIndexChange?.(to);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   return (
-    <View style={styles.wrap}>
-      <CardView key={card.id} card={card} />
-      <Text style={styles.counter}>
-        {index + 1} / {cards.length}
-      </Text>
-      <View style={styles.nav}>
-        <Button mode="outlined" disabled={index === 0} onPress={() => setIndex(index - 1)}>
-          Înapoi
-        </Button>
-        <Button mode="contained" onPress={() => (last ? onFinish() : setIndex(index + 1))}>
-          {last ? 'Continuă' : 'Următorul'}
-        </Button>
+    <ScreenLayout
+      title={frame.title}
+      progress={frame.progress}
+      onBack={frame.onBack}
+      scrollRef={scrollRef}
+      actions={
+        <>
+          <Button flex variant="secondary" label="Înapoi" disabled={index === 0} onPress={() => index > 0 && go(index - 1)} />
+          <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
+        </>
+      }
+    >
+      <CardTransition contentKey={card.id} direction={direction}>
+        <CardView card={card} eyebrow={`Cartonaș ${index + 1} din ${cards.length}`} />
+      </CardTransition>
+      <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {cards.map((c, i) => (
+          <Dot key={c.id} active={i === index} />
+        ))}
       </View>
-    </View>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 16 },
-  card: {
-    backgroundColor: legacyColors.paper,
-    borderRadius: legacyRadius,
-    borderWidth: 1,
-    borderColor: legacyColors.border,
-    borderTopWidth: 3,
-    borderTopColor: legacyColors.gold,
-    padding: 20,
-    gap: 12,
-    shadowColor: legacyColors.ink,
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  title: { fontFamily: fontFamily.legacyHeadingBold, color: legacyColors.bordeaux },
-  figure: { gap: 4 },
-  image: { width: '100%', height: 200, borderRadius: 8 },
-  credit: { fontSize: 12, color: legacyColors.inkMuted, fontFamily: fontFamily.legacyBody },
-  body: { fontSize: 17, lineHeight: 26, color: legacyColors.ink, fontFamily: fontFamily.legacyBody },
-  counter: { textAlign: 'center', color: legacyColors.inkMuted, fontFamily: fontFamily.legacyBody },
-  nav: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  title: { marginTop: space[1.5], marginBottom: space[3] },
+  bodyOnly: { marginTop: space[1.5] },
+  figure: { gap: space[1], marginBottom: space[3] },
+  image: { width: '100%', height: IMAGE_HEIGHT, borderRadius: radius.md },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: space[1.5], marginTop: space[3.5] },
+  dot: { height: DOT, borderRadius: radius.pill },
 });

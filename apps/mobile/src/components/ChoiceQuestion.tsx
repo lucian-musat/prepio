@@ -1,74 +1,54 @@
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Checkbox, RadioButton } from 'react-native-paper';
-import { legacyColors, legacyRadius, type Answer, type ChoiceOption } from '@prepio/shared';
-import { fontFamily } from '../theme/fonts';
+import { space, type ChoiceOption } from '@prepio/shared';
+import { Enter, OptionRow, type OptionState } from '../ui';
 
 type Props = {
-  type: 'single_choice' | 'multiple_choice';
   options: ChoiceOption[];
+  multiple: boolean;
   answered: boolean;
-  onSubmit: (answer: Answer) => void;
+  /** Ids the learner picked (owned by QuestionView). */
+  selected: string[];
+  onToggle: (id: string) => void;
 };
 
-export default function ChoiceQuestion({ type, options, answered, onSubmit }: Props) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const multiple = type === 'multiple_choice';
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-  const toggle = (id: string) => {
-    if (answered) return;
-    if (!multiple) setSelected([id]);
-    else setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  };
+function stateOf(o: ChoiceOption, picked: boolean, answered: boolean): OptionState {
+  if (!answered) return picked ? 'selected' : 'idle';
+  if (o.correct) return 'correct';
+  return picked ? 'wrong' : 'idle';
+}
 
+// After checking, the result is part of the name so screen readers hear it (colour alone is not enough).
+function a11yLabel(o: ChoiceOption, picked: boolean, answered: boolean) {
+  if (!answered || (!o.correct && !picked)) return o.text;
+  return `${o.text}, ${o.correct ? 'corect' : 'greșit'}${picked ? ', ai ales-o' : ''}`;
+}
+
+/** Single / multiple choice options (prototype `.opts`): staggered OptionRows, display-only once answered. */
+export default function ChoiceQuestion({ options, multiple, answered, selected, onToggle }: Props) {
   return (
-    <View style={styles.wrap}>
-      {options.map((o) => {
-        const isSelected = selected.includes(o.id);
-        const status: 'checked' | 'unchecked' = isSelected ? 'checked' : 'unchecked';
-        const rowStyle = [
-          styles.row,
-          answered && o.correct && styles.rowCorrect,
-          answered && isSelected && !o.correct && styles.rowWrong,
-        ];
-        const common = {
-          label: o.text,
-          status,
-          onPress: () => toggle(o.id),
-          disabled: answered,
-          style: rowStyle,
-          labelStyle: styles.label,
-          color: legacyColors.bordeaux,
-          position: 'leading' as const,
-        };
-        return multiple ? (
-          <Checkbox.Item key={o.id} {...common} />
-        ) : (
-          <RadioButton.Item key={o.id} {...common} value={o.id} />
+    <View style={styles.list}>
+      {options.map((o, i) => {
+        const picked = selected.includes(o.id);
+        return (
+          <Enter key={o.id} index={i}>
+            <OptionRow
+              label={o.text}
+              marker={multiple ? 'checkbox' : (LETTERS[i] ?? String(i + 1))}
+              state={stateOf(o, picked, answered)}
+              // Checked = the learner picked it; a revealed correct answer they didn't pick stays unchecked.
+              checked={picked}
+              accessibilityLabel={a11yLabel(o, picked, answered)}
+              onPress={answered ? undefined : () => onToggle(o.id)}
+            />
+          </Enter>
         );
       })}
-      {!answered ? (
-        <Button
-          mode="contained"
-          disabled={selected.length === 0}
-          onPress={() => onSubmit({ type, selected })}
-        >
-          Verifică
-        </Button>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  row: {
-    backgroundColor: legacyColors.paper,
-    borderWidth: 1,
-    borderColor: legacyColors.border,
-    borderRadius: legacyRadius,
-  },
-  rowCorrect: { borderColor: legacyColors.success, backgroundColor: '#E6F0E4', borderWidth: 2 },
-  rowWrong: { borderColor: legacyColors.error, backgroundColor: '#F6E3E1', borderWidth: 2 },
-  label: { fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink, textAlign: 'left' },
+  list: { gap: space[2.5] },
 });

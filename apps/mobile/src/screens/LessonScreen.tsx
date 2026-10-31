@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Button, Card, Text } from 'react-native-paper';
-import { legacyColors, legacyRadius, type Lesson } from '@prepio/shared';
+import { space, type Lesson } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
-import QuestionView from '../components/QuestionView';
-import Screen from '../components/Screen';
+import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { WritingExercise } from '../components/WritingExercise';
 import { fetchLesson } from '../lib/content';
-import { fontFamily } from '../theme/fonts';
+import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 
-type Phase = 'cards' | 'questions' | 'exercises' | 'done';
+export type Phase = 'cards' | 'questions' | 'exercises' | 'done';
 
 const PHASES: Phase[] = ['cards', 'questions', 'exercises', 'done'];
 const sizeOf = (lesson: Lesson, phase: Phase) =>
@@ -28,11 +26,41 @@ const firstNonEmpty = (lesson: Lesson, from: Phase): Phase =>
 const nextPhase = (lesson: Lesson, current: Phase): Phase =>
   firstNonEmpty(lesson, PHASES[PHASES.indexOf(current) + 1] ?? 'done');
 
+/**
+ * Share of the lesson reached: steps are cards + questions + exercises, the current step counts as
+ * reached, and the done screen is 1.
+ */
+export function lessonProgress(lesson: Lesson, phase: Phase, index: number): number {
+  const c = lesson.cards.length;
+  const q = lesson.questions.length;
+  const total = c + q + lesson.exercises.length;
+  if (phase === 'done' || total === 0) return 1;
+  const offset = phase === 'cards' ? 0 : phase === 'questions' ? c : c + q;
+  return Math.min(1, (offset + index + 1) / total);
+}
+
+function Message({ title, body }: { title: string; body?: string }) {
+  return (
+    <ScreenLayout title="Lecție" onBack={goBackOrHome}>
+      <Surface style={styles.message}>
+        <AppText role="section">{title}</AppText>
+        {body ? (
+          <AppText role="small" color="textMuted">
+            {body}
+          </AppText>
+        ) : null}
+        <Button label="Înapoi la lecții" onPress={() => router.replace('/')} />
+      </Surface>
+    </ScreenLayout>
+  );
+}
+
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [lesson, setLesson] = useState<Lesson | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState<Phase>('cards');
+  const [cIndex, setCIndex] = useState(0);
   const [qIndex, setQIndex] = useState(0);
   const [eIndex, setEIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -55,43 +83,20 @@ export default function LessonScreen() {
   }, [id]);
 
   if (failed) {
-    return (
-      <Screen>
-        <Card style={styles.box}>
-          <Card.Content style={styles.gap}>
-            <Text variant="titleMedium">Nu am putut încărca lecția</Text>
-            <Text>Verifică conexiunea la internet și încearcă din nou.</Text>
-            <Button mode="contained" onPress={() => router.replace('/')}>
-              Înapoi la lecții
-            </Button>
-          </Card.Content>
-        </Card>
-      </Screen>
-    );
+    return <Message title="Nu am putut încărca lecția" body="Verifică conexiunea la internet și încearcă din nou." />;
   }
 
   if (lesson === undefined) {
     return (
-      <Screen>
-        <ActivityIndicator style={styles.loader} accessibilityLabel="Se încarcă" />
-      </Screen>
+      <ScreenLayout title="Lecție" onBack={goBackOrHome}>
+        <View style={styles.loader}>
+          <Spinner />
+        </View>
+      </ScreenLayout>
     );
   }
 
-  if (lesson === null) {
-    return (
-      <Screen>
-        <Card style={styles.box}>
-          <Card.Content style={styles.gap}>
-            <Text variant="titleMedium">Lecția nu a fost găsită</Text>
-            <Button mode="contained" onPress={() => router.replace('/')}>
-              Înapoi la lecții
-            </Button>
-          </Card.Content>
-        </Card>
-      </Screen>
-    );
-  }
+  if (lesson === null) return <Message title="Lecția nu a fost găsită" />;
 
   const advance = () => setPhase(nextPhase(lesson, phase));
   const question = lesson.questions[qIndex];
@@ -106,72 +111,76 @@ export default function LessonScreen() {
     else advance();
   };
 
+  const index = phase === 'cards' ? cIndex : phase === 'questions' ? qIndex : phase === 'exercises' ? eIndex : 0;
+  const frame = (title: string): LessonFrame => ({ title, progress: lessonProgress(lesson, phase, index), onBack: goBackOrHome });
+  const somethingAfterCards = lesson.questions.length + lesson.exercises.length > 0;
+
+  if (phase === 'cards') {
+    return (
+      <CardStepper
+        cards={lesson.cards}
+        onFinish={advance}
+        frame={frame(lesson.title)}
+        finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
+        onIndexChange={setCIndex}
+      />
+    );
+  }
+
+  if (phase === 'questions' && question) {
+    return (
+      <QuestionView
+        key={question.id}
+        question={question}
+        frame={frame(`Întrebarea ${qIndex + 1} din ${lesson.questions.length}`)}
+        onAnswered={(ok) => {
+          if (ok) setCorrectCount((n) => n + 1);
+        }}
+        onNext={nextQuestion}
+        nextLabel={qIndex + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
+      />
+    );
+  }
+
+  // Exercises and done keep their old content for now (Task 7 restyles them) inside the lesson frame.
+  if (phase === 'exercises' && exercise) {
+    const f = frame(`Exercițiul ${eIndex + 1} din ${lesson.exercises.length}`);
+    return (
+      <ScreenLayout
+        key={exercise.id}
+        title={f.title}
+        progress={f.progress}
+        onBack={f.onBack}
+        actions={
+          <Button flex label={eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'} onPress={nextExercise} />
+        }
+      >
+        <WritingExercise exercise={exercise} />
+      </ScreenLayout>
+    );
+  }
+
   return (
-    <Screen>
-      <Text variant="headlineSmall" style={styles.title}>
-        {lesson.title}
-      </Text>
-
-      {phase === 'cards' ? <CardStepper cards={lesson.cards} onFinish={advance} /> : null}
-
-      {phase === 'questions' && question ? (
-        <View style={styles.gap}>
-          <Text style={styles.progress}>
-            Întrebarea {qIndex + 1} din {lesson.questions.length}
-          </Text>
-          <QuestionView
-            key={question.id}
-            question={question}
-            onAnswered={(ok) => {
-              if (ok) setCorrectCount((n) => n + 1);
-            }}
-            onNext={nextQuestion}
-            nextLabel={qIndex + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
-          />
-        </View>
-      ) : null}
-
-      {phase === 'exercises' && exercise ? (
-        <View style={styles.gap}>
-          <Text style={styles.progress}>
-            Exercițiul {eIndex + 1} din {lesson.exercises.length}
-          </Text>
-          <WritingExercise key={exercise.id} exercise={exercise} />
-          <Button mode="contained" onPress={nextExercise}>
-            {eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
-          </Button>
-        </View>
-      ) : null}
-
-      {phase === 'done' ? (
-        <Card style={styles.box}>
-          <Card.Content style={styles.gap}>
-            <Text variant="titleLarge" style={styles.title}>
-              Lecție terminată
-            </Text>
-            <Text style={styles.summary}>
-              {correctCount} din {lesson.questions.length} întrebări corecte
-            </Text>
-            <Button mode="contained" onPress={() => router.replace('/')}>
-              Înapoi la lecții
-            </Button>
-          </Card.Content>
-        </Card>
-      ) : null}
-    </Screen>
+    <ScreenLayout
+      title="Lecție terminată"
+      progress={1}
+      onBack={goBackOrHome}
+      actions={<Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />}
+    >
+      <Surface style={styles.message}>
+        <AppText role="display">Lecție terminată</AppText>
+        <AppText role="small" color="textMuted">
+          {lesson.title}
+        </AppText>
+        <AppText role="bodyStrong">
+          {correctCount} din {lesson.questions.length} întrebări corecte
+        </AppText>
+      </Surface>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  box: {
-    backgroundColor: legacyColors.paper,
-    borderRadius: legacyRadius,
-    borderWidth: 1,
-    borderColor: legacyColors.border,
-  },
-  gap: { gap: 12 },
-  loader: { marginTop: 48 },
-  title: { fontFamily: fontFamily.legacyHeadingBold, color: legacyColors.bordeaux },
-  progress: { fontFamily: fontFamily.legacyBody, color: legacyColors.inkMuted },
-  summary: { fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink },
+  message: { gap: space[3] },
+  loader: { paddingTop: space[12], alignItems: 'center' },
 });
