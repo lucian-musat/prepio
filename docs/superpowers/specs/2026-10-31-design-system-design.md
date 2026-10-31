@@ -58,6 +58,8 @@ Visual reference (source of truth for look and motion): `docs/design/2026-10-31-
 - Fixed header with progress + fixed bottom action bar; nothing essential scrolls away.
 - Pixel-perfect match with the prototype, verified in the browser.
 
+- Accessibility over pixel match for primary: buttons and primary elements use the darker teal `#0F766E` (white label 5.5:1) instead of the prototype's `#0D9488` (3.7:1). Decided 2026-10-31.
+
 ## Builder's calls (Claude's, flagged for review)
 
 - React Native Paper is phased out of the student app in favour of the own UI kit (Paper's Material look fights the design); `PaperProvider` and the dependency are removed when no component uses them.

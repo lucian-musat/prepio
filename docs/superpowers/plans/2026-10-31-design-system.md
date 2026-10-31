@@ -16,8 +16,9 @@
 - Work directly on `main` (owner's choice); commit after every task.
 - Commands run in WSL with nvm: `wsl -d Ubuntu-22.04 -- bash -ic "cd ~/projects/prepio_new && <cmd>"`.
 - Components use **only semantic tokens / scales** from `@prepio/shared` — no hex, font family or magic size literals in component files (anti-goal "hard-coded colours, sizes or fonts").
-- Semantic colour values (exact): `bg #F3FAF7`, `surface #FFFFFF`, `surfaceMuted #E6F4EF`, `text #0F2E28`, `textMuted #4C6A63`, `border #D8EAE3`, `primary #0D9488`, `primaryStrong #0A6E66`, `primarySubtle #E0F5F1`, `onPrimary #FFFFFF`, `accent #FFC93C`, `accentSubtle #FFF6D9`, `onAccent #3A2C00`, `success #22A55B`, `successSubtle #E5F7EC`, `danger #E5484D`, `dangerSubtle #FDECEC`.
+- Semantic colour values (exact): `bg #F3FAF7`, `surface #FFFFFF`, `surfaceMuted #E6F4EF`, `text #0F2E28`, `textMuted #4C6A63`, `border #D8EAE3`, `primary #0F766E`, `primaryStrong #0A5C55`, `primarySubtle #E0F5F1`, `onPrimary #FFFFFF`, `accent #FFC93C`, `accentSubtle #FFF6D9`, `onAccent #3A2C00`, `success #22A55B`, `successSubtle #E5F7EC`, `danger #E5484D`, `dangerSubtle #FDECEC`.
 - Gradients: hero `135deg #0D9488 0% → #14B8A6 55% → #5EEAD4 100%`; progress fill `90deg #0D9488 → #2DD4BF`.
+- **Deliberate deviations from the prototype (owner-approved / accessibility):** `primary` is `#0F766E` and `primaryStrong` `#0A5C55` instead of the prototype's `#0D9488` / `#0A6E66` (white label contrast 5.5:1 instead of 3.7:1); gradients keep the prototype colours (decorative, large bold text only); medium-difficulty / accent text is `#8A6A00`. Task 9 treats these as expected differences.
 - Fonts: headings Nunito 900 (Black) / 800 (ExtraBold); text Nunito Sans 400 / 600 / 700. Family keys must be CSS-safe identifiers (react-native-web writes them unquoted).
 - Motion: durations fast 160 ms, base 320 ms, slow 420 ms; standard easing `cubic-bezier(.34,1.4,.64,1)`; spring/pop easing `cubic-bezier(.34,1.56,.64,1)`; shake 420 ms `cubic-bezier(.36,.07,.19,.97)`. Every animation honours OS reduce-motion (Reanimated `ReduceMotion.System` / `useReducedMotion`). Nothing on a critical path > ~500 ms.
 - Layout: content max width 720 px; side padding 16 px (phone) / 32 px (≥ 768 px); touch targets ≥ 48 px; action bar bottom padding = 14 px + safe-area inset.
@@ -62,7 +63,7 @@
   - `semantic colours match the approved variant B` — `expect(color).toEqual({ bg: '#F3FAF7', …all 17… })`.
   - `every semantic colour exists in the primitive palette` — flatten `palette`, each `Object.values(color)` included.
   - `text pairs meet WCAG AA` — `contrastRatio(color.text, color.bg) >= 4.5`, `textMuted/bg >= 4.5`, `textMuted/surface >= 4.5`, `onAccent/accent >= 4.5`, `difficultyTone.medium.fg/accentSubtle >= 4.5`, `feedbackText.wrong` (`#A54042`, = mix(danger 70%, text) from the prototype) on `dangerSubtle >= 4.5`, `feedbackText.good` (`#1C814C`, = mix(success 70%, text)) on `successSubtle >= 4.5`. Export these two as `feedbackText = { good, wrong }`.
-  - `button label contrast is documented` — `contrastRatio(color.onPrimary, color.primary)` is `> 3.5` and `< 4.5` (prototype value, passes AA large/UI 3:1 only; see owner note in handoff). If the owner changes `primary`, update this test.
+  - `button label meets AA` — `contrastRatio(color.onPrimary, color.primary) >= 4.5` (owner decision 2026-10-31: primary darkened from the prototype's #0D9488 to #0F766E, 5.5:1).
   - `space and radius scales are the prototype values` — `toEqual` on both objects.
 - [ ] **Step 2: Run** `pnpm --filter @prepio/shared test` → FAIL (exports missing).
 - [ ] **Step 3: Implement** the exports in `theme.ts`; rename old exports to `legacy*` and update all imports in `apps/mobile/**` and `apps/admin/src/app/theme.ts` (pure rename).
@@ -240,7 +241,7 @@
 - `theme.css`: body font `--font-body`; headings + `.brand` `--font-head` weight 800; `.btn-primary` hover/active = primaryStrong, focus ring primary 25 %; inputs focus border primary + 4 px ring 18 %; `.card` white with 1 px border, no heavy shadow; navbar `.navbar-prepio` → white bg, bottom border, brand = 28 px rounded-square logo mark (`gradient.hero`, white "P") + "Prepio" in `text` + muted "admin"; sidebar active link `primarySubtle` bg + `primaryStrong` text; transitions 160 ms on hover/focus only (no springs, no 3D).
 - Remove the unused `globals.css` dark-mode rule only if it conflicts (it's in the backlog; don't widen scope otherwise).
 
-- [ ] **Step 1: Write failing test** `theme.test.ts`: `maps semantic tokens to bootstrap variables` — `themeVariablesCss` contains `--bs-primary:#0D9488`, `--bs-body-bg:#F3FAF7`, `--bs-link-color:#0A6E66`, and no `bordeaux`/`parchment`/`gold` substrings.
+- [ ] **Step 1: Write failing test** `theme.test.ts`: `maps semantic tokens to bootstrap variables` — `themeVariablesCss` contains `--bs-primary:#0F766E`, `--bs-body-bg:#F3FAF7`, `--bs-link-color:#0A5C55`, and no `bordeaux`/`parchment`/`gold` substrings.
 - [ ] **Step 2: Run** `pnpm --filter @prepio/admin test` → FAIL. **Step 3: Implement.** **Step 4: Run** unit + `pnpm --filter @prepio/admin exec playwright test` → PASS.
 - [ ] **Step 5: Browser check** (admin :3000, local test admin from `apps/admin/.env.example`): login, content tree, lesson editor (cards, questions, exercises tabs, modals), settings — at desktop and 360 px; create/edit/delete a `[test]` item and remove it; console clean; seeded content intact.
 - [ ] **Step 6: Commit** `feat(admin): variant B theme`.
