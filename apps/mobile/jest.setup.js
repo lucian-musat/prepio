@@ -7,3 +7,4 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
     default: ({ name }) => createElement(Text, null, name),
   };
 });
+

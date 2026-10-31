@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
     borderColor: legacyColors.border,
     borderRadius: legacyRadius,
   },
-  index: { fontFamily: fontFamily.bodyBold, color: legacyColors.inkMuted, fontSize: 17 },
-  text: { flex: 1, fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink, paddingVertical: 8 },
+  index: { fontFamily: fontFamily.legacyBodyBold, color: legacyColors.inkMuted, fontSize: 17 },
+  text: { flex: 1, fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink, paddingVertical: 8 },
   buttons: { flexDirection: 'row' },
   correctBox: {
     gap: 6,
@@ -99,8 +99,8 @@ const styles = StyleSheet.create({
     borderColor: legacyColors.success,
     backgroundColor: '#E6F0E4',
   },
-  correctTitle: { fontFamily: fontFamily.bodyBold, color: legacyColors.success, fontSize: 17 },
+  correctTitle: { fontFamily: fontFamily.legacyBodyBold, color: legacyColors.success, fontSize: 17 },
   correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chip: { backgroundColor: legacyColors.gold, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
-  chipText: { color: legacyColors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  chipText: { color: legacyColors.paper, fontFamily: fontFamily.legacyBodyBold, fontSize: 14 },
 });

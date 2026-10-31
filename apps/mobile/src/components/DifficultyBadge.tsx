@@ -13,5 +13,5 @@ export default function DifficultyBadge({ difficulty }: { difficulty: Difficulty
 
 const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 2 },
-  text: { color: legacyColors.paper, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  text: { color: legacyColors.paper, fontFamily: fontFamily.legacyBodyBold, fontSize: 14 },
 });

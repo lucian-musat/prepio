@@ -29,7 +29,7 @@ export default function RootLayout() {
           screenOptions={{
             headerStyle: { backgroundColor: legacyColors.bordeaux },
             headerTintColor: legacyColors.parchment,
-            headerTitleStyle: { fontFamily: fontFamily.headingBold },
+            headerTitleStyle: { fontFamily: fontFamily.legacyHeadingBold },
             contentStyle: { backgroundColor: legacyColors.parchment },
           }}
         >

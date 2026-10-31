@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   gap: { gap: 12 },
   loader: { marginTop: 48 },
-  title: { fontFamily: fontFamily.headingBold, color: legacyColors.bordeaux },
-  progress: { fontFamily: fontFamily.body, color: legacyColors.inkMuted },
-  summary: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink },
+  title: { fontFamily: fontFamily.legacyHeadingBold, color: legacyColors.bordeaux },
+  progress: { fontFamily: fontFamily.legacyBody, color: legacyColors.inkMuted },
+  summary: { fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink },
 });

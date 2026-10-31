@@ -70,5 +70,5 @@ const styles = StyleSheet.create({
   },
   rowCorrect: { borderColor: legacyColors.success, backgroundColor: '#E6F0E4', borderWidth: 2 },
   rowWrong: { borderColor: legacyColors.error, backgroundColor: '#F6E3E1', borderWidth: 2 },
-  label: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink, textAlign: 'left' },
+  label: { fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink, textAlign: 'left' },
 });

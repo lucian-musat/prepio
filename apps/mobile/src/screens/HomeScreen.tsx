@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   gap: { gap: 12 },
   loader: { marginTop: 48 },
   section: { gap: 8 },
-  header: { fontFamily: fontFamily.headingBold, color: legacyColors.bordeaux },
-  lessonTitle: { fontFamily: fontFamily.body, fontSize: 17, color: legacyColors.ink },
+  header: { fontFamily: fontFamily.legacyHeadingBold, color: legacyColors.bordeaux },
+  lessonTitle: { fontFamily: fontFamily.legacyBody, fontSize: 17, color: legacyColors.ink },
   divider: { borderTopWidth: 1, borderTopColor: legacyColors.border },
 });

@@ -66,10 +66,10 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
 
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
-  prompt: { fontFamily: fontFamily.heading, fontSize: 20, lineHeight: 28, color: legacyColors.ink },
+  prompt: { fontFamily: fontFamily.legacyHeading, fontSize: 20, lineHeight: 28, color: legacyColors.ink },
   feedback: { gap: 8, padding: 14, borderRadius: legacyRadius, borderWidth: 1 },
   feedbackOk: { borderColor: legacyColors.success, backgroundColor: legacyColors.paper },
   feedbackBad: { borderColor: legacyColors.error, backgroundColor: legacyColors.paper },
-  verdict: { fontFamily: fontFamily.headingBold, fontSize: 20 },
-  body: { fontFamily: fontFamily.body, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
+  verdict: { fontFamily: fontFamily.legacyHeadingBold, fontSize: 20 },
+  body: { fontFamily: fontFamily.legacyBody, fontSize: 17, lineHeight: 26, color: legacyColors.ink },
 });
