@@ -1,4 +1,5 @@
-import { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { Easing, Keyframe, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { motion } from '@prepio/shared';
 
 const { duration: dur, easing: curves } = motion;
@@ -31,6 +32,12 @@ export const screenConfig = (direction: Direction) => ({
   translateX: direction === 'forward' ? 32 : -32,
   reduceMotion: ReduceMotion.System,
 });
+
+export const feedbackConfig = {
+  duration: dur.slow,
+  translateY: 14,
+  reduceMotion: ReduceMotion.System,
+};
 
 export const cardInConfig = (direction: CardDirection) => ({
   duration: dur.base,
@@ -130,4 +137,27 @@ export function cardOut(direction: CardDirection) {
     curves.standard,
     c,
   );
+}
+
+/**
+ * Fade + slide in from an offset, replayed whenever `key` changes; returns an animated style.
+ * Use this instead of a Keyframe `entering` for anything that stays in layout flow: on
+ * react-native-web, Reanimated 4.7 pins Keyframe-entering elements to position:absolute with a
+ * frozen size about 5x the duration after they start (cleanup in layoutReanimation/web).
+ */
+export function useEnter(
+  key: string | number | undefined,
+  c: { duration: number; translateX?: number; translateY?: number },
+  curve: typeof easing.standard = easing.out,
+) {
+  const p = useSharedValue(0);
+  const { duration, translateX = 0, translateY = 0 } = c;
+  useEffect(() => {
+    p.value = 0;
+    p.value = withTiming(1, timing(duration, curve));
+  }, [key, p, duration, curve]);
+  return useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: translateY ? [{ translateY: (1 - p.value) * translateY }] : [{ translateX: (1 - p.value) * translateX }],
+  }));
 }

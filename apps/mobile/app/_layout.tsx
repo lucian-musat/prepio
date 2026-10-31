@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { legacyColors } from '@prepio/shared';
-import { fontFamily, fontFiles } from '../src/theme/fonts';
+import { color } from '@prepio/shared';
+import { fontFiles } from '../src/theme/fonts';
 import { paperTheme } from '../src/theme/paperTheme';
 
 SplashScreen.preventAutoHideAsync();
@@ -24,13 +24,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={paperTheme}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: legacyColors.bordeaux },
-            headerTintColor: legacyColors.parchment,
-            headerTitleStyle: { fontFamily: fontFamily.legacyHeadingBold },
-            contentStyle: { backgroundColor: legacyColors.parchment },
+            headerShown: false,
+            contentStyle: { backgroundColor: color.bg },
+            animation: 'slide_from_right',
           }}
         >
           <Stack.Screen name="index" options={{ title: 'Prepio' }} />

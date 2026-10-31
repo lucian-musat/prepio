@@ -33,6 +33,11 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
 
 ### Owner actions
 - [ ] Review the 3 lessons for historical accuracy. Known simplifications: universal-suffrage dates inconsistent across lessons (principle 1917 / decree-law Nov 1918 / first applied 1919); 1918 peace card says Romania "lost Dobrogea" (Cadrilater + south to Bulgaria, rest under Central Powers administration); L3 exercise 1 examples Plevna/Grivița overlap (could be credited as two facts); L2 card 6 "democratice" → "liberale"; L3 card 6 repeats "a aderat".
+- [ ] Test on the phone with the next APK (design system, native-only behaviour not verifiable on web):
+  - ScreenLayout: top bar sits below the status bar (dark status-bar icons), action bar clears the gesture/nav bar; with the keyboard open (`behavior='height'` on Android) the action bar stays visible and the focused input is not covered.
+  - Edge shadows (`boxShadow`) on the top bar / action bar when content scrolls under them, and the progress-bar inner shadow, render on Android.
+  - Back button: 48 px touch target, press-scale feedback; Android hardware back still navigates; screen transition is `slide_from_right`.
+  - Home and Lesson screens have no native header until they are migrated (Tasks 5–7) — expected in between.
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX
