@@ -22,10 +22,10 @@ The schema lives in `supabase/migrations/*.sql` (applied in filename order) and 
 
 2. **Check the connection**: `pnpm db:cloud:status` lists local vs remote migrations. The first run links the repo to the project (stored in `supabase/.temp/`, gitignored).
 
-3. **Initial history repair (only once, already-deployed project).** The first deploy applied migrations `20261030000001`–`20261030000004` through the SQL editor, so the remote migration history is empty. If `db:cloud:status` shows them only on the local side, mark them as applied — otherwise `db push` would try to run them again:
+3. **Initial history repair — done on 2026-10-31.** The first deploy applied migrations `20261030000001`–`20261030000004` through the SQL editor; they were then marked as applied in the remote history, so local and remote are in sync. For reference, the command was:
 
    ```bash
-   pnpm db:cloud migration repair --status applied 20261030000001 20261030000002 20261030000003 20261030000004
+   pnpm db:cloud migration repair --linked --status applied 20261030000001 20261030000002 20261030000003 20261030000004
    ```
 
 ## Making a change
@@ -84,4 +84,4 @@ There is no automatic down-migration. Write a new migration that reverts the cha
 | `pnpm db:cloud:status` | local vs production migration list |
 | `pnpm db:cloud:push:dry` | preview what would be applied to production |
 | `pnpm db:cloud:push` | apply pending migrations to production |
-| `pnpm db:cloud <args>` | any Supabase CLI command against production, e.g. `migration repair …` |
+| `pnpm db:cloud <args>` | any Supabase CLI command against production, e.g. `migration repair --linked …` (add `--linked` to commands that would otherwise default to the local DB) |

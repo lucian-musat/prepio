@@ -17,9 +17,9 @@
     "db:test": "supabase test db",
     "db:new": "supabase migration new",
     "db:cloud": "bash scripts/supabase-cloud.sh",
-    "db:cloud:status": "bash scripts/supabase-cloud.sh migration list",
-    "db:cloud:push:dry": "bash scripts/supabase-cloud.sh db push --dry-run",
-    "db:cloud:push": "bash scripts/supabase-cloud.sh db push"
+    "db:cloud:status": "bash scripts/supabase-cloud.sh migration list --linked",
+    "db:cloud:push:dry": "bash scripts/supabase-cloud.sh db push --linked --dry-run",
+    "db:cloud:push": "bash scripts/supabase-cloud.sh db push --linked"
   },
   "devDependencies": {
     "supabase": "^2.122.0"
