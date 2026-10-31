@@ -6,7 +6,16 @@ Prepio is a multi-platform product made of three apps:
 - **Web app** — end-user application in the browser
 - **Admin** — back-office for managing content
 
-The project is in its initial phase: no stack, architecture, or code structure has been decided yet. Update this file as those decisions are made (stack, repo layout, build/test/lint commands, conventions).
+Stack, layout and commands: see `README.md`. Design spec and plan: `docs/superpowers/`. Deploy: `docs/deploy.md`.
+
+- The repo lives in WSL (`~/projects/prepio_new`); run commands with nvm loaded: `wsl -d Ubuntu-22.04 -- bash -ic "cd ~/projects/prepio_new && <cmd>"`.
+- Production: student web https://prepio-web.vercel.app, admin https://prepio-admin.vercel.app, Supabase project `pienbjvwjgnzmnjzmrbh`, Expo `lucianm91s-team/prepio`.
+
+## Database changes
+
+Follow `docs/database-migrations.md`: new migration (`pnpm db:new`), RLS policies for every new table, pgTAP test, `pnpm db:reset && pnpm seed && pnpm db:test`, then `pnpm db:cloud:push:dry` → `pnpm db:cloud:push`. Never edit an applied migration; never change production by hand.
+
+Production DB credentials live in `~/.config/prepio/supabase.env` (chmod 600, outside the repo). Use them only through `scripts/supabase-cloud.sh` / the `pnpm db:cloud*` scripts — never read, print, copy or pass the values as command-line arguments. Never run `pnpm seed` with `SEED_RESET=1` against production.
 
 ## Repository
 

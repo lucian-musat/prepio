@@ -29,9 +29,8 @@ Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, p
 
 ## Schema and content
 
-- Schema: run the files in `supabase/migrations/` in order in the Supabase SQL editor (or `supabase link` + `supabase db push`).
-  The initial deploy (2026-10-31) applied migrations `20261030000001`–`20261030000004` and the seed content through the SQL editor, so the cloud migration history is empty. Before the first `supabase db push`, mark them as applied:
-  `pnpm exec supabase migration repair --status applied 20261030000001 20261030000002 20261030000003 20261030000004`
+- Schema: migrations in `supabase/migrations/`, applied with `pnpm db:cloud:push` — full workflow, credentials setup and the one-time history repair in [database-migrations.md](database-migrations.md).
+  The initial deploy (2026-10-31) applied migrations `20261030000001`–`20261030000004` and the seed content through the SQL editor.
 - Content: `pnpm seed` against the cloud project. Pass credentials inline, never through a `.env` file:
 
   ```bash
@@ -61,7 +60,7 @@ Share the internal-distribution install link from the build page; the phone must
 
 - Admin / student web: push to `main` (Vercel auto-deploys), or "Redeploy" in the Vercel dashboard after changing env vars.
 - APK: run a new `preview` build as above.
-- Schema change: add a migration, apply it in the SQL editor, commit it.
+- Schema change: see [database-migrations.md](database-migrations.md) (`pnpm db:new`, test locally, `pnpm db:cloud:push`).
 
 ## Verification checklist
 

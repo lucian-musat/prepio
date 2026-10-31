@@ -27,4 +27,4 @@ pnpm db:test             # database (RLS) tests
 
 ## Deployment
 
-See [docs/deploy.md](docs/deploy.md).
+See [docs/deploy.md](docs/deploy.md). Database changes: [docs/database-migrations.md](docs/database-migrations.md).
