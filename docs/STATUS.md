@@ -4,7 +4,7 @@ Last updated: 2026-11-01
 
 ## Where we are
 
-The student app and admin were restyled with the "Mentă Prietenoasă" design system (2026-10-31/11-01; `docs/design-system.md`). It is not released to phones yet: it needs a **new APK** (new native modules, see below).
+The student app and admin were restyled with the "Mentă Prietenoasă" design system (2026-10-31/11-01; `docs/design-system.md`) and **deployed on 2026-11-01**: both Vercel projects from `main` (`dd517be`, production checklist from `docs/deploy.md` passed, prod walked in Chrome) and a new Android `preview` APK (EAS build `81fa1fef-0077-47f6-a447-bc331f1ebee3`). The owner still has to install that APK and go through the phone test list below.
 
 The POC described in `docs/superpowers/specs/2026-10-30-prepio-poc-design.md` is **implemented, deployed and in use** (plan `docs/superpowers/plans/2026-10-30-prepio-poc.md`, all 13 tasks done).
 
