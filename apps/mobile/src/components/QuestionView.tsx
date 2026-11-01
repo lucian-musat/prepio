@@ -16,6 +16,7 @@ import {
   shuffleForDisplay,
   space,
   type Answer,
+  typeScale,
   type OrderItem,
   type Question,
 } from '@prepio/shared';
@@ -46,6 +47,8 @@ const TYPE_LABELS: Record<Question['type'], string> = {
 const SHORT_ANSWER_MAX = 60;
 const SEE_ABOVE = 'Vezi răspunsul corect mai sus.';
 
+// Badge: 15 px line + 2 × 2 px padding (Chip `badge`), against the 16 px eyebrow line.
+const BADGE_OVERHANG = (typeScale.badge.lineHeight + space[1] - typeScale.eyebrow.lineHeight) / 2;
 const ICON_SIZE = space[6] + space[1]; // 28 px circle (prototype `.feedback .ic`)
 const ICON_GLYPH = space[4];
 const ICON_STROKE = 3;
@@ -96,7 +99,7 @@ function Verdict({ good, line }: { good: boolean; line: string | null }) {
     <View style={styles.verdict}>
       <VerdictIcon good={good} />
       <View style={styles.verdictText}>
-        <AppText role="bodyStrong" style={tint}>
+        <AppText role="verdict" style={tint}>
           {verdictText(good)}
         </AppText>
         {line ? (
@@ -207,26 +210,33 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
       >
         <View style={styles.content}>
           <Surface padding={5} radius="xl">
-            <View style={styles.header}>
+            {/* Prototype `.qcard.stagger`: eyebrow, prompt and options rise one after another. */}
+            <Enter index={0} style={styles.header}>
               <AppText role="eyebrow" color="primary">
                 {TYPE_LABELS[question.type]}
               </AppText>
-              <DifficultyBadge difficulty={question.difficulty} />
-            </View>
-            <AppText role="question" style={styles.prompt}>
-              {question.prompt}
-            </AppText>
-            {question.type === 'chronological_order' ? (
-              <OrderQuestion order={order} items={question.options} answered={answered} onMove={move} />
-            ) : (
-              <ChoiceQuestion
-                options={question.options}
-                multiple={question.type === 'multiple_choice'}
-                answered={answered}
-                selected={selected}
-                onToggle={toggle}
-              />
-            )}
+              <View style={styles.badge}>
+                <DifficultyBadge difficulty={question.difficulty} />
+              </View>
+            </Enter>
+            <Enter index={1}>
+              <AppText role="question" style={styles.prompt}>
+                {question.prompt}
+              </AppText>
+            </Enter>
+            <Enter index={2}>
+              {question.type === 'chronological_order' ? (
+                <OrderQuestion order={order} items={question.options} answered={answered} onMove={move} />
+              ) : (
+                <ChoiceQuestion
+                  options={question.options}
+                  multiple={question.type === 'multiple_choice'}
+                  answered={answered}
+                  selected={selected}
+                  onToggle={toggle}
+                />
+              )}
+            </Enter>
           </Surface>
 
           {hasReveal ? (
@@ -259,6 +269,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { gap: space[4] },
   header: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[2] },
+  // The badge (app-only) is taller than the eyebrow line; it overhangs so the prompt sits where the prototype has it.
+  badge: { marginVertical: -BADGE_OVERHANG },
   prompt: { marginTop: space[1.5], marginBottom: space[4] },
   reveal: { gap: space[3] },
   answerBox: {
@@ -269,7 +281,8 @@ const styles = StyleSheet.create({
     backgroundColor: color.successSubtle,
   },
   answerText: { color: feedbackText.good },
-  verdict: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], paddingBottom: space[3] },
+  // Prototype `.feedback`: padding 2px 0 12px.
+  verdict: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], paddingTop: space[1] / 2, paddingBottom: space[3] },
   icon: { width: ICON_SIZE, height: ICON_SIZE, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   verdictText: { flex: 1 },
 });

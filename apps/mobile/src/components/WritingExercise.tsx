@@ -13,6 +13,7 @@ import {
 import { evaluateEssay } from '../lib/api';
 import { AppText, Button, Enter, ScoreRing, ScreenLayout, Skeleton, Surface, TextArea } from '../ui';
 import type { LessonFrame } from './QuestionView';
+import { fontFamily } from '../theme/fonts';
 
 type Props = {
   exercise: WritingExerciseData;
@@ -26,6 +27,11 @@ type Props = {
 const SKELETON_LINES = [90, 75, 60];
 // Prototype `.counter` side margin.
 const COUNTER_INSET = 2;
+// Prototype `.counter` sits 8 px under the textarea plus the ~6 px line-box descent below the inline
+// textarea: 14 px in all.
+const COUNTER_GAP = space[3.5];
+// Prototype `reveal`: scroll so new content sits 12 px below the top bar.
+const REVEAL_GAP = space[3];
 // Below this window width the two action labels don't fit side by side (360 px phone: the submit
 // label truncated), so the actions stack, the primary one last, where it sits on every other screen.
 const STACK_ACTIONS_BELOW = 480;
@@ -36,10 +42,10 @@ function Result({ result }: { result: EvaluateResponse }) {
       <Enter index={0} style={styles.grade}>
         <ScoreRing value={result.grade} min={result.gradeMin} max={result.gradeMax} />
         <View style={styles.gradeText}>
-          <AppText role="section" accessibilityRole="header">
+          <AppText role="section" accessibilityRole="header" style={styles.gradeTitle}>
             Nota ta
           </AppText>
-          <AppText role="small" color="textMuted">
+          <AppText role="note" color="textMuted">
             {result.summary}
           </AppText>
         </View>
@@ -51,18 +57,19 @@ function Result({ result }: { result: EvaluateResponse }) {
               Ce poți îmbunătăți
             </AppText>
           </Enter>
-          <View style={styles.sugg}>
+          {/* Prototype `.result.stagger`: the list rises as one block, after the label. */}
+          <Enter index={2} style={styles.sugg}>
             {result.suggestions.map((s, i) => (
-              <Enter key={i} index={i + 2} style={styles.suggRow}>
-                <AppText role="bodyStrong" color="primary" importantForAccessibility="no" accessibilityElementsHidden>
+              <View key={i} style={styles.suggRow}>
+                <AppText role="list" color="primary" style={styles.arrow} importantForAccessibility="no" accessibilityElementsHidden>
                   →
                 </AppText>
-                <AppText role="small" style={styles.suggText}>
+                <AppText role="list" style={styles.suggText}>
                   {s}
                 </AppText>
-              </Enter>
+              </View>
             ))}
-          </View>
+          </Enter>
         </>
       ) : null}
     </Surface>
@@ -115,7 +122,8 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
   const onOutLayout = (e: LayoutChangeEvent) => {
     if (!outKey || scrolledKey.current === outKey) return;
     scrolledKey.current = outKey;
-    scrollRef.current?.scrollTo({ y: cardY.current + e.nativeEvent.layout.y, animated: true });
+    // Prototype `reveal`: 12 px of breathing room under the top bar.
+    scrollRef.current?.scrollTo({ y: Math.max(0, cardY.current + e.nativeEvent.layout.y - REVEAL_GAP), animated: true });
   };
 
   return (
@@ -181,11 +189,11 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
 const styles = StyleSheet.create({
   // Prototype `.qcard h2` margins.
   prompt: { marginTop: space[1.5], marginBottom: space[4] },
-  // Prototype `.counter`: margin 8px 2px 14px.
+  // Prototype `.counter`: margin 8px 2px 14px (see COUNTER_GAP).
   counter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: space[2],
+    marginTop: COUNTER_GAP,
     marginHorizontal: COUNTER_INSET,
     marginBottom: space[3.5],
   },
@@ -197,6 +205,8 @@ const styles = StyleSheet.create({
   error: { padding: space[3], marginBottom: space[3.5], borderRadius: radius.md, backgroundColor: color.dangerSubtle },
   grade: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   gradeText: { flex: 1, gap: space[1] },
+  // Prototype `.grade h3` has no heading letter-spacing.
+  gradeTitle: { letterSpacing: 0 },
   // Prototype `.label-sm`: margin 18px 0 8px.
   suggLabel: { marginTop: space[4.5], marginBottom: space[2] },
   sugg: { gap: space[2] },
@@ -209,4 +219,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceMuted,
   },
   suggText: { flex: 1 },
+  // Prototype `.sugg li::before`: weight 800 (rendered bold).
+  arrow: { fontFamily: fontFamily.bodyBold },
 });

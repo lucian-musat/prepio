@@ -47,7 +47,7 @@ export default function TextArea({ value, onChangeText, accessibilityLabel, plac
 
 const styles = StyleSheet.create({
   input: {
-    ...type('option'),
+    ...type('input'),
     color: color.text,
     minHeight: MIN_HEIGHT,
     borderRadius: radius.lg,

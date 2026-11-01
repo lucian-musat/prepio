@@ -27,7 +27,7 @@ export default function ProgressBar({ value, accessibilityLabel }: Props) {
   const width = useSharedValue(v);
 
   useEffect(() => {
-    width.value = withTiming(v, timing(motion.duration.slow, easing.out));
+    width.value = withTiming(v, timing(motion.duration.slow, easing.standard));
   }, [v, width]);
 
   const animated = useAnimatedStyle(() => ({ width: `${width.value * 100}%` }));

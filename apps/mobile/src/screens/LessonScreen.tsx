@@ -193,16 +193,15 @@ function LessonDone({ title, correct, total }: { title: string; correct: number;
         actions={<Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />}
       >
         <View style={styles.done}>
-          <Enter index={0}>
-            <Cap />
-          </Enter>
+          {/* Prototype: `.done-wrap .big` only pops (its own animation replaces the stagger rise). */}
+          <Cap />
           <Enter index={1}>
-            <AppText role="display" accessibilityRole="header" style={styles.doneTitle}>
+            <AppText role="celebrate" accessibilityRole="header" style={styles.doneTitle}>
               Ai terminat lecția!
             </AppText>
           </Enter>
           <Enter index={2}>
-            <AppText role="body" color="textMuted" style={styles.centre}>
+            <AppText role="lead" color="textMuted" style={styles.centre}>
               {title}
             </AppText>
           </Enter>
@@ -222,7 +221,8 @@ function LessonDone({ title, correct, total }: { title: string; correct: number;
 
 // Prototype `.done-wrap`: 56 px emoji, padding 30px 8px, h2 margin 10px 0 6px; confetti 200 ms after mount.
 const CAP_SIZE = 56;
-const CAP_LINE_HEIGHT = 68; // ~1.2 x CAP_SIZE, so the glyph isn't clipped
+// The prototype's line box for the 56 px emoji (Nunito Sans `normal` raised by the emoji font): 80.6 px.
+const CAP_LINE_HEIGHT = 80;
 const DONE_PAD_V = 30;
 const CONFETTI_DELAY_MS = 200;
 const POP_MS = 600;

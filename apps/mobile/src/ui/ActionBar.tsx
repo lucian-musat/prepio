@@ -3,7 +3,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, layout, space } from '@prepio/shared';
 import Enter from './Enter';
-import { easing, feedbackConfig } from './motion';
+import { easing, feedbackConfig, webTransition } from './motion';
 import { raisedShadow } from './elevation';
 
 export type ActionTone = 'neutral' | 'good' | 'wrong';
@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'transparent',
     zIndex: 4,
+    ...webTransition(['box-shadow', 'border-color', 'background-color']),
   },
   // Prototype desktop: 14 / 32 / 18.
   wide: { paddingTop: space[3.5], paddingHorizontal: layout.gutterWide },

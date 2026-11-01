@@ -1,3 +1,5 @@
+import { StyleSheet } from 'react-native';
+import { color } from '@prepio/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Button from './Button';
 
@@ -31,4 +33,15 @@ it('uses accessibilityLabel as the accessible name when given, keeping the visib
   expect(screen.getByRole('button', { name: 'Înapoi la cartonașul anterior' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Înapoi' })).toBeNull();
   expect(screen.getByText('Înapoi')).toBeTruthy();
+});
+
+it('secondary button face turns surfaceMuted on hover (prototype `.btn.ghost:hover`)', async () => {
+  await render(<Button variant="secondary" label="Înapoi" onPress={jest.fn()} />);
+  const button = screen.getByRole('button', { name: 'Înapoi' });
+  const faceBg = () => StyleSheet.flatten(screen.getByTestId('button-face').props.style).backgroundColor;
+  expect(faceBg()).toBe(color.surface);
+  await fireEvent(button, 'hoverIn');
+  expect(faceBg()).toBe(color.surfaceMuted);
+  await fireEvent(button, 'hoverOut');
+  expect(faceBg()).toBe(color.surface);
 });

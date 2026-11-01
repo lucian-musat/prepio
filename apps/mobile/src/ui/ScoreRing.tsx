@@ -32,7 +32,7 @@ export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE }: Prop
       setShown(value);
       return;
     }
-    fill.value = withTiming(target, timing(FILL_MS, easing.out));
+    fill.value = withTiming(target, timing(FILL_MS, easing.standard));
     // The number counts on the JS side with a cubic ease-out (prototype `tick`).
     const from = shown;
     const start = Date.now();
@@ -71,7 +71,7 @@ export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE }: Prop
         />
       </Svg>
       <View style={styles.centre}>
-        <AppText role="display">{shown}</AppText>
+        <AppText role="display" style={styles.number}>{shown}</AppText>
       </View>
     </View>
   );
@@ -82,4 +82,6 @@ const styles = StyleSheet.create({
   // Start the arc at 12 o'clock.
   svg: { transform: [{ rotate: '-90deg' }] },
   centre: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  // Prototype `.ring b`: no heading letter-spacing.
+  number: { letterSpacing: 0 },
 });

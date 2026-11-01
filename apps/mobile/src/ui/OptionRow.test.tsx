@@ -1,7 +1,11 @@
 import { StyleSheet } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { color } from '@prepio/shared';
 import OptionRow from './OptionRow';
+import { mixColors } from './elevation';
+import * as Reanimated from 'react-native-reanimated';
+
+const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { borderColor: string } };
 
 let mockReducedMotion = false;
 jest.mock('react-native-reanimated', () => ({
@@ -55,4 +59,17 @@ it('an explicitly disabled row is announced as disabled', async () => {
 it('uses the accessibility label override', async () => {
   await render(<OptionRow label="1859" marker="B" state="correct" accessibilityLabel="1859, corect" />);
   expect(screen.getByRole('radio', { name: '1859, corect' })).toBeTruthy();
+});
+
+it('an idle row takes the prototype hover border (primary 40 % into border); a selected row keeps its own', async () => {
+  mockReducedMotion = true;
+  await render(<OptionRow label="1859" marker="B" state="idle" onPress={() => {}} />);
+  const face = () => getAnimatedStyle(screen.getByTestId('option-face'));
+  await fireEvent(screen.getByRole('radio', { name: /1859/ }), 'hoverIn');
+  expect(face().borderColor).toBe(mixColors(color.primary, color.border, 0.4));
+  await fireEvent(screen.getByRole('radio', { name: /1859/ }), 'hoverOut');
+  expect(face().borderColor).toBe(color.border);
+  await screen.rerender(<OptionRow label="1859" marker="B" state="selected" onPress={() => {}} />);
+  await fireEvent(screen.getByRole('radio', { name: /1859/ }), 'hoverIn');
+  expect(face().borderColor).toBe(color.primary);
 });

@@ -18,7 +18,7 @@ type Props = {
  * View that fades/slides in on mount (see useEnter). Give it a new `key` to replay for new content.
  * Pass `index` for list items (the shared-value replacement for the `enterStagger` Keyframe).
  */
-export default function Enter({ config, index, curve = easing.out, style, testID, children }: Props) {
+export default function Enter({ config, index, curve = easing.standard, style, testID, children }: Props) {
   const enter = useEnter(index !== undefined ? staggerConfig(index) : (config ?? staggerConfig(0)), curve);
   return (
     <Animated.View testID={testID} style={[style, enter]}>

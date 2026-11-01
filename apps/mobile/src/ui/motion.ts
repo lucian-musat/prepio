@@ -1,3 +1,4 @@
+import { Platform, type ViewStyle } from 'react-native';
 import { useEffect } from 'react';
 import {
   Easing, Keyframe, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming,
@@ -42,7 +43,7 @@ export const feedbackConfig = {
 };
 
 export const cardInConfig = (direction: CardDirection) => ({
-  duration: dur.base,
+  duration: dur.slow, // prototype `.lcard.in-next`: var(--dur-slow)
   translateX: direction === 'next' ? 60 : -60,
   rotate: direction === 'next' ? 2 : -2,
   reduceMotion: ReduceMotion.System,
@@ -110,13 +111,13 @@ function bake(
 /** Fade + rise for list items; each index starts 50 ms after the previous one. */
 export function enterStagger(index: number) {
   const c = staggerConfig(index);
-  return bake({ opacity: 0, translateY: c.translateY }, { opacity: 1, translateY: 0 }, curves.out, c);
+  return bake({ opacity: 0, translateY: c.translateY }, { opacity: 1, translateY: 0 }, curves.standard, c);
 }
 
 /** Screen transition: fade + slide in from the right (forward) or left (back). */
 export function enterScreen(direction: Direction) {
   const c = screenConfig(direction);
-  return bake({ opacity: 0, translateX: c.translateX }, { opacity: 1, translateX: 0 }, curves.out, c);
+  return bake({ opacity: 0, translateX: c.translateX }, { opacity: 1, translateX: 0 }, curves.standard, c);
 }
 
 /** Card entering from the side with a slight tilt. */
@@ -153,7 +154,7 @@ export function cardOut(direction: CardDirection) {
  */
 export function useEnter(
   c: { duration: number; delay?: number; translateX?: number; translateY?: number },
-  curve: typeof easing.standard = easing.out,
+  curve: typeof easing.standard = easing.standard,
 ) {
   const reduced = useReducedMotion();
   const p = useSharedValue(reduced ? 1 : 0);
@@ -169,4 +170,18 @@ export function useEnter(
     opacity: p.value,
     transform: translateY ? [{ translateY: (1 - p.value) * translateY }] : [{ translateX: (1 - p.value) * translateX }],
   }));
+}
+
+/**
+ * CSS transition for state-driven style changes on web (prototype: the raised edge shadow and the
+ * action bar tint fade over var(--dur) with the standard curve). Native has no CSS transitions,
+ * so there the change is immediate.
+ */
+export function webTransition(properties: string[], duration: number = dur.base): ViewStyle {
+  if (Platform.OS !== 'web') return {};
+  return {
+    transitionProperty: properties.join(', '),
+    transitionDuration: `${duration}ms`,
+    transitionTimingFunction: `cubic-bezier(${curves.standard.join(', ')})`,
+  } as unknown as ViewStyle;
 }

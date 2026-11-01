@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -11,7 +11,7 @@ import { color, elevation, motion, radius, space } from '@prepio/shared';
 import { fontFamily } from '../theme/fonts';
 import AppText from './AppText';
 import { Icon } from './IconButton';
-import { solidShadow } from './elevation';
+import { mixColors, solidShadow } from './elevation';
 import { easing, timing } from './motion';
 import { type } from './typography';
 
@@ -49,6 +49,8 @@ const POP_PEAK_AT = 0.6; // 60 % of the pop keyframe
 const SHAKE_PX = 5;
 const PRESSED_SCALE = 0.98;
 const BORDER = 2;
+// Prototype `.opt:hover` (idle rows only: the state colours override it).
+const HOVER_BORDER = mixColors(color.primary, color.border, 0.4);
 
 /** One answer option (prototype B `.opt`), animating between idle / selected / correct / wrong. */
 export default function OptionRow({ label, marker, state, onPress, disabled = false, checked, accessibilityLabel }: Props) {
@@ -63,6 +65,14 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
   const shakeX = useSharedValue(0);
   const pressScale = useSharedValue(1);
   const mounted = useRef(false);
+  const [hovered, setHovered] = useState(false);
+  const hoverBorder = state === 'idle' && hovered && interactive;
+
+  useEffect(() => {
+    if (!mounted.current || state !== 'idle') return;
+    const to = hoverBorder ? HOVER_BORDER : target.border;
+    border.value = reduced ? to : withTiming(to, timing(motion.duration.base));
+  }, [hoverBorder]);
 
   useEffect(() => {
     const first = !mounted.current;
@@ -71,7 +81,8 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
     if (!first) {
       const t = timing(motion.duration.base);
       bg.value = reduced ? target.bg : withTiming(target.bg, t);
-      border.value = reduced ? target.border : withTiming(target.border, t);
+      const edge = hoverBorder ? HOVER_BORDER : target.border;
+      border.value = reduced ? edge : withTiming(edge, t);
       keyBg.value = reduced ? target.key : withTiming(target.key, t);
     }
     if (reduced) {
@@ -130,6 +141,8 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
       onPress={interactive ? onPress : undefined}
       onPressIn={press(PRESSED_SCALE)}
       onPressOut={press(1)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
     >
       <Animated.View testID="option-face" style={[styles.row, rowStyle]}>
         <Animated.View style={[styles.key, keyStyle]}>

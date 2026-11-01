@@ -87,22 +87,32 @@ type TypeRole = {
   letterSpacing?: number;
   uppercase?: boolean;
 };
+// Line heights are the prototype's computed values: explicit ones (e.g. 1.6 × 17 = 27.2) or, where
+// the prototype uses `normal`, the font's own (Nunito / Nunito Sans: 1.364 × size).
 export const typeScale = {
-  logo: { size: 22, lineHeight: 27, weight: 'headBlack', letterSpacing: -0.22 },
-  display: { size: 24, lineHeight: 29, weight: 'headBlack', letterSpacing: -0.24 },
-  title: { size: 22, lineHeight: 28, weight: 'headBlack', letterSpacing: -0.22 },
+  logo: { size: 22, lineHeight: 30, weight: 'headBlack', letterSpacing: -0.22 },
+  logoMark: { size: 15, lineHeight: 20.5, weight: 'headBlack' },
+  display: { size: 24, lineHeight: 28.8, weight: 'headBlack', letterSpacing: -0.24 },
+  celebrate: { size: 24, lineHeight: 32.7, weight: 'headBlack' },
+  title: { size: 22, lineHeight: 27.5, weight: 'headBlack', letterSpacing: -0.22 },
   question: { size: 20, lineHeight: 26, weight: 'headBlack', letterSpacing: -0.2 },
-  section: { size: 18, lineHeight: 23, weight: 'headBlack', letterSpacing: -0.18 },
-  bar: { size: 17, lineHeight: 22, weight: 'headBlack', letterSpacing: -0.17 },
-  body: { size: 17, lineHeight: 27, weight: 'body' },
-  bodyStrong: { size: 16, lineHeight: 21, weight: 'bodyBold' },
-  option: { size: 16, lineHeight: 22, weight: 'body' },
-  small: { size: 15, lineHeight: 23, weight: 'body' },
-  caption: { size: 13, lineHeight: 18, weight: 'body' },
+  section: { size: 18, lineHeight: 24.5, weight: 'headBlack', letterSpacing: -0.18 },
+  bar: { size: 17, lineHeight: 23.2, weight: 'headBlack', letterSpacing: -0.17 },
+  body: { size: 17, lineHeight: 27.2, weight: 'body' },
+  bodyStrong: { size: 16, lineHeight: 20.8, weight: 'bodyBold' },
+  verdict: { size: 16, lineHeight: 24, weight: 'bodyBold' },
+  option: { size: 16, lineHeight: 21.8, weight: 'body' },
+  lead: { size: 16, lineHeight: 21.8, weight: 'body' },
+  input: { size: 16, lineHeight: 24.8, weight: 'body' },
+  small: { size: 15, lineHeight: 22.5, weight: 'body' },
+  list: { size: 15, lineHeight: 21.75, weight: 'body' },
+  note: { size: 14, lineHeight: 20.3, weight: 'body' },
+  label: { size: 14, lineHeight: 19.1, weight: 'bodySemi' },
+  caption: { size: 13, lineHeight: 17.7, weight: 'body' },
   eyebrow: { size: 12, lineHeight: 16, weight: 'bodyBold', letterSpacing: 0.96, uppercase: true },
-  button: { size: 16, lineHeight: 20, weight: 'bodyBold' },
-  chip: { size: 12, lineHeight: 16, weight: 'bodyBold' },
-  badge: { size: 11, lineHeight: 14, weight: 'bodyBold' },
+  button: { size: 16, lineHeight: 21.8, weight: 'bodyBold' },
+  chip: { size: 12, lineHeight: 15, weight: 'bodyBold' },
+  badge: { size: 11, lineHeight: 15, weight: 'bodyBold' },
 } as const satisfies Record<string, TypeRole>;
 
 // Motion: durations in ms, easings as cubic-bezier control points (usable by RN and CSS).

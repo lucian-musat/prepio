@@ -104,6 +104,23 @@ describe('single choice', () => {
     expect(onAnswered).toHaveBeenCalledWith(false);
   });
 
+  it('marks the correct option 300 ms after a wrong answer, like the prototype', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderQ(single);
+      await fireEvent.press(screen.getByText('Varianta A'));
+      await fireEvent.press(verify());
+      expect(screen.getByTestId('option-icon-close')).toBeTruthy();
+      expect(screen.queryByTestId('option-icon-check')).toBeNull();
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+      expect(screen.getByTestId('option-icon-check')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('announces the verdict and its line once to screen readers', async () => {
     // RN's jest setup already mocks AccessibilityInfo, so spyOn returns that mock with earlier calls: clear it.
     const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockClear().mockImplementation(() => {});

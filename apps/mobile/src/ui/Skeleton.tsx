@@ -13,7 +13,6 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 import { color, motion, radius, space } from '@prepio/shared';
-import { fontFamily } from '../theme/fonts';
 import AppText from './AppText';
 import Enter from './Enter';
 import { easing } from './motion';
@@ -93,7 +92,7 @@ export default function Skeleton({ lines }: Props) {
         {[0, 1, 2].map((i) => (
           <Dot key={i} index={i} />
         ))}
-        <AppText role="small" color="textMuted" style={styles.label}>
+        <AppText role="label" color="textMuted">
           Se evaluează răspunsul…
         </AppText>
       </View>
@@ -115,7 +114,6 @@ const styles = StyleSheet.create({
   },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: space[2.5] },
   dot: { width: DOT, height: DOT, borderRadius: radius.pill, backgroundColor: color.primary },
-  label: { fontFamily: fontFamily.bodySemi },
   line: { height: LINE_HEIGHT, borderRadius: radius.pill, overflow: 'hidden', backgroundColor: color.surfaceMuted },
   sweep: { position: 'absolute', top: 0, bottom: 0, left: 0, flexDirection: 'row' },
 });

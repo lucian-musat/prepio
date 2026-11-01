@@ -6,6 +6,7 @@ import AppText from './AppText';
 import IconButton from './IconButton';
 import ProgressBar from './ProgressBar';
 import { raisedShadow } from './elevation';
+import { webTransition } from './motion';
 
 /** Back to the previous screen, or to Home when the screen was opened directly (deep link / reload). */
 export function goBackOrHome() {
@@ -28,7 +29,7 @@ function Logo() {
   return (
     <View style={styles.logo} accessibilityRole="header">
       <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.mark}>
-        <AppText role="bar" color="onPrimary">P</AppText>
+        <AppText role="logoMark" color="onPrimary">P</AppText>
       </LinearGradient>
       <AppText role="logo">Prepio</AppText>
     </View>
@@ -73,6 +74,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'transparent',
     zIndex: 3,
+    ...webTransition(['border-color', 'box-shadow']),
   },
   // Prototype desktop: 18 / 32 / 14.
   wide: { paddingTop: space[4.5], paddingHorizontal: layout.gutterWide, paddingBottom: space[3.5] },

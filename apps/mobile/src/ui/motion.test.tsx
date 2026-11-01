@@ -35,7 +35,7 @@ it('stagger delay grows by 50 ms', () => {
 it('presets use the token durations and end at rest', () => {
   expect(inspect(enterStagger(0)).durationV).toBe(420);
   expect(inspect(enterScreen('back')).durationV).toBe(420);
-  expect(inspect(cardIn('next')).durationV).toBe(320);
+  expect(inspect(cardIn('next')).durationV).toBe(420);
   const end = inspect(cardIn('next')).definitions.to;
   expect(end.opacity).toBe(1);
 });

@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, gradient, radius, space } from '@prepio/shared';
+import { color, gradient, radius, space, typeScale } from '@prepio/shared';
 import { lessonCount } from '../lib/lessonCount';
 import { fontFamily } from '../theme/fonts';
 import AppText from './AppText';
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   label: {
     ...type('caption'),
     fontFamily: fontFamily.bodySemi,
-    lineHeight: space[5.5],
+    lineHeight: typeScale.lead.lineHeight,
     color: withAlpha(color.onPrimary, LABEL_ALPHA),
   },
   title: { color: color.onPrimary, marginTop: space[1.5], marginBottom: space[2] },
