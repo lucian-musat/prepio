@@ -1,8 +1,10 @@
 # Project status
 
-Last updated: 2026-10-31
+Last updated: 2026-11-01
 
 ## Where we are
+
+The student app and admin were restyled with the "Mentă Prietenoasă" design system (2026-10-31/11-01; `docs/design-system.md`). It is not released to phones yet: it needs a **new APK** (new native modules, see below).
 
 The POC described in `docs/superpowers/specs/2026-10-30-prepio-poc-design.md` is **implemented, deployed and in use** (plan `docs/superpowers/plans/2026-10-30-prepio-poc.md`, all 13 tasks done).
 
@@ -19,8 +21,12 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
 
 ## Decisions taken during implementation (not in the original spec)
 
-- UI libraries: admin uses Bootstrap 5 / react-bootstrap; student app uses React Native Paper. Shared design tokens in `packages/shared/src/theme.ts` ("archive / old book" theme: parchment, bordeaux, gold; Lora + Source Sans 3).
-- Mobile font family keys are CSS-safe (`Lora`, `Lora-Bold`, `SourceSans3`, `SourceSans3-Bold` in `apps/mobile/src/theme/fonts.ts`) — react-native-web writes `fontFamily` unquoted.
+- Design system (spec `docs/superpowers/specs/2026-10-31-design-system-design.md`, doc `docs/design-system.md`): variant B "Mentă Prietenoasă" chosen by the owner; tokens in `packages/shared/src/theme.ts`; fonts Nunito + Nunito Sans (family keys CSS-safe in `apps/mobile/src/theme/fonts.ts`, react-native-web writes `fontFamily` unquoted). The old archive theme (Lora, Source Sans, parchment/bordeaux/gold) is removed.
+- Primary is the darker teal `#0F766E` (white label 5.5:1) instead of the prototype's `#0D9488` (3.7:1) for AA; medium/accent text `#8A6A00`, feedback text `#1A7C49` / `#A54042`. Gradients keep the prototype colours.
+- Student app uses an own UI kit (`apps/mobile/src/ui/`) instead of React Native Paper, whose Material look fought the design; Paper is removed.
+- New native modules: `react-native-svg` (icons, score ring) and `expo-linear-gradient` (hero, progress bar). No `expo-updates`, so a new APK is required.
+- Admin keeps Bootstrap 5 / react-bootstrap; the tokens are mapped to Bootstrap CSS variables in `apps/admin/src/app/theme.ts` (calm: no 3D/confetti/springy motion).
+- Motion: in-flow enter animations use shared-value `Enter`/`useEnter`, not Reanimated `Keyframe` `entering` (on react-native-web 4.7.1 Keyframe leaves elements `position:absolute` with a frozen size). The prototype's outgoing-screen exit animation is not reproduced (the old screen/phase disappears at once on web; native uses the stack's `slide_from_right`) — would need to keep the previous phase mounted during the swap.
 - Admin data access: functions in `apps/admin/src/lib/data/*.ts` taking a `SupabaseClient`; server actions are thin wrappers returning `ActionResult` (`{ok,error}`) with Romanian messages; every update/delete uses `.select('id')` and fails on 0 affected rows (RLS denials are silent otherwise).
 - Rate limiting: fixed 1-hour window, 10 evaluations per IP, plus a global cap of 300/day (`consume_rate_limit`).
 - `/api/evaluate`: per-request nonce delimiters around the student text (prompt-injection), 403 for foreign `Origin`, 415 unless JSON, `maxDuration = 60`.
@@ -33,13 +39,19 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
 
 ### Owner actions
 - [ ] Review the 3 lessons for historical accuracy. Known simplifications: universal-suffrage dates inconsistent across lessons (principle 1917 / decree-law Nov 1918 / first applied 1919); 1918 peace card says Romania "lost Dobrogea" (Cadrilater + south to Bulgaria, rest under Central Powers administration); L3 exercise 1 examples Plevna/Grivița overlap (could be credited as two facts); L2 card 6 "democratice" → "liberale"; L3 card 6 repeats "a aderat".
-- [ ] Test on the phone with the next APK (design system, native-only behaviour not verifiable on web):
-  - ScreenLayout: top bar sits below the status bar (dark status-bar icons), action bar clears the gesture/nav bar; with the keyboard open (`behavior='height'` on Android) the action bar stays visible and the focused input is not covered.
-  - Edge shadows (`boxShadow`) on the top bar / action bar when content scrolls under them, and the progress-bar inner shadow, render on Android.
-  - Back button: 48 px touch target, press-scale feedback; Android hardware back still navigates; screen transition is `slide_from_right`.
-  - Home and Lesson screens have no native header until they are migrated (Tasks 5–7) — expected in between.
-  - Home (Task 5): hero gradient angle/colours and the floating circle (8 s loop, static with "Remove animations" on), lesson-row press scale on touch, emoji in the "📚 n lecții" chip, list content clears the gesture/nav bar at the bottom.
-  - Lesson cards/questions (Task 6): card slide + tilt transition and dot width animation; option press scale, pop on the correct key, shake on a wrong row; verdict icon pop and the tinted action bar; confetti on a correct answer; content scrolls smoothly to the revealed answer/explanation; TalkBack reads options as "…, corect" / "…, greșit, ai ales-o" with the right checked state; long card/question keeps the progress bar and action bar on screen.
+- [ ] Test on the phone with the next APK (design system; native-only behaviour not verifiable on web). The APK must be rebuilt (new native modules `react-native-svg`, `expo-linear-gradient`):
+  - Fonts and diacritics: Nunito / Nunito Sans everywhere, ă â î ș ț in both cases never in a fallback font; text line spacing looks right (fractional line heights are rounded by Android's text engine); the 🎓 emoji (56 px) and the "📚 n lecții" chip render without clipping (emoji line box differs per platform).
+  - Insets: status bar with dark icons on the light background; top bar below the status bar; action bar and the Home list clear the gesture/nav bar.
+  - Writing exercise: with the keyboard open the action bar stays above it and the focused field is not covered (`behavior='height'` on Android); TextArea focus ring and multiline typing.
+  - Back: Android hardware back leaves the lesson (and `slide_from_right` screen transition); back button 48 px target and press feedback.
+  - Animations smooth on Android (Reanimated): screen/content enter, staggered lists, card slide + tilt and dot width, option press scale / correct pop / wrong shake, verdict icon pop and tinted action bar, smooth scroll to the revealed answer, Home hero floating circle (8 s loop).
+  - Gradients and SVG (new native modules): hero gradient angle/colours, progress-bar fill, score ring arc and count-up, skeleton shimmer.
+  - Shadows (`boxShadow`, new architecture): solid card/option/button edges, top/action bar edge shadows when content scrolls under them, progress-bar inner shadow.
+  - Confetti (28 views) and ring count-up performance.
+  - Lesson-row and button press feedback on touch; no hover on native, and bar tint/edge changes are instant there (CSS transitions are web-only).
+  - TalkBack: options read as "…, corect" / "…, greșit, ai ales-o" with the right checked state; verdict announcement after "Verifică"; writing error alert.
+  - Long card/question keeps the progress bar and action bar on screen; CardTransition overlap with real card images.
+  - Reduce motion: with Android "Remove animations" on, everything shows at rest (no hero loop, confetti, count-up or enter animations).
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX

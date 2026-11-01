@@ -34,7 +34,7 @@ type Props = {
 // Edge shadows appear only once content is actually hidden under a bar (prototype: 4 px tolerance).
 const EDGE = space[1];
 
-// Same values as enterScreen('forward'), run as a shared-value animation (Keyframe entering breaks layout on web, see useEnter).
+// Screen enter, run as a shared-value animation (Keyframe entering breaks layout on web, see useEnter).
 const SCREEN_ENTER = screenConfig('forward');
 
 /**

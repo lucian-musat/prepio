@@ -1,7 +1,7 @@
 import { Platform, type ViewStyle } from 'react-native';
 import { useEffect } from 'react';
 import {
-  Easing, Keyframe, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming,
+  Easing, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming,
 } from 'react-native-reanimated';
 import { motion } from '@prepio/shared';
 
@@ -22,7 +22,7 @@ export function timing(duration: number, curve: typeof easing.standard = easing.
 type Direction = 'forward' | 'back';
 type CardDirection = 'next' | 'prev';
 
-// Plain config factories: the presets below are built from them, and tests assert on them.
+// Config factories shared by Enter / useEnter / CardTransition; tests assert on them.
 export const staggerConfig = (index: number) => ({
   duration: dur.slow,
   delay: 40 + index * motion.stagger,
@@ -55,92 +55,6 @@ export const cardOutConfig = (direction: CardDirection) => ({
   scale: 0.96,
   reduceMotion: ReduceMotion.System,
 });
-
-// Reanimated on web only supports predefined builders and Keyframe (no custom worklet
-// animations), and a Keyframe step can't carry a custom bezier there. So the token curve is
-// baked into evenly spaced linear steps, which renders the same curve on web and native.
-const STEPS = 10;
-
-function cubicBezierY([x1, y1, x2, y2]: readonly number[], x: number): number {
-  const axis = (a: number, b: number, t: number) => 3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t ** 2 + t ** 3;
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 24; i++) {
-    const mid = (lo + hi) / 2;
-    if (axis(x1, x2, mid) < x) lo = mid;
-    else hi = mid;
-  }
-  return axis(y1, y2, (lo + hi) / 2);
-}
-
-type Pose = { opacity: number; translateX?: number; translateY?: number; rotate?: number; scale?: number };
-
-function pose(p: Pose) {
-  const transform: Record<string, number | string>[] = [];
-  if (p.translateX !== undefined) transform.push({ translateX: p.translateX });
-  if (p.translateY !== undefined) transform.push({ translateY: p.translateY });
-  if (p.rotate !== undefined) transform.push({ rotate: `${p.rotate}deg` });
-  if (p.scale !== undefined) transform.push({ scale: p.scale });
-  return { opacity: p.opacity, transform };
-}
-
-function bake(
-  from: Pose,
-  to: Pose,
-  curve: readonly number[],
-  c: { duration: number; delay?: number; reduceMotion: ReduceMotion },
-) {
-  const mix = (a: number | undefined, b: number | undefined, t: number) =>
-    a === undefined || b === undefined ? undefined : a + (b - a) * t;
-  const definitions: Record<string, ReturnType<typeof pose>> = { from: pose(from) };
-  for (let i = 1; i <= STEPS; i++) {
-    const t = cubicBezierY(curve, i / STEPS);
-    const at = (k: keyof Pose) => mix(from[k], to[k], t);
-    definitions[i === STEPS ? 'to' : String((i * 100) / STEPS)] = pose({
-      opacity: Math.min(1, Math.max(0, at('opacity') ?? 0)),
-      translateX: at('translateX'),
-      translateY: at('translateY'),
-      rotate: at('rotate'),
-      scale: at('scale'),
-    });
-  }
-  const k = new Keyframe(definitions as never).duration(c.duration).reduceMotion(c.reduceMotion);
-  return c.delay ? k.delay(c.delay) : k;
-}
-
-/** Fade + rise for list items; each index starts 50 ms after the previous one. */
-export function enterStagger(index: number) {
-  const c = staggerConfig(index);
-  return bake({ opacity: 0, translateY: c.translateY }, { opacity: 1, translateY: 0 }, curves.standard, c);
-}
-
-/** Screen transition: fade + slide in from the right (forward) or left (back). */
-export function enterScreen(direction: Direction) {
-  const c = screenConfig(direction);
-  return bake({ opacity: 0, translateX: c.translateX }, { opacity: 1, translateX: 0 }, curves.standard, c);
-}
-
-/** Card entering from the side with a slight tilt. */
-export function cardIn(direction: CardDirection) {
-  const c = cardInConfig(direction);
-  return bake(
-    { opacity: 0, translateX: c.translateX, rotate: c.rotate },
-    { opacity: 1, translateX: 0, rotate: 0 },
-    curves.standard,
-    c,
-  );
-}
-
-/** Card leaving to the opposite side, slightly shrunk. */
-export function cardOut(direction: CardDirection) {
-  const c = cardOutConfig(direction);
-  return bake(
-    { opacity: 1, translateX: 0, scale: 1 },
-    { opacity: 0, translateX: c.translateX, scale: c.scale },
-    curves.standard,
-    c,
-  );
-}
 
 /**
  * Fade + slide in from an offset when the calling component mounts; returns an animated style.

@@ -3,11 +3,9 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { color } from '@prepio/shared';
 import { fontFiles } from '../src/theme/fonts';
-import { paperTheme } from '../src/theme/paperTheme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,19 +21,17 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={paperTheme}>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: color.bg },
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="index" options={{ title: 'Prepio' }} />
-          <Stack.Screen name="lesson/[id]" options={{ title: 'Lecție' }} />
-        </Stack>
-      </PaperProvider>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: color.bg },
+          animation: 'slide_from_right',
+        }}
+      >
+        <Stack.Screen name="index" options={{ title: 'Prepio' }} />
+        <Stack.Screen name="lesson/[id]" options={{ title: 'Lecție' }} />
+      </Stack>
     </SafeAreaProvider>
   );
 }

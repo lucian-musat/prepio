@@ -11,10 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@expo-google-fonts/lora": "^0.4.2",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo-google-fonts/nunito-sans": "^0.4.2",
-    "@expo-google-fonts/source-sans-3": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
     "@prepio/shared": "workspace:*",
     "@supabase/supabase-js": "^2.118.0",
@@ -31,7 +29,6 @@
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-gesture-handler": "~3.3.0",
-    "react-native-paper": "^5.15.3",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
