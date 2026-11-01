@@ -152,9 +152,9 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 
 | Component | Props | Use |
 |---|---|---|
-| `Button` | `label`, `onPress`, `variant` (primary / secondary), `tone` (primary / success / danger), `disabled`, `loading`, `flex` | Every action. 3D press, 48 px minimum, `loading` shows a spinner and sets busy. |
+| `Button` | `label`, `onPress`, `variant` (primary / secondary), `tone` (primary / success / danger), `disabled`, `loading`, `flex`, `accessibilityLabel` (defaults to `label`; set it when the visible text isn't enough for screen readers) | Every action. 3D press, 48 px minimum, `loading` shows a spinner and sets busy. |
 | `IconButton` / `Icon` | icons: back, chevron-right, check, close, up, down | 48 px hit area, 40 px visual; `Icon` draws the svg glyphs. |
-| `OptionRow` | `label`, `marker` ('A'... or 'checkbox'), `state` (idle / selected / correct / wrong), `checked`, `onPress`, `disabled` | Answer options: press scale, pop on correct, shake on wrong; radio/checkbox semantics. |
+| `OptionRow` | `label`, `marker` ('A'... or 'checkbox'), `state` (idle / selected / correct / wrong), `checked`, `onPress`, `disabled`, `accessibilityLabel` (defaults to `label`; the caller adds any verdict suffix) | Answer options: press scale, pop on correct, shake on wrong; radio/checkbox semantics. |
 | `TextArea` | `value`, `onChangeText`, `accessibilityLabel`, `placeholder`, `invalid` | Multiline input with focus ring; `invalid` turns border and ring to danger. |
 
 ### Feedback and status

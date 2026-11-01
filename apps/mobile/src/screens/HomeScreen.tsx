@@ -95,9 +95,7 @@ export default function HomeScreen() {
                 {lessonCount(section.lessons.length)}
               </AppText>
             </Enter>
-            <Enter index={stagger(2 + 2 * s)}>
-              <LessonList lessons={section.lessons} wide={wide} />
-            </Enter>
+            <LessonList lessons={section.lessons} wide={wide} />
           </View>
         );
       })}

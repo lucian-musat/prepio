@@ -1,4 +1,4 @@
-import { color, gradient, radius } from '@prepio/shared';
+import { color, feedbackText, gradient, radius } from '@prepio/shared';
 
 const hexToRgb = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
@@ -15,8 +15,10 @@ export const themeVariablesCss = `:root{
 --bs-warning:${color.accent};--bs-warning-rgb:${hexToRgb(color.accent)};
 --bs-body-bg:${color.bg};--bs-body-bg-rgb:${hexToRgb(color.bg)};
 --bs-body-color:${color.text};--bs-body-color-rgb:${hexToRgb(color.text)};
---bs-secondary-color:${color.textMuted};--bs-secondary-bg:${color.surfaceMuted};
---bs-tertiary-bg:${color.surfaceMuted};
+--bs-secondary-color:${color.textMuted};--bs-secondary-color-rgb:${hexToRgb(color.textMuted)};
+--bs-secondary-bg:${color.surfaceMuted};--bs-secondary-bg-rgb:${hexToRgb(color.surfaceMuted)};
+--bs-tertiary-bg:${color.surfaceMuted};--bs-tertiary-bg-rgb:${hexToRgb(color.surfaceMuted)};
+--bs-success-text-emphasis:${feedbackText.good};--bs-danger-text-emphasis:${feedbackText.wrong};
 --bs-border-color:${color.border};
 --bs-link-color:${color.primaryStrong};--bs-link-color-rgb:${hexToRgb(color.primaryStrong)};
 --bs-link-hover-color:${color.text};--bs-link-hover-color-rgb:${hexToRgb(color.text)};
@@ -26,6 +28,7 @@ export const themeVariablesCss = `:root{
 --prepio-text:${color.text};--prepio-text-muted:${color.textMuted};--prepio-border:${color.border};
 --prepio-primary:${color.primary};--prepio-primary-strong:${color.primaryStrong};--prepio-primary-subtle:${color.primarySubtle};--prepio-on-primary:${color.onPrimary};
 --prepio-accent:${color.accent};--prepio-accent-subtle:${color.accentSubtle};--prepio-on-accent:${color.onAccent};
+--prepio-success-text:${feedbackText.good};--prepio-danger-text:${feedbackText.wrong};
 --prepio-success:${color.success};--prepio-success-subtle:${color.successSubtle};
 --prepio-danger:${color.danger};--prepio-danger-subtle:${color.dangerSubtle};
 --prepio-primary-rgb:${hexToRgb(color.primary)};

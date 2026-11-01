@@ -28,7 +28,15 @@ const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg
 function Logo() {
   return (
     <View style={styles.logo} accessibilityRole="header">
-      <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.mark}>
+      <LinearGradient
+        colors={[...gradient.hero.colors]}
+        locations={[...gradient.hero.locations]}
+        {...HERO_POINTS}
+        style={styles.mark}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden
+      >
         <AppText role="logoMark" color="onPrimary">P</AppText>
       </LinearGradient>
       <AppText role="logo">Prepio</AppText>

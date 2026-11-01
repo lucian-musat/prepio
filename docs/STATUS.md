@@ -51,6 +51,8 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
   - Lesson-row and button press feedback on touch; no hover on native, and bar tint/edge changes are instant there (CSS transitions are web-only).
   - TalkBack: options read as "…, corect" / "…, greșit, ai ales-o" with the right checked state; verdict announcement after "Verifică"; writing error alert.
   - Long card/question keeps the progress bar and action bar on screen; CardTransition overlap with real card images.
+  - Screen push on Android doesn't look doubled (native stack slide + ScreenLayout content slide-in).
+  - Android splash/icon background now mint/teal (`#F3FAF7` splash, `#0F766E` adaptive icon).
   - Reduce motion: with Android "Remove animations" on, everything shows at rest (no hero loop, confetti, count-up or enter animations).
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 

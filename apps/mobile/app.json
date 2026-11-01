@@ -8,11 +8,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "prepio",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#F7F1E3",
+    "backgroundColor": "#F3FAF7",
     "android": {
       "package": "dev.musat.prepio",
       "adaptiveIcon": {
-        "backgroundColor": "#7A1F2B",
+        "backgroundColor": "#0F766E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -33,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F7F1E3",
+          "backgroundColor": "#F3FAF7",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
