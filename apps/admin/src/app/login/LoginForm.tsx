@@ -4,8 +4,8 @@ import { useActionState } from 'react';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { login, type LoginState } from './actions';
 
-export default function LoginForm() {
-  const [state, action, pending] = useActionState<LoginState, FormData>(login, { error: null });
+export default function LoginForm({ initialError = null }: { initialError?: string | null }) {
+  const [state, action, pending] = useActionState<LoginState, FormData>(login, { error: initialError });
   return (
     <Form action={action}>
       {state.error && <Alert variant="danger">{state.error}</Alert>}

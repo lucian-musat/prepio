@@ -30,8 +30,18 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isPublic(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  if (isPublic(request.nextUrl.pathname)) return response;
+  if (!user) return NextResponse.redirect(new URL('/login', request.url));
+
+  // Students sign in to the same Supabase project: a session alone is not enough, it must be an admin's.
+  const { data: isAdmin, error } = await supabase.rpc('is_admin');
+  if (error || isAdmin !== true) {
+    // Local scope: drop only this browser session, not the student's sessions in the app.
+    await supabase.auth.signOut({ scope: 'local' });
+    const redirect = NextResponse.redirect(new URL('/login?error=not_admin', request.url));
+    // signOut() cleared the auth cookies on `response` via setAll; carry them over to the redirect.
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
   }
   return response;
 }
