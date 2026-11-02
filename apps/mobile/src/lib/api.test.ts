@@ -1,11 +1,18 @@
 import { deleteAccount, evaluateEssay, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
 import { getAccessToken, signOut } from './supabase';
 
-jest.mock('./supabase', () => ({
-  apiUrl: () => process.env.EXPO_PUBLIC_API_URL || undefined,
-  getAccessToken: jest.fn(),
-  signOut: jest.fn(),
-}));
+jest.mock('./supabase', () => {
+  class AuthOutageError extends Error {
+    name = 'AuthOutageError';
+  }
+  return {
+    apiUrl: () => process.env.EXPO_PUBLIC_API_URL || undefined,
+    getAccessToken: jest.fn(),
+    signOut: jest.fn(),
+    AuthOutageError,
+  };
+});
+const { AuthOutageError: MockOutage } = jest.requireMock('./supabase') as { AuthOutageError: new () => Error };
 
 const mockToken = getAccessToken as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
@@ -71,6 +78,16 @@ it('without a session, fails as unauthorized and signs out without calling the A
   expect(mockSignOut).toHaveBeenCalledTimes(1);
 });
 
+it('an auth outage (expired token, offline refresh) is a connection error and keeps the session', async () => {
+  mockToken.mockRejectedValue(new MockOutage());
+  const err = await evaluateEssay(req).catch((e) => e);
+  expect(err).toBeInstanceOf(EvaluateApiError);
+  expect(err.code).toBe('ai_failed');
+  expect(err.message).toBe('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(mockSignOut).not.toHaveBeenCalled();
+});
+
 it('keeps the session on a server error (5xx is not a logout)', async () => {
   fetchMock.mockResolvedValue(json(502, { error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' }));
   const err = await evaluateEssay(req).catch((e) => e);
@@ -121,6 +138,16 @@ describe('deleteAccount', () => {
     expect(err.code).toBe('unauthorized');
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('an auth outage is a connection error, keeps the session and calls nothing', async () => {
+    mockToken.mockRejectedValue(new MockOutage());
+    const err = await deleteAccount().catch((e) => e);
+    expect(err).toBeInstanceOf(AccountDeleteApiError);
+    expect(err.code).toBe('server_error');
+    expect(err.message).toBe('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it('maps a network failure and an unparseable error body to Romanian messages', async () => {

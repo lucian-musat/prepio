@@ -28,10 +28,47 @@ export function getSupabase(): SupabaseClient {
   return client;
 }
 
-/** The current access token, read at call time (so a refreshed token is always used), or null when signed out. */
+/** Upper bound for an auth/profile network call the app waits on (splash, API token): a stalled network is an outage. */
+export const AUTH_TIMEOUT_MS = 6_000;
+
+/** The session could not be checked or refreshed (offline, timeout, Supabase down). It is NOT a logout. */
+export class AuthOutageError extends Error {
+  constructor(message = 'Supabase Auth is unreachable') {
+    super(message);
+    this.name = 'AuthOutageError';
+  }
+}
+
+/** Rejects with AuthOutageError when `promise` takes longer than `ms`. */
+export function withTimeout<T>(promise: Promise<T>, ms = AUTH_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new AuthOutageError(`timed out after ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+const REJECTED_STATUS = new Set([400, 401, 403, 404]);
+
+/**
+ * True when Supabase says the session/token is no good (user deleted, session revoked, refresh token invalid);
+ * auth-js reports a revoked session as AuthSessionMissingError (status 400). Anything else — network failure
+ * (AuthRetryableFetchError, status 0/5xx), rate limit, unknown — is an outage and the stored session is kept.
+ */
+export function isAuthRejection(error: { name?: string; status?: number }): boolean {
+  return error.name === 'AuthSessionMissingError' || (typeof error.status === 'number' && REJECTED_STATUS.has(error.status));
+}
+
+/**
+ * The current access token, read at call time (so a refreshed token is always used), or null when there is no
+ * session. Throws AuthOutageError when the stored token is expired and cannot be refreshed right now (offline):
+ * auth-js then returns no session but keeps it in storage, so callers must not sign out.
+ */
 export async function getAccessToken(): Promise<string | null> {
-  const { data } = await getSupabase().auth.getSession();
-  return data.session?.access_token ?? null;
+  const { data, error } = await withTimeout(getSupabase().auth.getSession());
+  if (data.session) return data.session.access_token;
+  if (error && !isAuthRejection(error)) throw new AuthOutageError(error.message);
+  return null;
 }
 
 /**

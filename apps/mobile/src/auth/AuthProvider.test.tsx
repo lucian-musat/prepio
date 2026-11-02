@@ -2,10 +2,14 @@ import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { AppState, Text } from 'react-native';
 import { AuthProvider, useAuth } from './AuthProvider';
 import { fetchProfile } from '../lib/profile';
-import { getSupabase, signOut as libSignOut } from '../lib/supabase';
+import { AUTH_TIMEOUT_MS, getSupabase, signOut as libSignOut } from '../lib/supabase';
 
 jest.mock('../lib/profile', () => ({ fetchProfile: jest.fn() }));
-jest.mock('../lib/supabase', () => ({ getSupabase: jest.fn(), signOut: jest.fn() }));
+jest.mock('../lib/supabase', () => ({
+  ...jest.requireActual('../lib/supabase'),
+  getSupabase: jest.fn(),
+  signOut: jest.fn(),
+}));
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -212,6 +216,124 @@ it('on native, auto-refresh follows the app state and the listeners are removed 
   await view.unmount();
   expect(remove).toHaveBeenCalled();
   expect(listeners).toHaveLength(0);
+});
+
+describe('network outages are not a logout', () => {
+  const offline = { name: 'AuthRetryableFetchError', message: 'Network request failed', status: 0 };
+  const advance = (ms: number) => act(async () => void (await jest.advanceTimersByTimeAsync(ms)));
+  afterEach(() => jest.useRealTimers());
+
+  it('expired stored token + offline refresh at start-up → stays signed in (ready, no session yet)', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: null }, error: offline });
+    await renderAuth();
+    await waitForState('ready|-|-');
+    expect(mockLibSignOut).not.toHaveBeenCalled();
+  });
+
+  it('…and recovers the session and profile when the auto-refresh succeeds (TOKEN_REFRESHED)', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: null }, error: offline });
+    await renderAuth();
+    await waitForState('ready|-|-');
+    await emit('TOKEN_REFRESHED', session(USER, 'access-2'));
+    await waitForState('ready|Ana|access-2');
+    expect(mockFetchProfile).toHaveBeenCalledWith(USER);
+  });
+
+  it('a getSession that throws is treated as an outage, not a logout', async () => {
+    auth.getSession.mockRejectedValue(new Error('storage exploded'));
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await renderAuth();
+    await waitForState('ready|-|-');
+    expect(mockLibSignOut).not.toHaveBeenCalled();
+  });
+
+  it('a TOKEN_REFRESHED while signedOut moves into the normal settle path', async () => {
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('TOKEN_REFRESHED', session());
+    await waitForState('ready|Ana|access-1');
+  });
+
+  it('refreshProfile in the offline state re-reads the stored session instead of signing out', async () => {
+    auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: offline });
+    await renderAuth();
+    await waitForState('ready|-|-');
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    await act(() => latest.refreshProfile());
+    await waitForState('ready|Ana|access-1');
+  });
+
+  it('a stalled getSession at start-up times out into the offline state (splash does not hang)', async () => {
+    jest.useFakeTimers();
+    auth.getSession.mockReturnValue(new Promise(() => {}));
+    await renderAuth();
+    expect(state()).toBe('loading|-|-');
+    await advance(AUTH_TIMEOUT_MS);
+    expect(state()).toBe('ready|-|-');
+    expect(mockLibSignOut).not.toHaveBeenCalled();
+  });
+
+  it('a getUser that never answers times out and keeps the stored session', async () => {
+    jest.useFakeTimers();
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    auth.getUser.mockReturnValue(new Promise(() => {}));
+    await renderAuth();
+    expect(state()).toBe('loading|-|-');
+    await advance(AUTH_TIMEOUT_MS - 1);
+    expect(state()).toBe('loading|-|-');
+    await advance(1);
+    expect(state()).toBe('ready|Ana|access-1');
+    expect(mockLibSignOut).not.toHaveBeenCalled();
+  });
+
+  it('a profile load that never answers times out into ready without a profile', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockReturnValue(new Promise(() => {}));
+    await renderAuth();
+    await advance(AUTH_TIMEOUT_MS);
+    expect(state()).toBe('ready|-|access-1');
+  });
+
+  it('ready without a profile retries the profile when the app returns to the foreground', async () => {
+    let onChange: (s: string) => void = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, cb) => {
+      onChange = cb as (s: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: USER, displayName: null });
+    await renderAuth();
+    await waitForState('ready|-|access-1');
+    await act(async () => onChange('active'));
+    await waitForState('needsName|-|access-1');
+  });
+
+  it('ready without a profile retries the profile on the next auth event', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockRejectedValueOnce(new Error('offline'));
+    await renderAuth();
+    await waitForState('ready|-|access-1');
+    await emit('TOKEN_REFRESHED', session(USER, 'access-2'));
+    await waitForState('ready|Ana|access-2');
+  });
+
+  it('back in the foreground after an offline start, re-reads the stored session', async () => {
+    let onChange: (s: string) => void = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, cb) => {
+      onChange = cb as (s: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: offline });
+    await renderAuth();
+    await waitForState('ready|-|-');
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    await act(async () => onChange('active'));
+    await waitForState('ready|Ana|access-1');
+  });
 });
 
 it('useAuth outside the provider throws', async () => {

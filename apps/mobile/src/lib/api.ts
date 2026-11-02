@@ -6,7 +6,7 @@ import type {
   EvaluateRequest,
   EvaluateResponse,
 } from '@prepio/shared';
-import { apiUrl, getAccessToken, signOut } from './supabase';
+import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
 
 export class EvaluateApiError extends Error {
   code: EvaluateErrorCode;
@@ -53,13 +53,26 @@ async function sessionExpired<E extends Error>(error: E): Promise<never> {
   throw error;
 }
 
+/**
+ * The bearer token, or null when there is no session. An auth outage (expired token that cannot be refreshed
+ * offline, stalled Supabase) becomes `outage()` — a connection error that keeps the stored session.
+ */
+async function bearerToken(outage: () => Error): Promise<string | null> {
+  try {
+    return await getAccessToken();
+  } catch (e) {
+    if (e instanceof AuthOutageError) throw outage();
+    throw e;
+  }
+}
+
 export async function evaluateEssay(req: EvaluateRequest): Promise<EvaluateResponse> {
   const base = apiUrl();
   if (!base) {
     missingApiUrl('evaluateEssay');
     throw new EvaluateApiError('ai_failed', NOT_CONFIGURED);
   }
-  const token = await getAccessToken();
+  const token = await bearerToken(() => new EvaluateApiError('ai_failed', OFFLINE));
   if (!token) return sessionExpired(new EvaluateApiError('unauthorized', SESSION_EXPIRED));
 
   const controller = new AbortController();
@@ -103,7 +116,7 @@ export async function deleteAccount(): Promise<void> {
     missingApiUrl('deleteAccount');
     throw new AccountDeleteApiError('server_error', DELETE_NOT_CONFIGURED);
   }
-  const token = await getAccessToken();
+  const token = await bearerToken(() => new AccountDeleteApiError('server_error', OFFLINE));
   if (!token) return sessionExpired(new AccountDeleteApiError('unauthorized', SESSION_EXPIRED));
 
   let res: Response;
