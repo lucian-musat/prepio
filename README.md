@@ -25,6 +25,17 @@ pnpm typecheck
 pnpm db:test             # database (RLS) tests
 ```
 
+### Local auth (student accounts)
+
+Students sign in with an emailed 6-digit code or with Google. Locally, codes arrive in the Mailpit inbox at http://127.0.0.1:54324.
+
+Google sign-in needs an OAuth client (Google Cloud Console). Copy `supabase/.env.example` to `supabase/.env` (gitignored, read by the Supabase CLI on `pnpm db:start`) and fill in:
+
+- `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`
+- `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`
+
+Never commit real values. Without them the stack still starts (use dummy values); only Google sign-in fails.
+
 ## Deployment
 
 See [docs/deploy.md](docs/deploy.md). Database changes: [docs/database-migrations.md](docs/database-migrations.md).
