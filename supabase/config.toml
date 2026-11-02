@@ -350,7 +350,8 @@ enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 redirect_uri = ""
-# Native Google Sign-In (free tier) sends no nonce.
+# Native Google Sign-In (free tier) sends no nonce. Local only: production keeps "Skip nonce checks" OFF
+# (Supabase checks a nonce only when the ID token has one) unless Android sign-in fails with a nonce error.
 skip_nonce_check = true
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.

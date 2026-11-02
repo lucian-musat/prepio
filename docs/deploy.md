@@ -24,7 +24,6 @@ Admin (Vercel project `prepio-admin`):
 Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, profiles `preview` and `production`):
 
 - `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://prepio-admin.vercel.app`
-
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` = Google OAuth web client id (public). Used by native Google sign-in as `webClientId`; the web flow doesn't need it but it is harmless. Set on Vercel and in `eas.json`.
 - `EXPO_PUBLIC_AUTH_EMAIL_ENABLED` = `false` in production (hides the email-code sign-in button until the domain + SMTP exist); `true` locally. Set on Vercel and in `eas.json`.
 
@@ -34,7 +33,16 @@ Provider setup (Google Cloud, Supabase dashboard, rollout checklist): [auth-setu
 
 ## Accounts rollout
 
-Push the `student_accounts` migration (`pnpm db:cloud:push`), apply the dashboard settings in [auth-setup.md](auth-setup.md), then deploy admin and student web back-to-back. After the migration, content is readable only by signed-in users, so the old APK (and the old web build) can no longer read content; ship a new APK build.
+Do these in this exact order:
+
+1. List production `auth.users` and get the owner's confirmation: the migration backfill makes every existing user an admin.
+2. `pnpm db:cloud:push:dry` → review → `pnpm db:cloud:push` (the `student_accounts` migration).
+3. Deploy admin (CORS allowing `Authorization`, admin guard, bearer APIs).
+4. Deploy student web. Admin must go first: the old admin's CORS doesn't allow the `Authorization` header, so the new web's authenticated calls (`/api/evaluate`, account deletion) would fail against it.
+5. Immediately apply the Supabase dashboard settings from [auth-setup.md](auth-setup.md): **Confirm email ON first**, then sign-ups ON, then the Google provider; run its production checks (admin password login still works, an OTP to an outside address is not delivered).
+6. Google consent screen: Branding + Publish to production.
+7. Production walk in Chrome (see the verification checklist below).
+8. New APK build. After the migration, content is readable only by signed-in users, so the old APK (and the old web build) can no longer read content.
 
 ## Schema and content
 
@@ -53,7 +61,7 @@ Push the `student_accounts` migration (`pnpm db:cloud:push`), apply the dashboar
 
 ## Auth settings (Supabase dashboard)
 
-- Anonymous sign-ins: OFF. Sign-up and provider settings for student accounts: see [auth-setup.md](auth-setup.md).
+- Anonymous sign-ins: OFF. Sign-up and provider settings for student accounts: see [auth-setup.md](auth-setup.md). The Email provider stays ON (admin password login) with Confirm email ON; there is no email-only sign-up switch.
 - The admin user is created manually in Authentication > Users with "Auto Confirm User" checked.
 
 ## Android APK
@@ -73,11 +81,11 @@ Share the internal-distribution install link from the build page; the phone must
 
 ## Verification checklist
 
-1. Sign-up is blocked (expect HTTP 422):
-   `curl -s -o /dev/null -w "%{http_code}" -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"email":"x@example.com","password":"password123"}'`
+1. A raw-API password sign-up for an outside address issues no session (Confirm email ON; with the default SMTP the confirmation mail can't be sent, expect an error such as `email_address_not_authorized`, never an `access_token`):
+   `curl -s -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"email":"x@example.com","password":"password123"}'`
 2. Anonymous cannot read `ai_settings` (empty array or 401/403, never rows):
    `curl -s "$SUPABASE_URL/rest/v1/ai_settings?select=*" -H "apikey: $ANON"`
-3. Anonymous sees the published lessons: `curl -s "$SUPABASE_URL/rest/v1/lessons?select=id" -H "apikey: $ANON"`.
-4. Evaluate CORS preflight from the student origin returns the `Access-Control-Allow-Origin` header:
-   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST"`
+3. Anonymous sees no lessons since the `student_accounts` migration (expect `[]`): `curl -s "$SUPABASE_URL/rest/v1/lessons?select=id" -H "apikey: $ANON"`.
+4. Evaluate CORS preflight from the student origin returns `Access-Control-Allow-Origin` and allows `Authorization`:
+   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
 5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and a writing exercise returns an evaluation.
