@@ -12,6 +12,7 @@ const countNodes = (nodes: typeof tree): number =>
 
 const ADMIN = { adminEmail: 'seed-test-admin@prepio.local', adminPassword: 'seed-test-password' };
 const ADMIN2 = { adminEmail: 'seed-test-admin2@prepio.local', adminPassword: 'seed-test-password2' };
+const EXISTING = { adminEmail: 'seed-test-existing@prepio.local', adminPassword: 'seed-test-password3' };
 
 const EXPECTED = {
   nodes: 14,
@@ -35,6 +36,14 @@ async function userId(client: SupabaseClient, email: string): Promise<string | u
 describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
   let client: SupabaseClient;
 
+  const isListedAdmin = async (email: string): Promise<boolean> => {
+    const id = await userId(client, email);
+    if (!id) return false;
+    const { data, error } = await client.from('admins').select('user_id').eq('user_id', id);
+    if (error) throw error;
+    return data.length === 1;
+  };
+
   const snapshot = async () => ({
     nodes: await count(client, 'nodes'),
     lessons: await count(client, 'lessons'),
@@ -48,7 +57,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
   });
 
   afterAll(async () => {
-    for (const email of [ADMIN.adminEmail, ADMIN2.adminEmail]) {
+    for (const email of [ADMIN.adminEmail, ADMIN2.adminEmail, EXISTING.adminEmail]) {
       const id = await userId(client, email);
       if (id) await client.auth.admin.deleteUser(id);
     }
@@ -124,7 +133,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       expect(ai?.model).toBe(aiDefaults.model);
       const img = await client.storage.from('images').download('seed/cuza.jpg');
       expect(img.error).toBeNull();
-      expect(await userId(client, ADMIN2.adminEmail)).toBeDefined();
+      expect(await isListedAdmin(ADMIN2.adminEmail)).toBe(true);
     } finally {
       await client.from('nodes').delete().eq('id', node.data.id);
       if (settingsRow) await client.from('settings').upsert(settingsRow);
@@ -165,6 +174,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
 
   it('creates the admin user who can sign in', async () => {
     expect(await userId(client, ADMIN.adminEmail)).toBeDefined();
+    expect(await isListedAdmin(ADMIN.adminEmail)).toBe(true);
 
     const authClient = createClient(url!, anonKey ?? serviceKey!, { auth: { persistSession: false } });
     const { data, error } = await authClient.auth.signInWithPassword({
@@ -173,5 +183,20 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     });
     expect(error).toBeNull();
     expect(data.session).not.toBeNull();
+  });
+
+  it('adds an already existing admin user to admins', async () => {
+    const created = await client.auth.admin.createUser({
+      email: EXISTING.adminEmail,
+      password: EXISTING.adminPassword,
+      email_confirm: true,
+    });
+    expect(created.error).toBeNull();
+    expect(await isListedAdmin(EXISTING.adminEmail)).toBe(false);
+
+    await seed(client, EXISTING);
+    expect(await isListedAdmin(EXISTING.adminEmail)).toBe(true);
+    await seed(client, EXISTING); // idempotent
+    expect(await isListedAdmin(EXISTING.adminEmail)).toBe(true);
   });
 });

@@ -8,8 +8,11 @@ config({ path: [resolve(__dirname, '../.env.local'), resolve(__dirname, '../../.
 
 const SB_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL)!;
 const SB_ANON = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY)!;
+const SB_SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const EMAIL = process.env.ADMIN_EMAIL ?? 'admin@prepio.local';
 const PASSWORD = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
+// A student: signed in but not in `admins` (anon reads no content at all).
+const STUDENT = { email: `e2e-student-${Date.now()}@prepio.local`, password: 'e2e-student-password' };
 
 // 1x1 PNG
 const PNG = Buffer.from(
@@ -18,6 +21,9 @@ const PNG = Buffer.from(
 );
 
 let db: SupabaseClient;
+let service: SupabaseClient;
+let student: SupabaseClient;
+let studentId: string | null = null;
 let rootId: string;
 let lessonId: string;
 let imagePath: string | null = null;
@@ -34,6 +40,15 @@ test.beforeAll(async () => {
   db = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
   const { error } = await db.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (error) throw error;
+
+  service = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
+  const created = await service.auth.admin.createUser({ ...STUDENT, email_confirm: true });
+  if (created.error) throw created.error;
+  studentId = created.data.user.id;
+  student = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
+  const signIn = await student.auth.signInWithPassword(STUDENT);
+  if (signIn.error) throw signIn.error;
+
   rootId = (await createNode(db, null, `[test] editor ${Date.now()}`)).id;
   const node = await createNode(db, rootId, '[test] capitol');
   lessonId = (await createLesson(db, node.id, '[test] lecție editor')).id;
@@ -42,6 +57,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (imagePath) await db.storage.from('images').remove([imagePath]);
   if (rootId) await db.from('nodes').delete().eq('id', rootId); // cascades to the lesson and its content
+  if (studentId) await service.auth.admin.deleteUser(studentId);
 });
 
 test('lesson editor: card with image, three question types, exercise, reorder, publish, student visibility', async ({ page }) => {
@@ -136,9 +152,8 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   await expect(page.getByTestId('exercise-item')).toHaveCount(1);
 
   // Draft is hidden from students, published is visible
-  const anon = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
   const fetchPublished = () =>
-    anon.from('lessons').select('id,title,cards(*),questions(*),writing_exercises(*)').eq('id', lessonId).maybeSingle();
+    student.from('lessons').select('id,title,cards(*),questions(*),writing_exercises(*)').eq('id', lessonId).maybeSingle();
   expect((await fetchPublished()).data).toBeNull();
 
   await page.getByRole('button', { name: 'Publică' }).click();
@@ -146,6 +161,8 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
 
   const { data } = await fetchPublished();
   expect(data?.title).toBe('[test] lecție completă');
+  const anon = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
+  expect((await anon.from('lessons').select('id').eq('id', lessonId).maybeSingle()).data).toBeNull();
   expect(data?.cards).toHaveLength(1);
   expect(data?.cards[0]).toMatchObject({ title: 'Unirea', image_credit: 'Wikimedia Commons', body: 'Primul paragraf.\n\nAl doilea paragraf.' });
   imagePath = data?.cards[0].image_path ?? null;

@@ -53,9 +53,14 @@ async function uploadImages(client: SupabaseClient): Promise<void> {
 async function ensureAdmin(client: SupabaseClient, email: string, password: string): Promise<void> {
   const { data, error } = await client.auth.admin.listUsers({ perPage: 1000 });
   if (error) throw new Error(`list users: ${error.message}`);
-  if (data.users.some((u) => u.email?.toLowerCase() === email.toLowerCase())) return;
-  const created = await client.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw new Error(`create admin: ${created.error.message}`);
+  let id = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())?.id;
+  if (!id) {
+    const created = await client.auth.admin.createUser({ email, password, email_confirm: true });
+    if (created.error) throw new Error(`create admin: ${created.error.message}`);
+    id = created.data.user.id;
+  }
+  // Only users listed in `admins` get write access (RLS via is_admin()).
+  check(await client.from('admins').upsert({ user_id: id }, { onConflict: 'user_id', ignoreDuplicates: true }), 'admins');
 }
 
 /**

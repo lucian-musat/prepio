@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(13);
 
 -- Fixtures (as postgres). Every assertion is scoped to these ids so the suite also passes on a seeded DB.
 insert into nodes (id, parent_id, title) values
@@ -25,33 +25,27 @@ insert into settings (id, welcome_message) values (1, 'Bun venit')
 insert into ai_settings (id, rules) values (1, 'rules')
   on conflict (id) do update set rules = excluded.rules;
 
--- Anonymous
+-- Admin user (students — authenticated but not in admins — are covered in accounts.test.sql).
+insert into auth.users (id, email, aud, role) values
+  ('00000000-0000-0000-0000-0000000000d9', 'rls-admin@test.local', 'authenticated', 'authenticated');
+insert into public.admins (user_id) values ('00000000-0000-0000-0000-0000000000d9');
+
+-- Anonymous: nothing is readable without an account.
 set local role anon;
 
-select is((select count(*)::int from nodes
-            where id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2')),
-          2, 'anon sees fixture nodes');
-select is((select welcome_message from settings where id = 1), 'Bun venit', 'anon sees settings row 1');
-select results_eq(
-  $$ select title from lessons
-      where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
-  $$ values ('Published'::text) $$,
-  'anon sees only the published fixture lesson');
-select results_eq(
-  $$ select body from cards
-      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
-  $$ values ('pub card'::text) $$,
-  'anon sees only published fixture cards');
-select results_eq(
-  $$ select prompt from questions
-      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
-  $$ values ('pub q'::text) $$,
-  'anon sees only published fixture questions');
-select results_eq(
-  $$ select prompt from writing_exercises
-      where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2') $$,
-  $$ values ('pub w'::text) $$,
-  'anon sees only published fixture exercises');
+select is(
+  (select (select count(*) from nodes
+            where id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2'))
+        + (select count(*) from settings where id = 1)
+        + (select count(*) from lessons
+            where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from cards
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from questions
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
+        + (select count(*) from writing_exercises
+            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')))::int,
+  0, 'anon sees no nodes, settings, lessons, cards, questions or exercises');
 select is((select count(*)::int from ai_settings), 0, 'anon cannot read ai_settings');
 select throws_ok(
   $$ insert into lessons (node_id, title) values ('00000000-0000-0000-0000-0000000000a2', 'x') $$,
@@ -60,26 +54,27 @@ select throws_ok(
   $$ select count(*) from rate_limits $$,
   '42501', null, 'anon cannot read rate_limits');
 
--- Authenticated
+-- Admin (authenticated and in admins)
 reset role;
 set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000d9","role":"authenticated"}';
 
 select is((select count(*)::int from lessons
             where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')),
-          2, 'authenticated sees draft lessons too');
-select is((select rules from ai_settings where id = 1), 'rules', 'authenticated reads ai_settings');
+          2, 'admin sees draft lessons too');
+select is((select rules from ai_settings where id = 1), 'rules', 'admin reads ai_settings');
 select lives_ok(
   $$ insert into lessons (id, node_id, title) values ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000a2', 'New') $$,
-  'authenticated inserts lesson');
+  'admin inserts lesson');
 select lives_ok(
   $$ update lessons set title = 'Renamed' where id = '00000000-0000-0000-0000-0000000000b3' $$,
-  'authenticated updates lesson');
+  'admin updates lesson');
 select is(
   (select title from lessons where id = '00000000-0000-0000-0000-0000000000b3'), 'Renamed',
   'update took effect');
 select lives_ok(
   $$ delete from lessons where id = '00000000-0000-0000-0000-0000000000b3' $$,
-  'authenticated deletes lesson');
+  'admin deletes lesson');
 select throws_ok(
   $$ select count(*) from rate_limits $$,
   '42501', null, 'authenticated cannot read rate_limits');
