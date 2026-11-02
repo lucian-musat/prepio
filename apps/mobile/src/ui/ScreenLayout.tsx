@@ -24,6 +24,7 @@ type Props = {
   /** Accessible name of the progress bar (default "Progres"). */
   progressLabel?: string;
   onBack?: () => void;
+  trailing?: ReactNode;
   actions?: ReactNode;
   feedback?: ReactNode;
   tone?: ActionTone;
@@ -52,6 +53,7 @@ export default function ScreenLayout({
   progress,
   progressLabel,
   onBack,
+  trailing,
   actions,
   feedback,
   tone,
@@ -100,7 +102,7 @@ export default function ScreenLayout({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} raised={topRaised} />
+        <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} trailing={trailing} raised={topRaised} />
         <Animated.ScrollView
           ref={scrollRef}
           testID="screen-scroll"

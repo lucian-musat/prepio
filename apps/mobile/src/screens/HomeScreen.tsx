@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { layout, space } from '@prepio/shared';
+import { border, color, layout, radius, space } from '@prepio/shared';
 import { AppText, Button, Enter, Hero, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
 import { fetchHome, type HomeData } from '../lib/content';
 import { lessonCount } from '../lib/lessonCount';
+import { useAuth } from '../auth/AuthProvider';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
 const LAST_STAGGER = 5;
@@ -39,6 +40,24 @@ function LessonList({ lessons, wide }: { lessons: Lesson[]; wide: boolean }) {
   );
 }
 
+/** Top-bar avatar: the name's initial (or "?"), opens the profile screen. */
+function ProfileButton() {
+  const { profile } = useAuth();
+  const initial = profile?.displayName?.trim() ? [...profile.displayName.trim()][0].toUpperCase() : '?';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Profil"
+      onPress={() => router.push('/profile')}
+      style={styles.avatar}
+    >
+      <AppText role="bar" color="primaryStrong">
+        {initial}
+      </AppText>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const [data, setData] = useState<HomeData | null>(null);
@@ -54,7 +73,7 @@ export default function HomeScreen() {
 
   if (failed) {
     return (
-      <ScreenLayout logo>
+      <ScreenLayout logo trailing={<ProfileButton />}>
         <Surface style={styles.error}>
           <AppText role="section">Nu am putut încărca lecțiile</AppText>
           <AppText role="small" color="textMuted">
@@ -68,7 +87,7 @@ export default function HomeScreen() {
 
   if (!data) {
     return (
-      <ScreenLayout logo>
+      <ScreenLayout logo trailing={<ProfileButton />}>
         <View style={styles.loader}>
           <Spinner />
         </View>
@@ -79,7 +98,7 @@ export default function HomeScreen() {
   const total = data.sections.reduce((sum, s) => sum + s.lessons.length, 0);
 
   return (
-    <ScreenLayout logo>
+    <ScreenLayout logo trailing={<ProfileButton />}>
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} />
       </Enter>
@@ -105,6 +124,16 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   error: { gap: space[3] },
+  avatar: {
+    width: space[10],
+    height: space[10],
+    borderRadius: radius.pill,
+    borderWidth: border.hairline,
+    borderColor: color.border,
+    backgroundColor: color.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   loader: { marginTop: space[12], alignItems: 'center' },
   // Prototype `.sec-title`: baseline-aligned title and count, 10 px above the list.
   header: {

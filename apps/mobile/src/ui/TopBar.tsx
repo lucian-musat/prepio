@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,8 @@ type Props = {
   /** Accessible name of the progress bar (default "Progres"). */
   progressLabel?: string;
   onBack?: () => void;
+  /** Right-aligned control (e.g. the profile button). */
+  trailing?: ReactNode;
   raised: boolean;
 };
 
@@ -47,7 +50,7 @@ function Logo() {
 }
 
 /** Fixed screen header: back button, title or logo, and (optionally) the lesson progress. */
-export default function TopBar({ title, logo = false, progress, progressLabel, onBack, raised }: Props) {
+export default function TopBar({ title, logo = false, progress, progressLabel, onBack, trailing, raised }: Props) {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   return (
     <View testID="top-bar" style={[styles.bar, wide && styles.wide, raised && styles.raised]}>
@@ -58,6 +61,7 @@ export default function TopBar({ title, logo = false, progress, progressLabel, o
           {title}
         </AppText>
       ) : null}
+      {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {progress !== undefined ? (
         // Full-width row so it always wraps under the title; the bar inside is capped at 720 px and centred.
         // (A max-width on the flex item itself lets it fit next to the title on wide screens.)
@@ -90,6 +94,7 @@ const styles = StyleSheet.create({
   wide: { paddingTop: space[4.5], paddingHorizontal: layout.gutterWide, paddingBottom: space[3.5] },
   raised: { borderBottomColor: color.border, boxShadow: raisedShadow('down') },
   title: { flex: 1 },
+  trailing: { marginLeft: 'auto' },
   progressRow: { flexBasis: '100%', width: '100%', marginTop: space[1.5] },
   progress: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center' }, // centred at 720 px on desktop, like the prototype
   logo: { flexDirection: 'row', alignItems: 'center', gap: space[2] },

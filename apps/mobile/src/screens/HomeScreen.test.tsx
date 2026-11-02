@@ -7,6 +7,8 @@ import { fetchHome } from '../lib/content';
 
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+let mockProfile: { id: string; displayName: string | null } | null = { id: 'u1', displayName: 'ana' };
+jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockProfile }) }));
 
 const mockedFetch = fetchHome as jest.Mock;
 
@@ -24,7 +26,25 @@ const renderHome = async () =>
 
 const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', title, position });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockProfile = { id: 'u1', displayName: 'ana' };
+});
+
+it('shows a profile button with the initial and opens the profile', async () => {
+  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
+  await renderHome();
+  expect(screen.getByText('A')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Profil' }));
+  expect(router.push).toHaveBeenCalledWith('/profile');
+});
+
+it('falls back to a question mark when the student has no name', async () => {
+  mockProfile = { id: 'u1', displayName: null };
+  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
+  await renderHome();
+  expect(screen.getByText('?')).toBeTruthy();
+});
 
 it('renders the welcome message and lessons grouped under section headers', async () => {
   mockedFetch.mockResolvedValue({
