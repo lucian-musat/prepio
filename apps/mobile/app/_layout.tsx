@@ -6,12 +6,19 @@ import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { color } from '@prepio/shared';
 import { fontFiles } from '../src/theme/fonts';
+import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts(fontFiles);
-  const ready = loaded || !!error;
+/**
+ * Keeps the splash up until the fonts and the stored session are resolved, then shows exactly one route group:
+ * signed out → (auth), signed in without a name → (onboarding), otherwise → (app). A guarded route that becomes
+ * unavailable redirects to the first available one, so nothing in (app) is reachable without a session.
+ */
+function RootNavigator() {
+  const [fontsLoaded, fontError] = useFonts(fontFiles);
+  const { status } = useAuth();
+  const ready = (fontsLoaded || !!fontError) && status !== 'loading';
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -20,7 +27,7 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -29,9 +36,26 @@ export default function RootLayout() {
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Prepio' }} />
-        <Stack.Screen name="lesson/[id]" options={{ title: 'Lecție' }} />
+        <Stack.Protected guard={status === 'signedOut'}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'needsName'}>
+          <Stack.Screen name="(onboarding)/name" options={{ title: 'Cum te numești?' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'ready'}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
       </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
