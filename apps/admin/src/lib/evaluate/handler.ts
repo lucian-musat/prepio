@@ -4,18 +4,17 @@ import { isUuid } from '@/lib/data/db';
 import type { Evaluator } from './openai';
 import { buildEvaluationInput, evaluationSchema } from './prompt';
 import {
-  GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, RATE_LIMIT, RATE_WINDOW_SECONDS, type RateLimit,
+  GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS, type RateLimit,
 } from './rateLimit';
 
 export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit };
 
 const GLOBAL_LIMIT_MESSAGE = 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.';
-/** Caps the rate-limit key length so a forged X-Forwarded-For can't bloat the table. */
-const MAX_IP_KEY_CHARS = 64;
 export type HandlerResult = { status: number; json: EvaluateResponse | EvaluateError };
 
 const ERRORS: Record<EvaluateErrorCode, { status: number; message: string }> = {
   bad_request: { status: 400, message: 'Cererea nu este validă.' },
+  unauthorized: { status: 401, message: 'Trebuie să fii autentificat.' },
   empty: { status: 400, message: 'Scrie un text înainte de a-l trimite.' },
   too_long: { status: 400, message: `Textul depășește ${MAX_ESSAY_CHARS} de caractere.` },
   not_found: { status: 404, message: 'Exercițiul nu a fost găsit.' },
@@ -31,7 +30,8 @@ export function errorResult(code: EvaluateErrorCode): HandlerResult {
 type ExerciseRow = { prompt: string; criteria: string; lessons: { status: string } | { status: string }[] | null };
 type SettingsRow = { rules: string; grade_min: number; grade_max: number; model: string };
 
-export async function handleEvaluate(body: unknown, ip: string, deps: Deps): Promise<HandlerResult> {
+/** `userId` is the authenticated caller (verified by the route); quotas are per user. */
+export async function handleEvaluate(body: unknown, userId: string, deps: Deps): Promise<HandlerResult> {
   if (typeof body !== 'object' || body === null) return errorResult('bad_request');
   const { exerciseId, text } = body as Record<string, unknown>;
   if (typeof exerciseId !== 'string' || typeof text !== 'string') return errorResult('bad_request');
@@ -58,8 +58,8 @@ export async function handleEvaluate(body: unknown, ip: string, deps: Deps): Pro
     if (stErr || !st) throw new Error(`settings lookup failed: ${stErr?.message ?? 'no row'}`);
     const settings = st as SettingsRow;
 
-    const ipKey = `evaluate:${ip.slice(0, MAX_IP_KEY_CHARS)}`;
-    if (!(await deps.rateLimit(ipKey, RATE_LIMIT, RATE_WINDOW_SECONDS))) return errorResult('rate_limited');
+    const userKey = `evaluate:user:${userId}`;
+    if (!(await deps.rateLimit(userKey, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS))) return errorResult('rate_limited');
     if (!(await deps.rateLimit(GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS))) {
       return { status: 429, json: { error: 'rate_limited', message: GLOBAL_LIMIT_MESSAGE } };
     }

@@ -43,32 +43,32 @@ const gradeOf = (r: { json: unknown }) => (r.json as { grade: number }).grade;
 describe('handleEvaluate', () => {
   it('returns the evaluation for a valid request', async () => {
     const d = deps();
-    const r = await handleEvaluate(ok(), '1.2.3.4', d);
+    const r = await handleEvaluate(ok(), 'user-1', d);
     expect(r.status).toBe(200);
     expect(r.json).toEqual({ grade: 7, gradeMin: 1, gradeMax: 10, summary: 'Bine.', suggestions: ['Adaugă date.'] });
-    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:1.2.3.4', 10, 3600);
+    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:user:user-1', 10, 3600);
     expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5-mini' }));
   });
 
   it('clamps and rounds the grade', async () => {
     const mk = (grade: number) => deps({ evaluate: async () => ({ grade, summary: 's', suggestions: [] }) });
-    expect(gradeOf(await handleEvaluate(ok(), 'ip', mk(14)))).toBe(10);
-    expect(gradeOf(await handleEvaluate(ok(), 'ip', mk(7.6)))).toBe(8);
-    expect(gradeOf(await handleEvaluate(ok(), 'ip', mk(-3)))).toBe(1);
+    expect(gradeOf(await handleEvaluate(ok(), 'user-1', mk(14)))).toBe(10);
+    expect(gradeOf(await handleEvaluate(ok(), 'user-1', mk(7.6)))).toBe(8);
+    expect(gradeOf(await handleEvaluate(ok(), 'user-1', mk(-3)))).toBe(1);
   });
 
   it('counts code points, not bytes or UTF-16 units', async () => {
     const text = 'șțăîâ'.repeat(600);
     expect([...text].length).toBe(3000);
-    expect((await handleEvaluate(ok(text), 'ip', deps())).status).toBe(200);
-    const r = await handleEvaluate(ok(text + 'ț'), 'ip', deps());
+    expect((await handleEvaluate(ok(text), 'user-1', deps())).status).toBe(200);
+    const r = await handleEvaluate(ok(text + 'ț'), 'user-1', deps());
     expect(r.status).toBe(400);
     expect(r.json).toMatchObject({ error: 'too_long', message: 'Textul depășește 3000 de caractere.' });
-    expect((await handleEvaluate(ok('😀'.repeat(3000)), 'ip', deps())).status).toBe(200);
+    expect((await handleEvaluate(ok('😀'.repeat(3000)), 'user-1', deps())).status).toBe(200);
   });
 
   it('rejects whitespace-only text as empty', async () => {
-    const r = await handleEvaluate(ok('  \n\t '), 'ip', deps());
+    const r = await handleEvaluate(ok('  \n\t '), 'user-1', deps());
     expect(r.status).toBe(400);
     expect(r.json).toMatchObject({ error: 'empty', message: 'Scrie un text înainte de a-l trimite.' });
   });
@@ -76,7 +76,7 @@ describe('handleEvaluate', () => {
   it('rejects malformed bodies', async () => {
     const bodies = [null, 'x', 42, {}, { exerciseId: PUBLISHED }, { exerciseId: 1, text: 'a' }, { exerciseId: PUBLISHED, text: 5 }];
     for (const body of bodies) {
-      const r = await handleEvaluate(body, 'ip', deps());
+      const r = await handleEvaluate(body, 'user-1', deps());
       expect(r.status).toBe(400);
       expect(r.json).toMatchObject({ error: 'bad_request' });
     }
@@ -85,7 +85,7 @@ describe('handleEvaluate', () => {
   it('returns 404 for a non-uuid id, unknown exercise or unpublished lesson', async () => {
     for (const id of ['nope', UNKNOWN, DRAFT]) {
       const d = deps();
-      const r = await handleEvaluate({ exerciseId: id, text: 'a' }, 'ip', d);
+      const r = await handleEvaluate({ exerciseId: id, text: 'a' }, 'user-1', d);
       expect(r.status).toBe(404);
       expect(r.json).toMatchObject({ error: 'not_found' });
       expect(d.rateLimit).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('handleEvaluate', () => {
 
   it('returns 429 without calling the evaluator when rate limited', async () => {
     const d = deps({ rateLimit: async () => false });
-    const r = await handleEvaluate(ok(), 'ip', d);
+    const r = await handleEvaluate(ok(), 'user-1', d);
     expect(r.status).toBe(429);
     expect(r.json).toMatchObject({
       error: 'rate_limited',
@@ -103,18 +103,18 @@ describe('handleEvaluate', () => {
     expect(d.evaluate).not.toHaveBeenCalled();
   });
 
-  it('consumes the global daily quota after the per-IP check', async () => {
+  it('consumes the global daily quota after the per-user check', async () => {
     const d = deps();
-    await handleEvaluate(ok(), '1.2.3.4', d);
+    await handleEvaluate(ok(), 'user-1', d);
     expect(vi.mocked(d.rateLimit).mock.calls).toEqual([
-      ['evaluate:1.2.3.4', 10, 3600],
+      ['evaluate:user:user-1', 10, 3600],
       ['evaluate:global', 300, 86400],
     ]);
   });
 
   it('returns 429 with the busy-day message when the global quota is exhausted', async () => {
     const d = deps({ rateLimit: vi.fn(async (key: string) => key !== 'evaluate:global') });
-    const r = await handleEvaluate(ok(), 'ip', d);
+    const r = await handleEvaluate(ok(), 'user-1', d);
     expect(r.status).toBe(429);
     expect(r.json).toEqual({
       error: 'rate_limited',
@@ -123,22 +123,16 @@ describe('handleEvaluate', () => {
     expect(d.evaluate).not.toHaveBeenCalled();
   });
 
-  it('does not touch the global quota when the per-IP limit is hit', async () => {
+  it('does not touch the global quota when the per-user limit is hit', async () => {
     const d = deps({ rateLimit: vi.fn(async () => false) });
-    await handleEvaluate(ok(), 'ip', d);
+    await handleEvaluate(ok(), 'user-1', d);
     expect(d.rateLimit).toHaveBeenCalledTimes(1);
-    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:ip', 10, 3600);
-  });
-
-  it('caps the per-IP key at 64 characters of IP', async () => {
-    const d = deps();
-    await handleEvaluate(ok(), 'a'.repeat(500), d);
-    expect(d.rateLimit).toHaveBeenNthCalledWith(1, `evaluate:${'a'.repeat(64)}`, 10, 3600);
+    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:user:user-1', 10, 3600);
   });
 
   it('does not consume quota for invalid requests', async () => {
     const d = deps();
-    await handleEvaluate(ok('   '), 'ip', d);
+    await handleEvaluate(ok('   '), 'user-1', d);
     expect(d.rateLimit).not.toHaveBeenCalled();
   });
 
@@ -152,7 +146,7 @@ describe('handleEvaluate', () => {
       async () => null,
     ];
     for (const evaluate of cases) {
-      const r = await handleEvaluate(ok(), 'ip', deps({ evaluate }));
+      const r = await handleEvaluate(ok(), 'user-1', deps({ evaluate }));
       expect(r.status).toBe(502);
       expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
     }
@@ -163,7 +157,7 @@ describe('handleEvaluate', () => {
     const rateLimit = async () => {
       throw new Error('db down');
     };
-    const r = await handleEvaluate(ok(), 'ip', deps({ rateLimit }));
+    const r = await handleEvaluate(ok(), 'user-1', deps({ rateLimit }));
     expect(r.status).toBe(502);
   });
 });
@@ -174,7 +168,7 @@ describe('corsHeaders', () => {
     const h = corsHeaders('http://localhost:8081', allowed);
     expect(h['Access-Control-Allow-Origin']).toBe('http://localhost:8081');
     expect(h['Access-Control-Allow-Methods']).toBe('POST, OPTIONS');
-    expect(h['Access-Control-Allow-Headers']).toBe('Content-Type');
+    expect(h['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
     expect(h.Vary).toContain('Origin');
   });
   it('gives no ACAO header to other origins or when absent', () => {

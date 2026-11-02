@@ -59,7 +59,8 @@ export type EvaluateErrorCode =
   | 'not_found'
   | 'rate_limited'
   | 'ai_failed'
-  | 'bad_request';
+  | 'bad_request'
+  | 'unauthorized';
 /** `message` is in Romanian. */
 export type EvaluateError = { error: EvaluateErrorCode; message: string };
 

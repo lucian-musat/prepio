@@ -17,9 +17,9 @@ describe.skipIf(!url || !service)('handleEvaluate (local Supabase)', () => {
   let lessonId: string;
   let exerciseId: string;
   // Every key the handler uses is rewritten under a unique prefix, so real quotas
-  // (per-IP and the shared `evaluate:global`) are never consumed by the tests.
+  // (per-user and the shared `evaluate:global`) are never consumed by the tests.
   const prefix = `test-${randomUUID()}:`;
-  const ip = 'ip-under-test';
+  const userId = 'user-under-test';
   let rateLimit: RateLimit;
   const testKey = (key: string) => `${prefix}${key}`;
 
@@ -57,13 +57,13 @@ describe.skipIf(!url || !service)('handleEvaluate (local Supabase)', () => {
     evaluate: vi.fn(async () => ({ grade: 6, summary: 'ok', suggestions: ['x'] })),
   });
 
-  it('serves a published exercise and trips the per-IP rate limit on the 11th call', async () => {
+  it('serves a published exercise and trips the per-user rate limit on the 11th call', async () => {
     for (let i = 0; i < 10; i++) {
-      const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, ip, deps());
+      const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, userId, deps());
       expect(r.status).toBe(200);
     }
     const d = deps();
-    const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, ip, d);
+    const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, userId, d);
     expect(r.status).toBe(429);
     expect(d.evaluate).not.toHaveBeenCalled();
 
@@ -81,7 +81,7 @@ describe.skipIf(!url || !service)('handleEvaluate (local Supabase)', () => {
     expect(upd.data).toHaveLength(1);
 
     const d = deps();
-    const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, 'another-ip', d);
+    const r = await handleEvaluate({ exerciseId, text: 'Un text.' }, 'another-user', d);
     expect(r.status).toBe(429);
     expect(r.json).toEqual({
       error: 'rate_limited',
@@ -90,10 +90,10 @@ describe.skipIf(!url || !service)('handleEvaluate (local Supabase)', () => {
     expect(d.evaluate).not.toHaveBeenCalled();
   });
 
-  it('consumed only the prefixed test keys (per-IP keys plus the global key)', async () => {
+  it('consumed only the prefixed test keys (per-user keys plus the global key)', async () => {
     const { data } = await db.from('rate_limits').select('key').like('key', `${prefix}%`);
     expect(data!.map((r) => r.key).sort()).toEqual(
-      [testKey(GLOBAL_RATE_KEY), testKey('evaluate:another-ip'), testKey(`evaluate:${ip}`)].sort(),
+      [testKey(GLOBAL_RATE_KEY), testKey('evaluate:user:another-user'), testKey(`evaluate:user:${userId}`)].sort(),
     );
   });
 });

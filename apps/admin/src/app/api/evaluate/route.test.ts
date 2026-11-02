@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createAdminClient = vi.fn();
 const handleEvaluate = vi.fn();
+const authenticateBearer = vi.fn();
 vi.mock('server-only', () => ({}));
+vi.mock('@/lib/auth/bearer', () => ({ authenticateBearer: (...a: unknown[]) => authenticateBearer(...a) }));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => createAdminClient() }));
 vi.mock('@/lib/evaluate/openai', () => ({ createOpenAIEvaluator: vi.fn(() => vi.fn()) }));
 vi.mock('@/lib/evaluate/handler', async (importOriginal) => ({
@@ -14,13 +16,14 @@ import { OPTIONS, POST, maxDuration } from './route';
 
 const ALLOWED = 'http://localhost:8081';
 const ID = '11111111-1111-4111-8111-111111111111';
+const USER_ID = '99999999-9999-4999-8999-999999999999';
 const ok = { grade: 7, gradeMin: 1, gradeMax: 10, summary: 'Bine.', suggestions: [] };
 
-function post(opts: { origin?: string; contentType?: string | null; body?: string; ip?: string } = {}) {
+function post(opts: { origin?: string; contentType?: string | null; body?: string; token?: string | null } = {}) {
   const headers = new Headers();
   if (opts.origin) headers.set('Origin', opts.origin);
   if (opts.contentType !== null) headers.set('Content-Type', opts.contentType ?? 'application/json');
-  if (opts.ip) headers.set('X-Forwarded-For', opts.ip);
+  if (opts.token !== null) headers.set('Authorization', `Bearer ${opts.token ?? 'jwt'}`);
   return new Request('http://localhost:3000/api/evaluate', {
     method: 'POST',
     headers,
@@ -33,6 +36,7 @@ beforeEach(() => {
   delete process.env.OPENAI_API_KEY;
   createAdminClient.mockReset().mockReturnValue({ rpc: vi.fn() });
   handleEvaluate.mockReset().mockResolvedValue({ status: 200, json: ok });
+  authenticateBearer.mockReset().mockResolvedValue({ userId: USER_ID });
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -45,15 +49,28 @@ describe('/api/evaluate route', () => {
     const r = OPTIONS(new Request('http://localhost:3000/api/evaluate', { method: 'OPTIONS', headers: { Origin: ALLOWED } }));
     expect(r.status).toBe(204);
     expect(r.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED);
+    expect(r.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
   });
 
-  it('serves an allowed origin with CORS headers', async () => {
-    const r = await POST(post({ origin: ALLOWED, ip: '1.2.3.4, 10.0.0.1' }));
+  it('serves an allowed origin with CORS headers, evaluating for the signed-in user', async () => {
+    const r = await POST(post({ origin: ALLOWED, token: 'good.jwt' }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual(ok);
     expect(r.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
-    expect(handleEvaluate).toHaveBeenCalledWith({ exerciseId: ID, text: 'Un text.' }, '1.2.3.4', expect.any(Object));
+    expect(authenticateBearer).toHaveBeenCalledWith(expect.any(Request), expect.any(Object));
+    expect(handleEvaluate).toHaveBeenCalledWith({ exerciseId: ID, text: 'Un text.' }, USER_ID, expect.any(Object));
+  });
+
+  it('returns 401 unauthorized without a valid token, before evaluating', async () => {
+    authenticateBearer.mockResolvedValue(null);
+    for (const token of [null, 'bad.jwt']) {
+      const r = await POST(post({ origin: ALLOWED, token }));
+      expect(r.status).toBe(401);
+      expect(await r.json()).toEqual({ error: 'unauthorized', message: 'Trebuie să fii autentificat.' });
+      expect(r.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED);
+    }
+    expect(handleEvaluate).not.toHaveBeenCalled();
   });
 
   it('serves requests without an Origin header (native app)', async () => {

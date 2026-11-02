@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { authenticateBearer } from '@/lib/auth/bearer';
 import { allowedOrigins, corsHeaders } from '@/lib/evaluate/cors';
 import { errorResult, handleEvaluate, type Deps } from '@/lib/evaluate/handler';
 import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
@@ -45,8 +46,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const db = createAdminClient();
+    const auth = await authenticateBearer(request, db);
+    if (!auth) {
+      const r = errorResult('unauthorized');
+      return reply(r.status, r.json, request);
+    }
     const apiKey = process.env.OPENAI_API_KEY;
     const deps: Deps = {
       db,
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
             throw new Error('OPENAI_API_KEY is not configured');
           },
     };
-    const r = await handleEvaluate(body, ip, deps);
+    const r = await handleEvaluate(body, auth.userId, deps);
     return reply(r.status, r.json, request);
   } catch (e) {
     console.error('[evaluate] unexpected failure:', e);
