@@ -1,8 +1,11 @@
 # Project status
 
-Last updated: 2026-11-01
+Last updated: 2026-11-02
 
 ## Where we are
+
+**Student accounts (2026-11-02) — deployed.** Spec `docs/superpowers/specs/2026-11-02-student-accounts-design.md`, plan `docs/superpowers/plans/2026-11-02-student-accounts.md`, setup record `docs/auth-setup.md`. Students must sign in before using the app (web + Android): Google (live), email + 6-digit code (built, hidden in production until a domain + SMTP exist). Admins are explicit (`public.admins`, `is_admin()`); students read published content only, anonymous visitors read nothing. Profile screen (rename, sign out, delete account), public `/confidentialitate` and `/sterge-cont`, `/api/evaluate` requires a session (10/h per student + 300/day global), `/api/account/delete`. Production: migrations `20261102094219_student_accounts` and `20261102145928_grant_admin_owner_gmail` pushed; admins `lucian@musat.dev` and `lucian.m91@gmail.com`; Supabase sign-ups ON, Confirm email ON, Google provider ON; Google OAuth app (project `prepio-513509`) published "In production". Verified in production (Chrome): Google sign-in links to the existing account, Home loads, real AI evaluation (200, ~13 s), admin panel works, anonymous REST read of lessons returns `[]`, CORS allows `Authorization`. New APK: EAS build `95bd8726-f39f-4ab2-95eb-681a2db949af` (preview) — the previous APK can no longer read lessons.
+
 
 The student app and admin were restyled with the "Mentă Prietenoasă" design system (2026-10-31/11-01; `docs/design-system.md`) and **deployed on 2026-11-01**: both Vercel projects from `main` (`dd517be`, production checklist from `docs/deploy.md` passed, prod walked in Chrome) and a new Android `preview` APK (EAS build `81fa1fef-0077-47f6-a447-bc331f1ebee3`). The owner still has to install that APK and go through the phone test list below.
 
@@ -40,6 +43,11 @@ Design-system polish (tokens, `Pop`, `progressLabel`, writing resubmit state, re
 ## Backlog (known follow-ups, prioritised)
 
 ### Owner actions
+- [ ] Install the new APK (EAS `95bd8726…`) and test accounts on the phone: native Google account picker shows "Prepio" and signs in; closing the picker shows no error; session survives an app restart; sign out → welcome, sign in again shows the picker; profile rename / delete account; AI evaluation from the writing exercise; open the app offline after > 1 h then reconnect (must stay signed in); keyboard on the name screen; welcome/profile screens at phone size.
+- [ ] Review the legal text on `/confidentialitate` and `/sterge-cont` (written by Claude; data in Supabase London/UK, OpenAI processes essay text possibly in the USA) before the Play Store listing.
+- [ ] Production content has two published lessons named "test" / "test 2" (section A) — unpublish or delete if they are leftovers.
+- [ ] When the domain exists: Resend SMTP + OTP template, `EXPO_PUBLIC_AUTH_EMAIL_ENABLED=true`, new `CONTACT_EMAIL` (checklist in `docs/auth-setup.md`).
+- [ ] Google Play release: add the Play app-signing SHA-1 as an Android OAuth client (`docs/auth-setup.md`).
 - [ ] Review the 3 lessons for historical accuracy. Known simplifications: universal-suffrage dates inconsistent across lessons (principle 1917 / decree-law Nov 1918 / first applied 1919); 1918 peace card says Romania "lost Dobrogea" (Cadrilater + south to Bulgaria, rest under Central Powers administration); L3 exercise 1 examples Plevna/Grivița overlap (could be credited as two facts); L2 card 6 "democratice" → "liberale"; L3 card 6 repeats "a aderat".
 - [ ] Test on the phone with the next APK (design system; native-only behaviour not verifiable on web). The APK must be rebuilt (new native modules `react-native-svg`, `expo-linear-gradient`):
   - Fonts and diacritics: Nunito / Nunito Sans everywhere, ă â î ș ț in both cases never in a fallback font; text line spacing looks right (fractional line heights are rounded by Android's text engine); the 🎓 emoji (56 px) and the "📚 n lecții" chip render without clipping (emoji line box differs per platform).
@@ -59,6 +67,8 @@ Design-system polish (tokens, `Pop`, `progressLabel`, writing resubmit state, re
 - Android emulator: **not wanted for now** (owner decision, 2026-10-31). Native-only behaviour is tested by the owner on the phone; Claude flags such changes. Revisit only if the owner asks.
 
 ### Product / UX
+- [ ] Next steps of the production roadmap: save student progress; AI credits per account; Sign in with Apple when an iOS build exists.
+- [ ] Accounts follow-ups (from reviews, non-blocking): `sendEmailCode` maps unknown server errors to the "no connection" message (fix before enabling email); `/code` without `email` param; signed-out redirect keeps query params (`/?id=…`); delete-confirm panel doesn't auto-scroll on small screens; admin server actions could add an explicit `is_admin` guard (RLS already blocks); transient `is_admin` RPC error shows the not-admin message; policies call `is_admin()` per row.
 - [ ] AI output sometimes uses cedilla ş/ţ — add a rule in admin Settings → AI rules, or normalise server-side.
 - [x] Student web: opening `/lesson/<id>` directly has no back button in the header (fixed: the lesson top bar back goes Home without history, design-system Task 6).
 - [ ] Student app: no fetch-error test/retry on the lesson screen; English fallback label `'Card'` in `CardStepper`. (The writing resubmit result-card bug is fixed: a new submit clears the previous grade.)
