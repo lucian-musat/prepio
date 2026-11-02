@@ -243,17 +243,16 @@ describe('reveal and verdict edge cases', () => {
     expect(screen.queryByText('Vezi răspunsul corect mai sus.')).toBeNull();
   });
 
-  it('scrolls to the reveal offset by the content top padding', async () => {
+  it('scrolls so the reveal lands 12 px under the top bar (content top padding 12, gap 12)', async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {});
     try {
       await renderQ(single);
-      await fireEvent(screen.getByTestId('question-content'), 'layout', { nativeEvent: { layout: { x: 0, y: 12, width: 320, height: 500 } } });
       await fireEvent.press(screen.getByText('Varianta A'));
       await fireEvent.press(verify());
       let node: any = within(screen.getByTestId('screen-content')).getByText('Răspuns corect: Varianta B');
       while (node && typeof node.props.onLayout !== 'function') node = node.parent;
       await fireEvent(node, 'layout', { nativeEvent: { layout: { x: 0, y: 300, width: 320, height: 100 } } });
-      expect(scrollTo).toHaveBeenCalledWith({ y: 312, animated: true });
+      expect(scrollTo).toHaveBeenCalledWith({ y: 300, animated: true });
     } finally {
       scrollTo.mockRestore();
     }

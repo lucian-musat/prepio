@@ -16,7 +16,7 @@ import {
   type OrderItem,
   type Question,
 } from '@prepio/shared';
-import { AppText, Button, Confetti, Enter, Icon, Pop, ScreenLayout, Surface, easing, feedbackConfig } from '../ui';
+import { AppText, Button, Confetti, Enter, Icon, Pop, SCREEN_CONTENT_TOP, ScreenLayout, Surface, easing, feedbackConfig } from '../ui';
 import ChoiceQuestion from './ChoiceQuestion';
 import DifficultyBadge from './DifficultyBadge';
 import OrderQuestion, { CorrectOrder } from './OrderQuestion';
@@ -41,6 +41,8 @@ const TYPE_LABELS: Record<Question['type'], string> = {
 
 // The action bar repeats a single correct answer only when it fits on about one line.
 const SHORT_ANSWER_MAX = 60;
+// Prototype `reveal`: scroll so new content sits 12 px below the top bar.
+const REVEAL_GAP = space[3];
 const SEE_ABOVE = 'Vezi răspunsul corect mai sus.';
 
 // Badge: 15 px line + 2 × 2 px padding (Chip `badge`), against the 16 px eyebrow line.
@@ -108,8 +110,6 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const nextRef = useRef(false);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const scrolledRef = useRef(false);
-  // y of the content block inside the scroll content (its top padding), added to the reveal's own y.
-  const contentY = useRef(0);
 
   const correctTexts = question.type === 'chronological_order' ? [] : question.options.filter((o) => o.correct).map((o) => o.text);
 
@@ -165,7 +165,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const onRevealLayout = (e: LayoutChangeEvent) => {
     if (scrolledRef.current) return;
     scrolledRef.current = true;
-    scrollRef.current?.scrollTo({ y: contentY.current + e.nativeEvent.layout.y, animated: true });
+    scrollRef.current?.scrollTo({ y: Math.max(0, SCREEN_CONTENT_TOP + e.nativeEvent.layout.y - REVEAL_GAP), animated: true });
   };
 
   const line = correct === null ? null : barLine(correct);
@@ -192,7 +192,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
           )
         }
       >
-        <View testID="question-content" style={styles.content} onLayout={(e) => (contentY.current = e.nativeEvent.layout.y)}>
+        <View style={styles.content}>
           <Surface padding={5} radius="xl">
             {/* Prototype `.qcard.stagger`: eyebrow, prompt and options rise one after another. */}
             <Enter index={0} style={styles.header}>

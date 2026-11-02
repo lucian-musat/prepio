@@ -3,7 +3,7 @@ export { default as IconButton, Icon, type IconName } from './IconButton';
 export { default as ProgressBar } from './ProgressBar';
 export { default as TopBar, goBackOrHome } from './TopBar';
 export { default as ActionBar, type ActionTone } from './ActionBar';
-export { default as ScreenLayout } from './ScreenLayout';
+export { default as ScreenLayout, SCREEN_CONTENT_TOP } from './ScreenLayout';
 export { default as Enter } from './Enter';
 export { default as CardTransition } from './CardTransition';
 export { default as Button } from './Button';

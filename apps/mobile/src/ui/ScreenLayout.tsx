@@ -33,6 +33,9 @@ type Props = {
   scrollRef?: Ref<Animated.ScrollView>;
 };
 
+/** Top padding of the scroll content: the content wrapper sits this far below the scroll origin. */
+export const SCREEN_CONTENT_TOP = space[3];
+
 // Edge shadows appear only once content is actually hidden under a bar (prototype: 4 px tolerance).
 const EDGE = space[1];
 
@@ -130,7 +133,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: {
     flexGrow: 1,
-    paddingTop: space[3],
+    paddingTop: SCREEN_CONTENT_TOP,
     paddingBottom: space[6],
     paddingHorizontal: layout.gutter,
   },

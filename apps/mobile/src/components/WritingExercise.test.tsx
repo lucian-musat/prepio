@@ -191,15 +191,15 @@ it('scrolls the content to the skeleton when loading starts and to the result wh
     const slotLayout = (y: number) => ({ nativeEvent: { layout: { x: 0, y, width: 300, height: 120 } } });
     await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(300));
     expect(scrollTo).toHaveBeenCalledTimes(1);
-    // 12 px under the top bar, like the prototype: card 10 + slot 300 - 12.
-    expect(scrollTo).toHaveBeenLastCalledWith({ y: 298, animated: true });
+    // 12 px under the top bar, like the prototype: padding 12 + card 10 + slot 300 - 12.
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 310, animated: true });
     // A later layout of the same skeleton (e.g. a resize) doesn't scroll again.
     await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(300));
     expect(scrollTo).toHaveBeenCalledTimes(1);
     await act(async () => resolve(result));
     await fireEvent(screen.getByTestId('evaluation-slot'), 'layout', slotLayout(320));
     expect(scrollTo).toHaveBeenCalledTimes(2);
-    expect(scrollTo).toHaveBeenLastCalledWith({ y: 318, animated: true });
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 330, animated: true });
   } finally {
     scrollTo.mockRestore();
   }

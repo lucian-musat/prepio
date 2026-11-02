@@ -11,7 +11,7 @@ import {
   type WritingExercise as WritingExerciseData,
 } from '@prepio/shared';
 import { evaluateEssay } from '../lib/api';
-import { AppText, Button, Enter, ScoreRing, ScreenLayout, Skeleton, Surface, TextArea } from '../ui';
+import { AppText, Button, Enter, ScoreRing, SCREEN_CONTENT_TOP, ScreenLayout, Skeleton, Surface, TextArea } from '../ui';
 import type { LessonFrame } from './QuestionView';
 import { fontFamily } from '../theme/fonts';
 
@@ -125,7 +125,7 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
     if (!outKey || scrolledKey.current === outKey) return;
     scrolledKey.current = outKey;
     // Prototype `reveal`: 12 px of breathing room under the top bar.
-    scrollRef.current?.scrollTo({ y: Math.max(0, cardY.current + e.nativeEvent.layout.y - REVEAL_GAP), animated: true });
+    scrollRef.current?.scrollTo({ y: Math.max(0, SCREEN_CONTENT_TOP + cardY.current + e.nativeEvent.layout.y - REVEAL_GAP), animated: true });
   };
 
   return (

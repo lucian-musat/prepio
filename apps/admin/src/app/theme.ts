@@ -1,12 +1,12 @@
-import { color, feedbackText, gradient, radius } from '@prepio/shared';
+import { color, difficultyTone, feedbackText, gradient, radius } from '@prepio/shared';
 
 const hexToRgb = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 };
 
-// AA text on the warning (yellow) subtle background; there is no shared token for it yet.
-const WARNING_TEXT = '#8A6A00';
+// AA text on the warning (yellow) subtle background: the medium-difficulty badge colour.
+const WARNING_TEXT = difficultyTone.medium.fg;
 
 const [heroFrom, heroMid, heroTo] = gradient.hero.colors;
 
