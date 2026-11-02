@@ -12,6 +12,8 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Prepio' }} />
+      <Stack.Screen name="email" options={{ title: 'Email' }} />
+      <Stack.Screen name="code" options={{ title: 'Cod' }} />
     </Stack>
   );
 }
