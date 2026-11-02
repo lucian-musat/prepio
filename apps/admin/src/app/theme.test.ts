@@ -16,6 +16,14 @@ describe('themeVariablesCss', () => {
     expect(themeVariablesCss).toMatch(/--bs-secondary-color-rgb:\d+, \d+, \d+/);
     expect(themeVariablesCss).toMatch(/--bs-secondary-bg-rgb:\d+, \d+, \d+/);
     expect(themeVariablesCss).toMatch(/--bs-tertiary-bg-rgb:\d+, \d+, \d+/);
+    for (const v of ['primary', 'success', 'danger', 'warning']) {
+      expect(themeVariablesCss).toContain(`--bs-${v}-bg-subtle:`);
+      expect(themeVariablesCss).toContain(`--bs-${v}-border-subtle:`);
+      expect(themeVariablesCss).toContain(`--bs-${v}-text-emphasis:`);
+    }
+    expect(themeVariablesCss).toContain('--bs-primary-text-emphasis:#0A5C55');
+    expect(themeVariablesCss).toContain('--bs-warning-text-emphasis:#8A6A00');
+    expect(themeVariablesCss).toContain('--bs-danger-bg-subtle:#');
     for (const old of ['#7A1F2B', '#F7F1E3', '#B8893B']) {
       expect(themeVariablesCss).not.toContain(old);
     }

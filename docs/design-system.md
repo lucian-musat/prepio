@@ -131,6 +131,17 @@ Helpers in `ui/motion.ts`: `easing.*` (Reanimated beziers), `timing(duration, cu
 | `elevation.optionRest` | 3 px solid `border` |
 | `elevation.raised` | soft edge shadow (-10 y, blur 24, spread -16, 25%) under/over a bar while content scrolls |
 
+### Border, stroke, opacity and press tokens
+
+| Token | Value / use |
+|---|---|
+| `border.hairline` / `border.thick` | 1 px / 2 px border widths (e.g. the correct-answer box uses `thick`) |
+| `stroke.icon` / `iconBold` / `ring` | 2.2 / 3 icon stroke widths; 8 for the score ring |
+| `opacity.disabled` / `disabledIcon` | Disabled control / disabled icon opacity |
+| `pressScale.row` / `icon` | Scale while pressed for rows and icon buttons |
+| `shadowColor` | Colour of the soft shadows |
+| `elevation.progressInset` | Inset shadow of the progress track |
+
 Helpers: `solidShadow`, `raisedShadow`, `withAlpha`, `mixColors` in `ui/elevation.ts`.
 
 ## Component catalogue (`apps/mobile/src/ui/`)
@@ -184,9 +195,11 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 
 **A screen.** Wrap content in `ScreenLayout` (title, `onBack={goBackOrHome}`, `actions` for the primary action, `contentKey` if the content changes in place). Build the body from `Surface`, `AppText`, `Button`, `OptionRow`, and stagger sections with `Enter index={n}`. Never reproduce the top bar/action bar yourself. Walk it in the browser at 360 px and desktop, console clean, and list native-only behaviour in `docs/STATUS.md`.
 
+`Pop` (`ui/Pop.tsx`): scale-pop wrapper (.6 to 1.18 to 1) for the lesson cap and the verdict icon; static at rest with reduce motion. `ScreenLayout`, `TopBar` and `ProgressBar` accept `progressLabel` (accessible name of the progress bar).
+
 ## Admin mapping
 
-Admin keeps Bootstrap 5 / react-bootstrap but a calmer take of the same system: `themeVariablesCss` (generated from the tokens in `apps/admin/src/app/theme.ts`) overrides the Bootstrap variables: `--bs-primary` = `primary`, `--bs-body-bg` = `bg`, `--bs-body-color` = `text`, `--bs-secondary-color` = `textMuted`, `--bs-border-color` = `border`, `--bs-link-color` = `primaryStrong`, `--bs-border-radius` = `radius.md` (14), `--bs-border-radius-lg` = `radius.lg`, success/danger/warning from `success`/`danger`/`accent`. It also exposes `--prepio-*` variables for every semantic token and the hero gradient stops. Fonts: Nunito (headings) and Nunito Sans (text) through `next/font/google`. White top navbar with the teal logo mark. No confetti, no 3D press, no springy motion: only subtle hover/focus transitions.
+Admin keeps Bootstrap 5 / react-bootstrap but a calmer take of the same system: `themeVariablesCss` (generated from the tokens in `apps/admin/src/app/theme.ts`) overrides the Bootstrap variables: `--bs-primary` = `primary`, `--bs-body-bg` = `bg`, `--bs-body-color` = `text`, `--bs-secondary-color` = `textMuted`, `--bs-border-color` = `border`, `--bs-link-color` = `primaryStrong`, `--bs-border-radius` = `radius.md` (14), `--bs-border-radius-lg` = `radius.lg`, success/danger/warning from `success`/`danger`/`accent`. The Bootstrap subtle variants are mapped too: `--bs-{primary,success,danger,warning}-bg-subtle` (the subtle tokens), `-border-subtle` (the colour at 25 % over white) and `-text-emphasis` (AA text colours: `primaryStrong`, `feedbackText.good/wrong`, `#8A6A00` for warning). `.text-success` / `.text-danger` keep `!important` because Bootstrap's own utilities use it and `--bs-success-rgb` must stay the brand colour for backgrounds. The content tree's action groups wrap at 360 px. It also exposes `--prepio-*` variables for every semantic token and the hero gradient stops. Fonts: Nunito (headings) and Nunito Sans (text) through `next/font/google`. White top navbar with the teal logo mark. No confetti, no 3D press, no springy motion: only subtle hover/focus transitions.
 
 ## Removed
 

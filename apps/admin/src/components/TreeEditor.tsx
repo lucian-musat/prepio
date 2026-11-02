@@ -40,7 +40,7 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
         <Link href={`/lessons/${lesson.id}`} className="text-decoration-none fw-semibold">{lesson.title}</Link>{' '}
         <Badge bg={published ? 'success' : 'secondary'} data-testid="lesson-status">{published ? 'Publicată' : 'Ciornă'}</Badge>
       </span>
-      <ButtonGroup size="sm">
+      <ButtonGroup size="sm" className="flex-wrap mw-100">
         <Button variant="outline-secondary" onClick={() => run(() => setLessonStatus(lesson.id, next))}>
           {published ? 'Retrage' : 'Publică'}
         </Button>
@@ -73,7 +73,7 @@ function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: bool
         <div className="card-body py-2">
           <div className="d-flex flex-wrap align-items-center gap-2">
             <h2 className="h6 mb-0 flex-grow-1">{node.title}</h2>
-            <ButtonGroup size="sm">
+            <ButtonGroup size="sm" className="flex-wrap mw-100">
               <Button
                 variant="outline-primary"
                 onClick={() =>

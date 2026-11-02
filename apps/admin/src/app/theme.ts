@@ -5,6 +5,9 @@ const hexToRgb = (hex: string) => {
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 };
 
+// AA text on the warning (yellow) subtle background; there is no shared token for it yet.
+const WARNING_TEXT = '#8A6A00';
+
 const [heroFrom, heroMid, heroTo] = gradient.hero.colors;
 
 /** Bootstrap CSS-variable overrides generated from the shared design tokens. */
@@ -19,6 +22,10 @@ export const themeVariablesCss = `:root{
 --bs-secondary-bg:${color.surfaceMuted};--bs-secondary-bg-rgb:${hexToRgb(color.surfaceMuted)};
 --bs-tertiary-bg:${color.surfaceMuted};--bs-tertiary-bg-rgb:${hexToRgb(color.surfaceMuted)};
 --bs-success-text-emphasis:${feedbackText.good};--bs-danger-text-emphasis:${feedbackText.wrong};
+--bs-primary-bg-subtle:${color.primarySubtle};--bs-primary-border-subtle:color-mix(in srgb,${color.primary} 25%,#fff);--bs-primary-text-emphasis:${color.primaryStrong};
+--bs-success-bg-subtle:${color.successSubtle};--bs-success-border-subtle:color-mix(in srgb,${color.success} 25%,#fff);
+--bs-danger-bg-subtle:${color.dangerSubtle};--bs-danger-border-subtle:color-mix(in srgb,${color.danger} 25%,#fff);
+--bs-warning-bg-subtle:${color.accentSubtle};--bs-warning-border-subtle:color-mix(in srgb,${color.accent} 25%,#fff);--bs-warning-text-emphasis:${WARNING_TEXT};
 --bs-border-color:${color.border};
 --bs-link-color:${color.primaryStrong};--bs-link-color-rgb:${hexToRgb(color.primaryStrong)};
 --bs-link-hover-color:${color.text};--bs-link-hover-color-rgb:${hexToRgb(color.text)};

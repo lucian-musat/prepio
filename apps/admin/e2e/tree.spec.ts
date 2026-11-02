@@ -59,3 +59,9 @@ test('tree: create nodes and a lesson, publish it, rename, confirm-delete with c
   await expect(page.getByRole('heading', { name: THEME, exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: '[test] Capitol 2' })).toHaveCount(0);
 });
+test('tree: no horizontal overflow at 360 px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await login(page);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});

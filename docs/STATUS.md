@@ -19,6 +19,8 @@ Content: 3 published lessons (BAC history 1857–1918), written by Claude from t
 
 Verified at the end of the POC: all unit, pgTAP, integration and Playwright suites green; `next build` and `expo export` OK; production checks (sign-up blocked, anon can't read `ai_settings`, CORS/403 on the evaluate API, real OpenAI evaluation in Romanian, ~15 s).
 
+Design-system polish (tokens, `Pop`, `progressLabel`, writing resubmit state, reveal scroll offset, admin Bootstrap subtle variables, narrow-screen tree) is done; see `docs/design-system.md`.
+
 ## Decisions taken during implementation (not in the original spec)
 
 - Design system (spec `docs/superpowers/specs/2026-10-31-design-system-design.md`, doc `docs/design-system.md`): variant B "Mentă Prietenoasă" chosen by the owner; tokens in `packages/shared/src/theme.ts`; fonts Nunito + Nunito Sans (family keys CSS-safe in `apps/mobile/src/theme/fonts.ts`, react-native-web writes `fontFamily` unquoted). The old archive theme (Lora, Source Sans, parchment/bordeaux/gold) is removed.
@@ -59,7 +61,7 @@ Verified at the end of the POC: all unit, pgTAP, integration and Playwright suit
 ### Product / UX
 - [ ] AI output sometimes uses cedilla ş/ţ — add a rule in admin Settings → AI rules, or normalise server-side.
 - [x] Student web: opening `/lesson/<id>` directly has no back button in the header (fixed: the lesson top bar back goes Home without history, design-system Task 6).
-- [ ] Student app: no fetch-error test/retry on the lesson screen; English fallback label `'Card'` in `CardStepper`; result card stays visible next to a new error after resubmit.
+- [ ] Student app: no fetch-error test/retry on the lesson screen; English fallback label `'Card'` in `CardStepper`. (The writing resubmit result-card bug is fixed: a new submit clears the previous grade.)
 - [ ] Admin: login form clears the email after a failed attempt; logged-in user can still see `/login`; all login errors shown as "wrong password" (also when Supabase is down); row buttons not disabled while an action is pending; modal closes before the action result.
 - [ ] Admin wording: „cartonaș” vs „card”; missing period in „Titlul nu poate fi gol”.
 - [ ] Admin preview of draft lessons (spec: publish to preview in the POC).
