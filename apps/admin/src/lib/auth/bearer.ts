@@ -1,7 +1,11 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { isAuthSessionMissingError, type AuthError, type SupabaseClient } from '@supabase/supabase-js';
 
-/** Supabase Auth answers 401/403 when the token itself is bad (malformed, expired, user/session gone). */
+/** Supabase Auth answers 401/403 when the token itself is bad (malformed, expired, user gone). */
 const TOKEN_REJECTED = new Set([401, 403]);
+
+/** A revoked session (403 `session_not_found`) reaches us as AuthSessionMissingError with status 400. */
+const tokenRejected = (error: AuthError) =>
+  isAuthSessionMissingError(error) || (typeof error.status === 'number' && TOKEN_REJECTED.has(error.status));
 
 /**
  * Verifies the `Authorization: Bearer <jwt>` header with Supabase Auth.
@@ -14,7 +18,7 @@ export async function authenticateBearer(request: Request, db: SupabaseClient): 
   if (!match) return null;
   const { data, error } = await db.auth.getUser(match[1]);
   if (error) {
-    if (typeof error.status === 'number' && TOKEN_REJECTED.has(error.status)) return null;
+    if (tokenRejected(error)) return null;
     throw new Error(`Supabase Auth getUser failed (status ${error.status ?? 'unknown'}): ${error.message}`);
   }
   if (!data.user) return null;

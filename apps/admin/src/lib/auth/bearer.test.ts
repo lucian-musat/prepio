@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { AuthSessionMissingError, type SupabaseClient } from '@supabase/supabase-js';
 import { authenticateBearer } from './bearer';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -46,6 +46,11 @@ describe('authenticateBearer', () => {
       const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'bad jwt', status } }));
       expect(await authenticateBearer(req('Bearer x.jwt'), db)).toBeNull();
     }
+  });
+
+  it('returns null for a revoked session (auth-js maps session_not_found to AuthSessionMissingError, status 400)', async () => {
+    const { db } = fakeDb(async () => ({ data: { user: null }, error: new AuthSessionMissingError() }));
+    expect(await authenticateBearer(req('Bearer x.jwt'), db)).toBeNull();
   });
 
   it('returns null when Supabase answers without error but without a user', async () => {
