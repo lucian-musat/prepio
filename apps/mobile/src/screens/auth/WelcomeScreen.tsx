@@ -53,7 +53,7 @@ export default function WelcomeScreen() {
               role="caption"
               color="primaryStrong"
               accessibilityRole="link"
-              onPress={() => router.push('/confidentialitate' as never)}
+              onPress={() => router.push('/confidentialitate')}
               style={styles.link}
             >
               Politica de confidențialitate

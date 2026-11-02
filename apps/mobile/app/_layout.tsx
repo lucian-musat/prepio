@@ -45,6 +45,9 @@ function RootNavigator() {
         <Stack.Protected guard={status === 'ready'}>
           <Stack.Screen name="(app)" />
         </Stack.Protected>
+        {/* Public pages (Google Play needs them reachable signed out): outside every guard. */}
+        <Stack.Screen name="confidentialitate" options={{ title: 'Politica de confidențialitate' }} />
+        <Stack.Screen name="sterge-cont" options={{ title: 'Ștergerea contului' }} />
       </Stack>
     </>
   );
