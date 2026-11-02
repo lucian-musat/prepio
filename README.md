@@ -34,7 +34,7 @@ Google sign-in needs an OAuth client (Google Cloud Console). Copy `supabase/.env
 - `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`
 - `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`
 
-Never commit real values. Without them the stack still starts (use dummy values); only Google sign-in fails.
+Both must be non-empty for the stack to start; any placeholder works if you don't test Google locally (only Google sign-in then fails). Never commit real values. Full provider setup (Google Cloud, Supabase dashboard, env vars): [docs/auth-setup.md](docs/auth-setup.md).
 
 ## Deployment
 

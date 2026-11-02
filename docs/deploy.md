@@ -25,7 +25,16 @@ Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, p
 
 - `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://prepio-admin.vercel.app`
 
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` = Google OAuth web client id (public). Used by native Google sign-in as `webClientId`; the web flow doesn't need it but it is harmless. Set on Vercel and in `eas.json`.
+- `EXPO_PUBLIC_AUTH_EMAIL_ENABLED` = `false` in production (hides the email-code sign-in button until the domain + SMTP exist); `true` locally. Set on Vercel and in `eas.json`.
+
+Provider setup (Google Cloud, Supabase dashboard, rollout checklist): [auth-setup.md](auth-setup.md).
+
 `EXPO_PUBLIC_*` values are inlined at build time, so changing them needs a rebuild/redeploy. For the APK they are committed in `eas.json` (all public values).
+
+## Accounts rollout
+
+Push the `student_accounts` migration (`pnpm db:cloud:push`), apply the dashboard settings in [auth-setup.md](auth-setup.md), then deploy admin and student web back-to-back. After the migration, content is readable only by signed-in users, so the old APK (and the old web build) can no longer read content; ship a new APK build.
 
 ## Schema and content
 
@@ -44,7 +53,7 @@ Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, p
 
 ## Auth settings (Supabase dashboard)
 
-- Email sign-ups: OFF. Anonymous sign-ins: OFF.
+- Anonymous sign-ins: OFF. Sign-up and provider settings for student accounts: see [auth-setup.md](auth-setup.md).
 - The admin user is created manually in Authentication > Users with "Auto Confirm User" checked.
 
 ## Android APK
