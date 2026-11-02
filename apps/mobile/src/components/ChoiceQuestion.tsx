@@ -35,8 +35,14 @@ export default function ChoiceQuestion({ options, multiple, answered, selected, 
   const reduced = useReducedMotion();
   const [revealCorrect, setRevealCorrect] = useState(false);
   useEffect(() => {
-    if (!answered) return setRevealCorrect(false);
-    if (reduced) return setRevealCorrect(true);
+    if (!answered) {
+      setRevealCorrect(false);
+      return;
+    }
+    if (reduced) {
+      setRevealCorrect(true);
+      return;
+    }
     const t = setTimeout(() => setRevealCorrect(true), REVEAL_CORRECT_DELAY_MS);
     return () => clearTimeout(t);
   }, [answered, reduced]);

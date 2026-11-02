@@ -108,7 +108,7 @@ export default function Hero({ welcomeMessage, lessonCount: count }: Props) {
         <Chip label={`📚 ${lessonCount(count)}`} fg={color.onPrimary} bg={withAlpha(color.onPrimary, CHIP_ALPHA)} />
       </View>
       {/* Last child, like `::after`: it floats over the text too. */}
-      <Animated.View pointerEvents="none" style={[styles.circle, circleStyle]} />
+      <Animated.View testID="hero-circle" pointerEvents="none" style={[styles.circle, circleStyle]} />
     </LinearGradient>
   );
 }

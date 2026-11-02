@@ -40,3 +40,14 @@ it('numbers the tile and alternates teal and yellow tiles', async () => {
   expect(StyleSheet.flatten(first.props.style).color).toBe(color.primary);
   expect(StyleSheet.flatten(second.props.style).color).toBe(difficultyTone.medium.fg);
 });
+
+it('lifts, tints the chevron and nudges it on hover (web), and resets on hover out', async () => {
+  await render(<LessonListItem index={0} title="Lecția" onPress={() => {}} />);
+  const row = screen.getByRole('button', { name: 'Lecția' });
+  await fireEvent(row, 'hoverIn');
+  await act(async () => jest.advanceTimersByTime(400));
+  expect(transform()).toMatchObject({ translateY: -2, scale: 1 });
+  await fireEvent(row, 'hoverOut');
+  await act(async () => jest.advanceTimersByTime(400));
+  expect(transform()).toMatchObject({ translateY: 0 });
+});

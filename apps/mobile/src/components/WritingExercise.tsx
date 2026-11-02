@@ -106,6 +106,8 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
     setAttempt((n) => n + 1);
     setLoading(true);
     setError(null);
+    // A new attempt starts clean: an error after a resubmit must not sit next to the previous grade.
+    setResult(null);
     try {
       setResult(await evaluateEssay({ exerciseId: exercise.id, text }));
       setResults((n) => n + 1);
@@ -161,7 +163,6 @@ export function WritingExercise({ exercise, frame, nextLabel, onNext }: Props) {
             invalid={over}
           />
           <View style={styles.counter}>
-            <View />
             <AppText role="caption" color="textMuted" style={over && styles.dangerText}>
               {count} / {MAX_ESSAY_CHARS}
             </AppText>
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   // Prototype `.counter`: margin 8px 2px 14px (see COUNTER_GAP).
   counter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: COUNTER_GAP,
     marginHorizontal: COUNTER_INSET,
     marginBottom: space[3.5],

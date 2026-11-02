@@ -9,6 +9,8 @@ import {
   radius,
   shuffleForDisplay,
   space,
+  stroke,
+  border,
   type Answer,
   typeScale,
   type OrderItem,
@@ -45,7 +47,6 @@ const SEE_ABOVE = 'Vezi răspunsul corect mai sus.';
 const BADGE_OVERHANG = (typeScale.badge.lineHeight + space[1] - typeScale.eyebrow.lineHeight) / 2;
 const ICON_SIZE = space[6] + space[1]; // 28 px circle (prototype `.feedback .ic`)
 const ICON_GLYPH = space[4];
-const ICON_STROKE = 3;
 
 // A sentence end that leaves less than this is most likely an abbreviation ("Al. I. Cuza").
 const MIN_SENTENCE = 20;
@@ -68,7 +69,7 @@ const verdictText = (good: boolean) => (good ? 'Corect, bravo!' : 'Nu chiar.');
 function VerdictIcon({ good }: { good: boolean }) {
   return (
     <Pop duration={motion.duration.slow} style={[styles.icon, { backgroundColor: good ? color.success : color.danger }]}>
-      <Icon name={good ? 'check' : 'close'} size={ICON_GLYPH} stroke={ICON_STROKE} tint={color.onPrimary} />
+      <Icon name={good ? 'check' : 'close'} size={ICON_GLYPH} stroke={stroke.iconBold} tint={color.onPrimary} />
     </Pop>
   );
 }
@@ -107,6 +108,8 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const nextRef = useRef(false);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const scrolledRef = useRef(false);
+  // y of the content block inside the scroll content (its top padding), added to the reveal's own y.
+  const contentY = useRef(0);
 
   const correctTexts = question.type === 'chronological_order' ? [] : question.options.filter((o) => o.correct).map((o) => o.text);
 
@@ -114,6 +117,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const barLine = (ok: boolean): string | null => {
     if (ok) return question.explanation ? firstSentence(question.explanation) : null;
     const only = correctTexts.length === 1 ? correctTexts[0]! : null;
+    if (correctTexts.length === 0) return null; // nothing is revealed above, so there is nothing to point at
     return only && only.length <= SHORT_ANSWER_MAX ? `Răspuns corect: ${only}` : SEE_ABOVE;
   };
 
@@ -161,7 +165,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const onRevealLayout = (e: LayoutChangeEvent) => {
     if (scrolledRef.current) return;
     scrolledRef.current = true;
-    scrollRef.current?.scrollTo({ y: e.nativeEvent.layout.y, animated: true });
+    scrollRef.current?.scrollTo({ y: contentY.current + e.nativeEvent.layout.y, animated: true });
   };
 
   const line = correct === null ? null : barLine(correct);
@@ -188,7 +192,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
           )
         }
       >
-        <View style={styles.content}>
+        <View testID="question-content" style={styles.content} onLayout={(e) => (contentY.current = e.nativeEvent.layout.y)}>
           <Surface padding={5} radius="xl">
             {/* Prototype `.qcard.stagger`: eyebrow, prompt and options rise one after another. */}
             <Enter index={0} style={styles.header}>
@@ -256,7 +260,7 @@ const styles = StyleSheet.create({
   answerBox: {
     padding: space[3.5],
     borderRadius: radius.lg,
-    borderWidth: 2,
+    borderWidth: border.thick,
     borderColor: color.success,
     backgroundColor: color.successSubtle,
   },

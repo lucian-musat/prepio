@@ -85,6 +85,29 @@ it('shows the skeleton while evaluating, then the result with Nota ta, summary, 
   expect(bar().getByRole('button', { name: 'Retrimite' })).toBeTruthy();
 });
 
+it('an error after a resubmit shows alone, without the previous grade', async () => {
+  mockEvaluate.mockResolvedValueOnce(result).mockRejectedValueOnce(new Error('Eroare de rețea'));
+  await setup();
+  await fireEvent.changeText(input(), 'Eseul meu');
+  await fireEvent.press(submitBtn());
+  expect(await content().findByText('Nota ta')).toBeTruthy();
+  await fireEvent.press(submitBtn());
+  expect(await content().findByText('Eroare de rețea')).toBeTruthy();
+  expect(content().queryByText('Nota ta')).toBeNull();
+});
+
+it('a success after a resubmit shows the new grade', async () => {
+  mockEvaluate.mockResolvedValueOnce(result).mockResolvedValueOnce({ ...result, grade: 9, summary: 'Mai bine.' });
+  await setup();
+  await fireEvent.changeText(input(), 'Eseul meu');
+  await fireEvent.press(submitBtn());
+  expect(await content().findByText('Eseu bun.')).toBeTruthy();
+  await fireEvent.press(submitBtn());
+  expect(await content().findByText('Mai bine.')).toBeTruthy();
+  expect(content().queryByText('Eseu bun.')).toBeNull();
+  expect(content().getByLabelText('Nota 9 din 10')).toBeTruthy();
+});
+
 it('hides the suggestions label when there are no suggestions', async () => {
   mockEvaluate.mockResolvedValue({ ...result, suggestions: [] });
   await setup();
@@ -100,7 +123,10 @@ it('submit pressed twice calls evaluateEssay once', async () => {
   await fireEvent.changeText(input(), 'Eseul meu');
   const button = submitBtn();
   // Two presses inside one act, before React re-renders (a fast double tap); RNTL warns about the nested act().
-  const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const unexpected: unknown[][] = [];
+  const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (!/overlapping act/.test(String(args[0]))) unexpected.push(args);
+  });
   try {
     await act(async () => {
       void fireEvent.press(button);
@@ -109,6 +135,7 @@ it('submit pressed twice calls evaluateEssay once', async () => {
   } finally {
     spy.mockRestore();
   }
+  expect(unexpected).toEqual([]);
   expect(mockEvaluate).toHaveBeenCalledTimes(1);
 });
 

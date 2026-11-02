@@ -86,7 +86,7 @@ export default function HomeScreen() {
       {data.sections.map((section, s) => {
         const title = section.path.join(' › ');
         return (
-          <View key={title}>
+          <View key={`${s}:${title}`}>
             <Enter testID={`enter-section-${s}`} index={stagger(1 + 2 * s)} style={styles.header}>
               <AppText role="section" accessibilityRole="header" style={styles.headerTitle}>
                 {title}

@@ -1,4 +1,4 @@
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, ScrollView } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import type { Question } from '@prepio/shared';
@@ -49,7 +49,10 @@ const verify = () => bar().getByRole('button', { name: 'Verifică' });
 // Two presses inside one act, before React re-renders: what a fast double tap does. RNTL warns about
 // the nested act() calls this needs, so that one expected warning is silenced here.
 const pressTwice = async (el: Parameters<typeof fireEvent.press>[0]) => {
-  const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const unexpected: unknown[][] = [];
+  const spy = jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (!/overlapping act/.test(String(args[0]))) unexpected.push(args);
+  });
   try {
     await act(async () => {
       void fireEvent.press(el);
@@ -58,6 +61,7 @@ const pressTwice = async (el: Parameters<typeof fireEvent.press>[0]) => {
   } finally {
     spy.mockRestore();
   }
+  expect(unexpected).toEqual([]);
 };
 const isDisabled = (el: any) => !!el.props.accessibilityState?.disabled || !!el.props['aria-disabled'];
 
@@ -226,6 +230,33 @@ describe('single choice', () => {
     await fireEvent.press(verify());
     await fireEvent.press(screen.getByText('Varianta B'));
     expect(screen.getByRole('radio', { name: 'Varianta B, corect' }).props.accessibilityState).toMatchObject({ checked: false });
+  });
+});
+
+describe('reveal and verdict edge cases', () => {
+  it('shows the verdict only (no "see above" hint) when no option is marked correct', async () => {
+    const broken: Question = { ...single, explanation: null, options: [{ id: 'a', text: 'Prima', correct: false }, { id: 'b', text: 'A doua', correct: false }] } as Question;
+    await renderQ(broken);
+    await fireEvent.press(screen.getByText('Prima'));
+    await fireEvent.press(verify());
+    expect(screen.getByText('Nu chiar.')).toBeTruthy();
+    expect(screen.queryByText('Vezi răspunsul corect mai sus.')).toBeNull();
+  });
+
+  it('scrolls to the reveal offset by the content top padding', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {});
+    try {
+      await renderQ(single);
+      await fireEvent(screen.getByTestId('question-content'), 'layout', { nativeEvent: { layout: { x: 0, y: 12, width: 320, height: 500 } } });
+      await fireEvent.press(screen.getByText('Varianta A'));
+      await fireEvent.press(verify());
+      let node: any = within(screen.getByTestId('screen-content')).getByText('Răspuns corect: Varianta B');
+      while (node && typeof node.props.onLayout !== 'function') node = node.parent;
+      await fireEvent(node, 'layout', { nativeEvent: { layout: { x: 0, y: 300, width: 320, height: 100 } } });
+      expect(scrollTo).toHaveBeenCalledWith({ y: 312, animated: true });
+    } finally {
+      scrollTo.mockRestore();
+    }
   });
 });
 
