@@ -40,7 +40,7 @@ The schema lives in `supabase/migrations/*.sql` (applied in filename order) and 
    - Never edit a migration that has been applied to production; fix forward with a new one.
    - Prefer additive, backwards-compatible changes (add nullable columns / defaults first; drop or rename only after the apps no longer use the old shape). Vercel and the APK may run the previous code version for a while.
    - Every new table: `enable row level security` + explicit policies, following `20261102094219_student_accounts.sql` — `anon` gets nothing; admins (`authenticated` + `public.is_admin()`) get `<table>_admin_all`; students (any other `authenticated` user) may only `select` published content or their own rows; secrets/config tables are admin-only.
-   - Functions that bypass RLS: `security definer`, `set search_path = public`, and `revoke execute … from public, anon, authenticated` unless they must be callable by clients.
+   - Functions that bypass RLS: `security definer`, `set search_path = ''` (empty; reference everything fully qualified, e.g. `public.admins`), and `revoke execute … from public, anon, authenticated` unless they must be callable by clients.
    - Data fixes go in migrations too (idempotent `update … where …`), never by hand in production.
 
 3. **Test locally**

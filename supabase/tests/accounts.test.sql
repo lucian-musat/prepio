@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(48);
 
 -- Fixtures (as postgres). Every assertion is scoped to these ids so the suite also passes on a seeded DB.
 -- Users: d1 = student, d2 = admin (also in admins).
@@ -116,6 +116,7 @@ insert into auth.users (id, email, aud, role, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000f2', 'name@test.local', 'authenticated', 'authenticated', '{"name":"  Ion Ionescu  "}'),
   ('00000000-0000-0000-0000-0000000000f3', 'long@test.local', 'authenticated', 'authenticated',
     jsonb_build_object('full_name', repeat('x', 70))),
+  ('00000000-0000-0000-0000-0000000000f5', 'blankfull@test.local', 'authenticated', 'authenticated', '{"full_name":"  ","name":"Ion"}'),
   ('00000000-0000-0000-0000-0000000000f4', 'blank@test.local', 'authenticated', 'authenticated', '{"full_name":"   "}');
 
 select is((select display_name from profiles where id = '00000000-0000-0000-0000-0000000000f1'),
@@ -126,6 +127,10 @@ select is((select display_name from profiles where id = '00000000-0000-0000-0000
           repeat('x', 60), 'long names are truncated to 60 chars');
 select is((select display_name from profiles where id = '00000000-0000-0000-0000-0000000000f4'),
           null, 'blank name metadata gives a null display_name');
+select is((select display_name from profiles where id = '00000000-0000-0000-0000-0000000000f5'),
+          'Ion', 'blank full_name falls back to name');
+select is((select count(*)::int from auth.users u where not exists (select 1 from profiles p where p.id = u.id)),
+          0, 'every auth user has a profile row');
 select ok(exists (select 1 from profiles where id = '00000000-0000-0000-0000-0000000000d1' and display_name is null),
           'new user without metadata gets a profile with a null display_name');
 
@@ -149,6 +154,8 @@ select throws_ok($$ update profiles set display_name = '   ' where id = '0000000
   '23514', null, 'blank display_name is rejected');
 select throws_ok($$ update profiles set display_name = repeat('a', 61) where id = '00000000-0000-0000-0000-0000000000d1' $$,
   '23514', null, '61-char display_name is rejected');
+select lives_ok($$ update profiles set display_name = 'Hacked' where id = '00000000-0000-0000-0000-0000000000d2' $$,
+  'student update of another profile runs');
 select throws_ok($$ insert into profiles (id) values ('00000000-0000-0000-0000-0000000000d1') $$,
   '42501', null, 'student cannot insert profiles');
 select throws_ok($$ delete from profiles where id = '00000000-0000-0000-0000-0000000000d1' $$,
@@ -166,6 +173,8 @@ select lives_ok(
 
 -- ---------------------------------------------------------------- cascade
 reset role;
+select is((select display_name from profiles where id = '00000000-0000-0000-0000-0000000000d2'),
+          null, 'student update of another profile changed nothing');
 delete from auth.users where id = '00000000-0000-0000-0000-0000000000d1';
 select is((select count(*)::int from profiles where id = '00000000-0000-0000-0000-0000000000d1'),
           0, 'deleting the user removes their profile');

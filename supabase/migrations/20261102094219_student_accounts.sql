@@ -59,7 +59,7 @@ create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
--- Name from Google metadata (full_name, else name), trimmed and capped at 60 chars; null when absent.
+-- Name from Google metadata (full_name, else name; blanks skipped), trimmed and capped at 60 chars; null when absent.
 create function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -71,7 +71,9 @@ begin
   values (
     new.id,
     nullif(btrim(left(
-      nullif(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name')), ''),
+      coalesce(
+        nullif(btrim(new.raw_user_meta_data ->> 'full_name'), ''),
+        nullif(btrim(new.raw_user_meta_data ->> 'name'), '')),
       60)), '')
   );
   return new;
@@ -82,6 +84,9 @@ revoke execute on function public.handle_new_user() from public, anon, authentic
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Existing users (all admins) predate the trigger: give them a profile row too.
+insert into public.profiles (id) select id from auth.users on conflict do nothing;
 
 -- ---------------------------------------------------------------- content policies
 drop policy nodes_anon_select on public.nodes;
