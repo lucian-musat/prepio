@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { fetchProfile, type Profile } from '../lib/profile';
 import { getSupabase, isAuthRejection, signOut as signOutSession, withTimeout } from '../lib/supabase';
+import { signOutGoogle } from './google';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'needsName' | 'ready';
 
@@ -172,6 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [restore, settle]);
 
   const signOut = useCallback(async () => {
+    // Forget the Google account too (native), so the next sign-in shows the account picker. Best-effort.
+    await signOutGoogle().catch((e) => console.warn('[auth] Google sign-out failed:', e));
     await signOutSession();
     setSignedOut();
   }, [setSignedOut]);

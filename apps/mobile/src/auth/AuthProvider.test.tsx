@@ -3,8 +3,10 @@ import { AppState, Text } from 'react-native';
 import { AuthProvider, useAuth } from './AuthProvider';
 import { fetchProfile } from '../lib/profile';
 import { AUTH_TIMEOUT_MS, getSupabase, signOut as libSignOut } from '../lib/supabase';
+import { signOutGoogle } from './google';
 
 jest.mock('../lib/profile', () => ({ fetchProfile: jest.fn() }));
+jest.mock('./google', () => ({ signOutGoogle: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../lib/supabase', () => ({
   ...jest.requireActual('../lib/supabase'),
   getSupabase: jest.fn(),
@@ -77,9 +79,15 @@ it('starts loading and becomes signedOut without a stored session', async () => 
 });
 
 it('is loading until the stored session is resolved', async () => {
-  auth.getSession.mockReturnValue(new Promise(() => {}));
-  await renderAuth();
-  expect(state()).toBe('loading|-|-');
+  // Fake timers: the start-up timeout must not fire (and log) after the test run has finished.
+  jest.useFakeTimers();
+  try {
+    auth.getSession.mockReturnValue(new Promise(() => {}));
+    await renderAuth();
+    expect(state()).toBe('loading|-|-');
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 it('a session whose profile has no name → needsName', async () => {
@@ -183,6 +191,25 @@ it('refreshProfile moves needsName → ready once the name is saved', async () =
 it('signOut() signs out through the shared lib signOut and ends signedOut', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   mockLibSignOut.mockResolvedValue(undefined);
+  await renderAuth();
+  await waitForState('ready|Ana|access-1');
+  await act(() => latest.signOut());
+  expect(mockLibSignOut).toHaveBeenCalledTimes(1);
+  expect(state()).toBe('signedOut|-|-');
+});
+
+it('signOut() also signs out of Google (so the next sign-in shows the account picker)', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  await renderAuth();
+  await waitForState('ready|Ana|access-1');
+  await act(() => latest.signOut());
+  expect(signOutGoogle).toHaveBeenCalledTimes(1);
+  expect(state()).toBe('signedOut|-|-');
+});
+
+it('signOut() still signs out of Supabase when the Google sign-out fails', async () => {
+  (signOutGoogle as jest.Mock).mockRejectedValueOnce(new Error('google down'));
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   await renderAuth();
   await waitForState('ready|Ana|access-1');
   await act(() => latest.signOut());
