@@ -1,3 +1,4 @@
+import type { AccountDeleteError } from '@prepio/shared';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { authenticateBearer } from '@/lib/auth/bearer';
@@ -9,7 +10,7 @@ function headers(request: Request): Record<string, string> {
   return { ...corsHeaders(request.headers.get('origin'), allowedOrigins()), 'Cache-Control': 'no-store' };
 }
 
-function reply(status: number, json: unknown, request: Request) {
+function reply(status: number, json: AccountDeleteError, request: Request) {
   return Response.json(json, { status, headers: headers(request) });
 }
 

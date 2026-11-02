@@ -73,6 +73,14 @@ describe('/api/evaluate route', () => {
     expect(handleEvaluate).not.toHaveBeenCalled();
   });
 
+  it('answers an auth outage with 502, not 401 (the client must keep its session)', async () => {
+    authenticateBearer.mockRejectedValue(new Error('auth down'));
+    const r = await POST(post({ origin: ALLOWED }));
+    expect(r.status).toBe(502);
+    expect(await r.json()).toMatchObject({ error: 'ai_failed' });
+    expect(handleEvaluate).not.toHaveBeenCalled();
+  });
+
   it('serves requests without an Origin header (native app)', async () => {
     const r = await POST(post());
     expect(r.status).toBe(200);

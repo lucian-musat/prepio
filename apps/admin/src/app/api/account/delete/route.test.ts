@@ -64,6 +64,14 @@ describe('/api/account/delete route', () => {
     expect(deleteAccount).not.toHaveBeenCalled();
   });
 
+  it('answers an auth outage with 500 server_error, not 401, and deletes nothing', async () => {
+    authenticateBearer.mockRejectedValue(new Error('auth down'));
+    const r = await POST(post({ origin: ALLOWED, token: 'jwt' }));
+    expect(r.status).toBe(500);
+    expect(await r.json()).toEqual({ error: 'server_error', message: 'Contul nu a putut fi șters. Încearcă din nou.' });
+    expect(deleteAccount).not.toHaveBeenCalled();
+  });
+
   it('returns 403 forbidden for an admin account', async () => {
     deleteAccount.mockResolvedValue('forbidden_admin');
     const r = await POST(post({ origin: ALLOWED, token: 'jwt' }));

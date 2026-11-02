@@ -12,7 +12,7 @@ function fakeDb(getUser: (jwt: string) => Promise<unknown>) {
 const valid = () => fakeDb(async (jwt) =>
   jwt === 'good.jwt'
     ? { data: { user: { id: USER_ID } }, error: null }
-    : { data: { user: null }, error: { message: 'invalid JWT' } },
+    : { data: { user: null }, error: { message: 'invalid JWT', status: 403 } },
 );
 
 function req(authorization?: string) {
@@ -41,11 +41,30 @@ describe('authenticateBearer', () => {
     expect(await authenticateBearer(req('Bearer bad.jwt'), db)).toBeNull();
   });
 
-  it('returns null when auth throws', async () => {
+  it('returns null when Supabase rejects the token with 401 or 403', async () => {
+    for (const status of [401, 403]) {
+      const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'bad jwt', status } }));
+      expect(await authenticateBearer(req('Bearer x.jwt'), db)).toBeNull();
+    }
+  });
+
+  it('returns null when Supabase answers without error but without a user', async () => {
+    const { db } = fakeDb(async () => ({ data: { user: null }, error: null }));
+    expect(await authenticateBearer(req('Bearer x.jwt'), db)).toBeNull();
+  });
+
+  it('throws (auth outage, not a logout) when auth throws', async () => {
     const { db } = fakeDb(async () => {
       throw new Error('network down');
     });
-    expect(await authenticateBearer(req('Bearer good.jwt'), db)).toBeNull();
+    await expect(authenticateBearer(req('Bearer good.jwt'), db)).rejects.toThrow('network down');
+  });
+
+  it('throws when Supabase returns a non-auth error (network status 0, 5xx, unknown)', async () => {
+    for (const status of [0, 500, 502, undefined]) {
+      const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'upstream', status } }));
+      await expect(authenticateBearer(req('Bearer good.jwt'), db)).rejects.toThrow();
+    }
   });
 
   it('returns the user id for a valid token (scheme is case-insensitive)', async () => {

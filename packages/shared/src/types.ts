@@ -64,6 +64,11 @@ export type EvaluateErrorCode =
 /** `message` is in Romanian. */
 export type EvaluateError = { error: EvaluateErrorCode; message: string };
 
+/** Error replies of `POST /api/account/delete` (success is 204, no body). */
+export type AccountDeleteErrorCode = 'unauthorized' | 'forbidden' | 'bad_request' | 'server_error';
+/** `message` is in Romanian. */
+export type AccountDeleteError = { error: AccountDeleteErrorCode; message: string };
+
 /** Omit fields from every member of a union (plain `Omit` collapses unions). */
 export type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
 
