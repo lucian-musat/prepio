@@ -2,10 +2,13 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, gradient, motion, radius, space } from '@prepio/shared';
+import { color, elevation, gradient, motion, radius, shadowColor, space } from '@prepio/shared';
+import { withAlpha } from './elevation';
 import { easing, timing } from './motion';
 
 type Props = { value: number; accessibilityLabel?: string };
+
+export const DEFAULT_PROGRESS_LABEL = 'Progres';
 
 const clamp = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0));
 
@@ -18,10 +21,11 @@ function points(angle: number) {
 }
 
 const fill = points(gradient.progress.angle);
-const INNER_SHADOW = 'inset 0px -3px 0px rgba(0, 0, 0, 0.08)';
+const { progressInset } = elevation;
+const INNER_SHADOW = `inset 0px ${progressInset.offsetY}px 0px ${withAlpha(shadowColor, progressInset.opacity)}`;
 
 /** Lesson progress: pill track with a gradient fill whose width eases to the new value. */
-export default function ProgressBar({ value, accessibilityLabel }: Props) {
+export default function ProgressBar({ value, accessibilityLabel = DEFAULT_PROGRESS_LABEL }: Props) {
   const v = clamp(value);
   const now = Math.round(v * 100);
   const width = useSharedValue(v);

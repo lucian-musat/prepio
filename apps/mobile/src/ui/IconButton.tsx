@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
-import { color, layout, motion, radius, space } from '@prepio/shared';
+import { border, color, layout, motion, opacity, pressScale, radius, space, stroke } from '@prepio/shared';
 import { timing } from './motion';
 
 // Paths from the prototype's `svg` object (24×24 viewBox).
@@ -21,14 +21,11 @@ const SIZE = space[10]; // 40 px visual
 // react-native-web ignores it.
 const OUTSET = (layout.minTouch - SIZE) / 2;
 const ICON = space[5]; // 20 px glyph
-const STROKE = 2.2;
-const PRESSED_SCALE = 0.92;
-const DISABLED_OPACITY = 0.4;
 
-export function Icon({ name, size = ICON, stroke = STROKE, tint = color.text }: { name: IconName; size?: number; stroke?: number; tint?: string }) {
+export function Icon({ name, size = ICON, stroke: strokeWidth = stroke.icon, tint = color.text }: { name: IconName; size?: number; stroke?: number; tint?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d={paths[name]} stroke={tint} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={paths[name]} stroke={tint} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -55,7 +52,7 @@ export default function IconButton({ icon, accessibilityLabel, onPress, disabled
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      onPressIn={press(PRESSED_SCALE)}
+      onPressIn={press(pressScale.icon)}
       onPressOut={press(1)}
       style={styles.hit}
     >
@@ -72,11 +69,11 @@ const styles = StyleSheet.create({
     width: SIZE,
     height: SIZE,
     borderRadius: radius.sm,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
     backgroundColor: color.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  disabled: { opacity: DISABLED_OPACITY },
+  disabled: { opacity: opacity.disabledIcon },
 });

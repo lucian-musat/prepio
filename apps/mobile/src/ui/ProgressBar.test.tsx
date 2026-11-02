@@ -14,3 +14,8 @@ it('clamps values outside 0..1', async () => {
   await screen.rerender(<ProgressBar value={-1} />);
   expect(value().now).toBe(0);
 });
+
+it('is labelled "Progres" by default', async () => {
+  await render(<ProgressBar value={0.5} />);
+  expect(screen.getByRole('progressbar', { name: 'Progres' })).toBeTruthy();
+});

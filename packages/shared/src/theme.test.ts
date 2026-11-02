@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
+  border,
   color,
   contrastRatio,
   difficultyTone,
+  elevation,
   feedbackText,
+  gradient,
+  layout,
+  motion,
+  opacity,
   palette,
+  pressScale,
   radius,
+  shadowColor,
   space,
+  stroke,
+  typeScale,
 } from './theme';
 
 describe('design tokens', () => {
@@ -32,11 +42,95 @@ describe('design tokens', () => {
     });
   });
 
-  it('every semantic colour exists in the primitive palette', () => {
-    const flat = new Set(Object.values(palette).flatMap((scale) => Object.values(scale)));
-    for (const [name, value] of Object.entries(color)) {
-      expect(flat.has(value), `${name} ${value}`).toBe(true);
-    }
+  it('each semantic colour is its palette step', () => {
+    expect(color).toEqual({
+      bg: palette.neutral[100],
+      surface: palette.neutral[50],
+      surfaceMuted: palette.neutral[200],
+      text: palette.neutral[900],
+      textMuted: palette.neutral[600],
+      border: palette.neutral[300],
+      primary: palette.teal[700],
+      primaryStrong: palette.teal[800],
+      primarySubtle: palette.teal[50],
+      onPrimary: palette.neutral[50],
+      accent: palette.yellow[400],
+      accentSubtle: palette.yellow[50],
+      onAccent: palette.yellow[900],
+      success: palette.green[500],
+      successSubtle: palette.green[50],
+      danger: palette.red[500],
+      dangerSubtle: palette.red[50],
+    });
+    expect(feedbackText).toEqual({ good: palette.green[600], wrong: palette.red[700] });
+  });
+
+  it('type scale is the prototype values', () => {
+    expect(typeScale).toEqual({
+      logo: { size: 22, lineHeight: 30, weight: 'headBlack', letterSpacing: -0.22 },
+      logoMark: { size: 15, lineHeight: 20.5, weight: 'headBlack' },
+      display: { size: 24, lineHeight: 28.8, weight: 'headBlack', letterSpacing: -0.24 },
+      celebrate: { size: 24, lineHeight: 32.7, weight: 'headBlack' },
+      title: { size: 22, lineHeight: 27.5, weight: 'headBlack', letterSpacing: -0.22 },
+      question: { size: 20, lineHeight: 26, weight: 'headBlack', letterSpacing: -0.2 },
+      section: { size: 18, lineHeight: 24.5, weight: 'headBlack', letterSpacing: -0.18 },
+      bar: { size: 17, lineHeight: 23.2, weight: 'headBlack', letterSpacing: -0.17 },
+      body: { size: 17, lineHeight: 27.2, weight: 'body' },
+      bodyStrong: { size: 16, lineHeight: 20.8, weight: 'bodyBold' },
+      verdict: { size: 16, lineHeight: 24, weight: 'bodyBold' },
+      option: { size: 16, lineHeight: 21.8, weight: 'body' },
+      lead: { size: 16, lineHeight: 21.8, weight: 'body' },
+      input: { size: 16, lineHeight: 24.8, weight: 'body' },
+      small: { size: 15, lineHeight: 22.5, weight: 'body' },
+      list: { size: 15, lineHeight: 21.75, weight: 'body' },
+      note: { size: 14, lineHeight: 20.3, weight: 'body' },
+      label: { size: 14, lineHeight: 19.1, weight: 'bodySemi' },
+      caption: { size: 13, lineHeight: 17.7, weight: 'body' },
+      eyebrow: { size: 12, lineHeight: 16, weight: 'bodyBold', letterSpacing: 0.96, uppercase: true },
+      button: { size: 16, lineHeight: 21.8, weight: 'bodyBold' },
+      chip: { size: 12, lineHeight: 15, weight: 'bodyBold' },
+      badge: { size: 11, lineHeight: 15, weight: 'bodyBold' },
+    });
+  });
+
+  it('motion is the prototype values', () => {
+    expect(motion).toEqual({
+      duration: { fast: 160, base: 320, slow: 420, shake: 420 },
+      easing: {
+        standard: [0.34, 1.4, 0.64, 1],
+        pop: [0.34, 1.56, 0.64, 1],
+        shake: [0.36, 0.07, 0.19, 0.97],
+        out: [0.22, 1, 0.36, 1],
+      },
+      stagger: 50,
+    });
+  });
+
+  it('elevation is the prototype values', () => {
+    expect(elevation).toEqual({
+      card: { offsetY: 2, blur: 0, color: palette.neutral[300] },
+      button: { offsetY: 4, color: palette.teal[800] },
+      buttonPressed: { offsetY: 1 },
+      optionRest: { offsetY: 3, color: palette.neutral[300] },
+      raised: { offsetY: -10, blur: 24, spread: -16, opacity: 0.25 },
+      progressInset: { offsetY: -3, opacity: 0.08 },
+    });
+    expect(shadowColor).toBe('#000000');
+  });
+
+  it('layout and gradients are the prototype values', () => {
+    expect(layout).toEqual({ maxContentWidth: 720, gutter: 16, gutterWide: 32, wideBreakpoint: 768, minTouch: 48 });
+    expect(gradient).toEqual({
+      hero: { colors: ['#0D9488', '#14B8A6', '#5EEAD4'], locations: [0, 0.55, 1], angle: 135 },
+      progress: { colors: ['#0D9488', '#2DD4BF'], angle: 90 },
+    });
+  });
+
+  it('border widths, strokes, disabled opacities and press scales are the prototype values', () => {
+    expect(border).toEqual({ hairline: 1, thick: 2 });
+    expect(stroke).toEqual({ icon: 2.2, iconBold: 3, ring: 8 });
+    expect(opacity).toEqual({ disabled: 0.45, disabledIcon: 0.4 });
+    expect(pressScale).toEqual({ row: 0.98, icon: 0.92 });
   });
 
   it('text pairs meet WCAG AA', () => {

@@ -1,7 +1,7 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, gradient, layout, radius, space } from '@prepio/shared';
+import { border, color, gradient, layout, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import IconButton from './IconButton';
 import ProgressBar from './ProgressBar';
@@ -18,6 +18,8 @@ type Props = {
   title?: string;
   logo?: boolean;
   progress?: number;
+  /** Accessible name of the progress bar (default "Progres"). */
+  progressLabel?: string;
   onBack?: () => void;
   raised: boolean;
 };
@@ -45,7 +47,7 @@ function Logo() {
 }
 
 /** Fixed screen header: back button, title or logo, and (optionally) the lesson progress. */
-export default function TopBar({ title, logo = false, progress, onBack, raised }: Props) {
+export default function TopBar({ title, logo = false, progress, progressLabel, onBack, raised }: Props) {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   return (
     <View testID="top-bar" style={[styles.bar, wide && styles.wide, raised && styles.raised]}>
@@ -61,7 +63,7 @@ export default function TopBar({ title, logo = false, progress, onBack, raised }
         // (A max-width on the flex item itself lets it fit next to the title on wide screens.)
         <View style={styles.progressRow}>
           <View style={styles.progress}>
-            <ProgressBar value={progress} accessibilityLabel="Progres" />
+            <ProgressBar value={progress} accessibilityLabel={progressLabel} />
           </View>
         </View>
       ) : null}
@@ -79,7 +81,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.gutter,
     paddingBottom: space[3],
     backgroundColor: color.bg,
-    borderBottomWidth: 1,
+    borderBottomWidth: border.hairline,
     borderBottomColor: 'transparent',
     zIndex: 3,
     ...webTransition(['border-color', 'box-shadow']),

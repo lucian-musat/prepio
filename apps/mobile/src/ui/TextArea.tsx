@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, StyleSheet, TextInput, type TextStyle } from 'react-native';
-import { color, radius, space } from '@prepio/shared';
+import { border, color, radius, space } from '@prepio/shared';
 import { withAlpha } from './elevation';
 import { type } from './typography';
 
@@ -12,9 +12,8 @@ type Props = {
   invalid?: boolean;
 };
 
-// Prototype `.ta`: min height 150, 2 px border; focus ring 4 px of primary at 18 %.
+// Prototype `.ta`: min height 150, thick border; focus ring 4 px of primary at 18 %.
 const MIN_HEIGHT = 150;
-const BORDER = 2;
 const RING = space[1];
 const RING_ALPHA = 0.18;
 
@@ -51,7 +50,7 @@ const styles = StyleSheet.create({
     color: color.text,
     minHeight: MIN_HEIGHT,
     borderRadius: radius.lg,
-    borderWidth: BORDER,
+    borderWidth: border.thick,
     borderColor: color.border,
     backgroundColor: color.surface,
     padding: space[3.5],

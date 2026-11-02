@@ -21,6 +21,8 @@ type Props = {
   title?: string;
   logo?: boolean;
   progress?: number;
+  /** Accessible name of the progress bar (default "Progres"). */
+  progressLabel?: string;
   onBack?: () => void;
   actions?: ReactNode;
   feedback?: ReactNode;
@@ -45,6 +47,7 @@ export default function ScreenLayout({
   title,
   logo,
   progress,
+  progressLabel,
   onBack,
   actions,
   feedback,
@@ -63,8 +66,10 @@ export default function ScreenLayout({
 
   const update = useCallback(() => {
     const { y, viewH, contentH } = m.current;
-    setTopRaised(y > EDGE);
-    setBottomRaised(y + viewH < contentH - EDGE);
+    const measured = viewH > 0;
+    setTopRaised(measured && y > EDGE);
+    // Before the first layout the viewport height is unknown (0): nothing can be hidden yet.
+    setBottomRaised(measured && y + viewH < contentH - EDGE);
   }, []);
 
   const onScroll = useCallback(
@@ -92,7 +97,7 @@ export default function ScreenLayout({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TopBar title={title} logo={logo} progress={progress} onBack={onBack} raised={topRaised} />
+        <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} raised={topRaised} />
         <Animated.ScrollView
           ref={scrollRef}
           testID="screen-scroll"

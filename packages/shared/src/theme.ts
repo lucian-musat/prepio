@@ -134,7 +134,24 @@ export const elevation = {
   buttonPressed: { offsetY: 1 },
   optionRest: { offsetY: 3, color: color.border },
   raised: { offsetY: -10, blur: 24, spread: -16, opacity: 0.25 },
+  // Inner bottom shade on the progress fill (inset, blur 0), in `shadowColor` at `opacity`.
+  progressInset: { offsetY: -3, opacity: 0.08 },
 } as const;
+
+// Neutral shadow colour (black); soft shadows apply it at an elevation token's opacity.
+export const shadowColor = '#000000';
+
+// Border widths in px: hairline for cards, bars and ghost buttons; thick for option rows and inputs.
+export const border = { hairline: 1, thick: 2 } as const;
+
+// Icon stroke widths in px (24 px viewBox glyphs): regular icons, bold check/close marks, score ring.
+export const stroke = { icon: 2.2, iconBold: 3, ring: 8 } as const;
+
+// Disabled opacity: buttons (prototype `.btn:disabled`) and the smaller icon buttons.
+export const opacity = { disabled: 0.45, disabledIcon: 0.4 } as const;
+
+// Scale while pressed: full-width rows (options, lesson items) and icon buttons.
+export const pressScale = { row: 0.98, icon: 0.92 } as const;
 
 // Layout metrics in px.
 export const layout = {

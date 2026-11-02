@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
   ReduceMotion,
 } from 'react-native-reanimated';
-import { color, motion, radius, space } from '@prepio/shared';
+import { border, color, motion, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import Enter from './Enter';
 import { easing } from './motion';
@@ -29,7 +29,7 @@ const slideUp = { duration: motion.duration.base, translateY: space[3.5] };
 
 const shimmerColors = [color.surfaceMuted, color.border, color.surfaceMuted] as const;
 
-function Line({ width }: { width: number }) {
+function Line({ width, index }: { width: number; index: number }) {
   const reduced = useReducedMotion();
   const [w, setW] = useState(0);
   const x = useSharedValue(0);
@@ -48,14 +48,14 @@ function Line({ width }: { width: number }) {
       -1,
       false,
     );
-  }, [w, reduced]);
+  }, [w, reduced, x]);
 
   const sweep = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
   return (
-    <View style={[styles.line, { width: `${width}%` }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+    <View testID={`skeleton-line-${index}`} style={[styles.line, { width: `${width}%` }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w ? (
-        <Animated.View style={[styles.sweep, { width: 4 * w }, sweep]}>
+        <Animated.View testID={`skeleton-sweep-${index}`} style={[styles.sweep, { width: 4 * w }, sweep]}>
           {[0, 1].map((i) => (
             <LinearGradient key={i} colors={[...shimmerColors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ width: 2 * w }} />
           ))}
@@ -74,12 +74,12 @@ function Dot({ index }: { index: number }) {
       index * BLINK_STAGGER,
       withRepeat(withTiming(1, { duration: BLINK_MS / 2, easing: CSS_EASE_IN_OUT, reduceMotion: ReduceMotion.System }), -1, true),
     );
-  }, [reduced]);
+  }, [reduced, index, p]);
   const blink = useAnimatedStyle(() => ({
     opacity: BLINK_LOW.opacity + (1 - BLINK_LOW.opacity) * p.value,
     transform: [{ scale: BLINK_LOW.scale + (1 - BLINK_LOW.scale) * p.value }],
   }));
-  return <Animated.View style={[styles.dot, blink]} />;
+  return <Animated.View testID={`skeleton-dot-${index}`} style={[styles.dot, blink]} />;
 }
 
 type Props = { lines: number[] /* widths in % */ };
@@ -97,7 +97,7 @@ export default function Skeleton({ lines }: Props) {
         </AppText>
       </View>
       {lines.map((width, i) => (
-        <Line key={i} width={width} />
+        <Line key={i} index={i} width={width} />
       ))}
     </Enter>
   );
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   box: {
     borderRadius: radius.lg,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
     padding: space[4.5],
     gap: space[2.5],

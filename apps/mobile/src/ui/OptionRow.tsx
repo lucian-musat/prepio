@@ -7,10 +7,11 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { color, elevation, motion, radius, space } from '@prepio/shared';
+import { border as borderWidth, color, elevation, motion, pressScale, radius, space, stroke } from '@prepio/shared';
 import { fontFamily } from '../theme/fonts';
 import AppText from './AppText';
 import { Icon } from './IconButton';
+import { popSequence } from './Pop';
 import { mixColors, solidShadow } from './elevation';
 import { easing, timing } from './motion';
 import { type } from './typography';
@@ -41,14 +42,8 @@ const look = {
 // Prototype `.opt .k` metrics and keyframes.
 const KEY_SIZE = 30;
 const KEY_ICON = space[4]; // 16 px glyph
-const KEY_ICON_STROKE = 3;
 const SELECTED_SCALE = 1.08;
-const POP_FROM = 0.6;
-const POP_PEAK = 1.18;
-const POP_PEAK_AT = 0.6; // 60 % of the pop keyframe
 const SHAKE_PX = 5;
-const PRESSED_SCALE = 0.98;
-const BORDER = 2;
 // Prototype `.opt:hover` (idle rows only: the state colours override it).
 const HOVER_BORDER = mixColors(color.primary, color.border, 0.4);
 
@@ -63,40 +58,34 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
   const keyBg = useSharedValue<string>(target.key);
   const keyScale = useSharedValue(state === 'selected' ? SELECTED_SCALE : 1);
   const shakeX = useSharedValue(0);
-  const pressScale = useSharedValue(1);
+  const pressed = useSharedValue(1);
   const mounted = useRef(false);
   const [hovered, setHovered] = useState(false);
-  const hoverBorder = state === 'idle' && hovered && interactive;
+  const edge = state === 'idle' && hovered && interactive ? HOVER_BORDER : target.border;
 
+  // The only writer of the row/key colours: state and hover changes blend like a CSS transition.
+  // Colours start at the right state on mount, so the first run does nothing.
   useEffect(() => {
-    if (!mounted.current || state !== 'idle') return;
-    const to = hoverBorder ? HOVER_BORDER : target.border;
-    border.value = reduced ? to : withTiming(to, timing(motion.duration.base));
-  }, [hoverBorder]);
-
-  useEffect(() => {
-    const first = !mounted.current;
-    mounted.current = true;
-    // Colours start at the right state on mount (like a CSS transition); later changes blend.
-    if (!first) {
-      const t = timing(motion.duration.base);
-      bg.value = reduced ? target.bg : withTiming(target.bg, t);
-      const edge = hoverBorder ? HOVER_BORDER : target.border;
-      border.value = reduced ? edge : withTiming(edge, t);
-      keyBg.value = reduced ? target.key : withTiming(target.key, t);
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
     }
+    const t = timing(motion.duration.base);
+    const to = (value: string) => (reduced ? value : withTiming(value, t));
+    bg.value = to(target.bg);
+    border.value = to(edge);
+    keyBg.value = to(target.key);
+  }, [edge, target.bg, target.key, reduced, bg, border, keyBg]);
+
+  // Key scale and shake follow the state only (not hover).
+  useEffect(() => {
     if (reduced) {
       keyScale.value = state === 'selected' ? SELECTED_SCALE : 1;
       return;
     }
     // Like the CSS keyframes, pop and shake also play when a row mounts already marked.
     if (state === 'correct') {
-      const slow = motion.duration.slow;
-      keyScale.value = withSequence(
-        withTiming(POP_FROM, { duration: 0 }),
-        withTiming(POP_PEAK, timing(slow * POP_PEAK_AT, easing.pop)),
-        withTiming(1, timing(slow * (1 - POP_PEAK_AT), easing.pop)),
-      );
+      keyScale.value = popSequence(motion.duration.slow);
     } else {
       keyScale.value = withTiming(state === 'selected' ? SELECTED_SCALE : 1, timing(motion.duration.base, easing.pop));
     }
@@ -110,17 +99,17 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
         withTiming(0, step),
       );
     }
-  }, [state]);
+  }, [state, reduced, keyScale, shakeX]);
 
   const rowStyle = useAnimatedStyle(() => ({
     backgroundColor: bg.value,
     borderColor: border.value,
-    transform: [{ translateX: shakeX.value }, { scale: pressScale.value }],
+    transform: [{ translateX: shakeX.value }, { scale: pressed.value }],
   }));
   const keyStyle = useAnimatedStyle(() => ({ backgroundColor: keyBg.value, transform: [{ scale: keyScale.value }] }));
 
   const press = (to: number) => () => {
-    if (interactive && !reduced) pressScale.value = withTiming(to, timing(motion.duration.fast));
+    if (interactive && !reduced) pressed.value = withTiming(to, timing(motion.duration.fast));
   };
 
   const icon = state === 'correct' ? 'check' : state === 'wrong' ? 'close' : marker === 'checkbox' && state === 'selected' ? 'check' : null;
@@ -139,7 +128,7 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
       aria-disabled={disabled}
       disabled={disabled}
       onPress={interactive ? onPress : undefined}
-      onPressIn={press(PRESSED_SCALE)}
+      onPressIn={press(pressScale.row)}
       onPressOut={press(1)}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
@@ -148,7 +137,7 @@ export default function OptionRow({ label, marker, state, onPress, disabled = fa
         <Animated.View style={[styles.key, keyStyle]}>
           {icon ? (
             <View testID={`option-icon-${icon}`}>
-              <Icon name={icon} size={KEY_ICON} stroke={KEY_ICON_STROKE} tint={color.onPrimary} />
+              <Icon name={icon} size={KEY_ICON} stroke={stroke.iconBold} tint={color.onPrimary} />
             </View>
           ) : marker === 'checkbox' ? null : (
             <AppText style={[styles.keyText, { color: target.keyText }]}>{marker}</AppText>
@@ -168,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[3],
     padding: space[3.5],
-    borderWidth: BORDER,
+    borderWidth: borderWidth.thick,
     borderRadius: radius.lg,
     boxShadow: solidShadow(elevation.optionRest.offsetY, elevation.optionRest.color),
   },

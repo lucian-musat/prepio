@@ -78,7 +78,9 @@ export function useEnter(
       const run = withTiming(1, timing(duration, curve));
       p.value = delay ? withDelay(delay, run) : run;
     }
-    // Mount-only by design: replaying is done by remounting.
+    // Mount-only by design: replaying is done by remounting (new key), so later changes to the
+    // config, curve or reduce-motion setting must not restart the animation mid-flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return useAnimatedStyle(() => ({
     opacity: p.value,

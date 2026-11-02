@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { color, elevation, feedbackText, motion, radius, space } from '@prepio/shared';
+import { border, color, elevation, feedbackText, motion, opacity, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import Spinner from './Spinner';
 import { easing, timing, webTransition } from './motion';
@@ -31,8 +31,8 @@ const GHOST_DEPTH = elevation.optionRest.offsetY; // 3 px, prototype B `.btn.gho
 const PRESSED_DEPTH = elevation.buttonPressed.offsetY; // 1 px of primary shade left showing while pressed
 // Prototype B `.btn:active { transform: translateY(3px) }` for both variants.
 const PRESS_TRAVEL = PRIMARY_DEPTH - PRESSED_DEPTH;
-const DISABLED_OPACITY = 0.45;
-const BRIGHTEN = (Platform.OS === 'web' ? { filter: 'brightness(1.05)' } : {}) as ViewStyle;
+// Applied on web only (native has no hover); checked at render so it follows Platform.OS.
+const BRIGHTEN: ViewStyle = { filter: 'brightness(1.05)' };
 
 /**
  * Prototype B `.btn`: a pill-ish button sitting on a solid shade that it presses into.
@@ -73,7 +73,7 @@ export default function Button({ label, accessibilityLabel, onPress, variant = '
     >
       {/* Ghost: the prototype keeps its 3 px shade under the face while pressed, so both travel together. */}
       <Animated.View style={[styles.shade, { top: depth, bottom: -depth, backgroundColor: shade }, ghost && pressStyle]} />
-      <Animated.View testID="button-face" style={[styles.face, ghost && styles.ghost, { backgroundColor: face }, hover && !ghost && BRIGHTEN, pressStyle]}>
+      <Animated.View testID="button-face" style={[styles.face, ghost && styles.ghost, { backgroundColor: face }, hover && !ghost && Platform.OS === 'web' && BRIGHTEN, pressStyle]}>
         {loading ? <Spinner tint={labelColor} /> : null}
         <AppText role="button" style={[styles.label, { color: labelColor }]} numberOfLines={1}>
           {label}
@@ -85,7 +85,7 @@ export default function Button({ label, accessibilityLabel, onPress, variant = '
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  disabled: { opacity: DISABLED_OPACITY },
+  disabled: { opacity: opacity.disabled },
   shade: { position: 'absolute', left: 0, right: 0, borderRadius: radius.lg },
   face: {
     flexGrow: 1, // fills the pressable when a row stretches it, so the shade stays aligned
@@ -99,6 +99,6 @@ const styles = StyleSheet.create({
     ...webTransition(['background-color']), // prototype `.btn` transitions background, not filter
   },
   // As in the prototype the border adds to the box; in a row the primary button stretches to match.
-  ghost: { borderWidth: 1, borderColor: color.border },
+  ghost: { borderWidth: border.hairline, borderColor: color.border },
   label: { textAlign: 'center', flexShrink: 1 },
 });

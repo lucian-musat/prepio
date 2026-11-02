@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { color, elevation, radius as radii, space } from '@prepio/shared';
+import { border, color, elevation, radius as radii, space } from '@prepio/shared';
 import { solidShadow } from './elevation';
 
 export type SpaceKey = keyof typeof space;
@@ -25,7 +25,7 @@ export default function Surface({ children, padding = 5, radius = 'xl', style, t
 const styles = StyleSheet.create({
   surface: {
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
     boxShadow: solidShadow(elevation.card.offsetY, elevation.card.color),
   },

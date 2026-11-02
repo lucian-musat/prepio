@@ -1,5 +1,5 @@
-import { Text } from 'react-native';
-import { act, render, screen } from '@testing-library/react-native';
+import { StyleSheet, Text } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as Reanimated from 'react-native-reanimated';
 import Enter from './Enter';
 import CardTransition from './CardTransition';
@@ -36,6 +36,22 @@ describe('Enter index (stagger)', () => {
     expect(style().transform[0].translateY).toBe(0);
   });
 
+  it('index 3 starts moving at 190 ms: hidden at 185 ms, moving by 200 ms', async () => {
+    await render(<Enter index={3} testID="item" />);
+    await act(async () => jest.advanceTimersByTime(185));
+    expect(style().opacity).toBe(0);
+    await act(async () => jest.advanceTimersByTime(15));
+    expect(style().opacity).toBeGreaterThan(0);
+    expect(style().transform[0].translateY).toBeLessThan(12);
+  });
+
+  it('index and config are mutually exclusive in the type', () => {
+    // Type-level check (tsc): never rendered.
+    // @ts-expect-error index and config together
+    const misuse = <Enter index={1} config={{ duration: 100 }} />;
+    expect(misuse).toBeTruthy();
+  });
+
   it('with reduced motion renders at rest on the first render', async () => {
     mockReducedMotion = true;
     await render(<Enter index={3} testID="item" />);
@@ -61,14 +77,46 @@ describe('CardTransition', () => {
   it('on key change animates the old card out and the new one in', async () => {
     await render(card('1'));
     await screen.rerender(card('2'));
-    expect(screen.getByText('Cartonaș 1')).toBeTruthy();
+    expect(screen.getByText('Cartonaș 1', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText('Cartonaș 2')).toBeTruthy();
     expect(incoming().opacity).toBe(0);
     expect(incoming().transform).toEqual(expect.arrayContaining([{ translateX: 60 }, { rotate: '2deg' }]));
     await act(async () => jest.advanceTimersByTime(600));
     expect(incoming().opacity).toBe(1);
-    expect(screen.queryByText('Cartonaș 1')).toBeNull();
+    expect(screen.queryByText('Cartonaș 1', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId('card-out')).toBeNull();
+  });
+
+  it('hides the outgoing card from screen readers and touches during the overlap', async () => {
+    await render(card('1'));
+    await screen.rerender(card('2'));
+    // Default queries skip hidden elements: only the incoming card is reachable.
+    expect(screen.queryByText('Cartonaș 1')).toBeNull();
+    expect(screen.getByText('Cartonaș 2')).toBeTruthy();
+    const out = screen.getByTestId('card-out', { includeHiddenElements: true });
+    expect(out.props).toMatchObject({
+      accessibilityElementsHidden: true,
+      importantForAccessibility: 'no-hide-descendants',
+      'aria-hidden': true,
+    });
+    // In style: the prop form is deprecated on react-native-web.
+    expect(StyleSheet.flatten(out.props.style).pointerEvents).toBe('none');
+  });
+
+  it('container min-height follows the incoming card layout', async () => {
+    const box = () => getAnimatedStyle(screen.getByTestId('card-box')) as unknown as { minHeight: number };
+    const layout = async (height: number) => {
+      await fireEvent(screen.getByTestId('card-in'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 360, height } } });
+      await act(async () => jest.advanceTimersByTime(20)); // one frame for the animated style
+    };
+    await render(card('1'));
+    await layout(300);
+    expect(box().minHeight).toBe(300);
+    await screen.rerender(card('2'));
+    expect(box().minHeight).toBe(300); // holds the old card's height
+    await layout(200);
+    await act(async () => jest.advanceTimersByTime(600));
+    expect(box().minHeight).toBe(200); // eased to the new card
   });
 
   it('going back enters from the left', async () => {
@@ -82,6 +130,6 @@ describe('CardTransition', () => {
     await render(card('1'));
     await screen.rerender(card('2'));
     expect(incoming().opacity).toBe(1);
-    expect(screen.queryByText('Cartonaș 1')).toBeNull();
+    expect(screen.queryByText('Cartonaș 1', { includeHiddenElements: true })).toBeNull();
   });
 });

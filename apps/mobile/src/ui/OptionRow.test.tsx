@@ -73,3 +73,21 @@ it('an idle row takes the prototype hover border (primary 40 % into border); a s
   await fireEvent(screen.getByRole('radio', { name: /1859/ }), 'hoverIn');
   expect(face().borderColor).toBe(color.primary);
 });
+
+it('with reduce motion an idle → correct change shows the final colours immediately', async () => {
+  mockReducedMotion = true;
+  await render(<OptionRow label="1859" marker="B" state="idle" onPress={() => {}} />);
+  const face = () => getAnimatedStyle(screen.getByTestId('option-face')) as unknown as { borderColor: string; backgroundColor: string };
+  expect(face().borderColor).toBe(color.border);
+  await screen.rerender(<OptionRow label="1859" marker="B" state="correct" />);
+  // No timers advanced: an animated (non-reduced) change would still be at the idle colours.
+  expect(face().borderColor).toBe(color.success);
+  expect(face().backgroundColor).toBe(color.successSubtle);
+});
+
+it('the checked prop overrides the state-derived checked value', async () => {
+  await render(<OptionRow label="1859" marker="B" state="idle" checked onPress={() => {}} />);
+  expect(screen.getByRole('radio', { name: /1859/ }).props.accessibilityState).toMatchObject({ checked: true });
+  await screen.rerender(<OptionRow label="1859" marker="B" state="wrong" checked={false} />);
+  expect(screen.getByRole('radio', { name: /1859/ }).props.accessibilityState).toMatchObject({ checked: false });
+});

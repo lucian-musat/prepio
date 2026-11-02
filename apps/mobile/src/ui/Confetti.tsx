@@ -46,7 +46,7 @@ function PieceView({ piece }: { piece: Piece }) {
   const p = useSharedValue(0);
   useEffect(() => {
     p.value = withDelay(piece.delay, withTiming(1, { duration: BURST_MS, easing: BURST_EASING, reduceMotion: ReduceMotion.System }));
-  }, []);
+  }, [p, piece]);
   const style = useAnimatedStyle(() => ({
     opacity: 1 - p.value,
     transform: [{ translateX: piece.x * p.value }, { translateY: piece.y * p.value }, { rotate: `${piece.r * p.value}deg` }],

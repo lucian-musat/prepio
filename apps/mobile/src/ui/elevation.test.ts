@@ -1,4 +1,4 @@
-import { mixColors, withAlpha } from './elevation';
+import { mixColors, raisedShadow, withAlpha } from './elevation';
 
 it('mixes two colours like CSS color-mix in srgb', () => {
   expect(mixColors('#FFFFFF', '#000000', 0.5)).toBe('#808080');
@@ -10,4 +10,9 @@ it('mixes two colours like CSS color-mix in srgb', () => {
 
 it('turns a token colour into rgba', () => {
   expect(withAlpha('#FFFFFF', 0.18)).toBe('rgba(255, 255, 255, 0.18)');
+});
+
+it('raised shadow is the neutral shadow colour at the token opacity', () => {
+  expect(raisedShadow('up')).toBe('0px -10px 24px -16px rgba(0, 0, 0, 0.25)');
+  expect(raisedShadow('down')).toBe('0px 10px 24px -16px rgba(0, 0, 0, 0.25)');
 });

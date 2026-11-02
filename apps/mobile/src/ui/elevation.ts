@@ -1,4 +1,4 @@
-import { elevation } from '@prepio/shared';
+import { elevation, shadowColor } from '@prepio/shared';
 
 const { raised } = elevation;
 
@@ -9,7 +9,7 @@ const { raised } = elevation;
  */
 export function raisedShadow(direction: 'up' | 'down'): string {
   const y = direction === 'up' ? raised.offsetY : -raised.offsetY;
-  return `0px ${y}px ${raised.blur}px ${raised.spread}px rgba(0, 0, 0, ${raised.opacity})`;
+  return `0px ${y}px ${raised.blur}px ${raised.spread}px ${withAlpha(shadowColor, raised.opacity)}`;
 }
 
 /** Solid offset "shadow" under an element (prototype B `0 Npx 0 colour`). */

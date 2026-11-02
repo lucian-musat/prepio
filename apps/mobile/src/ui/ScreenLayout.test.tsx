@@ -55,6 +55,11 @@ it('progress is in the top bar', async () => {
   expect(within(screen.getByTestId('top-bar')).getByRole('progressbar')).toBeTruthy();
 });
 
+it('passes progressLabel down to the progress bar', async () => {
+  await renderLayout({ progressLabel: 'Progres lecție' });
+  expect(within(screen.getByTestId('top-bar')).getByRole('progressbar', { name: 'Progres lecție' })).toBeTruthy();
+});
+
 it('renders feedback inside the action bar', async () => {
   await renderLayout({ actions: <Text>Verifică</Text>, feedback: <Text>Corect, bravo!</Text>, tone: 'good' });
   expect(isInside(screen.getByText('Corect, bravo!'), screen.getByTestId('action-bar'))).toBe(true);
@@ -92,6 +97,14 @@ describe('raised edges', () => {
     await layoutH(500);
     await contentH(300);
     expect([topRaised(), bottomRaised()]).toEqual([false, false]);
+  });
+
+  it('is not raised before the first layout (viewport height unknown)', async () => {
+    await renderLayout({ actions: <Text>Verifică</Text> });
+    await contentH(1000);
+    expect([topRaised(), bottomRaised()]).toEqual([false, false]);
+    await layoutH(500);
+    expect(bottomRaised()).toBe(true);
   });
 
   it('no lingering raised state when content size arrives before layout', async () => {

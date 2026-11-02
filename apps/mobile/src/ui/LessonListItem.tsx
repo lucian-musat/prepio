@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { color, difficultyTone, elevation, motion, radius, space } from '@prepio/shared';
+import { border, color, difficultyTone, elevation, motion, pressScale, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import { Icon } from './IconButton';
 import { mixColors, solidShadow } from './elevation';
@@ -14,7 +14,6 @@ type Props = { index: number; title: string; onPress: () => void };
 const TILE = space[10] + space[1]; // 44 px
 const HOVER_LIFT = -2;
 const HOVER_NUDGE = 3; // chevron slides right on hover
-const PRESSED_SCALE = 0.98;
 const HOVER_BORDER = mixColors(color.primary, color.border, 0.35);
 
 // Number tiles alternate teal / yellow (prototype `.lesson:nth-child(2) .num`). The yellow text is
@@ -40,7 +39,7 @@ export default function LessonListItem({ index, title, onPress }: Props) {
     nudge.value = withTiming(on ? HOVER_NUDGE : 0, t());
   };
   const onPressState = (pressed: boolean) => () => {
-    scale.value = withTiming(pressed ? PRESSED_SCALE : 1, t());
+    scale.value = withTiming(pressed ? pressScale.row : 1, t());
     lift.value = withTiming(pressed || !hovered ? 0 : HOVER_LIFT, t());
   };
 
@@ -85,7 +84,7 @@ const styles = StyleSheet.create({
     padding: space[3.5],
     borderRadius: radius.lg,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
     boxShadow: solidShadow(elevation.card.offsetY, elevation.card.color),
   },

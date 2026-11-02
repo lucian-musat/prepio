@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, layout, space } from '@prepio/shared';
+import { border, color, layout, space } from '@prepio/shared';
 import Enter from './Enter';
 import { easing, feedbackConfig, webTransition } from './motion';
 import { raisedShadow } from './elevation';
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     paddingTop: space[3],
     paddingHorizontal: layout.gutter,
     backgroundColor: color.bg,
-    borderTopWidth: 1,
+    borderTopWidth: border.hairline,
     borderTopColor: 'transparent',
     zIndex: 4,
     ...webTransition(['box-shadow', 'border-color', 'background-color']),

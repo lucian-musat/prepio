@@ -31,3 +31,10 @@ it('has no back button without onBack', async () => {
   expect(screen.queryByRole('button', { name: 'Înapoi' })).toBeNull();
   expect(screen.getByText('Prepio')).toBeTruthy();
 });
+
+it('labels the progress bar with progressLabel (default "Progres")', async () => {
+  await render(<TopBar title="Lecția" progress={0.5} raised={false} />);
+  expect(screen.getByRole('progressbar', { name: 'Progres' })).toBeTruthy();
+  await screen.rerender(<TopBar title="Lecția" progress={0.5} progressLabel="Progres lecție" raised={false} />);
+  expect(screen.getByRole('progressbar', { name: 'Progres lecție' })).toBeTruthy();
+});

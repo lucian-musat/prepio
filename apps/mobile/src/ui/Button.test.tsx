@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { color } from '@prepio/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Button from './Button';
@@ -44,4 +44,20 @@ it('secondary button face turns surfaceMuted on hover (prototype `.btn.ghost:hov
   expect(faceBg()).toBe(color.surfaceMuted);
   await fireEvent(button, 'hoverOut');
   expect(faceBg()).toBe(color.surface);
+});
+
+it('primary button face brightens 5 % on hover on web (prototype `.btn:hover`)', async () => {
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    await render(<Button label="Verifică" onPress={jest.fn()} />);
+    const filter = () => (StyleSheet.flatten(screen.getByTestId('button-face').props.style) as { filter?: string }).filter;
+    expect(filter()).toBeUndefined();
+    await fireEvent(screen.getByRole('button', { name: 'Verifică' }), 'hoverIn');
+    expect(filter()).toBe('brightness(1.05)');
+    await fireEvent(screen.getByRole('button', { name: 'Verifică' }), 'hoverOut');
+    expect(filter()).toBeUndefined();
+  } finally {
+    Platform.OS = os;
+  }
 });

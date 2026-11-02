@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import { space, type Lesson } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { WritingExercise } from '../components/WritingExercise';
 import { fetchLesson } from '../lib/content';
-import { AppText, Button, Confetti, Enter, ScreenLayout, Spinner, Surface, easing, goBackOrHome, timing } from '../ui';
+import { AppText, Button, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 
 export type Phase = 'cards' | 'questions' | 'exercises' | 'done';
 
@@ -160,20 +159,10 @@ export default function LessonScreen() {
 
 /** 🎓 that pops in (prototype `.done-wrap .big`: `pop 600ms` spring). */
 function Cap() {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(reduced ? 1 : POP_FROM);
-  useEffect(() => {
-    if (reduced) return;
-    scale.value = withSequence(
-      withTiming(POP_PEAK, timing(POP_MS * POP_PEAK_AT, easing.pop)),
-      withTiming(1, timing(POP_MS * (1 - POP_PEAK_AT), easing.pop)),
-    );
-  }, []);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={style} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+    <Pop duration={POP_MS} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
       <Text style={styles.cap}>🎓</Text>
-    </Animated.View>
+    </Pop>
   );
 }
 
@@ -226,9 +215,6 @@ const CAP_LINE_HEIGHT = 80;
 const DONE_PAD_V = 30;
 const CONFETTI_DELAY_MS = 200;
 const POP_MS = 600;
-const POP_FROM = 0.6;
-const POP_PEAK = 1.18;
-const POP_PEAK_AT = 0.6;
 
 const styles = StyleSheet.create({
   message: { gap: space[3] },

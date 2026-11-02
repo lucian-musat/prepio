@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import type Animated from 'react-native-reanimated';
 import {
   checkAnswer,
   color,
@@ -20,7 +14,7 @@ import {
   type OrderItem,
   type Question,
 } from '@prepio/shared';
-import { AppText, Button, Confetti, Enter, Icon, ScreenLayout, Surface, easing, feedbackConfig, timing } from '../ui';
+import { AppText, Button, Confetti, Enter, Icon, Pop, ScreenLayout, Surface, easing, feedbackConfig } from '../ui';
 import ChoiceQuestion from './ChoiceQuestion';
 import DifficultyBadge from './DifficultyBadge';
 import OrderQuestion, { CorrectOrder } from './OrderQuestion';
@@ -52,9 +46,6 @@ const BADGE_OVERHANG = (typeScale.badge.lineHeight + space[1] - typeScale.eyebro
 const ICON_SIZE = space[6] + space[1]; // 28 px circle (prototype `.feedback .ic`)
 const ICON_GLYPH = space[4];
 const ICON_STROKE = 3;
-const POP_FROM = 0.6;
-const POP_PEAK = 1.18;
-const POP_PEAK_AT = 0.6;
 
 // A sentence end that leaves less than this is most likely an abbreviation ("Al. I. Cuza").
 const MIN_SENTENCE = 20;
@@ -75,21 +66,10 @@ const verdictText = (good: boolean) => (good ? 'Corect, bravo!' : 'Nu chiar.');
 
 /** Verdict icon in a circle that pops in (prototype `.feedback .ic`). */
 function VerdictIcon({ good }: { good: boolean }) {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(reduced ? 1 : POP_FROM);
-  useEffect(() => {
-    if (reduced) return;
-    const slow = motion.duration.slow;
-    scale.value = withSequence(
-      withTiming(POP_PEAK, timing(slow * POP_PEAK_AT, easing.pop)),
-      withTiming(1, timing(slow * (1 - POP_PEAK_AT), easing.pop)),
-    );
-  }, []);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={[styles.icon, { backgroundColor: good ? color.success : color.danger }, style]}>
+    <Pop duration={motion.duration.slow} style={[styles.icon, { backgroundColor: good ? color.success : color.danger }]}>
       <Icon name={good ? 'check' : 'close'} size={ICON_GLYPH} stroke={ICON_STROKE} tint={color.onPrimary} />
-    </Animated.View>
+    </Pop>
   );
 }
 
