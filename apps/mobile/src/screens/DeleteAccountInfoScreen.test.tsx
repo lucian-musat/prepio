@@ -54,3 +54,19 @@ it('signed in (ready): offers the profile, where the account is deleted', async 
   fireEvent.press(screen.getByText('Mergi la profil'));
   expect(router.push).toHaveBeenCalledWith('/profile');
 });
+
+it('needsName: offers Continuă (to the root, which shows the name screen) with the name hint', async () => {
+  mockStatus = 'needsName';
+  await renderScreen();
+  expect(screen.getByText('După ce completezi numele, mergi la Profil → Șterge contul.')).toBeTruthy();
+  expect(screen.queryByText('Intră în cont')).toBeNull();
+  expect(screen.queryByText('Mergi la profil')).toBeNull();
+  fireEvent.press(screen.getByText('Continuă'));
+  expect(router.push).toHaveBeenCalledWith('/');
+});
+
+it.each(['signedOut', 'needsName', 'ready'] as const)('%s: never says lessons are public', async (status) => {
+  mockStatus = status;
+  await renderScreen();
+  expect(JSON.stringify(screen.toJSON())).not.toMatch(/public/i);
+});

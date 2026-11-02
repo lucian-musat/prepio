@@ -65,7 +65,7 @@ export default function DeleteAccountInfoScreen() {
         </Section>
 
         <Section title="Ce nu se șterge">
-          <AppText role="body">Lecțiile și exercițiile sunt conținut public și rămân disponibile.</AppText>
+          <AppText role="body">Lecțiile și exercițiile sunt conținutul Prepio, nu datele tale, așa că nu se șterg.</AppText>
         </Section>
 
         <Section title="Cum îl ștergi">

@@ -45,3 +45,8 @@ it('links to the account deletion page', async () => {
   fireEvent.press(screen.getByText('Cum îți ștergi contul'));
   expect(router.push).toHaveBeenCalledWith('/sterge-cont');
 });
+
+it('never says anything is public', async () => {
+  await renderScreen();
+  expect(JSON.stringify(screen.toJSON())).not.toMatch(/public/i);
+});
