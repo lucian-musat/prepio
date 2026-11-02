@@ -105,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await withTimeout(auth.getUser());
         if (error ? isAuthRejection(error) : !data.user) {
+          // A newer auth event (e.g. a fresh sign-in) owns the state and the stored session now: leave both alone.
+          if (start !== generation.current) return;
           await signOutSession();
           setSignedOut();
           return;

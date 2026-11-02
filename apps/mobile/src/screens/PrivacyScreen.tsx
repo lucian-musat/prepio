@@ -53,9 +53,15 @@ export default function PrivacyScreen() {
         </Section>
 
         <Section title="Cine prelucrează datele">
-          <Item>Supabase găzduiește baza de date și autentificarea, în regiunea Uniunea Europeană.</Item>
+          <Item>
+            Supabase găzduiește baza de date și autentificarea, pe servere în Londra (Regatul Unit; Comisia Europeană
+            recunoaște un nivel adecvat de protecție a datelor pentru Regatul Unit).
+          </Item>
           <Item>Vercel găzduiește site-urile Prepio.</Item>
-          <Item>OpenAI evaluează eseurile scrise în lecții: textul eseului tău este trimis către OpenAI pentru evaluare.</Item>
+          <Item>
+            OpenAI evaluează eseurile scrise în lecții: textul eseului tău este trimis către OpenAI pentru evaluare și
+            poate fi prelucrat în afara UE (în SUA).
+          </Item>
         </Section>
 
         <Section title="Cât timp păstrăm datele">

@@ -40,6 +40,14 @@ it('covers the data, purposes, processors, retention and rights', async () => {
   }
 });
 
+it('states where data is stored and processed: Supabase in London (UK adequacy), OpenAI possibly in the USA', async () => {
+  await renderScreen();
+  expect(screen.getByText(/Supabase.*Londra.*Regatul Unit/)).toBeTruthy();
+  expect(screen.getByText(/Comisia Europeană recunoaște un nivel adecvat de protecție a datelor pentru Regatul Unit/)).toBeTruthy();
+  expect(screen.queryByText(/Uniunea Europeană/)).toBeNull();
+  expect(screen.getByText(/OpenAI.*în afara UE \(în SUA\)/)).toBeTruthy();
+});
+
 it('links to the account deletion page', async () => {
   await renderScreen();
   fireEvent.press(screen.getByText('Cum îți ștergi contul'));

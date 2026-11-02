@@ -8,7 +8,7 @@ config({ path: [resolve(__dirname, '../.env.local'), resolve(__dirname, '../../.
 
 const SB_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL)!;
 const SB_ANON = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY)!;
-const SB_SERVICE =process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SB_SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const EMAIL = process.env.ADMIN_EMAIL ?? 'admin@prepio.local';
 const PASSWORD = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
 

@@ -22,6 +22,16 @@ describe('getAccessToken', () => {
     );
   });
 
+  it('uses the PKCE flow (web Google redirect returns ?code=, exchanged by detectSessionInUrl)', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: { access_token: 'tok' } }, error: null });
+    await getAccessToken();
+    expect(createClient).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ auth: expect.objectContaining({ flowType: 'pkce' }) }),
+    );
+  });
+
   it('returns null when there is no session', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
     await expect(getAccessToken()).resolves.toBeNull();

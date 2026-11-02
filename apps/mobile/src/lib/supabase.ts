@@ -7,7 +7,7 @@ let client: SupabaseClient | undefined;
 /**
  * Lazily-created client with the student's persisted session (RLS lets signed-in students read published content).
  * Native keeps the session in AsyncStorage; web uses Supabase's default (localStorage) and picks up the OAuth
- * redirect from the URL.
+ * redirect (PKCE `?code=`) from the URL.
  */
 export function getSupabase(): SupabaseClient {
   if (!client) {
@@ -22,6 +22,10 @@ export function getSupabase(): SupabaseClient {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: Platform.OS === 'web',
+        // Web Google sign-in returns with `?code=`; auth-js keeps the code verifier in the same storage
+        // (localStorage on web) and exchanges it on load. Native Google (signInWithIdToken) and email OTP
+        // (verifyOtp) don't use the redirect, so PKCE changes nothing there.
+        flowType: 'pkce',
       },
     });
   }

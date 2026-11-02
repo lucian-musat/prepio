@@ -12,7 +12,7 @@ function fakeDb(getUser: (jwt: string) => Promise<unknown>) {
 const valid = () => fakeDb(async (jwt) =>
   jwt === 'good.jwt'
     ? { data: { user: { id: USER_ID } }, error: null }
-    : { data: { user: null }, error: { message: 'invalid JWT', status: 403 } },
+    : { data: { user: null }, error: { message: 'invalid JWT', status: 403, code: 'bad_jwt' } },
 );
 
 function req(authorization?: string) {
@@ -41,11 +41,30 @@ describe('authenticateBearer', () => {
     expect(await authenticateBearer(req('Bearer bad.jwt'), db)).toBeNull();
   });
 
-  it('returns null when Supabase rejects the token with 401 or 403', async () => {
-    for (const status of [401, 403]) {
-      const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'bad jwt', status } }));
+  it('returns null when Supabase rejects the token itself (bad_jwt, session/user gone, session expired)', async () => {
+    for (const [status, code] of [
+      [403, 'bad_jwt'],
+      [401, 'bad_jwt'],
+      [403, 'user_not_found'],
+      [404, 'user_not_found'],
+      [403, 'session_expired'],
+      [403, 'session_not_found'],
+    ] as const) {
+      const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'rejected', status, code } }));
       expect(await authenticateBearer(req('Bearer x.jwt'), db)).toBeNull();
     }
+  });
+
+  it('throws (5xx, not a logout) when the server key is wrong: 401 "Invalid API key" carries no token error code', async () => {
+    for (const code of [undefined, 'no_authorization', 'unexpected_failure']) {
+      const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'Invalid API key', status: 401, code } }));
+      await expect(authenticateBearer(req('Bearer good.jwt'), db)).rejects.toThrow('Invalid API key');
+    }
+  });
+
+  it('throws for a 403 without a token error code (e.g. a proxy/WAF block)', async () => {
+    const { db } = fakeDb(async () => ({ data: { user: null }, error: { message: 'forbidden', status: 403 } }));
+    await expect(authenticateBearer(req('Bearer good.jwt'), db)).rejects.toThrow();
   });
 
   it('returns null for a revoked session (auth-js maps session_not_found to AuthSessionMissingError, status 400)', async () => {

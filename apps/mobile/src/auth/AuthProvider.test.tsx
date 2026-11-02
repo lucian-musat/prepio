@@ -132,6 +132,22 @@ it('a revoked session (AuthSessionMissingError) → signedOut', async () => {
   expect(mockLibSignOut).toHaveBeenCalledTimes(1);
 });
 
+it('a stale start-up rejection does not sign out a student who signed in meanwhile', async () => {
+  let rejectUser!: (v: unknown) => void;
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  auth.getUser.mockReturnValue(new Promise((r) => (rejectUser = r)));
+  await renderAuth();
+  await waitFor(() => expect(auth.getUser).toHaveBeenCalled());
+  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: 'Ion' });
+  await emit('SIGNED_IN', session(OTHER, 'access-9'));
+  await waitForState('ready|Ion|access-9');
+  await act(async () =>
+    rejectUser({ data: { user: null }, error: { name: 'AuthApiError', message: 'User not found', status: 403 } }),
+  );
+  expect(mockLibSignOut).not.toHaveBeenCalled();
+  expect(state()).toBe('ready|Ion|access-9');
+});
+
 it('keeps the stored session when getUser fails for a network reason (offline start)', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   auth.getUser.mockResolvedValue({
