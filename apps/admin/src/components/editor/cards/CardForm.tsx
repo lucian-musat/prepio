@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { Alert, Button, ButtonGroup, Col, Form, Row } from 'react-bootstrap';
 import { emptyCardContent, validateCard, type Card, type CardType } from '@prepio/shared';
 import type { ActionResult } from '@/lib/actionResult';
@@ -11,13 +11,22 @@ import TypePicker from './TypePicker';
 
 export type CardDraft<T extends CardType = CardType> = Extract<CardInput, { type: T }>;
 
-/** Props of a type's field group. `onChange` also takes an updater, for async results (uploads). */
+/**
+ * Props of a type's field group. `onChange` also takes an updater, for async results (uploads).
+ *
+ * `onBusyChange` contract: call `onBusyChange(true)` when an async operation the draft depends on
+ * (an image upload) starts and `onBusyChange(false)` exactly once when it ends, success or failure.
+ * Calls are counted, so parallel operations are fine. On unmount, release every operation still
+ * running and don't call it again for them. While any operation is busy the form can't be saved
+ * or cancelled.
+ */
 export type FieldsProps<T extends CardType> = {
   lessonId: string;
   /** Unique per form; prefix for element ids. */
   idPrefix: string;
   draft: CardDraft<T>;
   onChange: (next: CardDraft<T> | ((current: CardDraft<T>) => CardDraft<T>)) => void;
+  onBusyChange?: (busy: boolean) => void;
 };
 
 /** Field groups per card type; types without an entry show a placeholder. */
@@ -63,11 +72,23 @@ export default function CardForm({ lessonId, initial, onSave, onCancel, preview 
     initial ? toInput(initial) : { title: null, ...emptyCardContent('text', newId) } as CardInput,
   );
   const [pendingType, setPendingType] = useState<CardType | null>(null);
-  const [attempted, setAttempted] = useState(false);
+  // number of failed save attempts; > 0 shows validation errors, each change focuses them
+  const [attempts, setAttempts] = useState(0);
+  const [busyCount, setBusyCount] = useState(0);
+  const errorsRef = useRef<HTMLDivElement>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const errors = attempted ? validateCard(draft) : [];
+  const errors = attempts > 0 ? validateCard(draft) : [];
+  const busy = busyCount > 0;
+  const onBusyChange = useCallback((b: boolean) => setBusyCount((n) => Math.max(0, n + (b ? 1 : -1))), []);
+
+  useEffect(() => {
+    const el = errorsRef.current;
+    if (!attempts || !el) return;
+    el.focus();
+    el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [attempts]);
 
   const applyType = (type: CardType) => {
     setPendingType(null);
@@ -86,9 +107,12 @@ export default function CardForm({ lessonId, initial, onSave, onCancel, preview 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setAttempted(true);
+    if (busy || saving) return;
     setServerError(null);
-    if (validateCard(draft).length) return;
+    if (validateCard(draft).length) {
+      setAttempts((n) => n + 1);
+      return;
+    }
     setSaving(true);
     try {
       const res = await onSave(draft);
@@ -107,7 +131,7 @@ export default function CardForm({ lessonId, initial, onSave, onCancel, preview 
       <Row className="g-4">
         <Col lg={preview ? 6 : 12}>
           {errors.length > 0 && (
-            <Alert variant="danger">
+            <Alert variant="danger" ref={errorsRef} tabIndex={-1}>
               {errors.map((m) => (
                 <div key={m}>{m}</div>
               ))}
@@ -138,15 +162,18 @@ export default function CardForm({ lessonId, initial, onSave, onCancel, preview 
           </div>
 
           {Fields ? (
-            <Fields key={draft.type} lessonId={lessonId} idPrefix={idPrefix} draft={draft} onChange={onFieldsChange} />
+            <Fields key={draft.type} lessonId={lessonId} idPrefix={idPrefix} draft={draft} onChange={onFieldsChange} onBusyChange={onBusyChange} />
           ) : (
             <p className="text-secondary">Câmpurile pentru acest tip vin în curând.</p>
           )}
 
-          <ButtonGroup>
-            <Button type="submit" variant="primary" disabled={saving}>Salvează</Button>
-            <Button variant="outline-secondary" onClick={onCancel} disabled={saving}>Anulează</Button>
-          </ButtonGroup>
+          <div className="d-flex flex-wrap align-items-center gap-3">
+            <ButtonGroup>
+              <Button type="submit" variant="primary" disabled={saving || busy}>Salvează</Button>
+              <Button variant="outline-secondary" onClick={onCancel} disabled={saving || busy}>Anulează</Button>
+            </ButtonGroup>
+            {busy && <span className="text-secondary small" role="status">Se încarcă imaginile…</span>}
+          </div>
         </Col>
         {preview && <Col lg={6}>{preview(draft)}</Col>}
       </Row>

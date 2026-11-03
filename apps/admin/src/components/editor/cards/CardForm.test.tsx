@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@prepio/shared';
@@ -94,7 +94,8 @@ describe('CardForm', () => {
     const { user, onSave } = setup(imagesCard(['']));
     expect(screen.queryByText('Imaginea 1: descrierea nu poate fi goală.')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Salvează' }));
-    expect(screen.getByText('Imaginea 1: descrierea nu poate fi goală.')).toBeTruthy();
+    const message = screen.getByText('Imaginea 1: descrierea nu poate fi goală.');
+    expect(document.activeElement).toBe(message.closest('[role="alert"]'));
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -110,6 +111,36 @@ describe('CardForm', () => {
     expect(onSave.mock.calls[0][0]).toMatchObject({
       id: 'c1', type: 'images', images: [{ path: 'lessons/l1/img1.png', alt: 'A doua', credit: null }],
     });
+  });
+
+  it('renders images sharing a path without duplicate React keys', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const card = imagesCard(['A', 'B']);
+    if (card.type === 'images') card.images[1].path = card.images[0].path;
+    setup(card);
+    expect(altValues()).toEqual(['A', 'B']);
+    expect(error.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false);
+    error.mockRestore();
+  });
+
+  it('blocks saving while an upload is in flight', async () => {
+    let finish: (v: ActionResult<{ path: string }>) => void = () => {};
+    upload.mockReturnValue(new Promise((r) => { finish = r; }));
+    const { user, onSave } = setup(imagesCard([]));
+    await user.upload(screen.getByLabelText('Încarcă imagini'), new File(['x'], 'harta.png', { type: 'image/png' }));
+    const save = screen.getByRole('button', { name: 'Salvează' }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    expect(screen.getByText('Se încarcă imaginile…')).toBeTruthy();
+    await user.type(screen.getByLabelText('Titlu (opțional)'), 'X{enter}');
+    fireEvent.submit(screen.getByTestId('card-form'));
+    expect(onSave).not.toHaveBeenCalled();
+
+    await act(async () => finish({ ok: true, data: { path: 'lessons/l1/new.png' } }));
+    expect(save.disabled).toBe(false);
+    expect(screen.queryByText('Se încarcă imaginile…')).toBeNull();
+    await user.type(screen.getByLabelText('Descriere (alt)'), 'Harta');
+    await user.click(save);
+    expect(onSave.mock.calls[0][0]).toMatchObject({ title: 'HărțiX', images: [{ path: 'lessons/l1/new.png', alt: 'Harta' }] });
   });
 
   it('uploads images and adds them to the card', async () => {

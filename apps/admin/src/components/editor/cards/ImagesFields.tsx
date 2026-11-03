@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Form } from 'react-bootstrap';
 import type { CardImage } from '@prepio/shared';
 import { uploadCardImage } from '@/app/(admin)/lessons/[id]/actions';
@@ -11,10 +11,24 @@ import SortableList from './SortableList';
 
 const orNull = (s: string) => (s === '' ? null : s);
 
-export default function ImagesFields({ lessonId, idPrefix, draft, onChange }: FieldsProps<'images'>) {
+export default function ImagesFields({ lessonId, idPrefix, draft, onChange, onBusyChange }: FieldsProps<'images'>) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // Busy reporting (see FieldsProps): uploads still running at unmount are released then, not again later.
+  const active = useRef(0);
+  const mounted = useRef(true);
+  const busyCb = useRef(onBusyChange);
+  busyCb.current = onBusyChange;
+  useEffect(() => {
+    mounted.current = true;
+    const running = active; // a counter, not a DOM node: reading it at cleanup is intended
+    return () => {
+      mounted.current = false;
+      for (; running.current > 0; running.current--) busyCb.current?.(false);
+    };
+  }, []);
 
   const setImage = (i: number, patch: Partial<CardImage>) =>
     onChange({ ...draft, images: draft.images.map((img, j) => (j === i ? { ...img, ...patch } : img)) });
@@ -23,6 +37,8 @@ export default function ImagesFields({ lessonId, idPrefix, draft, onChange }: Fi
     if (!files.length) return;
     setError(null);
     setUploading(true);
+    active.current++;
+    busyCb.current?.(true);
     const added: CardImage[] = [];
     try {
       for (const file of files) {
@@ -38,6 +54,10 @@ export default function ImagesFields({ lessonId, idPrefix, draft, onChange }: Fi
     } catch {
       setError('Încărcarea imaginii a eșuat. Încearcă din nou.');
     } finally {
+      if (mounted.current) {
+        active.current--;
+        busyCb.current?.(false);
+      }
       // images uploaded before a failure are kept; updater form so edits made meanwhile survive
       if (added.length) onChange((d) => ({ ...d, images: [...d.images, ...added] }));
       setUploading(false);
@@ -45,8 +65,13 @@ export default function ImagesFields({ lessonId, idPrefix, draft, onChange }: Fi
     }
   }
 
-  // Image paths are unique per upload, so they serve as row keys.
-  const rows = draft.images.map((img) => ({ id: img.path, img }));
+  // Row keys: the path (unique per upload) plus its occurrence count, in case a path repeats.
+  const seen = new Map<string, number>();
+  const rows = draft.images.map((img) => {
+    const n = (seen.get(img.path) ?? 0) + 1;
+    seen.set(img.path, n);
+    return { id: n === 1 ? img.path : `${img.path}#${n}`, img };
+  });
 
   return (
     <>
