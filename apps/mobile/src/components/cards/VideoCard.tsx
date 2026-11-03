@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { color, radius, space, type CardContent } from '@prepio/shared';
 import { AppText, Button, useCardLeaving } from '../../ui';
 import RichText from './RichText';
@@ -35,7 +36,7 @@ export default function VideoCard({ content }: { content: Extract<CardContent, {
           </Pressable>
         ) : null}
       </View>
-      {failed && youtubeId ? <Button variant="secondary" label="Deschide pe YouTube" onPress={() => void Linking.openURL(watchUrl(youtubeId))} /> : null}
+      {failed && youtubeId ? <Button variant="secondary" label="Deschide pe YouTube" onPress={() => void WebBrowser.openBrowserAsync(watchUrl(youtubeId))} /> : null}
       {text ? <RichText source={text} /> : null}
     </View>
   );

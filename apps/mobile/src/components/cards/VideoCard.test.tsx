@@ -1,4 +1,4 @@
-import { Linking } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Card, CardContent } from '@prepio/shared';
@@ -93,7 +93,7 @@ it('leaving the card in the stepper stops the video', async () => {
 });
 
 it('when the embed fails it falls back to the thumbnail and a YouTube link', async () => {
-  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  const open = jest.mocked(WebBrowser.openBrowserAsync).mockClear();
   await render(<VideoCard content={video()} />);
   await act(async () => {
     player().props.onError();
@@ -103,7 +103,6 @@ it('when the embed fails it falls back to the thumbnail and a YouTube link', asy
   expect(screen.getByTestId('video-thumbnail').props.source).toEqual({ uri: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' });
   await fireEvent.press(screen.getByRole('button', { name: 'Deschide pe YouTube' }));
   expect(open).toHaveBeenCalledWith('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-  open.mockRestore();
 });
 
 it('an empty id renders no player', async () => {

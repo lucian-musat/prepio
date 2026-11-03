@@ -4,8 +4,9 @@ import ImagesCard from './ImagesCard';
 import VideoCard from './VideoCard';
 import TimelineCard from './TimelineCard';
 import SchemaCard from './SchemaCard';
+import LinkCard from './LinkCard';
 
-/** Renders a card's body by type. Task 9 adds the last case; unfinished types render nothing. */
+/** Renders a card's body by type. Unknown types render nothing. */
 export default function CardContentView({ card }: { card: Card }) {
   switch (card.type) {
     case 'text':
@@ -18,6 +19,8 @@ export default function CardContentView({ card }: { card: Card }) {
       return <TimelineCard content={card} />;
     case 'schema':
       return <SchemaCard content={card} />;
+    case 'link':
+      return <LinkCard content={card} />;
     default:
       return null;
   }

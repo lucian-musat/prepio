@@ -18,3 +18,6 @@ jest.mock('react-native-webview', () => {
   const { View } = require('react-native');
   return { __esModule: true, default: View, WebView: View };
 });
+
+// Native module with no Jest binding: link and video-fallback buttons call it; tests assert on the mock.
+jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn().mockResolvedValue({ type: 'opened' }) }));
