@@ -1,5 +1,6 @@
 module.exports = {
   preset: 'jest-expo',
+  setupFiles: ['<rootDir>/jest.setup.js'],
   resolver: require.resolve('react-native-reanimated/jest/resolver'),
   testPathIgnorePatterns: ['/node_modules/', '/.expo/'],
   moduleNameMapper: {
