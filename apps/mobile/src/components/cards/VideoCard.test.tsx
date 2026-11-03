@@ -42,6 +42,7 @@ it('an active card autoplays the video muted, with its fragment', async () => {
   expect(player().props).toMatchObject({ videoId: 'dQw4w9WgXcQ', start: 5, end: 30, muted: true });
   expect(screen.getByLabelText('Pornește sunetul')).toBeTruthy();
   expect(screen.getByText('🔇 Atinge pentru sunet')).toBeTruthy();
+  expect(screen.getByLabelText('Pornește sunetul').props.hitSlop).toBe(8);
 });
 
 it('passes null bounds through when the whole video plays', async () => {

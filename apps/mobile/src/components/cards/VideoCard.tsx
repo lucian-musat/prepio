@@ -28,7 +28,7 @@ export default function VideoCard({ content }: { content: Extract<CardContent, {
           <Image testID="video-thumbnail" source={{ uri: thumbnailUrl(youtubeId) }} resizeMode="cover" accessible={false} style={StyleSheet.absoluteFill} />
         ) : null}
         {live && muted ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Pornește sunetul" onPress={() => setMuted(false)} style={styles.pill}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Pornește sunetul" hitSlop={PILL_SLOP} onPress={() => setMuted(false)} style={styles.pill}>
             <AppText role="caption" color="surface">
               🔇 Atinge pentru sunet
             </AppText>
@@ -40,6 +40,9 @@ export default function VideoCard({ content }: { content: Extract<CardContent, {
     </View>
   );
 }
+
+// The pill is small (caption text): widen its touch target towards 44 px.
+const PILL_SLOP = space[2];
 
 const styles = StyleSheet.create({
   root: { gap: space[3] },
