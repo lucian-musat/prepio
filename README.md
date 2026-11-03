@@ -10,6 +10,12 @@ Proof of concept for exam-prep lessons: a student app (Expo, Android + web), an 
 - `packages/content` - seed content and the `pnpm seed` script
 - `supabase` - migrations, RLS tests, local config
 
+## Lesson cards
+
+Lessons are made of cards of six types: text (formatted text: a small Markdown subset with bold, italic, lists, `### ` headings and `:::retine` / `:::atentie` / `:::exemplu` callouts, never rendered as HTML), images (single or gallery, zoom viewer), YouTube video (muted autoplay, optional start/end), timeline, cause-effect schema and link preview (metadata fetched by an admin server action). Shapes and validation live in `packages/shared/src/cards.ts`, renderers in `apps/mobile/src/components/cards/`.
+
+The student web has a `/preview` route that renders one card from data posted by the admin card editor, which embeds it in an iframe as a live preview (Telefon / Desktop). It needs `NEXT_PUBLIC_STUDENT_WEB_URL` in the admin (default `http://localhost:8081`) and `EXPO_PUBLIC_ADMIN_ORIGIN` in the student web (default `http://localhost:3000`); see the `.env.example` files and [docs/deploy.md](docs/deploy.md). Admin Playwright runs start the student web server themselves.
+
 ## Local development
 
 Requires Node 22, pnpm 9 and Docker.

@@ -187,6 +187,23 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 | `Enter` | `config` / `index`, `style`, `testID` | Fade + rise on mount; `index` staggers list items (40 + i x 50 ms). Remount (new `key`) to replay. |
 | `CardTransition` | `contentKey`, `direction` (next / prev), `style` | Card stepper: previous card slides out as an overlay, new card tilts in; container height eases between cards. |
 
+### Card types (`apps/mobile/src/components/cards/`)
+
+Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, one component per type), shared by the card stepper and the `/preview` route. They follow the rules above; the type-specific choices:
+
+| Piece | Tokens / behaviour |
+|---|---|
+| `RichText` callouts | De reținut: `accentSubtle` background, `accent` left edge. Atenție: `dangerSubtle` / `danger`. Exemplu: `primarySubtle` / `primary`. Label (`bodyStrong`) and body in `text`, 4 px left edge, `radius.md`. Map: `CALLOUT` in `RichText.tsx`. |
+| `ImagesCard` | Images at their natural aspect ratio (16:9 until loaded) on `surfaceMuted`, `radius.md`; credit as `caption` / `textMuted`. Gallery thumbnails 64 px, `border` edge, `primary` edge when selected (`aria-selected`). Tapping opens `ImageViewer`: `text` backdrop, `surface` text, pinch on native, tap-to-zoom 2x and drag on web, translation clamped. |
+| `VideoCard` | 16:9 frame, `radius.md`, `surfaceMuted` while loading; the "Atinge pentru sunet" pill is a `text` pill with `surface` caption. |
+| `TimelineCard` | Vertical line gradient teal 300 → 700; dots `surface` with a `primary` ring; key moments: `accent` dot with a yellow 600 ring and a ★ after the date; date `caption` / `primary` in the extra-bold head family; details in a `primarySubtle` box. Items with details are buttons with `aria-expanded`, and the expanded label includes the details. |
+| `SchemaCard` | Causes: `primarySubtle` boxes with a teal 300 edge; central: `primary` box, `onPrimary` text; consequences: `accentSubtle` boxes with an `accent` edge; `▼` arrows in `primary`. Boxes wrap below ~120 px. Boxes with a detail are buttons with `aria-expanded`. |
+| `LinkCard` | Bordered `surface` preview (`border`, `radius.md`), image 16:9, domain `caption` / `textMuted` uppercase, title `label`; long URLs and titles wrap (`wordBreak` on web). "Deschide ↗" opens a new tab on web (`noopener`) and the in-app browser on native. |
+
+**Documented palette exceptions** (the only `palette.*` uses in the student app; there is no semantic token for these decorative strokes yet): `palette.teal[300]` / `palette.teal[700]` for the timeline line gradient, `palette.yellow[600]` for the key-moment dot ring, `palette.teal[300]` for the schema cause-box edge. If another component needs them, promote them to semantic tokens (e.g. `timelineLineStart/End`, `keyMarkerBorder`, `schemaCauseBorder`) in `theme.ts` instead of adding more exceptions.
+
+**Accessibility on web.** react-native-web 0.21 ignores `accessibilityState`; expanded / selected / checked states are set with `aria-expanded` / `aria-selected` / `aria-checked`, which react-native 0.88 also maps on native. `accessibilityRole="imagebutton"` has no web role, so tappable images use `button`.
+
 ## How to add things
 
 **A token.** Add it to `packages/shared/src/theme.ts` (a semantic colour points at a palette step; a scale gets a named key). Add or extend the test in `packages/shared/src/theme.test.ts` (and a contrast assertion for any new text/background pair). If admin needs it, map it in `apps/admin/src/app/theme.ts` and its test. Update the tables above.

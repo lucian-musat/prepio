@@ -20,12 +20,14 @@ Admin (Vercel project `prepio-admin`):
 - `SUPABASE_SERVICE_ROLE_KEY` - secret, server only
 - `OPENAI_API_KEY` - secret, server only (set a monthly spend limit in the OpenAI dashboard)
 - `STUDENT_WEB_ORIGINS` = `https://prepio-web.vercel.app` (comma-separated CORS allow-list for `/api/evaluate`)
+- `NEXT_PUBLIC_STUDENT_WEB_URL` = `https://prepio-web.vercel.app` (the student web that the card editor embeds as its live preview, `/preview`). Inlined at build time.
 
 Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, profiles `preview` and `production`):
 
 - `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://prepio-admin.vercel.app`
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` = Google OAuth web client id (public). Used by native Google sign-in as `webClientId`; the web flow doesn't need it but it is harmless. Set on Vercel and in `eas.json`.
 - `EXPO_PUBLIC_AUTH_EMAIL_ENABLED` = `false` in production (hides the email-code sign-in button until the domain + SMTP exist); `true` locally. Set on Vercel and in `eas.json`.
+- `EXPO_PUBLIC_ADMIN_ORIGIN` = `https://prepio-admin.vercel.app` (Vercel `prepio-web` only; the APK has no `/preview`). The only origin whose `postMessage` the `/preview` route accepts. Exact origin: no trailing slash and no path, otherwise the preview silently waits forever.
 
 Provider setup (Google Cloud, Supabase dashboard, rollout checklist): [auth-setup.md](auth-setup.md).
 
@@ -43,6 +45,19 @@ Do these in this exact order:
 6. Google consent screen: Branding + Publish to production.
 7. Production walk in Chrome (see the verification checklist below).
 8. New APK build. After the migration, content is readable only by signed-in users, so the old APK (and the old web build) can no longer read content.
+
+## Typed cards rollout
+
+The card-types change (spec `docs/superpowers/specs/2026-11-03-card-types-design.md`) drops the old `cards.body` / `image_path` / `image_credit` columns. Old builds of the admin, the student web and the APK read those columns, so do these in this exact order, without a pause between steps 3 and 4:
+
+1. Set the two env vars on Vercel **before** pushing: `prepio-admin` → `NEXT_PUBLIC_STUDENT_WEB_URL=https://prepio-web.vercel.app`; `prepio-web` → `EXPO_PUBLIC_ADMIN_ORIGIN=https://prepio-admin.vercel.app` (no trailing slash). Both are inlined at build time; if they are set after the push, both projects need a redeploy.
+2. Optional insurance: export the `cards` table from the Supabase dashboard.
+3. `pnpm db:cloud:push:dry` (must list only `20261103122901_card_types`) → `pnpm db:cloud:push`.
+4. `git push` immediately: both Vercel projects deploy from `main`. Between steps 3 and 4 the live admin errors (it selects dropped columns) and the live student web shows empty cards.
+5. Check the `/preview` CSP header (both forms of the path must carry it):
+   `curl -sI https://prepio-web.vercel.app/preview | grep -i content-security-policy` and the same for `/preview/` → `frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000`.
+6. Production walk in Chrome: existing lessons render (converted text and image cards); in the admin, create a `[test]` draft lesson with one card of each type, check the live preview (Telefon / Desktop) against production web, then delete it; console clean.
+7. New EAS `preview` APK, **mandatory**: after the migration the installed APK shows empty or placeholder cards. New native modules: `react-native-webview`, `react-native-youtube-iframe`, `expo-web-browser` (config plugin in `app.json`). Run `npx expo install --check` before the build. Then the owner's phone-test list in `docs/STATUS.md`.
 
 ## Schema and content
 
@@ -89,3 +104,4 @@ Share the internal-distribution install link from the build page; the phone must
 4. Evaluate CORS preflight from the student origin returns `Access-Control-Allow-Origin` and allows `Authorization`:
    `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
 5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and a writing exercise returns an evaluation.
+6. The card preview may only be framed by the admin: `curl -sI https://prepio-web.vercel.app/preview` and `curl -sI https://prepio-web.vercel.app/preview/` both return `Content-Security-Policy: frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000`; the admin card editor shows the live preview (not "previzualizarea nu este disponibilă").
