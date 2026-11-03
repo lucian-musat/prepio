@@ -26,3 +26,13 @@ it('renders HTML as literal text', async () => {
   await render(<RichText source="<b>x</b>" />);
   expect(screen.getByText('<b>x</b>')).toBeTruthy();
 });
+
+it('headings keep the section typography and spans inherit the parent colour', async () => {
+  await render(<RichText source={'### Titlu\n\n:::atentie\nText **gros**\n:::'} />);
+  const h = StyleSheet.flatten(screen.getByRole('header').props.style);
+  expect(h.fontFamily).toBe('Nunito-Black');
+  expect(h.fontSize).toBe(18);
+  const span = StyleSheet.flatten(screen.getByText('gros').props.style);
+  expect(span.color).toBeUndefined();
+  expect(span.fontSize).toBeUndefined();
+});

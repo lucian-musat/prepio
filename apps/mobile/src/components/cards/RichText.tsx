@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { CALLOUT_LABELS, color, parseRichText, radius, space, type CalloutVariant, type RichBlock, type RichSpan } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
 import { AppText } from '../../ui';
@@ -9,13 +9,15 @@ const CALLOUT: Record<CalloutVariant, { bg: string; edge: string }> = {
   exemplu: { bg: color.primarySubtle, edge: color.primary },
 };
 
-function Spans({ spans }: { spans: RichSpan[] }) {
+// Nested plain Text inherits the parent's role typography and colour; only bold/italic are added.
+// Headings are already in the black weight, so they skip the bold family.
+function Spans({ spans, heading = false }: { spans: RichSpan[]; heading?: boolean }) {
   return (
     <>
       {spans.map((s, i) => (
-        <AppText key={i} role="body" style={[s.bold && styles.bold, s.italic && styles.italic]}>
+        <Text key={i} style={[s.bold && !heading && styles.bold, s.italic && styles.italic]}>
           {s.text}
-        </AppText>
+        </Text>
       ))}
     </>
   );
@@ -32,7 +34,7 @@ function Block({ block }: { block: RichBlock }) {
     case 'heading':
       return (
         <AppText role="section" accessibilityRole="header">
-          <Spans spans={block.spans} />
+          <Spans spans={block.spans} heading />
         </AppText>
       );
     case 'list':
