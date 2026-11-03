@@ -7,5 +7,5 @@ export type * from './types';
 export { tree } from './tree';
 export { aiDefaults, welcomeMessage } from './defaults';
 
-/** Seed lessons, in display order. Card `image` values are file names inside `packages/content/images/`. */
+/** Seed lessons, in display order. Card image paths are file names inside `packages/content/images/`. */
 export const lessons: SeedLesson[] = [unireaPrincipatelor, constitutia1866, independenta];

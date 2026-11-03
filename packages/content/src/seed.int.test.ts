@@ -1,7 +1,26 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { aiDefaults, lessons, tree, welcomeMessage } from './index';
+import { cardFromRow, cardImagePaths, type CardRow } from '@prepio/shared';
+import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
 import { seed } from './seed';
+
+/** The source card as it should be stored: every image file name prefixed with `seed/`. */
+function withSeedPaths(card: SeedCard): SeedCard {
+  const seedPath = (file: string) => `seed/${file}`;
+  switch (card.type) {
+    case 'images':
+      return { ...card, images: card.images.map((i) => ({ ...i, path: seedPath(i.path) })) };
+    case 'timeline':
+      return {
+        ...card,
+        points: card.points.map((p) => ({ ...p, imagePath: p.imagePath && seedPath(p.imagePath) })),
+      };
+    case 'link':
+      return card.image?.kind === 'path' ? { ...card, image: { kind: 'path', path: seedPath(card.image.path) } } : card;
+    default:
+      return card;
+  }
+}
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -160,14 +179,32 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     await client.from('settings').update({ welcome_message: welcomeMessage }).eq('id', 1);
   });
 
-  it('uploads every card image to the images bucket', async () => {
-    const { data: cards, error } = await client.from('cards').select('image_path').not('image_path', 'is', null);
+  it('stores every card so that it reads back equal to the source (image paths under seed/)', async () => {
+    const { data: dbLessons, error } = await client
+      .from('lessons')
+      .select('title,cards(id,position,title,type,content)')
+      .order('position', { referencedTable: 'cards' });
     if (error) throw error;
-    expect(cards!.length).toBeGreaterThan(0);
-    for (const { image_path } of cards!) {
-      expect(image_path).toMatch(/^seed\//);
-      const { data, error: e } = await client.storage.from('images').download(image_path);
-      expect(e, image_path).toBeNull();
+    for (const l of lessons) {
+      const row = dbLessons!.find((r) => r.title === l.title);
+      expect(row, l.title).toBeDefined();
+      const readBack = (row!.cards as CardRow[]).map((r) => {
+        const { id: _id, position: _position, ...card } = cardFromRow(r);
+        return card;
+      });
+      expect(readBack).toEqual(l.cards.map(withSeedPaths));
+    }
+  });
+
+  it('uploads every card image to the images bucket', async () => {
+    const { data: rows, error } = await client.from('cards').select('id,position,title,type,content');
+    if (error) throw error;
+    const paths = new Set((rows as CardRow[]).flatMap((r) => cardImagePaths(cardFromRow(r))));
+    expect(paths.size).toBeGreaterThan(0);
+    for (const path of paths) {
+      expect(path).toMatch(/^seed\//);
+      const { data, error: e } = await client.storage.from('images').download(path);
+      expect(e, path).toBeNull();
       expect(data!.size).toBeGreaterThan(0);
     }
   });

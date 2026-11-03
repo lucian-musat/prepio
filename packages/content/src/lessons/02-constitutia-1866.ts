@@ -7,89 +7,148 @@ export const constitutia1866: SeedLesson = {
   status: 'published',
   cards: [
     {
+      type: 'images',
       title: 'Aducerea prințului străin (1866)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'ion-c-bratianu.jpg',
+          alt: 'Fotografie a lui Ion C. Brătianu',
+          credit:
+            'Ion C. Brătianu, fotografie de Carol Popp de Szathmari (anii 1860). Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'După abdicarea lui Cuza, Locotenența domnească a căutat un prinț străin, așa cum ceruseră Adunările ' +
         'ad-hoc. Deoarece Filip de Flandra a refuzat, Ion C. Brătianu a negociat cu Carol de ' +
         'Hohenzollern-Sigmaringen, rudă cu familia regală a Prusiei și susținut de Napoleon al III-lea. ' +
         'Un plebiscit (aprilie 1866) a aprobat alegerea, iar Carol a depus jurământul la București la ' +
         '10 mai 1866. Un prinț străin punea capăt rivalităților dintre marile familii boierești și sporea ' +
         'prestigiul extern al statului.',
-      image: 'ion-c-bratianu.jpg',
-      imageCredit:
-        'Ion C. Brătianu, fotografie de Carol Popp de Szathmari (anii 1860). Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'images',
       title: 'Carol I (domn 1866–1881, rege 1881–1914)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'carol-i.jpg',
+          alt: 'Fotografie a regelui Carol I',
+          credit: 'Regele Carol I, fotografie (cca 1905–1914). Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Carol I a domnit 48 de ani. În timpul domniei sale a fost adoptată Constituția din 1866, a fost ' +
         'cucerită independența (1877–1878) și a fost proclamat Regatul (1881). El a respectat, în general, ' +
         'regulile monarhiei constituționale: numea primul-ministru și miniștrii, dar actele sale trebuiau ' +
         'contrasemnate de un ministru, care răspundea pentru ele. Astfel, Carol I a asigurat stabilitatea ' +
         'politică a statului român modern.',
-      image: 'carol-i.jpg',
-      imageCredit: 'Regele Carol I, fotografie (cca 1905–1914). Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'text',
       title: 'Adoptarea Constituției (1 iulie 1866)',
-      body:
+      text:
         'Adunarea Constituantă a dezbătut și votat noua Constituție, promulgată de Carol la 1 iulie 1866. ' +
         'Modelul a fost Constituția Belgiei din 1831, una dintre cele mai liberale ale epocii. Constituția a ' +
         'fost elaborată și adoptată fără consultarea Imperiului Otoman și a puterilor garante, deși România ' +
         'era încă sub suzeranitate otomană. Așadar, adoptarea ei a fost un act de afirmare a autonomiei, ' +
         'un pas spre independență. Ea a înlocuit Convenția de la Paris și Statutul Dezvoltător.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Numele statului și forma de guvernământ',
-      body:
+      text:
         'Articolul 1 prevedea: „Principatele Unite Române constituie un singur stat indivizibil, sub ' +
         'denumirea de România”. Forma de guvernământ era monarhia constituțională ereditară: tronul se ' +
         'moștenea în familia lui Carol, pe linie masculină, prin primogenitură. Constituția consacra ' +
         'suveranitatea națională („Toate puterile statului emană de la națiune”) și responsabilitatea ' +
         'ministerială: domnul era inviolabil, iar miniștrii răspundeau pentru actele guvernării.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Separarea puterilor în stat',
-      body:
+      text:
         'Constituția aplica principiul separării puterilor. Puterea legislativă era exercitată de domn ' +
         'împreună cu Reprezentanța națională, adică un Parlament bicameral (Adunarea Deputaților și Senatul). ' +
         'Puterea executivă aparținea domnului, care o exercita prin miniștri. Puterea judecătorească era ' +
         'exercitată de curți și tribunale. Domnul avea atribuții largi: numea și revoca miniștrii, sancționa ' +
         'și promulga legile (avea drept de veto), putea dizolva Parlamentul și era comandantul armatei.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Drepturi și libertăți cetățenești',
-      body:
+      text:
         'Constituția garanta egalitatea în fața legii, libertatea conștiinței, a presei, a întrunirilor și a ' +
         'asocierii, libertatea învățământului, inviolabilitatea domiciliului și a persoanei. Proprietatea era ' +
         'declarată „sacră și inviolabilă”. Datorită acestor prevederi, Constituția din 1866 era una dintre ' +
         'cele mai democratice din Europa vremii. Avea însă și limite: articolul 7 permitea naturalizarea ' +
         'doar străinilor de religie creștină.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Votul cenzitar',
-      body:
+      text:
         'Dreptul de vot depindea de avere și de venit (cens). Alegătorii erau împărțiți în colegii: patru ' +
         'pentru Adunarea Deputaților și două pentru Senat. Cei mai mulți țărani votau indirect, prin delegați, ' +
         'în colegiul al IV-lea. Astfel, un număr mic de alegători bogați alegea majoritatea parlamentarilor, ' +
         'iar marea majoritate a populației avea o influență redusă asupra vieții politice. Votul cenzitar ' +
         'este principala limită democratică a Constituției din 1866.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Modificări și înlocuirea Constituției',
-      body:
+      text:
         'Constituția a fost modificată de trei ori. În 1879, articolul 7 a fost revizuit, deoarece Congresul ' +
         'de la Berlin condiționase recunoașterea independenței de acordarea drepturilor civile și politice ' +
         'fără deosebire de religie. În 1884, colegiile electorale pentru Adunarea Deputaților au fost reduse ' +
         'de la patru la trei, iar titlul de rege a fost consacrat în Constituție. În 1917, la Iași, au fost ' +
         'introduse principiile votului universal și al exproprierii pentru reforma agrară. Constituția a rămas în vigoare ' +
         'până în 1923.',
-      imageCredit: null,
+    },
+    {
+      type: 'schema',
+      title: 'Constituția din 1866: cauze și urmări',
+      causesLabel: 'Cauze',
+      consequencesLabel: 'Urmări',
+      causes: [
+        {
+          id: 'cause-0',
+          text: 'Abdicarea lui Cuza (februarie 1866)',
+          detail: 'Statutul Dezvoltător, legat de regimul personal al lui Cuza, trebuia înlocuit.',
+        },
+        {
+          id: 'cause-1',
+          text: 'Aducerea prințului străin Carol I',
+          detail: 'Noul domn trebuia să conducă după reguli clare, acceptate de elita politică.',
+        },
+        {
+          id: 'cause-2',
+          text: 'Nevoia unei legi fundamentale moderne',
+          detail: 'Convenția de la Paris fusese impusă de marile puteri, nu adoptată de români.',
+        },
+      ],
+      central: {
+        id: 'central',
+        text: 'Constituția din 1866',
+        detail: 'Promulgată la 1 iulie 1866, după modelul Constituției Belgiei din 1831.',
+      },
+      consequences: [
+        {
+          id: 'consequence-0',
+          text: 'Monarhia constituțională ereditară',
+          detail: 'Statul se numește oficial România; puterile sunt separate în stat.',
+        },
+        {
+          id: 'consequence-1',
+          text: 'Drepturi și libertăți cetățenești garantate',
+          detail: 'Votul rămâne însă cenzitar, iar articolul 7 limitează naturalizarea.',
+        },
+        {
+          id: 'consequence-2',
+          text: 'Afirmarea autonomiei, pas spre independență',
+          detail: 'A fost adoptată fără consultarea Imperiului Otoman și a puterilor garante.',
+        },
+      ],
     },
   ],
   questions: [

@@ -1,10 +1,19 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { validateLesson, type Lesson, type Question } from '@prepio/shared';
+import {
+  CARD_TYPES,
+  cardImagePaths,
+  validateCard,
+  validateLesson,
+  type Card,
+  type Lesson,
+  type Question,
+} from '@prepio/shared';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedLesson, type SeedNode } from './index';
 
 const imagesDir = fileURLToPath(new URL('../images/', import.meta.url));
+const credits = readFileSync(imagesDir + 'CREDITS.md', 'utf8');
 
 const EXPECTED_TREE: Array<[string, string[]]> = [
   ['A. Popoare și spații istorice', ['Romanitatea românilor în viziunea istoricilor']],
@@ -73,12 +82,7 @@ function toLesson(l: SeedLesson): Lesson {
     title: l.title,
     position: 0,
     status: l.status,
-    cards: l.cards.map(({ image, ...c }, i) => ({
-      ...c,
-      id: `c${i}`,
-      position: i,
-      imagePath: image ?? null,
-    })),
+    cards: l.cards.map((c, i) => ({ ...c, id: `c${i}`, position: i }) as Card),
     questions: l.questions.map((q, i) => ({ ...q, id: `q${i}`, position: i }) as Question),
     exercises: l.exercises.map((x, i) => ({ ...x, id: `x${i}`, position: i })),
   };
@@ -111,11 +115,20 @@ describe('lessons', () => {
     expect(new Set(lessons.map((l) => l.key)).size).toBe(3);
   });
 
+  it('uses every card type at least once', () => {
+    const types = new Set(lessons.flatMap((l) => l.cards.map((c) => c.type)));
+    expect([...types].sort()).toEqual([...CARD_TYPES].sort());
+  });
+
   describe.each(lessons.map((l) => [l.key, l] as const))('%s', (_key, lesson) => {
     it('has 6–10 cards, at least 2 with an image', () => {
       expect(lesson.cards.length).toBeGreaterThanOrEqual(6);
       expect(lesson.cards.length).toBeLessThanOrEqual(10);
-      expect(lesson.cards.filter((c) => c.image).length).toBeGreaterThanOrEqual(2);
+      expect(lesson.cards.filter((c) => cardImagePaths(c).length > 0).length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('has only valid cards', () => {
+      for (const c of lesson.cards) expect(validateCard(c), c.title ?? c.type).toEqual([]);
     });
 
     it('has 8–10 questions covering all types and difficulties, each with an explanation', () => {
@@ -151,13 +164,19 @@ describe('lessons', () => {
       expect(validateLesson(toLesson(lesson))).toEqual([]);
     });
 
-    it('references existing images (≤ 300 KB) with a credit', () => {
+    it('references existing images (≤ 300 KB) listed in CREDITS.md', () => {
+      for (const image of lesson.cards.flatMap((c) => cardImagePaths(c))) {
+        const file = imagesDir + image;
+        expect(existsSync(file), image).toBe(true);
+        expect(statSync(file).size, image).toBeLessThanOrEqual(300 * 1024);
+        expect(credits, image).toContain(`| \`${image}\` |`);
+      }
+    });
+
+    it('credits every image shown on an images card', () => {
       for (const c of lesson.cards) {
-        if (!c.image) continue;
-        const file = imagesDir + c.image;
-        expect(existsSync(file), c.image).toBe(true);
-        expect(statSync(file).size, c.image).toBeLessThanOrEqual(300 * 1024);
-        expect(c.imageCredit?.trim(), c.image).toBeTruthy();
+        if (c.type !== 'images') continue;
+        for (const img of c.images) expect(img.credit?.trim(), img.path).toBeTruthy();
       }
     });
   });

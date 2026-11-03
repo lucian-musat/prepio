@@ -2,8 +2,11 @@ import type { Card, DistributiveOmit, Question, WritingExercise } from '@prepio/
 
 export type SeedNode = { key: string; title: string; children?: SeedNode[] };
 
-/** A card as authored in the content package; `image` is a file name inside `images/`. */
-export type SeedCard = Omit<Card, 'id' | 'position' | 'imagePath'> & { image?: string };
+/**
+ * A card as authored in the content package. Image paths (`CardImage.path`, `TimelinePoint.imagePath`,
+ * `LinkImage.path`) are file names inside `images/`; the seed uploads them under `seed/`.
+ */
+export type SeedCard = DistributiveOmit<Card, 'id' | 'position'>;
 
 /** Option ids are stable short strings ('a', 'b', ...). */
 export type SeedQuestion = DistributiveOmit<Question, 'id' | 'position'>;

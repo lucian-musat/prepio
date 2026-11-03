@@ -7,112 +7,147 @@ export const independenta: SeedLesson = {
   status: 'published',
   cards: [
     {
-      title: 'Criza orientală (1875–1877)',
-      body:
+      type: 'text',
+      title: 'Criza orientală și Convenția româno-rusă (1875–1877)',
+      text:
+        '### Criza orientală (1875–1877)\n' +
         'În 1875, răscoalele antiotomane din Bosnia și Herțegovina au redeschis „criza orientală”. În 1876, ' +
         'Serbia și Muntenegru au intrat în război cu Imperiul Otoman, iar bulgarii s-au răsculat. Constituția ' +
         'otomană din decembrie 1876 considera România o „provincie privilegiată” a Imperiului, ceea ce încălca ' +
         'autonomia ei. De aceea, guvernul condus de Ion C. Brătianu a decis că independența putea fi obținută ' +
-        'doar pe calea armelor, în colaborare cu Rusia.',
-      imageCredit: null,
-    },
-    {
-      title: 'Convenția româno-rusă (aprilie 1877)',
-      body:
+        'doar pe calea armelor, în colaborare cu Rusia.\n\n' +
+        '### Convenția româno-rusă (aprilie 1877)\n' +
         'La 4 aprilie 1877, România și Rusia au semnat la București o convenție: trupele ruse puteau traversa ' +
         'teritoriul României spre Balcani, iar Rusia se obliga să respecte drepturile politice ale statului ' +
         'român și să mențină și să apere integritatea lui teritorială. La 12 aprilie 1877, Rusia a declarat ' +
         'război Imperiului Otoman, iar artileria otomană a bombardat orașele românești de la Dunăre. Astfel, ' +
         'România a intrat de fapt în război.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Proclamarea independenței (9 mai 1877)',
-      body:
+      text:
         'La 9 mai 1877, în Adunarea Deputaților, ministrul de externe Mihail Kogălniceanu a declarat: ' +
         '„Suntem independenți; suntem o națiune de sine stătătoare”. În aceeași zi, Senatul a adoptat o ' +
         'moțiune asemănătoare, iar la 10 mai 1877 actul a fost sancționat de domnitorul Carol. Tributul datorat Porții a fost redirecționat ' +
         'către armată. Independența proclamată trebuia însă apărată pe câmpul de luptă și recunoscută de ' +
         'marile puteri.',
-      imageCredit: null,
     },
     {
+      type: 'images',
       title: 'Războiul: Plevna, Grivița, Rahova, Smârdan',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'grivita-1877.jpg',
+          alt: 'Trupele române atacând reduta Grivița (1877)',
+          credit:
+            'Atacul trupelor române asupra redutei Grivița (1877), ilustrație de Henryk Dembitzky (1881). Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Înfrânți la Plevna în vara lui 1877, rușii au cerut ajutorul armatei române. Aceasta a trecut ' +
         'Dunărea, iar prințul Carol a primit comanda trupelor ruso-române de lângă Plevna. La 30 august 1877, ' +
         'românii au cucerit reduta Grivița 1. După un lung asediu, Osman Pașa a capitulat la Plevna, la ' +
         '28 noiembrie 1877. Armata română a cucerit și Rahova (noiembrie 1877) și Smârdanul (ianuarie 1878), ' +
         'în apropiere de Vidin. Așadar, România și-a câștigat independența prin efort militar propriu.',
-      image: 'grivita-1877.jpg',
-      imageCredit:
-        'Atacul trupelor române asupra redutei Grivița (1877), ilustrație de Henryk Dembitzky (1881). Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'video',
+      title: 'Războiul de Independență (1877–1878), pe scurt',
+      youtubeId: 'gJth8m46cwo',
+      startSeconds: null,
+      endSeconds: null,
+      text: 'Documentar video, partea 1 din 2, realizat de canalul „Istorie pe șleau”.',
+    },
+    {
+      type: 'text',
       title: 'San Stefano și Congresul de la Berlin (1878)',
-      body:
+      text:
         'Tratatul de pace de la San Stefano (martie 1878), încheiat fără participarea României, recunoștea ' +
         'independența, dar Rusia urma să anexeze sudul Basarabiei. Congresul de la Berlin (iunie–iulie 1878) ' +
         'a recunoscut independența României cu două condiții: modificarea articolului 7 din Constituție ' +
         '(naturalizarea necreștinilor) și cedarea sudului Basarabiei (Cahul, Bolgrad, Ismail) către Rusia. ' +
         'În schimb, România a primit Dobrogea, Delta Dunării și Insula Șerpilor. Rusia încălca astfel ' +
         'Convenția din 1877.',
-      imageCredit: null,
     },
     {
+      type: 'link',
+      title: 'Pentru aprofundare',
+      url: 'https://ro.wikipedia.org/wiki/R%C4%83zboiul_de_Independen%C8%9B%C4%83_al_Rom%C3%A2niei',
+      pageTitle: 'Războiul de Independență al României',
+      description:
+        'Articolul Wikipedia despre participarea României la Războiul Ruso-Turc din 1877–1878, prin care ' +
+        'țara și-a obținut independența față de Imperiul Otoman.',
+      image: null,
+      text: null,
+    },
+    {
+      type: 'text',
       title: 'Regatul României și Tripla Alianță (1881–1883)',
-      body:
+      text:
         'La 14 martie 1881, România a fost proclamată regat, iar Carol I a fost încoronat la 10 mai 1881 cu ' +
         'o coroană făurită din oțelul unui tun capturat la Plevna. Pierderea sudului Basarabiei a arătat ' +
         'pericolul rusesc și izolarea României. De aceea, în octombrie 1883, România a aderat la Tripla ' +
         'Alianță (Germania, Austro-Ungaria, Italia), printr-un tratat secret, cu caracter defensiv, încheiat ' +
         'cu Austro-Ungaria, la care a aderat și Germania. Tratatul era cunoscut doar de rege și de câțiva ' +
         'oameni politici.',
-      imageCredit: null,
     },
     {
-      title: 'Neutralitatea (1914–1916)',
-      body:
+      type: 'text',
+      title: 'România în Primul Război Mondial (1914–1916)',
+      text:
+        '### Neutralitatea (1914–1916)\n' +
         'La izbucnirea Primului Război Mondial, Consiliul de Coroană de la Sinaia (3 august 1914) a hotărât ' +
         'neutralitatea, deși regele Carol I dorea intrarea în război alături de Puterile Centrale. Argumentele ' +
         'au fost: tratatul cu Tripla Alianță era defensiv, iar Austro-Ungaria atacase Serbia fără să consulte ' +
         'România; în plus, opinia publică dorea eliberarea românilor din Transilvania și Bucovina, aflați sub ' +
-        'stăpânire austro-ungară. După moartea lui Carol I (1914), a urmat la tron Ferdinand I.',
-      imageCredit: null,
-    },
-    {
-      title: 'Intrarea în război alături de Antanta (1916)',
-      body:
+        'stăpânire austro-ungară. După moartea lui Carol I (1914), a urmat la tron Ferdinand I.\n\n' +
+        '### Intrarea în război alături de Antanta (1916)\n' +
         'În august 1916, România a semnat un tratat politic și o convenție militară cu Antanta (Franța, Marea ' +
         'Britanie, Rusia, Italia), care îi recunoșteau drepturile asupra Transilvaniei, Banatului și ' +
         'Bucovinei. Apoi, România a declarat război Austro-Ungariei, iar armata română a intrat în ' +
         'Transilvania. Atacată și din sud de trupele germane și bulgare (înfrângerea de la Turtucaia), armata ' +
         's-a retras. În decembrie 1916 Bucureștiul a fost ocupat, iar autoritățile s-au mutat la Iași.',
-      imageCredit: null,
     },
     {
+      type: 'images',
       title: 'Mărăști, Mărășești, Oituz (1917) și pacea din 1918',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'marasesti-1917.jpg',
+          alt: 'Trupe române la Mărășești (1917)',
+          credit:
+            'Trupe române la Mărășești (1917), fotografie de epocă. Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'În vara lui 1917, armata română reorganizată a obținut victoria de la Mărăști și a oprit ofensiva ' +
         'germano-austro-ungară la Mărășești și Oituz. După revoluția bolșevică, Rusia a ieșit din război, iar ' +
         'România, rămasă izolată, a semnat armistițiul de la Focșani (decembrie 1917) și pacea de la ' +
         'Buftea-București (mai 1918): pierdea Dobrogea, ceda crestele Carpaților Austro-Ungariei și acorda ' +
         'Germaniei controlul petrolului. Regele Ferdinand nu a promulgat pacea, iar România a reintrat în ' +
         'război în noiembrie 1918.',
-      image: 'marasesti-1917.jpg',
-      imageCredit: 'Trupe române la Mărășești (1917), fotografie de epocă. Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'images',
       title: 'Unirea din 1918',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'harta-romania-1918.jpg',
+          alt: 'Harta României după unirile din 1918',
+          credit:
+            'România după unirile din 1918, hartă de Spiridon Ion Cepleanu. Sursa: Wikimedia Commons, licență CC BY-SA 3.0',
+        },
+      ],
+      text:
         'Destrămarea Imperiului Rus și a Austro-Ungariei a permis realizarea unității naționale. Sfatul Țării ' +
         'a votat unirea Basarabiei cu România la 27 martie 1918. Congresul General al Bucovinei a hotărât ' +
         'unirea la 28 noiembrie 1918. Adunarea Națională de la Alba Iulia a votat, la 1 decembrie 1918, unirea ' +
         'Transilvaniei, Banatului, Crișanei și Maramureșului cu România. Unirile au fost recunoscute prin ' +
         'tratatele Conferinței de pace de la Paris (1919–1920). Așadar, s-a format România Mare.',
-      image: 'harta-romania-1918.jpg',
-      imageCredit:
-        'România după unirile din 1918, hartă de Spiridon Ion Cepleanu. Sursa: Wikimedia Commons, licență CC BY-SA 3.0',
     },
   ],
   questions: [

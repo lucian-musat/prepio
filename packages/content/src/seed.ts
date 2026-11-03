@@ -4,8 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cardImagePaths, cardToRow } from '@prepio/shared';
 import { aiDefaults, lessons, tree, welcomeMessage } from './index';
-import type { SeedNode } from './types';
+import type { SeedCard, SeedNode } from './types';
 
 const IMAGES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../images');
 const BUCKET = 'images';
@@ -39,13 +40,29 @@ function contentType(file: string): string {
   return ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
 }
 
+const seedPath = (file: string): string => `seed/${file}`;
+
+/** Rewrites the card's image file names to their storage paths (`seed/<file>`). */
+function withStoragePaths(card: SeedCard): SeedCard {
+  switch (card.type) {
+    case 'images':
+      return { ...card, images: card.images.map((i) => ({ ...i, path: seedPath(i.path) })) };
+    case 'timeline':
+      return { ...card, points: card.points.map((p) => ({ ...p, imagePath: p.imagePath && seedPath(p.imagePath) })) };
+    case 'link':
+      return card.image?.kind === 'path' ? { ...card, image: { kind: 'path', path: seedPath(card.image.path) } } : card;
+    default:
+      return card;
+  }
+}
+
 async function uploadImages(client: SupabaseClient): Promise<void> {
-  const files = new Set(lessons.flatMap((l) => l.cards.map((c) => c.image).filter((f): f is string => !!f)));
+  const files = new Set(lessons.flatMap((l) => l.cards.flatMap((c) => cardImagePaths(c))));
   for (const file of files) {
     const body = await readFile(resolve(IMAGES_DIR, file));
     const { error } = await client.storage
       .from(BUCKET)
-      .upload(`seed/${file}`, body, { upsert: true, contentType: contentType(file) });
+      .upload(seedPath(file), body, { upsert: true, contentType: contentType(file) });
     if (error) throw new Error(`upload ${file}: ${error.message}`);
   }
 }
@@ -118,14 +135,7 @@ async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; 
     if (lesson.cards.length) {
       check(
         await client.from('cards').insert(
-          lesson.cards.map((c, i) => ({
-            lesson_id: lessonId,
-            position: i,
-            title: c.title,
-            body: c.body,
-            image_path: c.image ? `seed/${c.image}` : null,
-            image_credit: c.imageCredit,
-          })),
+          lesson.cards.map((c, i) => ({ lesson_id: lessonId, position: i, ...cardToRow(withStoragePaths(c)) })),
         ),
         `insert cards ${lesson.key}`,
       );

@@ -7,102 +7,186 @@ export const unireaPrincipatelor: SeedLesson = {
   status: 'published',
   cards: [
     {
+      type: 'text',
       title: 'Contextul internațional: Războiul Crimeii (1853–1856)',
-      body:
+      text:
         'Războiul Crimeii s-a încheiat cu înfrângerea Rusiei. Prin Tratatul de la Paris (martie 1856), ' +
         'Moldova și Țara Românească au rămas sub suzeranitate otomană, dar au fost puse sub garanția colectivă ' +
         'a celor șapte mari puteri, iar protectoratul rusesc a încetat. Moldova a primit sudul Basarabiei ' +
         '(Cahul, Bolgrad, Ismail). Pentru a afla dorințele românilor, marile puteri au hotărât convocarea ' +
         'unor Adunări ad-hoc. Astfel, problema Unirii a devenit o chestiune europeană.',
-      imageCredit: null,
     },
     {
+      type: 'images',
       title: 'Adunările ad-hoc (1857)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'hora-unirii-aman.jpg',
+          alt: 'Tabloul „Hora Unirii la Craiova” de Theodor Aman',
+          credit: 'Theodor Aman, „Hora Unirii la Craiova”. Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Primele alegeri din Moldova (iulie 1857) au fost falsificate de caimacamul Nicolae Vogoride, adversar ' +
         'al Unirii, și au fost anulate la presiunea Franței. După noi alegeri, Adunările ad-hoc s-au întrunit ' +
         'în toamna lui 1857, iar la Iași Mihail Kogălniceanu a prezentat propunerea unionistă. Rezoluțiile ' +
         'adoptate în octombrie 1857 cereau: respectarea autonomiei și neutralitatea Principatelor, unirea lor ' +
         'într-un stat cu numele România, prinț străin dintr-o familie domnitoare a Europei, o adunare ' +
         'reprezentativă și garanția colectivă a marilor puteri.',
-      image: 'hora-unirii-aman.jpg',
-      imageCredit: 'Theodor Aman, „Hora Unirii la Craiova”. Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'images',
       title: 'Convenția de la Paris (1858)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'harta-romania-1859-1878.jpg',
+          alt: 'Harta Principatelor Unite (România) între 1859 și 1878',
+          credit:
+            'Teritoriul Principatelor Unite (România) între 1859 și 1878, hartă de Spiridon Manoliu. Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Marile puteri au răspuns rezoluțiilor prin Convenția de la Paris (august 1858), care a funcționat ca o ' +
         'constituție. Statul se numea „Principatele Unite ale Moldovei și Valahiei”, dar fiecare principat ' +
         'păstra propriul domn, guvern și adunare. Instituțiile comune erau Comisia Centrală de la Focșani și ' +
         'Înalta Curte de Justiție și Casație. Convenția prevedea separarea puterilor și egalitatea în fața legii. ' +
         'Așadar, unirea acceptată de puteri era limitată, mai mult formală.',
-      image: 'harta-romania-1859-1878.jpg',
-      imageCredit:
-        'Teritoriul Principatelor Unite (România) între 1859 și 1878, hartă de Spiridon Manoliu. Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'images',
       title: 'Dubla alegere a lui Alexandru Ioan Cuza (1859)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'cuza.jpg',
+          alt: 'Portretul lui Alexandru Ioan Cuza',
+          credit:
+            'Alexandru Ioan Cuza, portret de Carol Popp de Szathmari (1864). Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Convenția de la Paris nu interzicea alegerea aceleiași persoane ca domn în ambele Principate. ' +
         'Profitând de această lacună, Adunarea electivă a Moldovei l-a ales pe Alexandru Ioan Cuza la ' +
         '5 ianuarie 1859, iar Adunarea electivă a Țării Românești, sub presiunea mulțimii din București, ' +
         'la 24 ianuarie 1859. Astfel, românii au pus marile puteri în fața faptului împlinit. Conferința ' +
         'de la Paris a recunoscut dubla alegere în același an.',
-      image: 'cuza.jpg',
-      imageCredit:
-        'Alexandru Ioan Cuza, portret de Carol Popp de Szathmari (1864). Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'text',
       title: 'Unificarea instituțiilor (1859–1862)',
-      body:
+      text:
         'Cuza a unificat treptat instituțiile celor două Principate (armata, vămile, serviciul telegrafic). ' +
         'În decembrie 1861, Imperiul Otoman a acceptat unirea deplină pe durata domniei lui Cuza, iar domnul a ' +
         'proclamat: „Unirea este îndeplinită, naționalitatea română este întemeiată”. În ianuarie 1862 s-au ' +
         'format un guvern unic, condus de Barbu Catargiu, și o adunare unică, iar capitala a devenit București. ' +
         'Statul s-a numit oficial Principatele Unite Române, dar se folosea tot mai des numele de România.',
-      imageCredit: null,
     },
     {
+      type: 'timeline',
+      title: 'Pașii Unirii (1857–1862)',
+      points: [
+        {
+          id: 'point-0',
+          date: 'octombrie 1857',
+          title: 'Adunările ad-hoc cer unirea',
+          details:
+            'Rezoluțiile cer unirea Principatelor într-un stat cu numele România, condus de un prinț străin.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-1',
+          date: 'august 1858',
+          title: 'Convenția de la Paris',
+          details:
+            'Principatele Unite ale Moldovei și Valahiei: câte un domn, un guvern și o adunare în fiecare principat.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-2',
+          date: '5 ianuarie 1859',
+          title: 'Cuza, ales domn al Moldovei',
+          details: 'Adunarea electivă de la Iași îl alege pe Alexandru Ioan Cuza.',
+          key: true,
+          imagePath: null,
+        },
+        {
+          id: 'point-3',
+          date: '24 ianuarie 1859',
+          title: 'Cuza, ales domn al Țării Românești',
+          details: 'Dubla alegere pune marile puteri în fața faptului împlinit.',
+          key: true,
+          imagePath: null,
+        },
+        {
+          id: 'point-4',
+          date: 'decembrie 1861',
+          title: 'Imperiul Otoman acceptă unirea deplină',
+          details: 'Recunoașterea este valabilă doar pe durata domniei lui Cuza.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-5',
+          date: 'ianuarie 1862',
+          title: 'Guvern unic și adunare unică',
+          details: 'Capitala devine București; statul se numește Principatele Unite Române.',
+          key: false,
+          imagePath: null,
+        },
+      ],
+    },
+    {
+      type: 'text',
       title: 'Secularizarea averilor mănăstirești (1863)',
-      body:
+      text:
         'Multe mănăstiri erau „închinate” unor locuri sfinte din afara țării (Muntele Athos, Ierusalim), ' +
         'iar veniturile lor ieșeau din Principate. În decembrie 1863, guvernul condus de Mihail Kogălniceanu ' +
         'a adoptat legea secularizării averilor mănăstirești. Prin această lege, aproximativ un sfert din ' +
         'terenul agricol al țării a trecut în proprietatea statului. Astfel, veniturile statului au crescut, ' +
         'iar statul a obținut pământ care putea fi folosit pentru împroprietărirea țăranilor.',
-      imageCredit: null,
     },
     {
+      type: 'text',
       title: 'Lovitura de stat și Statutul Dezvoltător (1864)',
-      body:
+      text:
         'Adunarea, dominată de marii proprietari conservatori, s-a opus proiectului de reformă agrară. ' +
         'De aceea, la 2 mai 1864, Cuza a dizolvat Adunarea (lovitura de stat) și a supus unui plebiscit ' +
         'Statutul Dezvoltător al Convenției de la Paris. Statutul îi dădea domnului inițiativa legislativă ' +
         'și drept de veto, crea Senatul (Corpul Ponderator), astfel încât Parlamentul devenea bicameral, ' +
         'și era însoțit de o nouă lege electorală, cu un cens mai scăzut. Astfel, s-a instaurat un regim ' +
         'autoritar, care a permis adoptarea reformelor.',
-      imageCredit: null,
     },
     {
+      type: 'images',
       title: 'Legea rurală și legea instrucțiunii publice (1864)',
-      body:
+      display: 'single',
+      images: [
+        {
+          path: 'kogalniceanu.jpg',
+          alt: 'Portretul lui Mihail Kogălniceanu',
+          credit: 'Mihail Kogălniceanu, autor necunoscut. Sursa: Wikimedia Commons, domeniu public',
+        },
+      ],
+      text:
         'Legea rurală (august 1864), promovată de Mihail Kogălniceanu, a desființat claca, dijma și celelalte ' +
         'obligații ale țăranilor față de proprietari și i-a împroprietărit pe clăcași cu loturi stabilite după ' +
         'numărul vitelor de muncă, în schimbul unei despăgubiri plătite în 15 ani. Legea instrucțiunii publice ' +
         '(1864) a organizat învățământul pe trei niveluri (primar, secundar, superior) și a făcut învățământul ' +
         'primar obligatoriu și gratuit. Așadar, reformele au modernizat societatea românească.',
-      image: 'kogalniceanu.jpg',
-      imageCredit: 'Mihail Kogălniceanu, autor necunoscut. Sursa: Wikimedia Commons, domeniu public',
     },
     {
+      type: 'text',
       title: 'Abdicarea lui Cuza (1866)',
-      body:
+      text:
         'Reformele și regimul autoritar l-au izolat pe Cuza. Conservatorii, nemulțumiți de legea rurală, și ' +
         'liberalii radicali, care criticau guvernarea personală, s-au aliat într-o grupare numită ' +
         '„monstruoasa coaliție”. În noaptea de 10/11 februarie 1866, Cuza a fost obligat să abdice. Puterea ' +
         'a fost preluată de o Locotenență domnească, iar politicienii au căutat un prinț străin, așa cum ' +
         'ceruseră Adunările ad-hoc.',
-      imageCredit: null,
     },
   ],
   questions: [
