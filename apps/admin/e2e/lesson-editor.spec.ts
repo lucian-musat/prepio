@@ -70,21 +70,23 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   await page.getByRole('button', { name: 'Salvează titlul' }).click();
   await expect(page.getByText('Titlul a fost salvat.')).toBeVisible();
 
-  // Cards (with image)
+  // Cards: an images card (alt text, credit, text under the image)
   await page.getByRole('button', { name: 'Adaugă card' }).click();
   const cardForm = page.getByTestId('card-form');
   await cardForm.getByLabel('Titlu (opțional)').fill('Unirea');
-  await cardForm.getByLabel('Text', { exact: true }).fill('Primul paragraf.\n\nAl doilea paragraf.');
-  await cardForm.getByLabel(/Imagine \(JPEG/).setInputFiles({ name: 'harta.png', mimeType: 'image/png', buffer: PNG });
-  await expect(cardForm.getByAltText('Previzualizare imagine')).toBeVisible();
+  await cardForm.getByRole('radiogroup', { name: 'Tipul cardului' }).getByText('Imagini', { exact: true }).click();
+  await cardForm.getByLabel('Încarcă imagini').setInputFiles({ name: 'harta.png', mimeType: 'image/png', buffer: PNG });
+  await expect(cardForm.getByLabel('Descriere (alt)')).toBeVisible();
+  await cardForm.getByLabel('Descriere (alt)').fill('Harta Principatelor');
   await cardForm.getByLabel('Sursa / creditul imaginii').fill('Wikimedia Commons');
+  await cardForm.getByLabel('Text sub imagini', { exact: true }).fill('Primul paragraf.\n\nAl doilea paragraf.');
   await cardForm.getByRole('button', { name: 'Salvează' }).click();
   await expect(page.getByTestId('card-item')).toHaveCount(1);
-  await expect(page.getByTestId('card-item')).toContainText('Wikimedia Commons');
+  await expect(page.getByTestId('card-item')).toContainText('1 imagine');
 
   // second card, then move it up and delete it
   await page.getByRole('button', { name: 'Adaugă card' }).click();
-  await page.getByTestId('card-form').getByLabel('Text', { exact: true }).fill('Card doi');
+  await page.getByTestId('card-form').getByRole('textbox', { name: 'Text', exact: true }).fill('Card doi');
   await page.getByTestId('card-form').getByRole('button', { name: 'Salvează' }).click();
   await expect(page.getByTestId('card-item')).toHaveCount(2);
   await page.getByRole('button', { name: 'Mută sus cardul 2' }).click();
@@ -164,8 +166,16 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   const anon = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
   expect((await anon.from('lessons').select('id').eq('id', lessonId).maybeSingle()).data).toBeNull();
   expect(data?.cards).toHaveLength(1);
-  expect(data?.cards[0]).toMatchObject({ title: 'Unirea', image_credit: 'Wikimedia Commons', body: 'Primul paragraf.\n\nAl doilea paragraf.' });
-  imagePath = data?.cards[0].image_path ?? null;
+  expect(data?.cards[0]).toMatchObject({
+    title: 'Unirea',
+    type: 'images',
+    content: {
+      display: 'single',
+      text: 'Primul paragraf.\n\nAl doilea paragraf.',
+      images: [{ alt: 'Harta Principatelor', credit: 'Wikimedia Commons' }],
+    },
+  });
+  imagePath = data?.cards[0].content.images[0].path ?? null;
   expect(imagePath).toMatch(new RegExp(`^lessons/${lessonId}/.+\\.png$`));
   expect((await fetch(`${SB_URL}/storage/v1/object/public/images/${imagePath}`)).status).toBe(200);
   expect(data?.questions.map((q: { type: string }) => q.type).sort()).toEqual(['chronological_order', 'multiple_choice', 'single_choice']);

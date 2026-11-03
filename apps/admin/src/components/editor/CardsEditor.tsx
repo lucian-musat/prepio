@@ -6,6 +6,7 @@ import { CARD_TYPE_LABELS, cardImagePaths } from '@prepio/shared';
 import { deleteItem, moveItem, saveCard } from '@/app/(admin)/lessons/[id]/actions';
 import type { CardInput, EditorCard } from '@/lib/data/lesson';
 import CardForm from './cards/CardForm';
+import CardPreview from './cards/CardPreview';
 import { cardSummary } from './cards/cardSummary';
 import { EmptyNote, ItemControls, publicImageUrl, useRunner } from './common';
 
@@ -29,7 +30,13 @@ export default function CardsEditor({ lessonId, cards }: { lessonId: string; car
           <Card className="mb-3" key={c.id} data-testid="card-item">
             <Card.Body>
               {editing === c.id ? (
-                <CardForm lessonId={lessonId} initial={c} onSave={save} onCancel={() => setEditing(null)} />
+                <CardForm
+                  lessonId={lessonId}
+                  initial={c}
+                  onSave={save}
+                  onCancel={() => setEditing(null)}
+                  preview={(d) => <CardPreview draft={d} index={i} total={cards.length} />}
+                />
               ) : (
                 <div className="d-flex flex-wrap gap-3 align-items-start">
                   {thumb && (
@@ -61,7 +68,12 @@ export default function CardsEditor({ lessonId, cards }: { lessonId: string; car
       {editing === 'new' ? (
         <Card className="mb-3">
           <Card.Body>
-            <CardForm lessonId={lessonId} onSave={save} onCancel={() => setEditing(null)} />
+            <CardForm
+              lessonId={lessonId}
+              onSave={save}
+              onCancel={() => setEditing(null)}
+              preview={(d) => <CardPreview draft={d} index={cards.length} total={cards.length + 1} />}
+            />
           </Card.Body>
         </Card>
       ) : (
