@@ -14,9 +14,9 @@ insert into nodes (id, parent_id, title) values
 insert into lessons (id, node_id, title, status) values
   ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000c2', 'Published', 'published'),
   ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000c2', 'Draft', 'draft');
-insert into cards (lesson_id, body) values
-  ('00000000-0000-0000-0000-0000000000e1', 'pub card'),
-  ('00000000-0000-0000-0000-0000000000e2', 'draft card');
+insert into cards (lesson_id, content) values
+  ('00000000-0000-0000-0000-0000000000e1', '{"text":"x"}'),
+  ('00000000-0000-0000-0000-0000000000e2', '{"text":"draft"}');
 insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000e1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000e2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
@@ -64,9 +64,9 @@ select results_eq(
   $$ values ('Published'::text) $$,
   'student sees only the published fixture lesson');
 select results_eq(
-  $$ select body from cards
+  $$ select content->>'text' from cards
       where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2') $$,
-  $$ values ('pub card'::text) $$,
+  $$ values ('x'::text) $$,
   'student sees only published fixture cards');
 select results_eq(
   $$ select prompt from questions

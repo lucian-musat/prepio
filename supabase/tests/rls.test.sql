@@ -10,9 +10,9 @@ insert into lessons (id, node_id, title, status) values
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a2', 'Published', 'published'),
   ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000a2', 'Draft', 'draft');
 
-insert into cards (lesson_id, body) values
-  ('00000000-0000-0000-0000-0000000000b1', 'pub card'),
-  ('00000000-0000-0000-0000-0000000000b2', 'draft card');
+insert into cards (lesson_id, content) values
+  ('00000000-0000-0000-0000-0000000000b1', '{"text":"x"}'),
+  ('00000000-0000-0000-0000-0000000000b2', '{"text":"draft"}');
 insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000b1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000b2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
