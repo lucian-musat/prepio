@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateLesson, validateQuestion } from './validation';
-import type { Lesson, Question } from './types';
+import type { Card, Lesson, Question } from './types';
 
 const base = { id: 'q1', position: 0, prompt: 'Care?', difficulty: 'easy' as const, explanation: null };
 const opt = (id: string, correct: boolean) => ({ id, text: id.toUpperCase(), correct });
@@ -58,13 +58,14 @@ describe('validateQuestion', () => {
   });
 });
 
+const textCard: Card = { id: 'c1', position: 0, title: null, type: 'text', text: 'Text' };
 const lesson: Lesson = {
   id: 'l1',
   nodeId: 'n1',
   title: 'Lecția 1',
   position: 0,
   status: 'draft',
-  cards: [{ id: 'c1', position: 0, title: null, body: 'Text', imagePath: null, imageCredit: null }],
+  cards: [textCard],
   questions: [validSingle],
   exercises: [{ id: 'e1', position: 0, prompt: 'Scrie', criteria: 'Criterii' }],
 };
@@ -80,7 +81,14 @@ describe('validateLesson', () => {
   });
 
   it('rejects empty card bodies', () => {
-    expect(validateLesson({ ...lesson, cards: [{ ...lesson.cards[0]!, body: '' }] })).not.toEqual([]);
+    expect(validateLesson({ ...lesson, cards: [{ ...textCard, text: '' }] })).not.toEqual([]);
+  });
+
+  it('prefixes card errors with the card number', () => {
+    const bad = { ...textCard, id: 'c2', text: ' ' };
+    expect(validateLesson({ ...lesson, cards: [textCard, bad] })).toContain(
+      'Cartonașul 2: Textul nu poate fi gol.',
+    );
   });
 
   it('aggregates question errors', () => {

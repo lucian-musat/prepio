@@ -23,13 +23,57 @@ export type Answer =
   | { type: 'single_choice' | 'multiple_choice'; selected: string[] }
   | { type: 'chronological_order'; order: string[] };
 
-export type Card = {
+export type CardType = 'text' | 'images' | 'video' | 'timeline' | 'schema' | 'link';
+export type CardImage = { path: string; alt: string; credit: string | null };
+export type TimelinePoint = {
+  id: string;
+  date: string;
+  title: string;
+  details: string | null;
+  key: boolean;
+  imagePath: string | null;
+};
+export type SchemaBox = { id: string; text: string; detail: string | null };
+export type LinkImage = { kind: 'url'; url: string } | { kind: 'path'; path: string };
+/**
+ * `display: 'single'` = every image shown large, stacked; `'gallery'` = one main image + thumbnails.
+ * A one-image card renders the same in both.
+ */
+export type CardContent =
+  | { type: 'text'; text: string }
+  | { type: 'images'; images: CardImage[]; display: 'single' | 'gallery'; text: string | null }
+  | {
+      type: 'video';
+      youtubeId: string;
+      startSeconds: number | null;
+      endSeconds: number | null;
+      text: string | null;
+    }
+  | { type: 'timeline'; points: TimelinePoint[] }
+  | {
+      type: 'schema';
+      causesLabel: string;
+      consequencesLabel: string;
+      causes: SchemaBox[];
+      central: SchemaBox;
+      consequences: SchemaBox[];
+    }
+  | {
+      type: 'link';
+      url: string;
+      title: string;
+      description: string | null;
+      image: LinkImage | null;
+      text: string | null;
+    };
+export type Card = { id: string; position: number; title: string | null } & CardContent;
+/** A `cards` table row; `content` is untrusted JSON (everything in `Card` except id/position/title/type). */
+export type CardRow = {
   id: string;
   position: number;
   title: string | null;
-  body: string;
-  imagePath: string | null;
-  imageCredit: string | null;
+  type: CardType;
+  content: Record<string, unknown>;
 };
 
 export type WritingExercise = { id: string; position: number; prompt: string; criteria: string };

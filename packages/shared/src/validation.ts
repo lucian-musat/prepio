@@ -1,3 +1,4 @@
+import { validateCard } from './cards';
 import type { Lesson, Question } from './types';
 
 const blank = (s: string | null | undefined) => !s || s.trim() === '';
@@ -30,7 +31,7 @@ export function validateLesson(l: Lesson): string[] {
   const errors: string[] = [];
   if (blank(l.title)) errors.push('Titlul lecției nu poate fi gol.');
   l.cards.forEach((c, i) => {
-    if (blank(c.body)) errors.push(`Cartonașul ${i + 1}: textul nu poate fi gol.`);
+    for (const e of validateCard(c)) errors.push(`Cartonașul ${i + 1}: ${e}`);
   });
   l.questions.forEach((q, i) => {
     for (const e of validateQuestion(q)) errors.push(`Întrebarea ${i + 1}: ${e}`);
