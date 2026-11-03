@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { UserError } from './db';
 import { createLesson, createNode } from './tree';
 import {
-  deleteItem, getLessonForEdit, moveItem, saveCard, saveExercise, saveQuestion, updateLesson, uploadCardImage,
+  type CardInput, deleteItem, getLessonForEdit, moveItem, saveCard, saveExercise, saveQuestion, updateLesson, uploadCardImage,
 } from './lesson';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
@@ -35,6 +35,11 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
       },
     );
 
+  const texts = async () =>
+    (await db.from('cards').select('content,position').eq('lesson_id', lessonId).order('position')).data!.map(
+      (r) => [(r.content as { text: string }).text, r.position],
+    );
+
   beforeAll(async () => {
     db = createClient(url!, anon!, { auth: { persistSession: false } });
     const { error } = await db.auth.signInWithPassword({ email, password });
@@ -55,21 +60,156 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
     await expect(updateLesson(db, lessonId, { title: ' ' })).rejects.toThrow('Titlul nu poate fi gol');
   });
 
-  it('saves, edits, moves and deletes cards with contiguous positions', async () => {
-    const a = await saveCard(db, lessonId, { body: 'A', title: 'Ta' });
-    const b = await saveCard(db, lessonId, { body: 'B', title: '' });
-    const c = await saveCard(db, lessonId, { body: 'C' });
-    expect(await rows('cards', 'body')).toEqual([['A', 0], ['B', 1], ['C', 2]]);
-    await saveCard(db, lessonId, { id: b.id, body: 'B2', title: 'Tb', image_credit: 'Wikimedia' });
+  it('saves, edits, moves and deletes text cards with contiguous positions', async () => {
+    const a = await saveCard(db, lessonId, { type: 'text', text: 'A', title: 'Ta' });
+    const b = await saveCard(db, lessonId, { type: 'text', text: 'B', title: '' });
+    const c = await saveCard(db, lessonId, { type: 'text', text: ' C ', title: null });
+    expect(await texts()).toEqual([['A', 0], ['B', 1], ['C', 2]]);
+    await saveCard(db, lessonId, { id: b.id, type: 'text', text: 'B2', title: 'Tb' });
     const row = (await db.from('cards').select('*').eq('id', b.id).single()).data!;
-    expect(row).toMatchObject({ body: 'B2', title: 'Tb', image_credit: 'Wikimedia', position: 1 });
+    expect(row).toMatchObject({ type: 'text', content: { text: 'B2' }, title: 'Tb', position: 1 });
     expect((await db.from('cards').select('title').eq('id', c.id).single()).data?.title).toBeNull();
     await moveItem(db, 'cards', a.id, 'down');
-    expect((await rows('cards', 'body')).map((r) => r[0])).toEqual(['B2', 'A', 'C']);
+    expect((await texts()).map((r) => r[0])).toEqual(['B2', 'A', 'C']);
     await moveItem(db, 'cards', b.id, 'up'); // already first: no-op
     await deleteItem(db, 'cards', b.id);
-    expect(await rows('cards', 'body')).toEqual([['A', 0], ['C', 1]]);
-    await expect(saveCard(db, lessonId, { body: '  ' })).rejects.toThrow('Textul cartonașului nu poate fi gol.');
+    expect(await texts()).toEqual([['A', 0], ['C', 1]]);
+    await expect(saveCard(db, lessonId, { type: 'text', text: '  ', title: null })).rejects.toThrow('Textul nu poate fi gol.');
+  });
+
+  describe('typed cards', () => {
+    const ownPath = (name: string) => `lessons/${lessonId}/${name}`;
+    const put = async (name: string) => {
+      const path = ownPath(name);
+      const { error } = await db.storage.from('images').upload(path, PNG, { contentType: 'image/png', upsert: true });
+      if (error) throw error;
+      uploaded.push(path);
+      return path;
+    };
+    const exists = async (path: string) => {
+      const dir = path.slice(0, path.lastIndexOf('/'));
+      const { data } = await db.storage.from('images').list(dir);
+      return (data ?? []).some((f) => `${dir}/${f.name}` === path);
+    };
+    const read = async (id: string) => (await getLessonForEdit(db, lessonId))!.cards.find((c) => c.id === id)!;
+
+    it('saves and reads back one card of each type', async () => {
+      const img = await put('rt.png');
+      const inputs: CardInput[] = [
+        { type: 'text', title: 'T', text: 'hello' },
+        { type: 'images', title: null, images: [{ path: img, alt: 'o poză', credit: null }], display: 'gallery', text: null },
+        { type: 'video', title: null, youtubeId: 'dQw4w9WgXcQ', startSeconds: 5, endSeconds: 10, text: null },
+        {
+          type: 'timeline', title: null,
+          points: [
+            { id: 'p1', date: '1859', title: 'Unirea', details: null, key: true, imagePath: null },
+            { id: 'p2', date: '1877', title: 'Independența', details: 'detalii', key: false, imagePath: null },
+          ],
+        },
+        {
+          type: 'schema', title: null, causesLabel: 'Cauze', consequencesLabel: 'Urmări',
+          causes: [{ id: 'c1', text: 'a', detail: null }],
+          central: { id: 'x', text: 'centru', detail: null },
+          consequences: [{ id: 'k1', text: 'b', detail: null }],
+        },
+        { type: 'link', title: null, url: 'https://ro.wikipedia.org', pageTitle: 'Wiki', description: null, image: null, text: null },
+      ];
+      const ids: string[] = [];
+      for (const input of inputs) ids.push((await saveCard(db, lessonId, input)).id);
+      for (const [i, input] of inputs.entries()) {
+        expect(await read(ids[i])).toMatchObject({ ...input, id: ids[i] });
+      }
+      for (const id of ids) await deleteItem(db, 'cards', id);
+    });
+
+    it('rejects an invalid timeline with the shared message', async () => {
+      const err = await saveCard(db, lessonId, {
+        type: 'timeline', title: null,
+        points: [{ id: 'p1', date: '1859', title: 'x', details: null, key: false, imagePath: null }],
+      }).then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(UserError);
+      expect((err as Error).message).toBe('Axa cronologică are nevoie de cel puțin 2 puncte.');
+    });
+
+    it("rejects image paths outside this lesson's folder", async () => {
+      const other = '00000000-0000-0000-0000-000000000001';
+      for (const path of [`lessons/${other}/x.png`, 'evil/x.png', '']) {
+        const err = await saveCard(db, lessonId, {
+          type: 'images', title: null, images: [{ path, alt: 'a', credit: null }], display: 'single', text: null,
+        }).then(() => null, (e: unknown) => e);
+        expect(err).toBeInstanceOf(UserError);
+        expect((err as Error).message).toBe('Imagine invalidă.');
+      }
+      const err = await saveCard(db, lessonId, {
+        type: 'link', title: null, url: 'https://a.ro', pageTitle: 't', description: null,
+        image: { kind: 'path', path: `lessons/${other}/x.png` }, text: null,
+      }).then(() => null, (e: unknown) => e);
+      expect((err as Error).message).toBe('Imagine invalidă.');
+    });
+
+    it('drops unknown content keys and trims strings', async () => {
+      const { id } = await saveCard(db, lessonId, {
+        type: 'text', title: ' ', text: '  hi  ', evil: 'x', body: 'old',
+      } as unknown as CardInput);
+      const row = (await db.from('cards').select('title,content').eq('id', id).single()).data!;
+      expect(row).toEqual({ title: null, content: { text: 'hi' } });
+      await deleteItem(db, 'cards', id);
+    });
+
+    it('deletes the replaced image object from storage on update', async () => {
+      const oldP = await put('old.png');
+      const keep = await put('keep.png');
+      const newP = await put('new.png');
+      const img = (path: string) => ({ path, alt: 'a', credit: null });
+      const { id } = await saveCard(db, lessonId, {
+        type: 'images', title: null, images: [img(oldP), img(keep)], display: 'gallery', text: null,
+      });
+      await saveCard(db, lessonId, {
+        id, type: 'images', title: null, images: [img(newP), img(keep)], display: 'gallery', text: null,
+      });
+      expect(await exists(oldP)).toBe(false);
+      expect(await exists(keep)).toBe(true);
+      expect(await exists(newP)).toBe(true);
+      await deleteItem(db, 'cards', id);
+      expect(await exists(keep)).toBe(false);
+      expect(await exists(newP)).toBe(false);
+    });
+
+    it('deletes timeline and link images with the card', async () => {
+      const t = await put('tl.png');
+      const l = await put('lk.png');
+      const tl = await saveCard(db, lessonId, {
+        type: 'timeline', title: null,
+        points: [
+          { id: 'a', date: '1', title: 'a', details: null, key: false, imagePath: t },
+          { id: 'b', date: '2', title: 'b', details: null, key: false, imagePath: null },
+        ],
+      });
+      const lk = await saveCard(db, lessonId, {
+        type: 'link', title: null, url: 'https://a.ro', pageTitle: 't', description: null,
+        image: { kind: 'path', path: l }, text: null,
+      });
+      await deleteItem(db, 'cards', tl.id);
+      await deleteItem(db, 'cards', lk.id);
+      expect(await exists(t)).toBe(false);
+      expect(await exists(l)).toBe(false);
+    });
+
+    it('never deletes seed/ objects', async () => {
+      const seedName = (await db.storage.from('images').list('seed')).data?.find((f) => f.id)?.name;
+      expect(seedName, 'seeded images are required (pnpm seed)').toBeTruthy();
+      const path = `seed/${seedName}`;
+      const mk = (p: string) => ({
+        type: 'images' as const, title: null, images: [{ path: p, alt: 'a', credit: null }], display: 'single' as const, text: null,
+      });
+      const { id } = await saveCard(db, lessonId, mk(path));
+      const other = await put('swap.png');
+      await saveCard(db, lessonId, { id, ...mk(other) });
+      expect(await exists(path)).toBe(true);
+      await saveCard(db, lessonId, { id, ...mk(path) });
+      await deleteItem(db, 'cards', id);
+      expect(await exists(path)).toBe(true);
+    });
   });
 
   it('saves questions of all three types and returns validateQuestion messages', async () => {
@@ -131,7 +271,7 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
   it('getLessonForEdit returns the lesson with ordered items, null for an unknown id', async () => {
     const data = await getLessonForEdit(db, lessonId);
     expect(data?.lesson.title).toBe('[test] nou');
-    expect(data?.cards.map((c) => c.body)).toEqual(['A', 'C']);
+    expect(data?.cards.map((c) => (c.type === 'text' ? c.text : null))).toEqual(['A', 'C']);
     expect(data?.questions.map((q) => q.prompt)).toEqual(['Q3', 'Q2']);
     expect(data?.exercises.map((e) => e.prompt)).toEqual(['E1b']);
     expect(await getLessonForEdit(db, '00000000-0000-0000-0000-000000000000')).toBeNull();
@@ -166,10 +306,10 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
 
   it('fails with a Romanian error when RLS denies writes (anon)', async () => {
     const anonDb = createClient(url!, anon!, { auth: { persistSession: false } });
-    const card = await saveCard(db, lessonId, { body: 'rls' });
+    const card = await saveCard(db, lessonId, { type: 'text', title: null, text: 'rls' });
     for (const call of [
       () => updateLesson(anonDb, lessonId, { title: 'hacked' }),
-      () => saveCard(anonDb, lessonId, { id: card.id, body: 'hacked' }),
+      () => saveCard(anonDb, lessonId, { id: card.id, type: 'text', title: null, text: 'hacked' }),
       () => deleteItem(anonDb, 'cards', card.id),
       () => moveItem(anonDb, 'cards', card.id, 'up'),
     ]) {
@@ -177,6 +317,6 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
       expect(err).toBeInstanceOf(UserError);
       expect((err as Error).message).toBe('Operația a eșuat. Încearcă din nou.');
     }
-    expect((await db.from('cards').select('body').eq('id', card.id).single()).data?.body).toBe('rls');
+    expect((await db.from('cards').select('content').eq('id', card.id).single()).data?.content).toEqual({ text: 'rls' });
   });
 });

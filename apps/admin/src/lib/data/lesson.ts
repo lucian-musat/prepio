@@ -1,34 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { validateQuestion, type DistributiveOmit, type LessonStatus, type Question } from '@prepio/shared';
+import {
+  cardFromRow, cardImagePaths, cardToRow, validateCard, validateQuestion,
+  type Card, type CardRow, type DistributiveOmit, type LessonStatus, type Question,
+} from '@prepio/shared';
 import { GENERIC_ERROR, UserError, check, isUuid, checkAffected, siblings, swapInGroup, renumber, type Direction } from './db';
 
 export { UserError };
 
 export type ItemTable = 'cards' | 'questions' | 'writing_exercises';
 
-export type EditorCard = {
-  id: string;
-  position: number;
-  title: string | null;
-  body: string;
-  image_path: string | null;
-  image_credit: string | null;
-};
+export type EditorCard = Card;
 export type EditorExercise = { id: string; position: number; prompt: string; criteria: string };
 export type LessonForEdit = {
   lesson: { id: string; title: string; status: LessonStatus };
-  cards: EditorCard[];
+  cards: Card[];
   questions: Question[];
   exercises: EditorExercise[];
 };
 
-export type CardInput = {
-  id?: string;
-  title?: string | null;
-  body: string;
-  image_path?: string | null;
-  image_credit?: string | null;
-};
+export type CardInput = DistributiveOmit<Card, 'id' | 'position'> & { id?: string };
 export type QuestionInput = DistributiveOmit<Question, 'id' | 'position'> & { id?: string };
 export type ExerciseInput = { id?: string; prompt: string; criteria: string };
 
@@ -42,13 +32,13 @@ export async function getLessonForEdit(db: SupabaseClient, id: string): Promise<
   const lesson = check(await db.from('lessons').select('id,title,status').eq('id', id).maybeSingle());
   if (!lesson) return null;
   const [cards, questions, exercises] = await Promise.all([
-    db.from('cards').select('id,position,title,body,image_path,image_credit').eq('lesson_id', id).order('position'),
+    db.from('cards').select('id,position,title,type,content').eq('lesson_id', id).order('position'),
     db.from('questions').select('id,position,type,prompt,difficulty,explanation,options').eq('lesson_id', id).order('position'),
     db.from('writing_exercises').select('id,position,prompt,criteria').eq('lesson_id', id).order('position'),
   ]);
   return {
     lesson: lesson as LessonForEdit['lesson'],
-    cards: check(cards) as EditorCard[],
+    cards: (check(cards) as unknown as CardRow[]).map(cardFromRow),
     questions: check(questions) as Question[],
     exercises: check(exercises) as EditorExercise[],
   };
@@ -76,13 +66,61 @@ async function upsert(db: SupabaseClient, table: ItemTable, lessonId: string, id
   return { id: row!.id as string };
 }
 
-export async function saveCard(db: SupabaseClient, lessonId: string, card: CardInput) {
-  if (blank(card.body)) throw new UserError('Textul cartonașului nu poate fi gol.');
-  const fields: Record<string, unknown> = { body: card.body.trim() };
-  if (card.title !== undefined) fields.title = orNull(card.title);
-  if (card.image_path !== undefined) fields.image_path = card.image_path;
-  if (card.image_credit !== undefined) fields.image_credit = orNull(card.image_credit);
-  return upsert(db, 'cards', lessonId, card.id, fields);
+// Optional text fields that an empty string turns into null (everything else only gets trimmed).
+const NULLABLE_KEYS = new Set(['detail', 'details', 'description', 'credit', 'imagePath']);
+
+function trimDeep(v: unknown, key?: string, type?: string): unknown {
+  if (typeof v === 'string') {
+    const t = v.trim();
+    const nullable = NULLABLE_KEYS.has(key ?? '') || (key === 'text' && type !== 'text');
+    return t === '' && nullable ? null : t;
+  }
+  if (Array.isArray(v)) return v.map((x) => trimDeep(x, key, type));
+  if (typeof v === 'object' && v !== null) {
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, trimDeep(x, k, type)]));
+  }
+  return v;
+}
+
+const ownsPath = (lessonId: string, p: string) => p.startsWith(`lessons/${lessonId}/`) || p.startsWith('seed/');
+
+/** Removes uploaded (`lessons/`) objects; `seed/` assets are never touched. Failures are logged, not thrown. */
+async function removeImages(db: SupabaseClient, paths: string[]) {
+  const doomed = paths.filter((p) => p.startsWith('lessons/'));
+  if (!doomed.length) return;
+  try {
+    const { error } = await db.storage.from('images').remove(doomed);
+    if (error) console.error('[lesson] image cleanup error:', error);
+  } catch (e) {
+    console.error('[lesson] image cleanup error:', e);
+  }
+}
+
+async function storedCard(db: SupabaseClient, id: string): Promise<Card | null> {
+  const row = check(await db.from('cards').select('id,position,title,type,content').eq('id', id).maybeSingle());
+  return row ? cardFromRow(row as unknown as CardRow) : null;
+}
+
+export async function saveCard(db: SupabaseClient, lessonId: string, input: CardInput) {
+  // Rebuild from the shared model: coerces types and drops unknown keys; then trim.
+  const raw = cardFromRow({
+    id: input.id ?? 'new', position: 0, title: input.title ?? null, type: input.type, content: input,
+  } as unknown as CardRow);
+  const { id: _id, position: _position, ...rest } = raw;
+  const card = trimDeep(rest, undefined, raw.type) as DistributiveOmit<Card, 'id' | 'position'>;
+  card.title = orNull(card.title);
+  const paths = cardImagePaths(card);
+  if (paths.some((p) => !ownsPath(lessonId, p))) throw new UserError('Imagine invalidă.');
+  const errors = validateCard(card);
+  if (errors.length) throw new UserError(errors.join(' '));
+
+  const old = input.id ? await storedCard(db, input.id) : null;
+  const saved = await upsert(db, 'cards', lessonId, input.id, cardToRow(card));
+  if (old) {
+    const kept = new Set(paths);
+    await removeImages(db, cardImagePaths(old).filter((p) => !kept.has(p)));
+  }
+  return saved;
 }
 
 export async function saveQuestion(db: SupabaseClient, lessonId: string, q: QuestionInput) {
@@ -113,7 +151,9 @@ async function lessonOf(db: SupabaseClient, table: ItemTable, id: string): Promi
 
 export async function deleteItem(db: SupabaseClient, table: ItemTable, id: string) {
   const lessonId = await lessonOf(db, table, id);
+  const old = table === 'cards' ? await storedCard(db, id) : null;
   checkAffected(await db.from(table).delete().eq('id', id).select('id'));
+  if (old) await removeImages(db, cardImagePaths(old));
   const rows = await siblings(db, table, 'lesson_id', lessonId);
   await renumber(db, table, rows.map((r) => r.id), rows);
 }
