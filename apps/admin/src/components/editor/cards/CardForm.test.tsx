@@ -143,6 +143,16 @@ describe('CardForm', () => {
     expect(onSave.mock.calls[0][0]).toMatchObject({ title: 'HărțiX', images: [{ path: 'lessons/l1/new.png', alt: 'Harta' }] });
   });
 
+  it('disables the type picker while an upload is in flight', async () => {
+    let finish: (v: ActionResult<{ path: string }>) => void = () => {};
+    upload.mockReturnValue(new Promise((r) => { finish = r; }));
+    const { user } = setup(imagesCard([]));
+    await user.upload(screen.getByLabelText('Încarcă imagini'), new File(['x'], 'harta.png', { type: 'image/png' }));
+    expect((screen.getByRole('radio', { name: 'Text' }) as HTMLInputElement).disabled).toBe(true);
+    await act(async () => finish({ ok: true, data: { path: 'lessons/l1/new.png' } }));
+    expect((screen.getByRole('radio', { name: 'Text' }) as HTMLInputElement).disabled).toBe(false);
+  });
+
   it('uploads images and adds them to the card', async () => {
     upload.mockResolvedValue({ ok: true, data: { path: 'lessons/l1/new.png' } });
     const { user, onSave } = setup(imagesCard([]));

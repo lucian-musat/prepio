@@ -6,8 +6,12 @@ import { emptyCardContent, validateCard, type Card, type CardType } from '@prepi
 import type { ActionResult } from '@/lib/actionResult';
 import type { CardInput } from '@/lib/data/lesson';
 import ImagesFields from './ImagesFields';
+import LinkFields from './LinkFields';
+import SchemaFields from './SchemaFields';
 import TextFields from './TextFields';
+import TimelineFields from './TimelineFields';
 import TypePicker from './TypePicker';
+import VideoFields from './VideoFields';
 
 export type CardDraft<T extends CardType = CardType> = Extract<CardInput, { type: T }>;
 
@@ -33,6 +37,10 @@ export type FieldsProps<T extends CardType> = {
 export const FIELDS: { [T in CardType]?: ComponentType<FieldsProps<T>> } = {
   text: TextFields,
   images: ImagesFields,
+  video: VideoFields,
+  timeline: TimelineFields,
+  schema: SchemaFields,
+  link: LinkFields,
 };
 
 const newId = () => crypto.randomUUID();
@@ -149,7 +157,7 @@ export default function CardForm({ lessonId, initial, onSave, onCancel, preview 
 
           <div className="mb-3">
             <div className="form-label" aria-hidden>Tipul cardului</div>
-            <TypePicker value={draft.type} onChange={pickType} />
+            <TypePicker value={draft.type} onChange={pickType} disabled={busy} />
             {pendingType && (
               <Alert variant="warning" className="mt-2 mb-0 d-flex flex-wrap align-items-center gap-2">
                 <span className="me-auto">Schimbi tipul? Conținutul specific tipului actual se va pierde.</span>
