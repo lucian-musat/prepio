@@ -5,6 +5,7 @@ import AppLayout from '../../app/(app)/_layout';
 import AuthLayout from '../../app/(auth)/_layout';
 import PrivacyRoute from '../../app/confidentialitate';
 import DeleteAccountRoute from '../../app/sterge-cont';
+import PreviewRoute from '../../app/preview';
 import type { AuthStatus } from './AuthProvider';
 
 let mockStatus: AuthStatus = 'signedOut';
@@ -25,7 +26,12 @@ const routes = {
   '(app)/lesson/[id]': () => <Text>lesson</Text>,
   confidentialitate: PrivacyRoute,
   'sterge-cont': DeleteAccountRoute,
+  preview: PreviewRoute,
 };
+
+// Jest runs as native: the preview page shows its web-only notice, which is enough to prove the route renders.
+const PREVIEW = 'Previzualizarea este disponibilă doar pe web.';
+const SCREENS = ['welcome', 'name', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
 
 it.each([
   ['signedOut', '/', 'welcome'],
@@ -40,11 +46,14 @@ it.each([
   ['signedOut', '/sterge-cont', 'Ștergerea contului'],
   ['needsName', '/sterge-cont', 'Ștergerea contului'],
   ['ready', '/sterge-cont', 'Ștergerea contului'],
+  ['signedOut', '/preview', PREVIEW],
+  ['needsName', '/preview', PREVIEW],
+  ['ready', '/preview', PREVIEW],
 ] as const)('%s at %s shows %s', async (status, initialUrl, expected) => {
   mockStatus = status;
   await renderRouter(routes, { initialUrl });
   expect(await screen.findByText(expected)).toBeTruthy();
-  for (const other of ['welcome', 'name', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului'].filter((t) => t !== expected)) {
+  for (const other of SCREENS.filter((t) => t !== expected)) {
     expect(screen.queryByText(other)).toBeNull();
   }
 });
@@ -52,5 +61,5 @@ it.each([
 it('renders nothing (splash stays up) while the session is loading', async () => {
   mockStatus = 'loading';
   await renderRouter(routes, { initialUrl: '/' });
-  for (const t of ['welcome', 'name', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului']) expect(screen.queryByText(t)).toBeNull();
+  for (const t of SCREENS) expect(screen.queryByText(t)).toBeNull();
 });
