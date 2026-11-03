@@ -69,7 +69,7 @@ const samples: { [K in CardType]: Of<K> } = {
   link: {
     type: 'link',
     url: 'https://example.com',
-    title: 'Ex',
+    pageTitle: 'Ex',
     description: null,
     image: { kind: 'path', path: 'l.jpg' },
     text: null,
@@ -78,13 +78,12 @@ const samples: { [K in CardType]: Of<K> } = {
 
 describe('card rows', () => {
   it.each(CARD_TYPES)('round-trips a %s card', (type) => {
-    // A link card's own `title` is the card title (same property), so it keeps one value.
-    const title = type === 'link' ? 'Ex' : 'T';
+    const title = 'T';
     const row = cardToRow({ ...samples[type], title });
     expect(row.type).toBe(type);
     expect(row.title).toBe(title);
     expect(row.content).not.toHaveProperty('type');
-    if (type !== 'link') expect(row.content).not.toHaveProperty('title');
+    expect(row.content).not.toHaveProperty('title');
     expect(cardFromRow({ id: 'c', position: 3, ...row })).toEqual({
       id: 'c',
       position: 3,
@@ -217,6 +216,6 @@ describe('validateCard', () => {
         'Linkul trebuie să înceapă cu http:// sau https://.',
       );
     }
-    expect(validateCard({ ...samples.link, title: ' ' })).toContain('Titlul linkului nu poate fi gol.');
+    expect(validateCard({ ...samples.link, pageTitle: ' ' })).toContain('Titlul linkului nu poate fi gol.');
   });
 });

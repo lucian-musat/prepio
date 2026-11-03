@@ -61,7 +61,7 @@ export type CardContent =
   | {
       type: 'link';
       url: string;
-      title: string;
+      pageTitle: string;
       description: string | null;
       image: LinkImage | null;
       text: string | null;

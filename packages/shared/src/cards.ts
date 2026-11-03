@@ -41,7 +41,7 @@ export function emptyCardContent(type: CardType, newId: () => string): CardConte
         consequences: [],
       };
     case 'link':
-      return { type, url: '', title: '', description: null, image: null, text: null };
+      return { type, url: '', pageTitle: '', description: null, image: null, text: null };
   }
 }
 
@@ -123,7 +123,7 @@ export function cardFromRow(row: CardRow): Card {
         ...head,
         type: 'link',
         url: str(c.url),
-        title: str(c.title, row.title ?? ''),
+        pageTitle: str(c.pageTitle),
         description: strOrNull(c.description),
         image: linkImage(c.image),
         text: strOrNull(c.text),
@@ -137,9 +137,7 @@ export function cardToRow(card: DistributiveOmit<Card, 'id' | 'position'>): {
   content: Record<string, unknown>;
 } {
   const { title, type, ...content } = card;
-  // A link card's `title` is both the card title and the link title (one property), so it
-  // also stays in `content` to keep the row self-describing.
-  return { title, type, content: type === 'link' ? { ...content, title } : content };
+  return { title, type, content };
 }
 
 /** Storage paths of images owned by the card (URL images are external and excluded). */
@@ -239,7 +237,7 @@ export function validateCard(card: CardContent & { title?: string | null }): str
       if (!/^https?:\/\/\S+/i.test(card.url.trim())) {
         errors.push('Linkul trebuie să înceapă cu http:// sau https://.');
       }
-      if (blank(card.title)) errors.push('Titlul linkului nu poate fi gol.');
+      if (blank(card.pageTitle)) errors.push('Titlul linkului nu poate fi gol.');
       break;
   }
   return errors;
