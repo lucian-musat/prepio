@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  cardFromRow, cardImagePaths, cardToRow, validateCard, validateQuestion,
+  CARD_TYPES, cardFromRow, cardImagePaths, cardToRow, validateCard, validateQuestion,
   type Card, type CardRow, type DistributiveOmit, type LessonStatus, type Question,
 } from '@prepio/shared';
 import { GENERIC_ERROR, UserError, check, isUuid, checkAffected, siblings, swapInGroup, renumber, type Direction } from './db';
@@ -82,13 +82,24 @@ function trimDeep(v: unknown, key?: string, type?: string): unknown {
   return v;
 }
 
-const ownsPath = (lessonId: string, p: string) => p.startsWith(`lessons/${lessonId}/`) || p.startsWith('seed/');
+// Exactly `lessons/<lessonId>/<file>` or `seed/<file>`: one plain segment, so no traversal, nesting or absolute paths.
+const ownsPath = (lessonId: string, p: string) => {
+  const m = /^(?:lessons\/([^/\\]+)|seed)\/([^/\\]+)$/.exec(p);
+  return !!m && m[2] !== '.' && m[2] !== '..' && (m[1] === undefined || m[1] === lessonId);
+};
 
-/** Removes uploaded (`lessons/`) objects; `seed/` assets are never touched. Failures are logged, not thrown. */
-async function removeImages(db: SupabaseClient, paths: string[]) {
-  const doomed = paths.filter((p) => p.startsWith('lessons/'));
-  if (!doomed.length) return;
+/**
+ * Removes uploaded (`lessons/`) objects that no card of the lesson references any more; `seed/` assets are
+ * never touched. Call after the row write. Failures are logged, not thrown.
+ */
+async function removeImages(db: SupabaseClient, lessonId: string, paths: string[]) {
+  const candidates = paths.filter((p) => p.startsWith('lessons/'));
+  if (!candidates.length) return;
   try {
+    const rows = check(await db.from('cards').select('id,position,title,type,content').eq('lesson_id', lessonId));
+    const inUse = new Set((rows as unknown as CardRow[]).flatMap((row) => cardImagePaths(cardFromRow(row))));
+    const doomed = candidates.filter((p) => !inUse.has(p));
+    if (!doomed.length) return;
     const { error } = await db.storage.from('images').remove(doomed);
     if (error) console.error('[lesson] image cleanup error:', error);
   } catch (e) {
@@ -96,12 +107,13 @@ async function removeImages(db: SupabaseClient, paths: string[]) {
   }
 }
 
-async function storedCard(db: SupabaseClient, id: string): Promise<Card | null> {
-  const row = check(await db.from('cards').select('id,position,title,type,content').eq('id', id).maybeSingle());
+async function storedCard(db: SupabaseClient, lessonId: string, id: string): Promise<Card | null> {
+  const row = check(await db.from('cards').select('id,position,title,type,content').eq('id', id).eq('lesson_id', lessonId).maybeSingle());
   return row ? cardFromRow(row as unknown as CardRow) : null;
 }
 
 export async function saveCard(db: SupabaseClient, lessonId: string, input: CardInput) {
+  if (!CARD_TYPES.includes(input?.type)) throw new UserError(GENERIC_ERROR);
   // Rebuild from the shared model: coerces types and drops unknown keys; then trim.
   const raw = cardFromRow({
     id: input.id ?? 'new', position: 0, title: input.title ?? null, type: input.type, content: input,
@@ -114,11 +126,11 @@ export async function saveCard(db: SupabaseClient, lessonId: string, input: Card
   const errors = validateCard(card);
   if (errors.length) throw new UserError(errors.join(' '));
 
-  const old = input.id ? await storedCard(db, input.id) : null;
+  const old = input.id ? await storedCard(db, lessonId, input.id) : null;
   const saved = await upsert(db, 'cards', lessonId, input.id, cardToRow(card));
   if (old) {
     const kept = new Set(paths);
-    await removeImages(db, cardImagePaths(old).filter((p) => !kept.has(p)));
+    await removeImages(db, lessonId, cardImagePaths(old).filter((p) => !kept.has(p)));
   }
   return saved;
 }
@@ -151,9 +163,9 @@ async function lessonOf(db: SupabaseClient, table: ItemTable, id: string): Promi
 
 export async function deleteItem(db: SupabaseClient, table: ItemTable, id: string) {
   const lessonId = await lessonOf(db, table, id);
-  const old = table === 'cards' ? await storedCard(db, id) : null;
+  const old = table === 'cards' ? await storedCard(db, lessonId, id) : null;
   checkAffected(await db.from(table).delete().eq('id', id).select('id'));
-  if (old) await removeImages(db, cardImagePaths(old));
+  if (old) await removeImages(db, lessonId, cardImagePaths(old));
   const rows = await siblings(db, table, 'lesson_id', lessonId);
   await renumber(db, table, rows.map((r) => r.id), rows);
 }

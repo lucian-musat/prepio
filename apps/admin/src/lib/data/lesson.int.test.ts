@@ -195,6 +195,54 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
       expect(await exists(l)).toBe(false);
     });
 
+    it('rejects traversal, empty names, backslashes and absolute paths', async () => {
+      const other = '00000000-0000-0000-0000-000000000001';
+      for (const path of [
+        `lessons/${lessonId}/../${other}/x.png`, 'seed/../lessons/x/y.png', `lessons/${lessonId}/`,
+        `lessons/${lessonId}/a\\b.png`, `/lessons/${lessonId}/x.png`, `lessons/${lessonId}/..`, 'seed/', `lessons/${lessonId}/a/b.png`,
+      ]) {
+        const err = await saveCard(db, lessonId, {
+          type: 'images', title: null, images: [{ path, alt: 'a', credit: null }], display: 'single', text: null,
+        }).then(() => null, (e: unknown) => e);
+        expect((err as Error | null)?.message, path).toBe('Imagine invalidă.');
+      }
+    });
+
+    it('keeps an object still referenced by another card of the lesson', async () => {
+      const shared = await put('shared.png');
+      const mk = (p: string) => ({
+        type: 'images' as const, title: null, images: [{ path: p, alt: 'a', credit: null }], display: 'single' as const, text: null,
+      });
+      const a = await saveCard(db, lessonId, mk(shared));
+      const b = await saveCard(db, lessonId, mk(shared));
+      const other = await put('shared2.png');
+      await saveCard(db, lessonId, { id: a.id, ...mk(other) });
+      expect(await exists(shared)).toBe(true);
+      await deleteItem(db, 'cards', a.id);
+      expect(await exists(shared)).toBe(true);
+      await deleteItem(db, 'cards', b.id);
+      expect(await exists(shared)).toBe(false);
+    });
+
+    it('cannot update a card of another lesson and leaves its images intact', async () => {
+      const n = await createNode(db, rootId, 'node2');
+      const otherLesson = (await createLesson(db, n.id, '[test] other')).id;
+      const path = `lessons/${otherLesson}/keep.png`;
+      await db.storage.from('images').upload(path, PNG, { contentType: 'image/png', upsert: true });
+      uploaded.push(path);
+      const card = await saveCard(db, otherLesson, {
+        type: 'images', title: null, images: [{ path, alt: 'a', credit: null }], display: 'single', text: null,
+      });
+      await expect(saveCard(db, lessonId, { id: card.id, type: 'text', title: null, text: 'x' })).rejects.toThrow();
+      expect(await exists(path)).toBe(true);
+      expect((await db.from('cards').select('type').eq('id', card.id).single()).data?.type).toBe('images');
+    });
+
+    it('rejects an unknown card type', async () => {
+      const err = await saveCard(db, lessonId, { type: 'bogus', title: null } as unknown as CardInput).then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(UserError);
+    });
+
     it('never deletes seed/ objects', async () => {
       const seedName = (await db.storage.from('images').list('seed')).data?.find((f) => f.id)?.name;
       expect(seedName, 'seeded images are required (pnpm seed)').toBeTruthy();
