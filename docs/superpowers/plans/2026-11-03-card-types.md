@@ -55,7 +55,7 @@
     | { type: 'video'; youtubeId: string; startSeconds: number | null; endSeconds: number | null; text: string | null }
     | { type: 'timeline'; points: TimelinePoint[] }
     | { type: 'schema'; causesLabel: string; consequencesLabel: string; causes: SchemaBox[]; central: SchemaBox; consequences: SchemaBox[] }
-    | { type: 'link'; url: string; title: string; description: string | null; image: LinkImage | null; text: string | null };
+    | { type: 'link'; url: string; pageTitle: string; description: string | null; image: LinkImage | null; text: string | null };
   export type Card = { id: string; position: number; title: string | null } & CardContent;
   export type CardRow = { id: string; position: number; title: string | null; type: CardType; content: Record<string, unknown> };
   ```
@@ -72,7 +72,7 @@
     - video id `''` → `'Linkul YouTube nu este valid.'`; start `-1` → `'Secundele nu pot fi negative.'`; start 30 end 30 → `'Secunda de final trebuie să fie după cea de start.'`
     - timeline 1 point → `'Axa cronologică are nevoie de cel puțin 2 puncte.'`; point 2 date blank → `'Punctul 2: data nu poate fi goală.'`; point 1 title blank → `'Punctul 1: titlul nu poate fi gol.'`
     - schema no causes → `'Schema are nevoie de cel puțin o cauză.'`; no consequences → `'Schema are nevoie de cel puțin o urmare.'`; central blank → `'Evenimentul central nu poate fi gol.'`; any blank box → `'Căsuțele schemei nu pot fi goale.'`
-    - link `ftp://x` or `javascript:alert(1)` → `'Linkul trebuie să înceapă cu http:// sau https://.'`; title blank → `'Titlul linkului nu poate fi gol.'`
+    - link `ftp://x` or `javascript:alert(1)` → `'Linkul trebuie să înceapă cu http:// sau https://.'`; pageTitle blank → `'Titlul linkului nu poate fi gol.'`
     - duplicate item ids (points/boxes) → `'Elementele trebuie să aibă identificatori unici.'`
     - a valid card of each type → `[]`.
   - `validation.test.ts`: `validateLesson` with an invalid text card at index 1 → contains `'Cartonașul 2: Textul nu poate fi gol.'`.
