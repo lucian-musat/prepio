@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import type { ActionResult } from '@/lib/actionResult';
 import { GENERIC_ERROR, UserError, type Direction } from '@/lib/data/db';
 import * as lesson from '@/lib/data/lesson';
+import { fetchLinkPreview, type LinkMetadata } from '@/lib/linkPreview';
 import type { CardInput, ExerciseInput, ItemTable, QuestionInput } from '@/lib/data/lesson';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -53,5 +54,14 @@ export async function uploadCardImage(lessonId: string, formData: FormData): Pro
     const file = formData.get('file');
     if (!(file instanceof File)) throw new UserError('Alege o imagine.');
     return lesson.uploadCardImage(db, lessonId, file);
+  });
+}
+/** Fetches a public page for the Link card preview. Reaches the network, so the admin check is explicit. */
+export async function fetchLinkMetadata(url: string): Promise<ActionResult<LinkMetadata>> {
+  return run(async (db) => {
+    const { data: isAdmin, error } = await db.rpc('is_admin');
+    if (error || isAdmin !== true) throw new UserError('Nu ai drepturi de administrator.');
+    if (typeof url !== 'string' || !url.trim()) throw new UserError('Introdu adresa linkului.');
+    return fetchLinkPreview(url);
   });
 }
