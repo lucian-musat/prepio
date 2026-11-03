@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { color, motion, radius, space, type Card } from '@prepio/shared';
-import { imageUrl } from '../lib/content';
-import { AppText, Button, CardTransition, ScreenLayout, Surface, timing } from '../ui';
+import { Button, CardTransition, ScreenLayout, timing } from '../ui';
+import CardView from './cards/CardView';
 import type { LessonFrame } from './QuestionView';
 
-// Prototype `.dots i` / `.dots i.on`, and the card image height.
+// Prototype `.dots i` / `.dots i.on`.
 const DOT = 7;
 const DOT_ACTIVE = 22;
-const IMAGE_HEIGHT = 200;
 
 function Dot({ active }: { active: boolean }) {
   const width = useSharedValue(active ? DOT_ACTIVE : DOT);
@@ -21,42 +20,6 @@ function Dot({ active }: { active: boolean }) {
   }, [active]);
   const style = useAnimatedStyle(() => ({ width: width.value, backgroundColor: bg.value }));
   return <Animated.View style={[styles.dot, style]} />;
-}
-
-function CardView({ card, eyebrow }: { card: Card; eyebrow: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = !!card.imagePath && !imageFailed;
-  return (
-    <Surface padding={5} radius="xl">
-      <AppText role="eyebrow" color="primary">
-        {eyebrow}
-      </AppText>
-      {card.title ? (
-        <AppText role="title" accessibilityRole="header" style={styles.title}>
-          {card.title}
-        </AppText>
-      ) : null}
-      {showImage ? (
-        <View style={styles.figure}>
-          <Image
-            source={{ uri: imageUrl(card.imagePath!) }}
-            accessibilityLabel={`${card.title ?? 'Card'} – ilustrație`}
-            resizeMode="contain"
-            style={styles.image}
-            onError={() => setImageFailed(true)}
-          />
-          {card.imageCredit ? (
-            <AppText role="caption" color="textMuted">
-              {card.imageCredit}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
-      <AppText role="body" style={!card.title && !showImage ? styles.bodyOnly : undefined}>
-        {card.body}
-      </AppText>
-    </Surface>
-  );
 }
 
 type Props = {
@@ -118,10 +81,6 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
 }
 
 const styles = StyleSheet.create({
-  title: { marginTop: space[1.5], marginBottom: space[3] },
-  bodyOnly: { marginTop: space[1.5] },
-  figure: { gap: space[1], marginBottom: space[3] },
-  image: { width: '100%', height: IMAGE_HEIGHT, borderRadius: radius.md },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: space[1.5], marginTop: space[3.5] },
   dot: { height: DOT, borderRadius: radius.pill },
 });

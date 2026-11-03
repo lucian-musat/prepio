@@ -27,7 +27,7 @@ const lesson = (over: Partial<Lesson> = {}): Lesson => ({
   title: 'Lecția test',
   position: 1,
   status: 'published',
-  cards: [{ id: 'c1', position: 1, title: 'Cardul', body: 'Corp card', imagePath: null, imageCredit: null }],
+  cards: [{ id: 'c1', position: 1, title: 'Cardul', type: 'text', text: 'Corp card' }],
   questions: [
     {
       id: 'q1',
@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe('lessonProgress', () => {
   const l = lesson({
-    cards: [1, 2, 3].map((n) => ({ id: `c${n}`, position: n, title: null, body: 'b', imagePath: null, imageCredit: null })),
+    cards: [1, 2, 3].map((n) => ({ id: `c${n}`, position: n, title: null, type: 'text', text: 'b' })),
     exercises: [
       { id: 'e1', position: 1, prompt: 'p', criteria: 'c' },
       { id: 'e2', position: 2, prompt: 'p', criteria: 'c' },

@@ -5,15 +5,7 @@ import CardStepper from './CardStepper';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: () => false } }));
 
-const card = (n: number, extra: Partial<Card> = {}): Card => ({
-  id: `c${n}`,
-  position: n,
-  title: `Titlu ${n}`,
-  body: `Corp ${n}`,
-  imagePath: null,
-  imageCredit: null,
-  ...extra,
-});
+const card = (n: number): Card => ({ id: `c${n}`, position: n, title: `Titlu ${n}`, type: 'text', text: `Corp ${n}` });
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const frame = { title: 'Lecția', progress: 0.2, onBack: jest.fn() };
@@ -76,19 +68,11 @@ it('renders the frame: title, progress and the top bar back button', async () =>
   expect(frame.onBack).toHaveBeenCalled();
 });
 
-it('renders an image with its credit; onError hides both but keeps the text', async () => {
-  await renderStepper([card(1, { imagePath: 'a/b.jpg', imageCredit: 'Wikimedia' })]);
-  const img = screen.getByLabelText('Titlu 1 – ilustrație');
-  expect(screen.getByText('Wikimedia')).toBeTruthy();
-  await fireEvent(img, 'error');
-  expect(screen.queryByLabelText('Titlu 1 – ilustrație')).toBeNull();
-  expect(screen.queryByText('Wikimedia')).toBeNull();
-  expect(screen.getByText('Corp 1')).toBeTruthy();
-});
-
-it('renders text only when the card has no image', async () => {
-  await renderStepper([card(1)]);
-  expect(screen.queryByLabelText('Titlu 1 – ilustrație')).toBeNull();
+it('renders the type chip and eyebrow with the title and body', async () => {
+  await renderStepper([card(1), card(2)]);
+  expect(screen.getByText('Text')).toBeTruthy();
+  expect(screen.getByText('Cartonaș 1 din 2')).toBeTruthy();
+  expect(screen.getByText('Titlu 1')).toBeTruthy();
   expect(screen.getByText('Corp 1')).toBeTruthy();
 });
 

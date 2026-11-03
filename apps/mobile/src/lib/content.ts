@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Card, Lesson, LessonSummary, Question, TreeNode, WritingExercise } from '@prepio/shared';
+import { cardFromRow, type Card, type Lesson, LessonSummary, Question, TreeNode, WritingExercise } from '@prepio/shared';
 import { getSupabase } from './supabase';
 
 export type HomeData = {
@@ -88,14 +88,7 @@ export async function fetchLesson(
   if (error) throw error;
   if (!data) return null;
 
-  const cards: Card[] = (data.cards ?? []).map((c: any) => ({
-    id: c.id,
-    position: c.position,
-    title: c.title,
-    body: c.body,
-    imagePath: c.image_path,
-    imageCredit: c.image_credit,
-  }));
+  const cards: Card[] = (data.cards ?? []).map((c: any) => cardFromRow(c));
   const questions: Question[] = (data.questions ?? []).map((q: any) => ({
     id: q.id,
     position: q.position,

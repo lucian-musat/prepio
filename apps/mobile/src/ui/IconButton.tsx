@@ -12,6 +12,12 @@ const paths = {
   close: 'M18 6L6 18M6 6l12 12',
   up: 'M18 15l-6-6-6 6',
   down: 'M6 9l6 6 6-6',
+  text: 'M4 6h16M4 12h16M4 18h10',
+  images: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M9 9.5a.5.5 0 1 0 .01 0',
+  video: 'M3 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3zM17 10l4-2v8l-4-2',
+  timeline: 'M3 12h18M6 12v-4M12 12v4M18 12v-4M6 7.5v.01M12 16.5v.01M18 7.5v.01',
+  schema: 'M9 4h6v5H9zM3 15h6v5H3zM15 15h6v5h-6zM12 9v3M6 15v-3h12v3',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
 } as const;
 
 export type IconName = keyof typeof paths;

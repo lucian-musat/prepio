@@ -62,8 +62,14 @@ describe('fetchLesson', () => {
           position: 3,
           status: 'published',
           cards: [
-            { id: 'k2', position: 2, title: null, body: 'b2', image_path: null, image_credit: null },
-            { id: 'k1', position: 1, title: 'T', body: 'b1', image_path: 'x.jpg', image_credit: 'Wiki' },
+            { id: 'k2', position: 2, title: null, type: 'text', content: { text: 'b2' } },
+            {
+              id: 'k1',
+              position: 1,
+              title: 'T',
+              type: 'images',
+              content: { images: [{ path: 'x.jpg', alt: 'a', credit: 'Wiki' }], display: 'single', text: 'b1' },
+            },
           ],
           questions: [
             { id: 'q2', position: 2, type: 'single_choice', prompt: 'p2', difficulty: 'easy', explanation: null, options: [] },
@@ -80,8 +86,15 @@ describe('fetchLesson', () => {
     expect(lesson).toMatchObject({ id: 'l1', nodeId: 'n1', status: 'published', position: 3 });
     expect(lesson?.cards.map((c) => c.id)).toEqual(['k1', 'k2']);
     expect(lesson?.cards[0]).toEqual({
-      id: 'k1', position: 1, title: 'T', body: 'b1', imagePath: 'x.jpg', imageCredit: 'Wiki',
+      id: 'k1',
+      position: 1,
+      title: 'T',
+      type: 'images',
+      images: [{ path: 'x.jpg', alt: 'a', credit: 'Wiki' }],
+      display: 'single',
+      text: 'b1',
     });
+    expect(lesson?.cards[1]).toEqual({ id: 'k2', position: 2, title: null, type: 'text', text: 'b2' });
     expect(lesson?.questions.map((q) => q.id)).toEqual(['q1', 'q2']);
     expect(lesson?.exercises.map((e) => e.id)).toEqual(['w1', 'w2']);
     expect(lesson?.exercises[0]).toEqual({ id: 'w1', position: 1, prompt: 'pw1', criteria: 'c1' });

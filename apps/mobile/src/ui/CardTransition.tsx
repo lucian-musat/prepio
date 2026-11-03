@@ -1,10 +1,17 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { motion } from '@prepio/shared';
 import { cardInConfig, cardOutConfig, easing, timing } from './motion';
 
 type Direction = 'next' | 'prev';
+
+const LeavingContext = createContext(false);
+
+/** True inside the outgoing card while it slides away (a renderer can pause video, etc.). */
+export function useCardLeaving(): boolean {
+  return useContext(LeavingContext);
+}
 type Key = string | number;
 
 type Props = {
@@ -54,7 +61,7 @@ function Outgoing({ direction, children }: { direction: Direction; children: Rea
       importantForAccessibility="no-hide-descendants"
       aria-hidden
     >
-      {children}
+      <LeavingContext.Provider value>{children}</LeavingContext.Provider>
     </Animated.View>
   );
 }
