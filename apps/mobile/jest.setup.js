@@ -11,3 +11,10 @@ jest.mock('react-native-gesture-handler', () => {
     useSimultaneousGestures: () => ({}),
   };
 });
+
+// The WebView is a native module (no Jest binding): a plain View stands in, so any screen that renders a
+// video card can load. The video player itself is validated in the browser and on a device.
+jest.mock('react-native-webview', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: View, WebView: View };
+});
