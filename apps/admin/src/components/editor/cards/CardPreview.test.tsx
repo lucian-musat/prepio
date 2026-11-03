@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_READY_MESSAGE } from '@prepio/shared';
 import type { CardInput } from '@/lib/data/lesson';
@@ -41,8 +41,31 @@ describe('CardPreview', () => {
   it('embeds the student /preview page', () => {
     render(<CardPreview draft={draft('a')} index={0} total={1} />);
     expect(screen.getByTitle('Previzualizare card').getAttribute('src')).toBe(`${URL_}/preview`);
-    expect(screen.getByRole('radio', { name: /Telefon/ })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: /Desktop/ })).toBeTruthy();
+    const group = screen.getByRole('radiogroup', { name: 'Dimensiunea previzualizării' });
+    expect((within(group).getByRole('radio', { name: 'Telefon' }) as HTMLInputElement).checked).toBe(true);
+    expect((within(group).getByRole('radio', { name: 'Desktop' }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('does not re-post an unchanged card, but always answers a ready', () => {
+    const { rerender } = render(<CardPreview draft={draft('a')} index={0} total={1} />);
+    const win = fakeWindow();
+    message(PREVIEW_READY_MESSAGE, URL_, win);
+    expect(win.postMessage).toHaveBeenCalledTimes(1);
+
+    // a new but equal draft object (an unrelated re-render)
+    rerender(<CardPreview draft={draft('a')} index={0} total={1} />);
+    act(() => vi.advanceTimersByTime(500));
+    expect(win.postMessage).toHaveBeenCalledTimes(1);
+
+    // a reloaded page sends ready again: the same card is sent again
+    message(PREVIEW_READY_MESSAGE, URL_, win);
+    expect(win.postMessage).toHaveBeenCalledTimes(2);
+
+    // a change, then back to the sent content before the debounce: nothing to send
+    rerender(<CardPreview draft={draft('ab')} index={0} total={1} />);
+    rerender(<CardPreview draft={draft('a')} index={0} total={1} />);
+    act(() => vi.advanceTimersByTime(500));
+    expect(win.postMessage).toHaveBeenCalledTimes(2);
   });
 
   it('posts the card on ready, then once 150 ms after a change, to the student origin', () => {

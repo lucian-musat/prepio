@@ -38,22 +38,25 @@ export default function CardPreview({ draft, index, total }: { draft: CardInput;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const paneRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
+  // serialized last message sent: unchanged drafts (re-renders) are not re-posted
+  const lastSentRef = useRef<string | null>(null);
 
-  const message = useMemo<AdminPreviewMessage>(
-    () => ({ source: 'prepio-admin', kind: 'card', card: { ...draft, id: draft.id ?? 'preview', position: index } as Card, index, total }),
-    [draft, index, total],
-  );
+  const message = useMemo<AdminPreviewMessage>(() => {
+    const card: Card = { ...draft, id: draft.id ?? 'preview', position: index };
+    return { source: 'prepio-admin', kind: 'card', card, index, total };
+  }, [draft, index, total]);
   const messageRef = useRef(message);
 
   useEffect(() => {
     if (!origin) return;
-    const post = () => iframeRef.current?.contentWindow?.postMessage(messageRef.current, origin);
     const onMessage = (e: MessageEvent) => {
       const win = iframeRef.current?.contentWindow;
       if (e.origin !== origin || !win || e.source !== win || !isPreviewReadyMessage(e.data)) return;
       readyRef.current = true;
       setReady(true);
-      post();
+      // a (re)loaded page has nothing yet: always send
+      lastSentRef.current = JSON.stringify(messageRef.current);
+      win.postMessage(messageRef.current, origin);
     };
     window.addEventListener('message', onMessage);
     const timer = setTimeout(() => setTimedOut(true), READY_TIMEOUT_MS);
@@ -66,7 +69,12 @@ export default function CardPreview({ draft, index, total }: { draft: CardInput;
   useEffect(() => {
     messageRef.current = message;
     if (!origin || !readyRef.current) return;
-    const timer = setTimeout(() => iframeRef.current?.contentWindow?.postMessage(messageRef.current, origin), DEBOUNCE_MS);
+    const timer = setTimeout(() => {
+      const serialized = JSON.stringify(messageRef.current);
+      if (serialized === lastSentRef.current) return;
+      lastSentRef.current = serialized;
+      iframeRef.current?.contentWindow?.postMessage(messageRef.current, origin);
+    }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [message, origin]);
 
@@ -94,8 +102,8 @@ export default function CardPreview({ draft, index, total }: { draft: CardInput;
           aria-label="Dimensiunea previzualizării"
           size="sm"
         >
-          <ToggleButton id={`${name}-phone`} value="phone" variant="outline-secondary">📱 Telefon</ToggleButton>
-          <ToggleButton id={`${name}-desktop`} value="desktop" variant="outline-secondary">🖥️ Desktop</ToggleButton>
+          <ToggleButton id={`${name}-phone`} value="phone" variant="outline-secondary">Telefon</ToggleButton>
+          <ToggleButton id={`${name}-desktop`} value="desktop" variant="outline-secondary">Desktop</ToggleButton>
         </ToggleButtonGroup>
       </div>
       {unavailable && <Alert variant="secondary">Previzualizarea nu este disponibilă. Poți salva cardul în continuare.</Alert>}

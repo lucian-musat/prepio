@@ -26,7 +26,6 @@ let student: SupabaseClient;
 let studentId: string | null = null;
 let rootId: string;
 let lessonId: string;
-let imagePath: string | null = null;
 
 async function login(page: Page) {
   await page.goto('/login');
@@ -54,10 +53,29 @@ test.beforeAll(async () => {
   lessonId = (await createLesson(db, node.id, '[test] lecție editor')).id;
 });
 
+// Each step runs even if another fails; failures are reported together.
 test.afterAll(async () => {
-  if (imagePath) await db.storage.from('images').remove([imagePath]);
-  if (rootId) await db.from('nodes').delete().eq('id', rootId); // cascades to the lesson and its content
-  if (studentId) await service.auth.admin.deleteUser(studentId);
+  const failures: string[] = [];
+  const step = async (what: string, fn: () => Promise<{ error: { message: string } | null }>) => {
+    try {
+      const { error } = await fn();
+      if (error) failures.push(`${what}: ${error.message}`);
+    } catch (e) {
+      failures.push(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+  // every upload of the lesson, also when the test failed before reading the saved path
+  if (lessonId) {
+    const folder = `lessons/${lessonId}`;
+    await step(`images in ${folder}`, async () => {
+      const listed = await service.storage.from('images').list(folder, { limit: 1000 });
+      if (listed.error || !listed.data.length) return listed;
+      return service.storage.from('images').remove(listed.data.map((f) => `${folder}/${f.name}`));
+    });
+  }
+  if (rootId) await step(`node ${rootId}`, async () => db.from('nodes').delete().eq('id', rootId)); // cascades
+  if (studentId) await step(`user ${studentId}`, async () => service.auth.admin.deleteUser(studentId!));
+  if (failures.length) throw new Error(`[test] cleanup failed: ${failures.join('; ')}`);
 });
 
 test('lesson editor: card with image, three question types, exercise, reorder, publish, student visibility', async ({ page }) => {
@@ -175,7 +193,7 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
       images: [{ alt: 'Harta Principatelor', credit: 'Wikimedia Commons' }],
     },
   });
-  imagePath = data?.cards[0].content.images[0].path ?? null;
+  const imagePath: string | null = data?.cards[0].content.images[0].path ?? null;
   expect(imagePath).toMatch(new RegExp(`^lessons/${lessonId}/.+\\.png$`));
   expect((await fetch(`${SB_URL}/storage/v1/object/public/images/${imagePath}`)).status).toBe(200);
   expect(data?.questions.map((q: { type: string }) => q.type).sort()).toEqual(['chronological_order', 'multiple_choice', 'single_choice']);

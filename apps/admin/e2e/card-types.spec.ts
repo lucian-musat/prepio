@@ -31,21 +31,37 @@ test.beforeAll(async () => {
   service = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
 });
 
-/** Creates `[test]` root → chapter → lesson; returns the root id (deleting it cascades) and the lesson id. */
-async function createTestLesson(name: string) {
-  const rootId = (await createNode(db, null, `[test] ${name} ${Date.now()}`)).id;
-  const node = await createNode(db, rootId, '[test] capitol');
-  const lessonId = (await createLesson(db, node.id, `[test] ${name}`)).id;
-  return { rootId, lessonId };
+/** Ids of the test rows, recorded as soon as each exists, so a partial setup is still cleaned up. */
+type TestLesson = { rootId?: string; lessonId?: string };
+
+/** Creates `[test]` root → chapter → lesson into `t` (deleting the root cascades to the rest). */
+async function createTestLesson(t: TestLesson, name: string) {
+  t.rootId = (await createNode(db, null, `[test] ${name} ${Date.now()}`)).id;
+  const node = await createNode(db, t.rootId, '[test] capitol');
+  t.lessonId = (await createLesson(db, node.id, `[test] ${name}`)).id;
 }
 
-/** Removes the lesson's uploaded images (saved or not), then the test tree. */
-async function removeTestLesson(t: { rootId: string; lessonId: string } | undefined) {
-  if (!t) return;
-  const folder = `lessons/${t.lessonId}`;
-  const { data: files } = await service.storage.from('images').list(folder, { limit: 1000 });
-  if (files?.length) await service.storage.from('images').remove(files.map((f) => `${folder}/${f.name}`));
-  await db.from('nodes').delete().eq('id', t.rootId);
+/** Removes the lesson's uploaded images (saved or not) and the test tree; each step runs even if the other fails. */
+async function removeTestLesson(t: TestLesson) {
+  const failures: string[] = [];
+  if (t.lessonId) {
+    const folder = `lessons/${t.lessonId}`;
+    try {
+      const listed = await service.storage.from('images').list(folder, { limit: 1000 });
+      if (listed.error) throw listed.error;
+      if (listed.data.length) {
+        const removed = await service.storage.from('images').remove(listed.data.map((f) => `${folder}/${f.name}`));
+        if (removed.error) throw removed.error;
+      }
+    } catch (e) {
+      failures.push(`images in ${folder}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  if (t.rootId) {
+    const { error } = await db.from('nodes').delete().eq('id', t.rootId);
+    if (error) failures.push(`node ${t.rootId}: ${error.message}`);
+  }
+  if (failures.length) throw new Error(`[test] cleanup failed: ${failures.join('; ')}`);
 }
 
 async function login(page: Page) {
@@ -90,9 +106,9 @@ async function fillSchema(form: Locator, cause: string, central: string, consequ
 }
 
 test.describe('card types', () => {
-  let lesson: { rootId: string; lessonId: string } | undefined;
+  const lesson: TestLesson = {};
   test.beforeAll(async () => {
-    lesson = await createTestLesson('tipuri de carduri');
+    await createTestLesson(lesson, 'tipuri de carduri');
   });
   test.afterAll(async () => {
     await removeTestLesson(lesson);
@@ -100,7 +116,7 @@ test.describe('card types', () => {
 
   test('one card of each type, with the live student preview', async ({ page }) => {
     await login(page);
-    await page.goto(`/lessons/${lesson!.lessonId}`);
+    await page.goto(`/lessons/${lesson.lessonId}`);
 
     // Text
     let form = await newCard(page, 'Text', 'Reformele lui Cuza');
@@ -126,9 +142,11 @@ test.describe('card types', () => {
     await addPoint(form, 0, '24 ianuarie 1859', 'Unirea Principatelor');
     await expect(preview(page).getByText('Unirea Principatelor')).toBeVisible();
     await expect(preview(page).getByText('Cartonaș 4 din 4')).toBeVisible();
-    await form.getByText('🖥️ Desktop').click();
+    const size = form.getByRole('radiogroup', { name: 'Dimensiunea previzualizării' });
+    await size.getByText('Desktop', { exact: true }).click();
+    await expect(size.getByRole('radio', { name: 'Desktop', exact: true })).toBeChecked();
     await expect(preview(page).getByText('Unirea Principatelor')).toBeVisible();
-    await form.getByText('📱 Telefon').click();
+    await size.getByText('Telefon', { exact: true }).click();
     await addPoint(form, 1, '1 decembrie 1918', 'Marea Unire');
     await expect(preview(page).getByText('Marea Unire')).toBeVisible();
     await save(page, 4);
@@ -174,13 +192,13 @@ test.describe('card types', () => {
 });
 
 test.describe('card types: long content', () => {
-  let lesson: { rootId: string; lessonId: string } | undefined;
+  const lesson: TestLesson = {};
   test.beforeAll(async () => {
-    lesson = await createTestLesson('conținut lung');
+    await createTestLesson(lesson, 'conținut lung');
   });
   test.afterAll(async () => {
-    if (KEEP) {
-      console.log(`KEEP_TEST_LESSON=1: kept lesson ${lesson?.lessonId} (root node ${lesson?.rootId})`);
+    if (KEEP && lesson.lessonId) {
+      console.log(`KEEP_TEST_LESSON=1: kept lesson ${lesson.lessonId} (root node ${lesson.rootId})`);
       return;
     }
     await removeTestLesson(lesson);
@@ -194,7 +212,7 @@ test.describe('card types: long content', () => {
     expect(url).toHaveLength(120);
 
     await login(page);
-    await page.goto(`/lessons/${lesson!.lessonId}`);
+    await page.goto(`/lessons/${lesson.lessonId}`);
 
     let form = await newCard(page, 'Axă cronologică', 'Cronologia secolului XIX');
     for (let i = 0; i < 20; i++) await addPoint(form, i, `${1800 + i * 5}`, `Evenimentul ${i + 1} din cronologia lungă`);
