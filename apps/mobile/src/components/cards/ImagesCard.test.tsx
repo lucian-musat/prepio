@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Image, Platform, StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { CardContent } from '@prepio/shared';
 import ImagesCard from './ImagesCard';
@@ -57,6 +57,56 @@ it('hides a failed image', async () => {
   expect(screen.getByLabelText('A doua')).toBeTruthy();
 });
 
+const ratio = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style).aspectRatio;
+
+it('sizes an image from the native load event', async () => {
+  await render(<ImagesCard content={make('single')} />);
+  expect(ratio('card-image-0')).toBeCloseTo(16 / 9);
+  await fireEvent(screen.getByTestId('card-image-0'), 'load', { nativeEvent: { source: { width: 300, height: 600 } } });
+  expect(ratio('card-image-0')).toBe(0.5);
+});
+
+it('sizes an image with Image.getSize when the load event has no source (react-native-web)', async () => {
+  const getSize = jest.spyOn(Image, 'getSize').mockImplementation((_uri, ok) => ok(400, 200));
+  try {
+    await render(<ImagesCard content={make('single')} />);
+    // react-native-web passes the DOM load event as nativeEvent: no `source`.
+    await fireEvent(screen.getByTestId('card-image-1'), 'load', { nativeEvent: {} });
+    expect(getSize).toHaveBeenCalledWith('http://x/b.jpg', expect.any(Function), expect.any(Function));
+    expect(ratio('card-image-1')).toBe(2);
+  } finally {
+    getSize.mockRestore();
+  }
+});
+
+// The components set only aria-* (react-native-web 0.21 drops accessibilityState); native Pressable maps them to
+// the host's accessibilityState, so asserting that state proves the aria props are set.
+const state = (el: { props: { accessibilityState?: object } }) => el.props.accessibilityState;
+
+it('images are buttons and gallery thumbnails expose the selected state', async () => {
+  await render(<ImagesCard content={make('gallery')} />);
+  expect(screen.getByRole('button', { name: 'Prima' })).toBeTruthy();
+  const thumb = (n: number) => screen.getByLabelText(new RegExp(`^Miniatura ${n}:`));
+  expect(state(thumb(1))).toMatchObject({ selected: true });
+  expect(state(thumb(2))).toMatchObject({ selected: false });
+  await fireEvent.press(thumb(2));
+  expect(state(thumb(1))).toMatchObject({ selected: false });
+  expect(state(thumb(2))).toMatchObject({ selected: true });
+});
+
+it('a failed image is remembered by path, so reordering or replacing images shows the right ones', async () => {
+  await render(<ImagesCard content={make('single')} />);
+  await fireEvent(screen.getByTestId('card-image-0'), 'error');
+  expect(screen.queryByLabelText('Prima')).toBeNull();
+  // The author removes the failed image: the others keep showing.
+  await screen.rerender(<ImagesCard content={make('single', { images: [images[1], images[2]] })} />);
+  expect(screen.getByLabelText('A doua')).toBeTruthy();
+  expect(screen.getByLabelText('A treia')).toBeTruthy();
+  // The author uploads a replacement in the failed slot: it shows.
+  await screen.rerender(<ImagesCard content={make('single', { images: [{ path: 'd.jpg', alt: 'Înlocuită', credit: null }, images[1]] })} />);
+  expect(screen.getByLabelText('Înlocuită')).toBeTruthy();
+});
+
 it('on web a press zooms the viewer image and a second press resets it', async () => {
   const os = Platform.OS;
   Platform.OS = 'web';
@@ -64,12 +114,45 @@ it('on web a press zooms the viewer image and a second press resets it', async (
     await render(<ImagesCard content={make('single')} />);
     await fireEvent.press(screen.getByLabelText('Prima'));
     const big = () => screen.getByLabelText('Prima (mărită)');
-    expect(big().props.accessibilityState.expanded).toBe(false);
+    expect(state(big())).toMatchObject({ expanded: false });
+    expect(screen.getByRole('button', { name: 'Prima (mărită)' })).toBeTruthy();
     await fireEvent.press(big());
-    expect(big().props.accessibilityState.expanded).toBe(true);
+    expect(state(big())).toMatchObject({ expanded: true });
     await fireEvent.press(big());
-    expect(big().props.accessibilityState.expanded).toBe(false);
+    expect(state(big())).toMatchObject({ expanded: false });
   } finally {
+    Platform.OS = os;
+  }
+});
+
+it('on web a tap after a touch drag (no trailing click) still zooms', async () => {
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  // Capture the pan callbacks the viewer registers (the global mock is a no-op).
+  const rngh = jest.requireMock('react-native-gesture-handler');
+  const usePan = rngh.usePanGesture;
+  let pan: { onBegin?: () => void; onActivate?: () => void } = {};
+  rngh.usePanGesture = (config: typeof pan) => {
+    pan = config;
+    return {};
+  };
+  try {
+    await render(<ImagesCard content={make('single')} />);
+    await fireEvent.press(screen.getByLabelText('Prima'));
+    const big = () => screen.getByLabelText('Prima (mărită)');
+    // Mouse drag: begin, activate, then the trailing click is swallowed.
+    pan.onBegin?.();
+    pan.onActivate?.();
+    await fireEvent.press(big());
+    expect(state(big())).toMatchObject({ expanded: false });
+    // Touch drag: begin, activate, no click. The next tap begins a new gesture and zooms.
+    pan.onBegin?.();
+    pan.onActivate?.();
+    pan.onBegin?.();
+    await fireEvent.press(big());
+    expect(state(big())).toMatchObject({ expanded: true });
+  } finally {
+    rngh.usePanGesture = usePan;
     Platform.OS = os;
   }
 });

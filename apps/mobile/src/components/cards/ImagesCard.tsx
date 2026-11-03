@@ -12,16 +12,26 @@ const THUMB = 64;
 /** A tappable image at its natural aspect ratio (16:9 until loaded). A failed image is reported to the parent, which drops it with its credit. */
 function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; testID: string; onPress: () => void; onFail: () => void }) {
   const [ratio, setRatio] = useState(FALLBACK_RATIO);
+  const uri = imageUrl(image.path);
 
   const onLoad = (e: ImageLoadEvent) => {
-    const { width, height } = e.nativeEvent.source;
-    if (width > 0 && height > 0) setRatio(width / height);
+    // Native passes the decoded size in `source`; react-native-web passes the DOM load event (no `source`).
+    const source = (e.nativeEvent as { source?: { width?: number; height?: number } } | undefined)?.source;
+    if (source?.width && source.height) return setRatio(source.width / source.height);
+    Image.getSize(
+      uri,
+      (w, h) => {
+        if (w > 0 && h > 0) setRatio(w / h);
+      },
+      () => {},
+    );
   };
   return (
-    <Pressable accessibilityRole="imagebutton" accessibilityLabel={image.alt} onPress={onPress}>
+    // "button", not "imagebutton": react-native-web maps "imagebutton" to no role.
+    <Pressable accessibilityRole="button" accessibilityLabel={image.alt} onPress={onPress}>
       <Image
         testID={testID}
-        source={{ uri: imageUrl(image.path) }}
+        source={{ uri }}
         resizeMode="contain"
         onLoad={onLoad}
         onError={onFail}
@@ -35,18 +45,19 @@ function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; t
 export default function ImagesCard({ content }: { content: Extract<CardContent, { type: 'images' }> }) {
   const { images, display, text } = content;
   const [selected, setSelected] = useState(0);
-  const [failed, setFailed] = useState<ReadonlySet<number>>(new Set());
+  // Keyed by path, not index: in the admin live preview the author reorders, removes or replaces images.
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   if (images.length === 0) return null;
 
   const main = Math.min(selected, images.length - 1);
-  const shown = (display === 'gallery' ? [main] : images.map((_, i) => i)).filter((i) => !failed.has(i));
+  const shown = (display === 'gallery' ? [main] : images.map((_, i) => i)).filter((i) => !failed.has(images[i].path));
 
   return (
     <View style={styles.root}>
       {shown.map((i) => (
         <View key={`${images[i].path}-${i}`} style={styles.figure}>
-          <CardImageView image={images[i]} testID={`card-image-${i}`} onPress={() => setViewerIndex(i)} onFail={() => setFailed((f) => new Set(f).add(i))} />
+          <CardImageView image={images[i]} testID={`card-image-${i}`} onPress={() => setViewerIndex(i)} onFail={() => setFailed((f) => new Set(f).add(images[i].path))} />
           {images[i].credit ? (
             <AppText role="caption" color="textMuted">
               {images[i].credit}
@@ -61,7 +72,8 @@ export default function ImagesCard({ content }: { content: Extract<CardContent, 
               key={`${image.path}-${i}`}
               accessibilityRole="button"
               accessibilityLabel={`Miniatura ${i + 1}: ${image.alt}`}
-              accessibilityState={{ selected: i === main }}
+              // aria-selected, not accessibilityState: react-native-web 0.21 drops the latter; native maps both.
+              aria-selected={i === main}
               onPress={() => setSelected(i)}
               style={[styles.thumb, i === main && styles.thumbSelected]}
             >

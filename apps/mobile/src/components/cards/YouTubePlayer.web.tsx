@@ -95,7 +95,6 @@ export default function YouTubePlayer({ videoId, start, end, muted, onError }: Y
     src,
     title: 'Video YouTube',
     allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
-    allowFullScreen: true,
     onLoad,
     style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 },
   });

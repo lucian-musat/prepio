@@ -1,4 +1,5 @@
-﻿import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Linking, Platform } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import * as WebBrowser from 'expo-web-browser';
 import type { CardContent } from '@prepio/shared';
 import LinkCard from './LinkCard';
@@ -31,6 +32,21 @@ it('opens the url in the browser', async () => {
   expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://ro.wikipedia.org/wiki/X');
 });
 
+it('on web opens the url in a new tab without a popup window', async () => {
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  try {
+    await render(<LinkCard content={link()} />);
+    await fireEvent.press(screen.getByRole('button', { name: /Deschide/ }));
+    expect(openURL).toHaveBeenCalledWith('https://ro.wikipedia.org/wiki/X');
+    expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+  } finally {
+    openURL.mockRestore();
+    Platform.OS = os;
+  }
+});
+
 it('never opens a non-http url', async () => {
   await render(<LinkCard content={link({ url: 'javascript:alert(1)' })} />);
   await fireEvent.press(screen.getByRole('button', { name: /Deschide/ }));
@@ -50,6 +66,13 @@ it('hides the image when it fails to load', async () => {
   await render(<LinkCard content={link({ image: { kind: 'url', url: 'https://x.test/a.png' } })} />);
   await fireEvent(screen.getByTestId('link-image'), 'error');
   expect(screen.queryByTestId('link-image')).toBeNull();
+});
+
+it('shows a replacement image after the previous one failed (admin live preview)', async () => {
+  await render(<LinkCard content={link({ image: { kind: 'url', url: 'https://x.test/a.png' } })} />);
+  await fireEvent(screen.getByTestId('link-image'), 'error');
+  await screen.rerender(<LinkCard content={link({ image: { kind: 'path', path: 'cards/b.png' } })} />);
+  expect(screen.getByTestId('link-image').props.source.uri).toContain('cards/b.png');
 });
 
 it('an invalid url still renders the title, without a domain', async () => {

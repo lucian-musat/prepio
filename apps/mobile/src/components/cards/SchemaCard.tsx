@@ -24,7 +24,8 @@ function Box({ box, tone }: { box: SchemaBox; tone: Tone }) {
   );
   const style: StyleProp<ViewStyle> = [styles.box, styles[tone], tone !== 'central' && styles.flexBox];
   return box.detail ? (
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded((e) => !e)} style={style}>
+    // aria-expanded, not accessibilityState: react-native-web 0.21 drops the latter; native maps both.
+    <Pressable accessibilityRole="button" aria-expanded={expanded} onPress={() => setExpanded((e) => !e)} style={style}>
       {body}
     </Pressable>
   ) : (

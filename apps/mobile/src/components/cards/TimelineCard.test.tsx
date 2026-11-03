@@ -29,6 +29,8 @@ it('a key point exposes "moment cheie" in its accessibility label', async () => 
 
 it('pressing a point with details toggles them and the expanded state', async () => {
   await render(<TimelineCard content={timeline([point(1, { details: 'Detalii despre unire' })])} />);
+  // The card sets only aria-expanded (react-native-web 0.21 drops accessibilityState); native Pressable maps it
+  // to the host's accessibilityState, so asserting that state proves the aria prop is set.
   const toggle = screen.getByRole('button');
   expect(toggle.props.accessibilityState).toMatchObject({ expanded: false });
   expect(screen.queryByText('Detalii despre unire')).toBeNull();
@@ -37,6 +39,13 @@ it('pressing a point with details toggles them and the expanded state', async ()
   expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ expanded: true });
   await fireEvent.press(screen.getByRole('button'));
   expect(screen.queryByText('Detalii despre unire')).toBeNull();
+});
+
+it('the label of an expanded point includes its details, so screen readers read them', async () => {
+  await render(<TimelineCard content={timeline([point(1, { details: 'Detalii despre unire' })])} />);
+  expect(screen.getByRole('button').props.accessibilityLabel).toBe('Data 1, Titlu 1');
+  await fireEvent.press(screen.getByRole('button'));
+  expect(screen.getByRole('button').props.accessibilityLabel).toBe('Data 1, Titlu 1. Detalii despre unire');
 });
 
 it('a point without details is not a button', async () => {

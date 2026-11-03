@@ -24,6 +24,7 @@ it('renders zone labels, the central box and every box', async () => {
 it('pressing a box with detail reveals it and sets expanded', async () => {
   await render(<SchemaCard content={schema()} />);
   expect(screen.queryByText('Principiul lui Wilson')).toBeNull();
+  // Only aria-expanded is set (react-native-web 0.21 drops accessibilityState); native maps it to this state.
   const toggle = screen.getByRole('button');
   expect(toggle.props.accessibilityState).toMatchObject({ expanded: false });
   await fireEvent.press(toggle);

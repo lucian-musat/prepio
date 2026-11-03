@@ -41,6 +41,12 @@ function ZoomableImage({ uri, alt }: { uri: string; alt: string }) {
     },
   });
   const pan = usePanGesture({
+    // Every pointer-down starts afresh: a touch drag ends without a click, so the flag must not
+    // survive into the next tap. A mouse drag still sets it before its trailing click.
+    onBegin: () => {
+      'worklet';
+      dragged.value = false;
+    },
     onActivate: () => {
       'worklet';
       dragged.value = true;
@@ -85,7 +91,7 @@ function ZoomableImage({ uri, alt }: { uri: string; alt: string }) {
         }}
       >
         {web ? (
-          <Pressable accessibilityRole="imagebutton" accessibilityLabel={alt} accessibilityState={{ expanded: zoomed }} onPress={toggle} style={styles.fill}>
+          <Pressable accessibilityRole="button" accessibilityLabel={alt} aria-expanded={zoomed} onPress={toggle} style={styles.fill}>
             {image}
           </Pressable>
         ) : (

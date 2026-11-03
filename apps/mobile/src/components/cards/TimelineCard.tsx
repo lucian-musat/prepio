@@ -42,7 +42,14 @@ function TimelineEvent({ point, index }: { point: TimelinePoint; index: number }
     <Enter index={index} style={styles.event}>
       <View style={[styles.dot, point.key && styles.dotKey]} />
       {point.details ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded }} onPress={() => setExpanded((e) => !e)}>
+        // The label replaces the children for screen readers, so it carries the details once expanded.
+        // aria-expanded, not accessibilityState: react-native-web 0.21 drops the latter; native maps both.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? `${label}. ${point.details}` : label}
+          aria-expanded={expanded}
+          onPress={() => setExpanded((e) => !e)}
+        >
           <PointBody point={point} expanded={expanded} />
         </Pressable>
       ) : (

@@ -1,4 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
+import { Linking, Platform } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Card, CardContent } from '@prepio/shared';
@@ -103,6 +104,25 @@ it('when the embed fails it falls back to the thumbnail and a YouTube link', asy
   expect(screen.getByTestId('video-thumbnail').props.source).toEqual({ uri: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' });
   await fireEvent.press(screen.getByRole('button', { name: 'Deschide pe YouTube' }));
   expect(open).toHaveBeenCalledWith('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+});
+
+it('on web the YouTube fallback opens a new tab without a popup window', async () => {
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  const open = jest.mocked(WebBrowser.openBrowserAsync).mockClear();
+  try {
+    await render(<VideoCard content={video()} />);
+    await act(async () => {
+      player().props.onError();
+    });
+    await fireEvent.press(screen.getByRole('button', { name: 'Deschide pe YouTube' }));
+    expect(openURL).toHaveBeenCalledWith('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(open).not.toHaveBeenCalled();
+  } finally {
+    openURL.mockRestore();
+    Platform.OS = os;
+  }
 });
 
 it('an empty id renders no player', async () => {
