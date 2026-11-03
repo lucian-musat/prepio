@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { CardContent } from '@prepio/shared';
 import ImagesCard from './ImagesCard';
@@ -52,7 +53,25 @@ it('hides a failed image', async () => {
   await render(<ImagesCard content={make('single')} />);
   await fireEvent(screen.getByTestId('card-image-0'), 'error');
   expect(screen.queryByLabelText('Prima')).toBeNull();
+  expect(screen.queryByText('Autor A')).toBeNull();
   expect(screen.getByLabelText('A doua')).toBeTruthy();
+});
+
+it('on web a press zooms the viewer image and a second press resets it', async () => {
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    await render(<ImagesCard content={make('single')} />);
+    await fireEvent.press(screen.getByLabelText('Prima'));
+    const big = () => screen.getByLabelText('Prima (mărită)');
+    expect(big().props.accessibilityState.expanded).toBe(false);
+    await fireEvent.press(big());
+    expect(big().props.accessibilityState.expanded).toBe(true);
+    await fireEvent.press(big());
+    expect(big().props.accessibilityState.expanded).toBe(false);
+  } finally {
+    Platform.OS = os;
+  }
 });
 
 it('renders the optional text', async () => {

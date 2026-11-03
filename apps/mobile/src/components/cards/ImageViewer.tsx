@@ -5,19 +5,31 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { color, motion, space, type CardImage } from '@prepio/shared';
 import { AppText, IconButton, timing } from '../../ui';
 import { imageUrl } from '../../lib/content';
+import { clampTranslation } from './zoomMath';
 
 const MAX_SCALE = 4;
 const TAP_SCALE = 2;
 
-/** Pinch to zoom and drag to pan (native). */
-function PinchZoomImage({ uri, alt }: { uri: string; alt: string }) {
+/**
+ * Zoomable image. Native: pinch to zoom, drag to pan. Web: a tap toggles 2x, and a drag pans while zoomed.
+ * Translation is always clamped so the image never leaves the stage.
+ */
+function ZoomableImage({ uri, alt }: { uri: string; alt: string }) {
+  const web = Platform.OS === 'web';
+  const [zoomed, setZoomed] = useState(false);
   const scale = useSharedValue(1);
   const x = useSharedValue(0);
   const y = useSharedValue(0);
+  const width = useSharedValue(0);
+  const height = useSharedValue(0);
+  const dragged = useSharedValue(false);
+
   const pinch = usePinchGesture({
     onUpdate: (e) => {
       'worklet';
       scale.value = Math.min(MAX_SCALE, Math.max(1, scale.value * e.scaleChange));
+      x.value = clampTranslation(x.value, scale.value, width.value);
+      y.value = clampTranslation(y.value, scale.value, height.value);
     },
     onDeactivate: () => {
       'worklet';
@@ -29,42 +41,58 @@ function PinchZoomImage({ uri, alt }: { uri: string; alt: string }) {
     },
   });
   const pan = usePanGesture({
+    onActivate: () => {
+      'worklet';
+      dragged.value = true;
+    },
     onUpdate: (e) => {
       'worklet';
       if (scale.value > 1) {
-        x.value += e.changeX;
-        y.value += e.changeY;
+        x.value = clampTranslation(x.value + e.changeX, scale.value, width.value);
+        y.value = clampTranslation(y.value + e.changeY, scale.value, height.value);
       }
     },
   });
-  const gesture = useSimultaneousGestures(pinch, pan);
+  const both = useSimultaneousGestures(pinch, pan);
   const animated = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }] }));
-  return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.fill, animated]}>
-        <Image source={{ uri }} resizeMode="contain" accessibilityLabel={alt} style={styles.fill} />
-      </Animated.View>
-    </GestureDetector>
-  );
-}
 
-/** A tap toggles 2x zoom (web). */
-function TapZoomImage({ uri, alt }: { uri: string; alt: string }) {
-  const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const toggle = () => {
+    if (dragged.value) {
+      dragged.value = false; // the click that ends a drag is not a tap
+      return;
+    }
+    const next = !zoomed;
+    setZoomed(next);
+    scale.value = withTiming(next ? TAP_SCALE : 1, timing(motion.duration.fast));
+    if (!next) {
+      x.value = withTiming(0, timing(motion.duration.fast));
+      y.value = withTiming(0, timing(motion.duration.fast));
+    }
+  };
+
+  const image = (
+    <Animated.View style={[styles.fill, animated]}>
+      <Image source={{ uri }} resizeMode="contain" accessible={web ? false : undefined} accessibilityLabel={web ? undefined : alt} style={styles.fill} />
+    </Animated.View>
+  );
   return (
-    <Pressable
-      accessibilityRole="imagebutton"
-      accessibilityLabel={alt}
-      onPress={() => {
-        scale.value = withTiming(scale.value > 1 ? 1 : TAP_SCALE, timing(motion.duration.fast));
-      }}
-      style={styles.fill}
-    >
-      <Animated.View style={[styles.fill, animated]}>
-        <Image source={{ uri }} resizeMode="contain" accessible={false} style={styles.fill} />
-      </Animated.View>
-    </Pressable>
+    <GestureDetector gesture={web ? pan : both}>
+      <View
+        style={styles.fill}
+        onLayout={(e) => {
+          width.value = e.nativeEvent.layout.width;
+          height.value = e.nativeEvent.layout.height;
+        }}
+      >
+        {web ? (
+          <Pressable accessibilityRole="imagebutton" accessibilityLabel={alt} accessibilityState={{ expanded: zoomed }} onPress={toggle} style={styles.fill}>
+            {image}
+          </Pressable>
+        ) : (
+          image
+        )}
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -75,7 +103,6 @@ export default function ImageViewer({ images, index, onClose }: { images: CardIm
   if (!image) return null;
   const uri = imageUrl(image.path);
   const alt = `${image.alt} (mărită)`;
-  const Zoomable = Platform.OS === 'web' ? TapZoomImage : PinchZoomImage;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -84,7 +111,7 @@ export default function ImageViewer({ images, index, onClose }: { images: CardIm
           <IconButton icon="close" accessibilityLabel="Închide" onPress={onClose} />
         </View>
         <View style={styles.stage}>
-          <Zoomable key={current} uri={uri} alt={alt} />
+          <ZoomableImage key={current} uri={uri} alt={alt} />
         </View>
         <View style={styles.bottom}>
           {images.length > 1 ? (

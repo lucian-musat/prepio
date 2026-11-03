@@ -9,11 +9,9 @@ import ImageViewer from './ImageViewer';
 const FALLBACK_RATIO = 16 / 9;
 const THUMB = 64;
 
-/** A tappable image at its natural aspect ratio (16:9 until loaded). A failed image renders nothing. */
-function CardImageView({ image, testID, onPress }: { image: CardImage; testID: string; onPress: () => void }) {
+/** A tappable image at its natural aspect ratio (16:9 until loaded). A failed image is reported to the parent, which drops it with its credit. */
+function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; testID: string; onPress: () => void; onFail: () => void }) {
   const [ratio, setRatio] = useState(FALLBACK_RATIO);
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
 
   const onLoad = (e: ImageLoadEvent) => {
     const { width, height } = e.nativeEvent.source;
@@ -26,7 +24,7 @@ function CardImageView({ image, testID, onPress }: { image: CardImage; testID: s
         source={{ uri: imageUrl(image.path) }}
         resizeMode="contain"
         onLoad={onLoad}
-        onError={() => setFailed(true)}
+        onError={onFail}
         accessible={false}
         style={[styles.image, { aspectRatio: ratio }]}
       />
@@ -37,17 +35,18 @@ function CardImageView({ image, testID, onPress }: { image: CardImage; testID: s
 export default function ImagesCard({ content }: { content: Extract<CardContent, { type: 'images' }> }) {
   const { images, display, text } = content;
   const [selected, setSelected] = useState(0);
+  const [failed, setFailed] = useState<ReadonlySet<number>>(new Set());
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   if (images.length === 0) return null;
 
   const main = Math.min(selected, images.length - 1);
-  const shown = display === 'gallery' ? [main] : images.map((_, i) => i);
+  const shown = (display === 'gallery' ? [main] : images.map((_, i) => i)).filter((i) => !failed.has(i));
 
   return (
     <View style={styles.root}>
       {shown.map((i) => (
         <View key={`${images[i].path}-${i}`} style={styles.figure}>
-          <CardImageView image={images[i]} testID={`card-image-${i}`} onPress={() => setViewerIndex(i)} />
+          <CardImageView image={images[i]} testID={`card-image-${i}`} onPress={() => setViewerIndex(i)} onFail={() => setFailed((f) => new Set(f).add(i))} />
           {images[i].credit ? (
             <AppText role="caption" color="textMuted">
               {images[i].credit}
