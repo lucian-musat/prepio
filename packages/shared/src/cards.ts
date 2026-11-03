@@ -53,11 +53,29 @@ const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 const strOrNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const numOrNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const arr = (v: unknown): Json[] => (Array.isArray(v) ? v.map((x) => (isObj(x) ? x : {})) : []);
-const id = (v: unknown, fallback: string) => (typeof v === 'string' && v !== '' ? v : fallback);
 
-const box = (v: unknown, fallbackId: string): SchemaBox => {
+/**
+ * Returns an id allocator for one card: keeps a stored id unless empty or already used,
+ * otherwise falls back to `<prefix>-<i>` (numeric suffix added while still taken).
+ * Guarantees ids are unique within the card.
+ */
+const idAllocator = () => {
+  const used = new Set<string>();
+  return (stored: unknown, prefix: string, i: number): string => {
+    let candidate = typeof stored === 'string' && stored !== '' && !used.has(stored) ? stored : '';
+    if (!candidate) {
+      candidate = `${prefix}-${i}`;
+      for (let n = 2; used.has(candidate); n++) candidate = `${prefix}-${i}-${n}`;
+    }
+    used.add(candidate);
+    return candidate;
+  };
+};
+type Alloc = ReturnType<typeof idAllocator>;
+
+const box = (v: unknown, alloc: Alloc, prefix: string, i: number): SchemaBox => {
   const o = isObj(v) ? v : {};
-  return { id: id(o.id, fallbackId), text: str(o.text), detail: strOrNull(o.detail) };
+  return { id: alloc(o.id, prefix, i), text: str(o.text), detail: strOrNull(o.detail) };
 };
 
 const linkImage = (v: unknown): LinkImage | null => {
@@ -67,9 +85,10 @@ const linkImage = (v: unknown): LinkImage | null => {
   return null;
 };
 
-/** Missing item ids are filled deterministically (`item-<index>`, schema centre `central`). */
+/** Missing or repeated item ids are replaced deterministically (`point-<i>`, `cause-<i>`, `consequence-<i>`, schema centre `central`). */
 export function cardFromRow(row: CardRow): Card {
   const c: Json = isObj(row.content) ? row.content : {};
+  const alloc = idAllocator();
   const head = { id: row.id, position: row.position, title: row.title };
   switch (row.type) {
     case 'text':
@@ -99,7 +118,7 @@ export function cardFromRow(row: CardRow): Card {
         type: 'timeline',
         points: arr(c.points).map(
           (p, i): TimelinePoint => ({
-            id: id(p.id, `item-${i}`),
+            id: alloc(p.id, 'point', i),
             date: str(p.date),
             title: str(p.title),
             details: strOrNull(p.details),
@@ -108,16 +127,21 @@ export function cardFromRow(row: CardRow): Card {
           }),
         ),
       };
-    case 'schema':
+    case 'schema': {
+      // The centre claims its id first so `central` is never taken by a stored item.
+      const co = isObj(c.central) ? c.central : {};
+      const centralId = typeof co.id === 'string' && co.id !== '' ? co.id : 'central';
+      const central = box({ ...co, id: centralId }, alloc, 'central', 0);
       return {
         ...head,
         type: 'schema',
         causesLabel: str(c.causesLabel, 'Cauze'),
         consequencesLabel: str(c.consequencesLabel, 'Urmări'),
-        causes: arr(c.causes).map((b, i) => box(b, `item-${i}`)),
-        central: box(c.central, 'central'),
-        consequences: arr(c.consequences).map((b, i) => box(b, `item-${i}`)),
+        causes: arr(c.causes).map((b, i) => box(b, alloc, 'cause', i)),
+        central,
+        consequences: arr(c.consequences).map((b, i) => box(b, alloc, 'consequence', i)),
       };
+    }
     case 'link':
       return {
         ...head,

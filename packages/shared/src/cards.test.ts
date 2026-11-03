@@ -120,7 +120,7 @@ describe('card rows', () => {
       content: { causes: [{ text: 'a' }, { id: 5, text: 7 }], central: {}, consequences: 'nope' },
     });
     if (card.type !== 'schema') throw new Error('wrong type');
-    expect(card.causes.map((b) => b.id)).toEqual(['item-0', 'item-1']);
+    expect(card.causes.map((b) => b.id)).toEqual(['cause-0', 'cause-1']);
     expect(card.causes[1]!.text).toBe('');
     expect(card.central.id).toBe('central');
     expect(card.consequences).toEqual([]);
@@ -135,6 +135,50 @@ describe('card rows', () => {
       content: { youtubeId: 4, startSeconds: 'x', endSeconds: -3, text: 9 },
     });
     expect(card).toMatchObject({ youtubeId: '', startSeconds: null, endSeconds: -3, text: null });
+  });
+
+  it('gives unique ids to missing ids across causes and consequences', () => {
+    const row = {
+      id: 'c',
+      position: 0,
+      title: null,
+      type: 'schema' as const,
+      content: { causes: [{ text: 'a' }, { text: 'b' }], central: { text: 'x' }, consequences: [{ text: 'c' }, { text: 'd' }] },
+    };
+    const card = cardFromRow(row);
+    if (card.type !== 'schema') throw new Error('wrong type');
+    expect(card.consequences.map((b) => b.id)).toEqual(['consequence-0', 'consequence-1']);
+    expect(card.central.id).toBe('central');
+    expect(validateCard(card)).toEqual([]);
+  });
+
+  it('de-duplicates stored duplicate ids so cardFromRow output passes uniqueness', () => {
+    const schema = cardFromRow({
+      id: 'c',
+      position: 0,
+      title: null,
+      type: 'schema',
+      content: {
+        causes: [{ id: 'a', text: 'a' }, { id: 'a', text: 'b' }, { id: 'central', text: 'c' }],
+        central: { id: 'x', text: 'x' },
+        consequences: [{ id: 'a', text: 'd' }, { id: 'cause-1', text: 'e' }],
+      },
+    });
+    if (schema.type !== 'schema') throw new Error('wrong type');
+    const all = [...schema.causes, schema.central, ...schema.consequences].map((b) => b.id);
+    expect(new Set(all).size).toBe(all.length);
+    expect(validateCard(schema)).not.toContain('Elementele trebuie să aibă identificatori unici.');
+
+    const timeline = cardFromRow({
+      id: 'c',
+      position: 0,
+      title: null,
+      type: 'timeline',
+      content: { points: [{ id: 'p', date: '1', title: 'A' }, { id: 'p', date: '2', title: 'B' }, { date: '3', title: 'C' }] },
+    });
+    if (timeline.type !== 'timeline') throw new Error('wrong type');
+    expect(timeline.points.map((p) => p.id)).toEqual(['p', 'point-1', 'point-2']);
+    expect(validateCard(timeline)).toEqual([]);
   });
 
   it('uses newId for fresh ids', () => {
