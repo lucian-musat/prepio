@@ -5,10 +5,13 @@ import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Surface, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import { deleteAccount } from '../lib/api';
-import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, validateDisplayName } from '../lib/profile';
+import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validateDisplayName } from '../lib/profile';
+import { modeOf, type LearningMode } from '../lib/learningMode';
+import LearningModePicker from '../components/LearningModePicker';
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
+const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
 
 // Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
@@ -24,7 +27,36 @@ export default function ProfileScreen() {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [mode, setMode] = useState<LearningMode>(modeOf(profile));
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeError, setModeError] = useState<string | null>(null);
+  const [modeSaved, setModeSaved] = useState(false);
   const busy = saving || deleting;
+
+  // Saves right away (no button); on failure the picker goes back to the stored mode.
+  const changeMode = async (next: LearningMode) => {
+    if (busy || modeSaving || next === mode) return;
+    const previous = mode;
+    setModeSaved(false);
+    const userId = session?.user.id;
+    if (!userId) {
+      setModeError(OFFLINE);
+      return;
+    }
+    setModeError(null);
+    setMode(next);
+    setModeSaving(true);
+    try {
+      await updateLearningMode(userId, next);
+      await refreshProfile();
+      setModeSaved(true);
+    } catch (e) {
+      setMode(previous);
+      setModeError(messageOf(e, MODE_SAVE_FAILED));
+    } finally {
+      setModeSaving(false);
+    }
+  };
 
   const save = async () => {
     if (busy) return;
@@ -102,6 +134,19 @@ export default function ProfileScreen() {
           <AppText role="caption" color="textMuted">{`Cel mult ${MAX_DISPLAY_NAME_CHARS} de caractere.`}</AppText>
         </View>
         <Button label="Salvează" onPress={save} loading={saving} disabled={deleting} />
+
+        <View style={styles.field}>
+          <AppText role="small" color="textMuted">
+            Mod de învățare
+          </AppText>
+          <LearningModePicker value={mode} onChange={changeMode} disabled={modeSaving || deleting} />
+          {modeError ? (
+            <AppText role="small" color="danger" accessibilityRole="alert">
+              {modeError}
+            </AppText>
+          ) : null}
+          {modeSaved ? <AppText role="small" color="success">Modul a fost salvat.</AppText> : null}
+        </View>
 
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 

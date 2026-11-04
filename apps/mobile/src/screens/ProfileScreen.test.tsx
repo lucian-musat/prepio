@@ -1,16 +1,17 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ProfileScreen from './ProfileScreen';
-import { updateDisplayName } from '../lib/profile';
+import { updateDisplayName, updateLearningMode } from '../lib/profile';
 import { deleteAccount } from '../lib/api';
 
 const mockRefresh = jest.fn();
 const mockSignOut = jest.fn();
+let mockMode = 'guided';
 let mockSession: { user: { id: string } } | null = { user: { id: 'u1' } };
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
     session: mockSession,
-    profile: { id: 'u1', displayName: 'Ana', learningMode: 'guided' },
+    profile: { id: 'u1', displayName: 'Ana', learningMode: mockMode },
     refreshProfile: mockRefresh,
     signOut: mockSignOut,
   }),
@@ -18,6 +19,7 @@ jest.mock('../auth/AuthProvider', () => ({
 jest.mock('../lib/profile', () => ({
   ...jest.requireActual('../lib/profile'),
   updateDisplayName: jest.fn(),
+  updateLearningMode: jest.fn(),
 }));
 jest.mock('../lib/api', () => ({ deleteAccount: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true } }));
@@ -36,6 +38,7 @@ const CONFIRM = 'Ștergi contul definitiv? Numele, emailul și tot ce ține de c
 beforeEach(() => {
   jest.clearAllMocks();
   mockSession = { user: { id: 'u1' } };
+  mockMode = 'guided';
 });
 
 it('shows the current name', async () => {
@@ -67,6 +70,33 @@ it('shows the offline message when renaming without a session', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Salvează' }));
   expect(await screen.findByText(OFFLINE)).toBeTruthy();
   expect(updateDisplayName).not.toHaveBeenCalled();
+});
+
+it('shows the current learning mode in the picker', async () => {
+  mockMode = 'free';
+  await renderScreen();
+  expect(screen.getByText('Mod de învățare')).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Explorare liberă' }).props.accessibilityState).toMatchObject({ checked: true });
+  expect(screen.getByRole('radio', { name: 'Traseu ghidat' }).props.accessibilityState).toMatchObject({ checked: false });
+});
+
+it('saves a changed learning mode immediately, refreshes the profile and confirms', async () => {
+  (updateLearningMode as jest.Mock).mockResolvedValue(undefined);
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('radio', { name: 'Explorare liberă' }));
+  await waitFor(() => expect(updateLearningMode).toHaveBeenCalledWith('u1', 'free'));
+  expect(mockRefresh).toHaveBeenCalled();
+  expect(await screen.findByText('Modul a fost salvat.')).toBeTruthy();
+});
+
+it('reverts the picker and shows the error when saving the mode fails', async () => {
+  (updateLearningMode as jest.Mock).mockRejectedValue(new Error('Modul nu a putut fi salvat.'));
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('radio', { name: 'Explorare liberă' }));
+  expect(await screen.findByText('Modul nu a putut fi salvat.')).toBeTruthy();
+  expect(screen.getByRole('radio', { name: 'Traseu ghidat' }).props.accessibilityState).toMatchObject({ checked: true });
+  expect(screen.queryByText('Modul a fost salvat.')).toBeNull();
+  expect(mockRefresh).not.toHaveBeenCalled();
 });
 
 it('signs out', async () => {
