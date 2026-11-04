@@ -1,4 +1,4 @@
-import { lessonCount } from './lessonCount';
+import { countLabel, lessonCount } from './lessonCount';
 
 it.each([
   [0, '0 lecții'],
@@ -14,4 +14,12 @@ it.each([
   [200, '200 de lecții'],
 ])('%i → %s', (n, label) => {
   expect(lessonCount(n)).toBe(label);
+});
+
+it.each([
+  [1, '1 card'],
+  [2, '2 carduri'],
+  [20, '20 de carduri'],
+])('countLabel %i → %s', (n, label) => {
+  expect(countLabel(n, 'card', 'carduri')).toBe(label);
 });

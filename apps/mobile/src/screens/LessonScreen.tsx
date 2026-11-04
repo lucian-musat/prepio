@@ -1,16 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { space, type Lesson } from '@prepio/shared';
+import { space, type Lesson, type LessonSummary } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { WritingExercise } from '../components/WritingExercise';
-import { fetchLesson } from '../lib/content';
+import { useAuth } from '../auth/AuthProvider';
+import { fetchHome, fetchLesson } from '../lib/content';
+import { modeOf } from '../lib/learningMode';
+import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
+import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { AppText, Button, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import LessonStart from './lesson/LessonStart';
+import { GuidedFailed, GuidedPassed } from './lesson/GuidedResult';
 
-export type Phase = 'cards' | 'questions' | 'exercises' | 'done';
+export type Phase = 'start' | 'cards' | 'questions' | 'exercises' | 'done';
+type Results = LessonPosition['results'];
+/** A phase inside the lesson (everything after the start screen). */
+type Step = Exclude<Phase, 'start'>;
 
-const PHASES: Phase[] = ['cards', 'questions', 'exercises', 'done'];
+const PHASES: Step[] = ['cards', 'questions', 'exercises', 'done'];
 const sizeOf = (lesson: Lesson, phase: Phase) =>
   phase === 'cards'
     ? lesson.cards.length
@@ -21,9 +30,9 @@ const sizeOf = (lesson: Lesson, phase: Phase) =>
         : 1;
 
 /** First phase at or after `from` that has content ("done" always does). */
-const firstNonEmpty = (lesson: Lesson, from: Phase): Phase =>
+const firstNonEmpty = (lesson: Lesson, from: Step): Step =>
   PHASES.slice(PHASES.indexOf(from)).find((p) => sizeOf(lesson, p) > 0) ?? 'done';
-const nextPhase = (lesson: Lesson, current: Phase): Phase =>
+const nextPhase = (lesson: Lesson, current: Step): Step =>
   firstNonEmpty(lesson, PHASES[PHASES.indexOf(current) + 1] ?? 'done');
 
 /**
@@ -35,11 +44,12 @@ export function lessonProgress(lesson: Lesson, phase: Phase, index: number): num
   const q = lesson.questions.length;
   const total = c + q + lesson.exercises.length;
   if (phase === 'done' || total === 0) return 1;
+  if (phase === 'start') return 0;
   const offset = phase === 'cards' ? 0 : phase === 'questions' ? c : c + q;
   return Math.min(1, (offset + index + 1) / total);
 }
 
-function Message({ title, body }: { title: string; body?: string }) {
+function Message({ title, body, onRetry }: { title: string; body?: string; onRetry?: () => void }) {
   return (
     <ScreenLayout title="Lecție" onBack={goBackOrHome}>
       <Surface style={styles.message}>
@@ -49,80 +59,160 @@ function Message({ title, body }: { title: string; body?: string }) {
             {body}
           </AppText>
         ) : null}
-        <Button label="Înapoi la lecții" onPress={() => router.replace('/')} />
+        {onRetry ? <Button label="Reîncearcă" onPress={onRetry} /> : null}
+        <Button
+          label="Înapoi la lecții"
+          variant={onRetry ? 'secondary' : 'primary'}
+          onPress={() => router.replace('/')}
+        />
       </Surface>
     </ScreenLayout>
   );
 }
 
+function Loading() {
+  return (
+    <ScreenLayout title="Lecție" onBack={goBackOrHome}>
+      <View style={styles.loader}>
+        <Spinner />
+      </View>
+    </ScreenLayout>
+  );
+}
+
+type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress };
+/** The end of an attempt; `saving` / `error` while the finished mark is being written. */
+type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error'; error?: string };
+
+/** Position writes never block the student: a failure is only logged. */
+const save = (lessonId: string, position: LessonPosition | null) =>
+  savePosition(lessonId, position).catch((e) => console.warn('Could not save the lesson position', e));
+
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [lesson, setLesson] = useState<Lesson | null | undefined>(undefined);
+  const mode = modeOf(useAuth().profile);
+  const [data, setData] = useState<Loaded | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
-  const [phase, setPhase] = useState<Phase>('cards');
-  const [cIndex, setCIndex] = useState(0);
-  const [qIndex, setQIndex] = useState(0);
-  const [eIndex, setEIndex] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
+  const [reload, setReload] = useState(0);
+  const [phase, setPhase] = useState<Phase>('start');
+  const [index, setIndex] = useState(0);
+  const [results, setResults] = useState<Results>({});
+  const [end, setEnd] = useState<End | null>(null);
+  const mounted = useRef(true);
 
   useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Lesson, order and progress load together; a new id (next lesson) starts again at the start screen.
+  useEffect(() => {
     let cancelled = false;
-    setLesson(undefined);
+    setData(undefined);
     setFailed(false);
-    fetchLesson(String(id)).then(
-      (l) => {
-        if (cancelled) return;
-        setLesson(l);
-        if (l) setPhase(firstNonEmpty(l, 'cards'));
-      },
+    setPhase('start');
+    setEnd(null);
+    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress()]).then(
+      ([lesson, home, progress]) => !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress } : null),
       () => !cancelled && setFailed(true),
     );
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reload]);
 
   if (failed) {
-    return <Message title="Nu am putut încărca lecția" body="Verifică conexiunea la internet și încearcă din nou." />;
+    return (
+      <Message
+        title="Nu am putut încărca lecția"
+        body="Verifică conexiunea la internet și încearcă din nou."
+        onRetry={() => setReload((n) => n + 1)}
+      />
+    );
+  }
+  if (data === undefined) return <Loading />;
+  if (data === null) return <Message title="Lecția nu a fost găsită" />;
+
+  const { lesson, order, progress } = data;
+  if (mode === 'guided' && lessonAccess(order, progress.finished, mode).get(lesson.id) === 'locked') {
+    return <Message title="Lecția este blocată" body="Termină mai întâi lecțiile de dinainte, în ordine." />;
   }
 
-  if (lesson === undefined) {
+  // Writes the finished mark; the result content waits for it, a failure offers a retry.
+  const commit = (outcome: AttemptOutcome) => {
+    setEnd({ outcome, status: 'saving' });
+    markFinished(lesson.id).then(
+      () => mounted.current && setEnd({ outcome, status: 'saved' }),
+      (e: Error) => mounted.current && setEnd({ outcome, status: 'error', error: e.message }),
+    );
+  };
+
+  const finish = (r: Results) => {
+    const outcome = attemptOutcome(lesson, r);
+    setPhase('done');
+    if (mode === 'guided' && !outcome.passed) {
+      // Not finished (and a finished lesson stays finished): only the attempt is cleared.
+      setEnd({ outcome, status: 'saved' });
+      save(lesson.id, null);
+    } else {
+      commit(outcome);
+    }
+  };
+
+  const goTo = (to: Step, i: number, r: Results) => {
+    if (to === 'done') return finish(r);
+    setPhase(to);
+    setIndex(i);
+    setResults(r);
+    save(lesson.id, { phase: to, index: i, results: r });
+  };
+  const startCards = () => goTo('cards', 0, {});
+  const startTest = () => goTo(firstNonEmpty(lesson, 'questions'), 0, {});
+
+  if (phase === 'start') {
+    const resume = resumePoint(lesson, progress.positions.get(lesson.id) ?? null);
     return (
-      <ScreenLayout title="Lecție" onBack={goBackOrHome}>
-        <View style={styles.loader}>
-          <Spinner />
-        </View>
-      </ScreenLayout>
+      <LessonStart
+        lesson={lesson}
+        guided={mode === 'guided'}
+        onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
+        onLearn={startCards}
+        onSkip={startTest}
+      />
     );
   }
 
-  if (lesson === null) return <Message title="Lecția nu a fost găsită" />;
+  if (phase === 'done') {
+    return (
+      <LessonEnd
+        {...data}
+        mode={mode}
+        end={end}
+        onRetrySave={commit}
+        onReviewCards={startCards}
+        onRetake={startTest}
+      />
+    );
+  }
 
-  const advance = () => setPhase(nextPhase(lesson, phase));
-  const question = lesson.questions[qIndex];
-  const exercise = lesson.exercises[eIndex];
-
-  const nextQuestion = () => {
-    if (qIndex + 1 < lesson.questions.length) setQIndex(qIndex + 1);
-    else advance();
-  };
-  const nextExercise = () => {
-    if (eIndex + 1 < lesson.exercises.length) setEIndex(eIndex + 1);
-    else advance();
-  };
-
-  const index = phase === 'cards' ? cIndex : phase === 'questions' ? qIndex : phase === 'exercises' ? eIndex : 0;
   const frame = (title: string): LessonFrame => ({ title, progress: lessonProgress(lesson, phase, index), onBack: goBackOrHome });
+  const question = lesson.questions[index];
+  const exercise = lesson.exercises[index];
+  const advance = () => goTo(nextPhase(lesson, phase), 0, results);
   const somethingAfterCards = lesson.questions.length + lesson.exercises.length > 0;
+  const nextIn = (size: number) => () => (index + 1 < size ? goTo(phase, index + 1, results) : advance());
 
   if (phase === 'cards') {
     return (
       <CardStepper
         cards={lesson.cards}
+        initialIndex={index}
         onFinish={advance}
         frame={frame(lesson.title)}
         finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
-        onIndexChange={setCIndex}
+        onIndexChange={(i) => goTo('cards', i, results)}
       />
     );
   }
@@ -132,12 +222,10 @@ export default function LessonScreen() {
       <QuestionView
         key={question.id}
         question={question}
-        frame={frame(`Întrebarea ${qIndex + 1} din ${lesson.questions.length}`)}
-        onAnswered={(ok) => {
-          if (ok) setCorrectCount((n) => n + 1);
-        }}
-        onNext={nextQuestion}
-        nextLabel={qIndex + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
+        frame={frame(`Întrebarea ${index + 1} din ${lesson.questions.length}`)}
+        onAnswered={(ok) => goTo('questions', index, { ...results, [question.id]: ok })}
+        onNext={nextIn(lesson.questions.length)}
+        nextLabel={index + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
       />
     );
   }
@@ -147,14 +235,48 @@ export default function LessonScreen() {
       <WritingExercise
         key={exercise.id}
         exercise={exercise}
-        frame={frame(`Exercițiul ${eIndex + 1} din ${lesson.exercises.length}`)}
-        nextLabel={eIndex + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
-        onNext={nextExercise}
+        frame={frame(`Exercițiul ${index + 1} din ${lesson.exercises.length}`)}
+        nextLabel={index + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
+        onNext={nextIn(lesson.exercises.length)}
       />
     );
   }
 
-  return <LessonDone title={lesson.title} correct={correctCount} total={lesson.questions.length} />;
+  return <Loading />;
+}
+
+type EndProps = Loaded & {
+  mode: 'guided' | 'free';
+  end: End | null;
+  onRetrySave: (outcome: AttemptOutcome) => void;
+  onReviewCards: () => void;
+  onRetake: () => void;
+};
+
+/** The screen after the last step: waits for the finished mark, then the free or guided result. */
+function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCards, onRetake }: EndProps) {
+  if (!end || end.status === 'saving') return <Loading />;
+  const { outcome } = end;
+  if (end.status === 'error') {
+    return (
+      <ScreenLayout title="Lecție" onBack={goBackOrHome} actions={<Button flex label="Reîncearcă" onPress={() => onRetrySave(outcome)} />}>
+        <Surface style={styles.message}>
+          <AppText role="small" color="danger" accessibilityRole="alert">
+            {end.error}
+          </AppText>
+        </Surface>
+      </ScreenLayout>
+    );
+  }
+  if (mode === 'free') return <LessonDone title={lesson.title} correct={outcome.correct} total={outcome.total} />;
+  if (!outcome.passed) {
+    return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
+  }
+  const at = order.findIndex((l) => l.id === lesson.id);
+  const next = at >= 0 ? order[at + 1] : undefined;
+  // "Ai deblocat" only on the pass that actually opened the next lesson, not on a redo.
+  const unlocked = next && !progress.finished.has(lesson.id) ? next.title : undefined;
+  return <GuidedPassed outcome={outcome} unlocked={unlocked} nextId={next?.id} />;
 }
 
 /** 🎓 that pops in (prototype `.done-wrap .big`: `pop 600ms` spring). */

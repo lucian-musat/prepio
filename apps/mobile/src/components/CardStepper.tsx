@@ -43,6 +43,8 @@ type Props = {
   finishLabel?: string;
   /** Reports the current card so the lesson can update its progress bar. */
   onIndexChange?: (index: number) => void;
+  /** Card to open on (a resumed lesson); default the first. */
+  initialIndex?: number;
 };
 
 /**
@@ -50,8 +52,8 @@ type Props = {
  * On touch screens the card can also be swiped (left = next, right = previous); the buttons stay the primary,
  * accessible path, and only the button finishes the lesson.
  */
-export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Continuă', onIndexChange }: Props) {
-  const [index, setIndex] = useState(0);
+export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Continuă', onIndexChange, initialIndex = 0 }: Props) {
+  const [index, setIndex] = useState(initialIndex);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   // The last change came from a swipe: the old card already flew off, so CardTransition skips its exit.
   const [swiped, setSwiped] = useState(false);

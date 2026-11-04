@@ -215,3 +215,14 @@ describe('swipe between cards', () => {
     }
   });
 });
+
+it('starts on initialIndex', async () => {
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <CardStepper cards={[card(1), card(2), card(3)]} onFinish={jest.fn()} frame={frame} initialIndex={1} />
+    </SafeAreaProvider>,
+  );
+  expect(screen.getByText('Corp 2')).toBeTruthy();
+  expect(screen.getByText('Cartonaș 2 din 3')).toBeTruthy();
+  expect(isDisabled(bar().getByRole('button', { name: PREV }))).toBe(false);
+});
