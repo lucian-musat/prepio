@@ -5,7 +5,7 @@ import { fetchProfile, type Profile } from '../lib/profile';
 import { getSupabase, isAuthRejection, signOut as signOutSession, withTimeout } from '../lib/supabase';
 import { signOutGoogle } from './google';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'needsName' | 'ready';
+export type AuthStatus = 'loading' | 'signedOut' | 'needsName' | 'needsMode' | 'ready';
 
 export type AuthContextValue = {
   status: AuthStatus;
@@ -32,9 +32,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * A profile that could not be loaded (offline, outage, timeout) lets the student in rather than asking a
  * returning student for their name again; it is retried on the next foreground / auth event.
  */
-function statusFor(profile: Profile | null, loadFailed: boolean): AuthStatus {
-  if (profile?.displayName) return 'ready';
-  return loadFailed ? 'ready' : 'needsName';
+export function statusFor(profile: Profile | null, loadFailed: boolean): AuthStatus {
+  if (!profile?.displayName) return loadFailed ? 'ready' : 'needsName';
+  return profile.learningMode ? 'ready' : 'needsMode';
 }
 
 /** `ready` without a profile or session: something failed to load and is worth retrying. */
@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'INITIAL_SESSION') return; // handled by restore()
       if (event === 'SIGNED_OUT' || !session) return setSignedOut();
       const cur = stateRef.current;
-      const settled = cur.status === 'ready' || cur.status === 'needsName';
+      const settled = cur.status === 'ready' || cur.status === 'needsName' || cur.status === 'needsMode';
       if (settled && cur.profile && session.user.id === userId.current) {
         // Same student, everything loaded: swap the session (new token) without reloading or changing screen.
         const next = { ...cur, session };

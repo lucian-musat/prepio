@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchProfile, updateDisplayName, validateDisplayName } from './profile';
+import { fetchProfile, updateDisplayName, updateLearningMode, validateDisplayName } from './profile';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 
@@ -45,18 +45,22 @@ describe('validateDisplayName', () => {
 
 describe('fetchProfile', () => {
   it('reads the own profile row and maps display_name', async () => {
-    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana' }, error: null });
-    await expect(fetchProfile(USER, client)).resolves.toEqual({ id: USER, displayName: 'Ana' });
+    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana', learning_mode: 'free' }, error: null });
+    await expect(fetchProfile(USER, client)).resolves.toEqual({
+      id: USER,
+      displayName: 'Ana',
+      learningMode: 'free',
+    });
     expect(from).toHaveBeenCalledWith('profiles');
-    expect(calls).toContainEqual(['select', ['id,display_name']]);
+    expect(calls).toContainEqual(['select', ['id,display_name,learning_mode']]);
     expect(calls).toContainEqual(['eq', ['id', USER]]);
   });
 
   it('returns null when there is no row and keeps a null name', async () => {
     await expect(fetchProfile(USER, fakeClient({ data: null, error: null }).client)).resolves.toBeNull();
     await expect(
-      fetchProfile(USER, fakeClient({ data: { id: USER, display_name: null }, error: null }).client),
-    ).resolves.toEqual({ id: USER, displayName: null });
+      fetchProfile(USER, fakeClient({ data: { id: USER, display_name: null, learning_mode: null }, error: null }).client),
+    ).resolves.toEqual({ id: USER, displayName: null, learningMode: null });
   });
 
   it('throws on a query error', async () => {
@@ -86,6 +90,25 @@ describe('updateDisplayName', () => {
     ).rejects.toThrow('down');
     await expect(updateDisplayName(USER, 'Ana', fakeClient({ data: [], error: null }).client)).rejects.toThrow(
       'Numele nu a putut fi salvat. Încearcă din nou.',
+    );
+  });
+});
+
+describe('updateLearningMode', () => {
+  it('saves the mode on the own row', async () => {
+    const { client, from, calls } = fakeClient({ data: [{ id: USER }], error: null });
+    await updateLearningMode(USER, 'free', client);
+    expect(from).toHaveBeenCalledWith('profiles');
+    expect(calls).toContainEqual(['update', [{ learning_mode: 'free' }]]);
+    expect(calls).toContainEqual(['eq', ['id', USER]]);
+  });
+
+  it('throws when the update fails or touches no row', async () => {
+    await expect(
+      updateLearningMode(USER, 'guided', fakeClient({ data: null, error: new Error('down') }).client),
+    ).rejects.toThrow('down');
+    await expect(updateLearningMode(USER, 'guided', fakeClient({ data: [], error: null }).client)).rejects.toThrow(
+      'Modul nu a putut fi salvat. Încearcă din nou.',
     );
   });
 });

@@ -7,7 +7,11 @@ import { fetchHome } from '../lib/content';
 
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
-let mockProfile: { id: string; displayName: string | null } | null = { id: 'u1', displayName: 'ana' };
+let mockProfile: { id: string; displayName: string | null; learningMode: 'guided' | 'free' | null } | null = {
+  id: 'u1',
+  displayName: 'ana',
+  learningMode: 'guided',
+};
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockProfile }) }));
 
 const mockedFetch = fetchHome as jest.Mock;
@@ -28,7 +32,7 @@ const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', 
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockProfile = { id: 'u1', displayName: 'ana' };
+  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided' };
 });
 
 it('shows a profile button with the initial and opens the profile', async () => {
@@ -40,7 +44,7 @@ it('shows a profile button with the initial and opens the profile', async () => 
 });
 
 it('falls back to a question mark when the student has no name', async () => {
-  mockProfile = { id: 'u1', displayName: null };
+  mockProfile = { id: 'u1', displayName: null, learningMode: null };
   mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
   await renderHome();
   expect(screen.getByText('?')).toBeTruthy();

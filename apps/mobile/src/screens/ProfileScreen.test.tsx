@@ -10,7 +10,7 @@ let mockSession: { user: { id: string } } | null = { user: { id: 'u1' } };
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
     session: mockSession,
-    profile: { id: 'u1', displayName: 'Ana' },
+    profile: { id: 'u1', displayName: 'Ana', learningMode: 'guided' },
     refreshProfile: mockRefresh,
     signOut: mockSignOut,
   }),
