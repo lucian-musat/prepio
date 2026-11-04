@@ -10,6 +10,7 @@
     "test:int": "vitest run --config vitest.int.config.ts",
     "seed": "tsx src/seed.ts",
     "add-cards": "tsx src/addCards.ts",
+    "remove-test-lessons": "tsx src/removeTestLessons.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

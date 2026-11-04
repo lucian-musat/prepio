@@ -20,7 +20,8 @@
     "db:cloud:status": "bash scripts/supabase-cloud.sh migration list --linked",
     "db:cloud:push:dry": "bash scripts/supabase-cloud.sh db push --linked --dry-run",
     "db:cloud:push": "bash scripts/supabase-cloud.sh db push --linked",
-    "content:cloud:add-cards": "bash scripts/content-cloud.sh"
+    "content:cloud:add-cards": "bash scripts/content-cloud.sh add-cards",
+    "content:cloud:remove-test-lessons": "bash scripts/content-cloud.sh remove-test-lessons"
   },
   "devDependencies": {
     "supabase": "^2.122.0"
