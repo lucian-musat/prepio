@@ -21,6 +21,7 @@ const routes = {
   '(auth)/_layout': AuthLayout,
   '(auth)/index': () => <Text>welcome</Text>,
   '(onboarding)/name': () => <Text>name</Text>,
+  '(onboarding)/mode': () => <Text>mode</Text>,
   '(app)/_layout': AppLayout,
   '(app)/index': () => <Text>home</Text>,
   '(app)/lesson/[id]': () => <Text>lesson</Text>,
@@ -31,13 +32,15 @@ const routes = {
 
 // Jest runs as native: the preview page shows its web-only notice, which is enough to prove the route renders.
 const PREVIEW = 'Previzualizarea este disponibilă doar pe web.';
-const SCREENS = ['welcome', 'name', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
+const SCREENS = ['welcome', 'name', 'mode', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
 
 it.each([
   ['signedOut', '/', 'welcome'],
   ['signedOut', '/lesson/abc', 'welcome'],
   ['needsName', '/', 'name'],
   ['needsName', '/lesson/abc', 'name'],
+  ['needsMode', '/', 'mode'],
+  ['needsMode', '/lesson/abc', 'mode'],
   ['ready', '/', 'home'],
   ['ready', '/lesson/abc', 'lesson'],
   ['signedOut', '/confidentialitate', 'Politica de confidențialitate'],

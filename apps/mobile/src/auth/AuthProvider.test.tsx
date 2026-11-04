@@ -204,6 +204,16 @@ it('refreshProfile moves needsName → ready once the name is saved', async () =
   expect(state()).toBe('ready|Ana|access-1');
 });
 
+it('refreshProfile moves needsMode → ready once the mode is saved', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: null });
+  await renderAuth();
+  await waitForState('needsMode|Ana|access-1');
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  await act(() => latest.refreshProfile());
+  expect(state()).toBe('ready|Ana|access-1');
+});
+
 it('signOut() signs out through the shared lib signOut and ends signedOut', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   mockLibSignOut.mockResolvedValue(undefined);
