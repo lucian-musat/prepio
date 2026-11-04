@@ -69,26 +69,36 @@ export default function HomeScreen() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const { profile } = useAuth();
   const loaded = useRef(false);
+  const cancel = useRef<(() => void) | undefined>(undefined);
 
   // Home and progress load together. A refresh on refocus (back from a lesson) keeps the stale
   // list on screen and ignores a failure; only the first load shows the error surface.
   const fetchAll = useCallback(() => {
+    cancel.current?.(); // a newer load supersedes an in-flight one
     let live = true;
     Promise.all([fetchHome(), fetchProgress()]).then(
       ([home, prog]) => {
         if (!live) return;
         loaded.current = true;
+        setFailed(false);
         setData(home);
         setProgress(prog);
       },
       () => live && !loaded.current && setFailed(true),
     );
-    return () => {
+    cancel.current = () => {
       live = false;
     };
+    return cancel.current;
   }, []);
 
-  useFocusEffect(fetchAll);
+  // Blur / unmount cancels whichever load is latest, including one started by retry.
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+      return () => cancel.current?.();
+    }, [fetchAll]),
+  );
 
   const retry = () => {
     setFailed(false);

@@ -81,3 +81,12 @@ it('keeps the plain look for open lessons', async () => {
   expect(screen.queryByText('Continuă')).toBeNull();
   expect(screen.queryByText('🔒')).toBeNull();
 });
+
+it('does not animate a locked row on hover or press', async () => {
+  await render(<LessonListItem index={0} title="Lecția" state="locked" onPress={() => {}} />);
+  const row = screen.getByRole('button', { name: 'Lecția, blocată' });
+  await fireEvent(row, 'hoverIn');
+  await fireEvent(row, 'pressIn');
+  await act(async () => jest.advanceTimersByTime(400));
+  expect(transform()).toMatchObject({ scale: 1, translateY: 0 });
+});

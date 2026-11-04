@@ -7,11 +7,31 @@ import { fetchHome } from '../lib/content';
 import { fetchProgress } from '../lib/progress';
 
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
+const mockFocusListeners = new Set<() => void>();
+const mockRefocus = () => act(async () => mockFocusListeners.forEach((l) => l()));
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
 // useFocusEffect runs its callback once, like an effect (the screen is focused on mount).
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
-  return { router: { push: jest.fn() }, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
+  return {
+    router: { push: jest.fn() },
+    // Runs on mount and again whenever a test calls `mockRefocus()`.
+    useFocusEffect: (cb: () => void | (() => void)) => {
+      useEffect(() => {
+        const run = () => cb();
+        let cleanup = run();
+        const listener = () => {
+          cleanup?.();
+          cleanup = run();
+        };
+        mockFocusListeners.add(listener);
+        return () => {
+          mockFocusListeners.delete(listener);
+          cleanup?.();
+        };
+      }, [cb]);
+    },
+  };
 });
 let mockProfile: { id: string; displayName: string | null; learningMode: 'guided' | 'free' | null } | null = {
   id: 'u1',
@@ -225,5 +245,37 @@ describe('lesson states', () => {
     expect(await screen.findByText('Unu')).toBeTruthy();
     expect(mockedFetch).toHaveBeenCalledTimes(2);
     expect(mockedProgress).toHaveBeenCalledTimes(2);
+  });
+
+  it('refocus after a lesson updates the states', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    await renderHome();
+    await screen.findByText('Unu');
+    mockedProgress.mockResolvedValue(progressOf('l1', 'l2'));
+    await mockRefocus();
+    expect(await screen.findByText('🧭 Traseu ghidat · 2 din 3 terminate')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Trei' })).toBeTruthy();
+    expect(screen.getAllByText('Terminată')).toHaveLength(2);
+  });
+
+  it('a failed refocus keeps the stale list', async () => {
+    threeLessons();
+    await renderHome();
+    await screen.findByText('Unu');
+    mockedProgress.mockRejectedValue(new Error('offline'));
+    await mockRefocus();
+    expect(screen.getByText('Unu')).toBeTruthy();
+    expect(screen.queryByText(/Nu am putut încărca lecțiile/)).toBeNull();
+  });
+
+  it('a successful refocus after a failed first load shows the list', async () => {
+    threeLessons();
+    mockedProgress.mockRejectedValueOnce(new Error('network'));
+    await renderHome();
+    expect(await screen.findByText(/Nu am putut încărca lecțiile/)).toBeTruthy();
+    await mockRefocus();
+    expect(await screen.findByText('Unu')).toBeTruthy();
+    expect(screen.queryByText(/Nu am putut încărca lecțiile/)).toBeNull();
   });
 });

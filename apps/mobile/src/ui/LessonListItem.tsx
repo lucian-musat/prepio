@@ -40,11 +40,13 @@ export default function LessonListItem({ index, title, state = 'open', onPress }
   // CSS: `:active` replaces the hover transform, so pressing drops the lift while it shrinks.
   const t = () => timing(motion.duration.base);
   const onHover = (on: boolean) => () => {
+    if (locked) return;
     setHovered(on);
     lift.value = withTiming(on ? HOVER_LIFT : 0, t());
     nudge.value = withTiming(on ? HOVER_NUDGE : 0, t());
   };
   const onPressState = (pressed: boolean) => () => {
+    if (locked) return;
     scale.value = withTiming(pressed ? pressScale.row : 1, t());
     lift.value = withTiming(pressed || !hovered ? 0 : HOVER_LIFT, t());
   };
