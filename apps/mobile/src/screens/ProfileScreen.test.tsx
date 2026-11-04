@@ -82,11 +82,31 @@ it('shows the current learning mode in the picker', async () => {
 
 it('saves a changed learning mode immediately, refreshes the profile and confirms', async () => {
   (updateLearningMode as jest.Mock).mockResolvedValue(undefined);
+  mockRefresh.mockResolvedValue({ id: 'u1', displayName: 'Ana', learningMode: 'free' });
   await renderScreen();
   await fireEvent.press(screen.getByRole('radio', { name: 'Explorare liberă' }));
   await waitFor(() => expect(updateLearningMode).toHaveBeenCalledWith('u1', 'free'));
   expect(mockRefresh).toHaveBeenCalled();
   expect(await screen.findByText('Modul a fost salvat.')).toBeTruthy();
+});
+
+it('keeps the saved mode and asks for a reload when the refreshed profile still has the old one', async () => {
+  (updateLearningMode as jest.Mock).mockResolvedValue(undefined);
+  mockRefresh.mockResolvedValue({ id: 'u1', displayName: 'Ana', learningMode: 'guided' });
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('radio', { name: 'Explorare liberă' }));
+  expect(await screen.findByText('Modul a fost salvat. Reîncarcă aplicația dacă nu vezi schimbarea.')).toBeTruthy();
+  expect(screen.queryByText('Modul a fost salvat.')).toBeNull();
+  expect(screen.getByRole('radio', { name: 'Explorare liberă' }).props.accessibilityState).toMatchObject({ checked: true });
+});
+
+it('shows the generic mode error for an Error subclass (e.g. a PostgREST error)', async () => {
+  class PostgrestLike extends Error {}
+  (updateLearningMode as jest.Mock).mockRejectedValue(new PostgrestLike('duplicate key value violates constraint'));
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('radio', { name: 'Explorare liberă' }));
+  expect(await screen.findByText('Modul nu a putut fi salvat. Încearcă din nou.')).toBeTruthy();
+  expect(screen.queryByText(/duplicate key/)).toBeNull();
 });
 
 it('reverts the picker and shows the error when saving the mode fails', async () => {

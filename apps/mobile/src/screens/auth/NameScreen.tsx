@@ -4,6 +4,7 @@ import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField } from '../../ui';
 import { useAuth } from '../../auth/AuthProvider';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, validateDisplayName } from '../../lib/profile';
+import { ownMessage } from '../../lib/errorMessage';
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
@@ -33,8 +34,7 @@ export default function NameScreen() {
       await updateDisplayName(userId, name);
       await refreshProfile();
     } catch (e) {
-      // Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
-      setError(e instanceof Error && e.constructor === Error ? e.message : SAVE_FAILED);
+      setError(ownMessage(e, SAVE_FAILED));
     } finally {
       setSaving(false);
     }

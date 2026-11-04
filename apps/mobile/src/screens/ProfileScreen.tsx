@@ -8,11 +8,15 @@ import { deleteAccount } from '../lib/api';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validateDisplayName } from '../lib/profile';
 import { modeOf, type LearningMode } from '../lib/learningMode';
 import LearningModePicker from '../components/LearningModePicker';
+import { ownMessage } from '../lib/errorMessage';
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
+const MODE_SAVED = 'Modul a fost salvat.';
+// Saved in the database, but the app still holds the old profile (the refresh failed).
+const MODE_SAVED_STALE = 'Modul a fost salvat. Reîncarcă aplicația dacă nu vezi schimbarea.';
 
 // Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
 const messageOf = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
@@ -30,14 +34,14 @@ export default function ProfileScreen() {
   const [mode, setMode] = useState<LearningMode>(modeOf(profile));
   const [modeSaving, setModeSaving] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
-  const [modeSaved, setModeSaved] = useState(false);
+  const [modeSaved, setModeSaved] = useState<string | null>(null);
   const busy = saving || deleting;
 
   // Saves right away (no button); on failure the picker goes back to the stored mode.
   const changeMode = async (next: LearningMode) => {
     if (busy || modeSaving || next === mode) return;
     const previous = mode;
-    setModeSaved(false);
+    setModeSaved(null);
     const userId = session?.user.id;
     if (!userId) {
       setModeError(OFFLINE);
@@ -48,11 +52,12 @@ export default function ProfileScreen() {
     setModeSaving(true);
     try {
       await updateLearningMode(userId, next);
-      await refreshProfile();
-      setModeSaved(true);
+      // The refresh never throws; the picker keeps the saved mode either way (the database has it).
+      const fresh = await refreshProfile();
+      setModeSaved(fresh?.learningMode === next ? MODE_SAVED : MODE_SAVED_STALE);
     } catch (e) {
       setMode(previous);
-      setModeError(messageOf(e, MODE_SAVE_FAILED));
+      setModeError(ownMessage(e, MODE_SAVE_FAILED));
     } finally {
       setModeSaving(false);
     }
@@ -145,7 +150,7 @@ export default function ProfileScreen() {
               {modeError}
             </AppText>
           ) : null}
-          {modeSaved ? <AppText role="small" color="success">Modul a fost salvat.</AppText> : null}
+          {modeSaved ? <AppText role="small" color="success">{modeSaved}</AppText> : null}
         </View>
 
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />

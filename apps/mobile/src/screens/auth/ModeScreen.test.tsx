@@ -35,10 +35,21 @@ it('shows the title and subtitle with the guided mode preselected', async () => 
 
 it('saves the guided mode and refreshes the profile', async () => {
   (updateLearningMode as jest.Mock).mockResolvedValue(undefined);
+  mockRefresh.mockResolvedValue({ id: 'u1', displayName: 'Ana', learningMode: 'guided' });
   await renderScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Continuă' }));
   expect(updateLearningMode).toHaveBeenCalledWith('u1', 'guided');
   expect(mockRefresh).toHaveBeenCalled();
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('shows an alert when the refreshed profile does not have the chosen mode', async () => {
+  (updateLearningMode as jest.Mock).mockResolvedValue(undefined);
+  mockRefresh.mockResolvedValue({ id: 'u1', displayName: 'Ana', learningMode: null });
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Continuă' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Nu am putut confirma alegerea. Încearcă din nou.');
+  expect(screen.getByText('Cum vrei să înveți?')).toBeTruthy();
 });
 
 it('saves the free mode when it is chosen', async () => {

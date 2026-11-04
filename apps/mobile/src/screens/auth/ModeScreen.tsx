@@ -6,9 +6,11 @@ import { useAuth } from '../../auth/AuthProvider';
 import LearningModePicker from '../../components/LearningModePicker';
 import { DEFAULT_MODE, type LearningMode } from '../../lib/learningMode';
 import { updateLearningMode } from '../../lib/profile';
+import { ownMessage } from '../../lib/errorMessage';
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
+const NOT_CONFIRMED = 'Nu am putut confirma alegerea. Încearcă din nou.';
 
 /** "Cum vrei să înveți?" shown once, after the name. Saving flips the status to ready (AuthProvider). */
 export default function ModeScreen() {
@@ -28,10 +30,11 @@ export default function ModeScreen() {
     setSaving(true);
     try {
       await updateLearningMode(userId, mode);
-      await refreshProfile();
+      // The refresh never throws; a profile without the saved mode means the status did not move on.
+      const fresh = await refreshProfile();
+      if (fresh?.learningMode !== mode) setError(NOT_CONFIRMED);
     } catch (e) {
-      // Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
-      setError(e instanceof Error && e.constructor === Error ? e.message : SAVE_FAILED);
+      setError(ownMessage(e, SAVE_FAILED));
     } finally {
       setSaving(false);
     }

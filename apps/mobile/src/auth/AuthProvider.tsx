@@ -15,8 +15,11 @@ export type AuthContextValue = {
    */
   session: Session | null;
   profile: Profile | null;
-  /** Re-reads the profile (e.g. after the name is saved) and updates `status`. */
-  refreshProfile(): Promise<void>;
+  /**
+   * Re-reads the profile (e.g. after the name is saved) and updates `status`. Never throws: resolves with the
+   * profile the context now holds (the previous one when the reload failed), so callers can check it.
+   */
+  refreshProfile(): Promise<Profile | null>;
   signOut(): Promise<void>;
 };
 
@@ -172,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Offline start (ready without a session): re-read the stored session instead of treating it as signed out.
     if (session) await settle(session);
     else if (stateRef.current.status === 'ready') await restore();
+    return stateRef.current.profile;
   }, [restore, settle]);
 
   const signOut = useCallback(async () => {

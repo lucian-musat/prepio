@@ -214,6 +214,32 @@ it('refreshProfile moves needsMode → ready once the mode is saved', async () =
   expect(state()).toBe('ready|Ana|access-1');
 });
 
+it('refreshProfile resolves with the profile it settled on', async () => {
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  await renderAuth();
+  await waitForState('ready|Ana|access-1');
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'free' });
+  let fresh: unknown;
+  await act(async () => {
+    fresh = await latest.refreshProfile();
+  });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'free' });
+});
+
+it('refreshProfile resolves with the kept profile when the reload fails', async () => {
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  await renderAuth();
+  await waitForState('ready|Ana|access-1');
+  mockFetchProfile.mockRejectedValue(new Error('offline'));
+  let fresh: unknown;
+  await act(async () => {
+    fresh = await latest.refreshProfile();
+  });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  warn.mockRestore();
+});
+
 it('signOut() signs out through the shared lib signOut and ends signedOut', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   mockLibSignOut.mockResolvedValue(undefined);
