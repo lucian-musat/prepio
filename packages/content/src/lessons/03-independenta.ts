@@ -54,14 +54,6 @@ export const independenta: SeedLesson = {
         'în apropiere de Vidin. Așadar, România și-a câștigat independența prin efort militar propriu.',
     },
     {
-      type: 'video',
-      title: 'Războiul de Independență (1877–1878), pe scurt',
-      youtubeId: 'gJth8m46cwo',
-      startSeconds: null,
-      endSeconds: null,
-      text: 'Documentar video, partea 1 din 2, realizat de canalul „Istorie pe șleau”.',
-    },
-    {
       type: 'text',
       title: 'San Stefano și Congresul de la Berlin (1878)',
       text:
@@ -71,17 +63,6 @@ export const independenta: SeedLesson = {
         '(naturalizarea necreștinilor) și cedarea sudului Basarabiei (Cahul, Bolgrad, Ismail) către Rusia. ' +
         'În schimb, România a primit Dobrogea, Delta Dunării și Insula Șerpilor. Rusia încălca astfel ' +
         'Convenția din 1877.',
-    },
-    {
-      type: 'link',
-      title: 'Pentru aprofundare',
-      url: 'https://ro.wikipedia.org/wiki/R%C4%83zboiul_de_Independen%C8%9B%C4%83_al_Rom%C3%A2niei',
-      pageTitle: 'Războiul de Independență al României',
-      description:
-        'Articolul Wikipedia despre participarea României la Războiul Ruso-Turc din 1877–1878, prin care ' +
-        'țara și-a obținut independența față de Imperiul Otoman.',
-      image: null,
-      text: null,
     },
     {
       type: 'text',

@@ -85,62 +85,6 @@ export const unireaPrincipatelor: SeedLesson = {
         'Statul s-a numit oficial Principatele Unite Române, dar se folosea tot mai des numele de România.',
     },
     {
-      type: 'timeline',
-      title: 'Pașii Unirii (1857–1862)',
-      points: [
-        {
-          id: 'point-0',
-          date: 'octombrie 1857',
-          title: 'Adunările ad-hoc cer unirea',
-          details:
-            'Rezoluțiile cer unirea Principatelor într-un stat cu numele România, condus de un prinț străin.',
-          key: false,
-          imagePath: null,
-        },
-        {
-          id: 'point-1',
-          date: 'august 1858',
-          title: 'Convenția de la Paris',
-          details:
-            'Principatele Unite ale Moldovei și Valahiei: câte un domn, un guvern și o adunare în fiecare principat.',
-          key: false,
-          imagePath: null,
-        },
-        {
-          id: 'point-2',
-          date: '5 ianuarie 1859',
-          title: 'Cuza, ales domn al Moldovei',
-          details: 'Adunarea electivă de la Iași îl alege pe Alexandru Ioan Cuza.',
-          key: true,
-          imagePath: null,
-        },
-        {
-          id: 'point-3',
-          date: '24 ianuarie 1859',
-          title: 'Cuza, ales domn al Țării Românești',
-          details: 'Dubla alegere pune marile puteri în fața faptului împlinit.',
-          key: true,
-          imagePath: null,
-        },
-        {
-          id: 'point-4',
-          date: 'decembrie 1861',
-          title: 'Imperiul Otoman acceptă unirea deplină',
-          details: 'Recunoașterea este valabilă doar pe durata domniei lui Cuza.',
-          key: false,
-          imagePath: null,
-        },
-        {
-          id: 'point-5',
-          date: 'ianuarie 1862',
-          title: 'Guvern unic și adunare unică',
-          details: 'Capitala devine București; statul se numește Principatele Unite Române.',
-          key: false,
-          imagePath: null,
-        },
-      ],
-    },
-    {
       type: 'text',
       title: 'Secularizarea averilor mănăstirești (1863)',
       text:

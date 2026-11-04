@@ -8,6 +8,62 @@ import type { SeedCard } from './types';
 export const EXTRA_CARDS: Record<string, SeedCard[]> = {
   'unirea-principatelor-cuza': [
     {
+      type: 'timeline',
+      title: 'Pașii Unirii (1857–1862)',
+      points: [
+        {
+          id: 'point-0',
+          date: 'octombrie 1857',
+          title: 'Adunările ad-hoc cer unirea',
+          details:
+            'Rezoluțiile cer unirea Principatelor într-un stat cu numele România, condus de un prinț străin.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-1',
+          date: 'august 1858',
+          title: 'Convenția de la Paris',
+          details:
+            'Principatele Unite ale Moldovei și Valahiei: câte un domn, un guvern și o adunare în fiecare principat.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-2',
+          date: '5 ianuarie 1859',
+          title: 'Cuza, ales domn al Moldovei',
+          details: 'Adunarea electivă de la Iași îl alege pe Alexandru Ioan Cuza.',
+          key: true,
+          imagePath: null,
+        },
+        {
+          id: 'point-3',
+          date: '24 ianuarie 1859',
+          title: 'Cuza, ales domn al Țării Românești',
+          details: 'Dubla alegere pune marile puteri în fața faptului împlinit.',
+          key: true,
+          imagePath: null,
+        },
+        {
+          id: 'point-4',
+          date: 'decembrie 1861',
+          title: 'Imperiul Otoman acceptă unirea deplină',
+          details: 'Recunoașterea este valabilă doar pe durata domniei lui Cuza.',
+          key: false,
+          imagePath: null,
+        },
+        {
+          id: 'point-5',
+          date: 'ianuarie 1862',
+          title: 'Guvern unic și adunare unică',
+          details: 'Capitala devine București; statul se numește Principatele Unite Române.',
+          key: false,
+          imagePath: null,
+        },
+      ],
+    },
+    {
       type: 'images',
       title: 'Galerie: oamenii și imaginile Unirii',
       display: 'gallery',
@@ -111,6 +167,51 @@ export const EXTRA_CARDS: Record<string, SeedCard[]> = {
     },
   ],
   'constitutia-1866': [
+    {
+      type: 'schema',
+      title: 'Constituția din 1866: cauze și urmări',
+      causesLabel: 'Cauze',
+      consequencesLabel: 'Urmări',
+      causes: [
+        {
+          id: 'cause-0',
+          text: 'Abdicarea lui Cuza (februarie 1866)',
+          detail: 'Statutul Dezvoltător, legat de regimul personal al lui Cuza, trebuia înlocuit.',
+        },
+        {
+          id: 'cause-1',
+          text: 'Aducerea prințului străin Carol I',
+          detail: 'Noul domn trebuia să conducă după reguli clare, acceptate de elita politică.',
+        },
+        {
+          id: 'cause-2',
+          text: 'Nevoia unei legi fundamentale moderne',
+          detail: 'Convenția de la Paris fusese impusă de marile puteri, nu adoptată de români.',
+        },
+      ],
+      central: {
+        id: 'central',
+        text: 'Constituția din 1866',
+        detail: 'Promulgată la 1 iulie 1866, după modelul Constituției Belgiei din 1831.',
+      },
+      consequences: [
+        {
+          id: 'consequence-0',
+          text: 'Monarhia constituțională ereditară',
+          detail: 'Statul se numește oficial România; puterile sunt separate în stat.',
+        },
+        {
+          id: 'consequence-1',
+          text: 'Drepturi și libertăți cetățenești garantate',
+          detail: 'Votul rămâne însă cenzitar, iar articolul 7 limitează naturalizarea.',
+        },
+        {
+          id: 'consequence-2',
+          text: 'Afirmarea autonomiei, pas spre independență',
+          detail: 'A fost adoptată fără consultarea Imperiului Otoman și a puterilor garante.',
+        },
+      ],
+    },
     {
       type: 'text',
       title: 'Recapitulare: Constituția din 1866 pe scurt',
@@ -344,6 +445,25 @@ export const EXTRA_CARDS: Record<string, SeedCard[]> = {
           detail: 'Pierderea sudului Basarabiei a arătat pericolul rusesc și izolarea României.',
         },
       ],
+    },
+    {
+      type: 'video',
+      title: 'Războiul de Independență (1877–1878), pe scurt',
+      youtubeId: 'gJth8m46cwo',
+      startSeconds: null,
+      endSeconds: null,
+      text: 'Documentar video, partea 1 din 2, realizat de canalul „Istorie pe șleau”.',
+    },
+    {
+      type: 'link',
+      title: 'Pentru aprofundare',
+      url: 'https://ro.wikipedia.org/wiki/R%C4%83zboiul_de_Independen%C8%9B%C4%83_al_Rom%C3%A2niei',
+      pageTitle: 'Războiul de Independență al României',
+      description:
+        'Articolul Wikipedia despre participarea României la Războiul Ruso-Turc din 1877–1878, prin care ' +
+        'țara și-a obținut independența față de Imperiul Otoman.',
+      image: null,
+      text: null,
     },
   ],
 };

@@ -106,51 +106,6 @@ export const constitutia1866: SeedLesson = {
         'introduse principiile votului universal și al exproprierii pentru reforma agrară. Constituția a rămas în vigoare ' +
         'până în 1923.',
     },
-    {
-      type: 'schema',
-      title: 'Constituția din 1866: cauze și urmări',
-      causesLabel: 'Cauze',
-      consequencesLabel: 'Urmări',
-      causes: [
-        {
-          id: 'cause-0',
-          text: 'Abdicarea lui Cuza (februarie 1866)',
-          detail: 'Statutul Dezvoltător, legat de regimul personal al lui Cuza, trebuia înlocuit.',
-        },
-        {
-          id: 'cause-1',
-          text: 'Aducerea prințului străin Carol I',
-          detail: 'Noul domn trebuia să conducă după reguli clare, acceptate de elita politică.',
-        },
-        {
-          id: 'cause-2',
-          text: 'Nevoia unei legi fundamentale moderne',
-          detail: 'Convenția de la Paris fusese impusă de marile puteri, nu adoptată de români.',
-        },
-      ],
-      central: {
-        id: 'central',
-        text: 'Constituția din 1866',
-        detail: 'Promulgată la 1 iulie 1866, după modelul Constituției Belgiei din 1831.',
-      },
-      consequences: [
-        {
-          id: 'consequence-0',
-          text: 'Monarhia constituțională ereditară',
-          detail: 'Statul se numește oficial România; puterile sunt separate în stat.',
-        },
-        {
-          id: 'consequence-1',
-          text: 'Drepturi și libertăți cetățenești garantate',
-          detail: 'Votul rămâne însă cenzitar, iar articolul 7 limitează naturalizarea.',
-        },
-        {
-          id: 'consequence-2',
-          text: 'Afirmarea autonomiei, pas spre independență',
-          detail: 'A fost adoptată fără consultarea Imperiului Otoman și a puterilor garante.',
-        },
-      ],
-    },
     ...(EXTRA_CARDS['constitutia-1866'] ?? []),
   ],
   questions: [
