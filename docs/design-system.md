@@ -185,11 +185,11 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 | Component | Props | Use |
 |---|---|---|
 | `Enter` | `config` / `index`, `style`, `testID` | Fade + rise on mount; `index` staggers list items (40 + i x 50 ms). Remount (new `key`) to replay. |
-| `CardTransition` | `contentKey`, `direction` (next / prev), `style` | Card stepper: previous card slides out as an overlay, new card tilts in; container height eases between cards. |
+| `CardTransition` | `contentKey`, `direction` (next / prev), `exit` (default true), `style` | Card stepper: previous card slides out as an overlay, new card tilts in; container height eases between cards. `exit={false}` skips the overlay when the old card already left (swiped away). |
 
 ### Card types (`apps/mobile/src/components/cards/`)
 
-Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, one component per type), shared by the card stepper and the `/preview` route. They follow the rules above; the type-specific choices:
+Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, one component per type), shared by the card stepper and the `/preview` route. In the stepper (`CardStepper`) a touch swipe also moves between cards: the card follows the finger with up to 3° tilt; past 25 % of the width or a flick over 500 px/s it flies off (left = next, right = previous) and the next card tilts in as after a button press; otherwise it springs back, with rubber-band resistance at the first and last card (swiping never finishes the lesson). It starts only on a clearly horizontal move (±15 px, fails after ±12 px vertical), is on for native and for touch-first web screens (`(pointer: coarse)`, mouse pointers ignored), and with reduce motion a committed swipe just changes the card. Thresholds live in `components/swipeMath.ts`. They follow the rules above; the type-specific choices:
 
 | Piece | Tokens / behaviour |
 |---|---|

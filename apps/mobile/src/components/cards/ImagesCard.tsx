@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View, type ImageLoadEvent } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View, type ImageLoadEvent } from 'react-native';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { color, radius, space, type CardContent, type CardImage } from '@prepio/shared';
 import { AppText } from '../../ui';
 import { imageUrl } from '../../lib/content';
@@ -8,6 +9,9 @@ import ImageViewer from './ImageViewer';
 
 const FALLBACK_RATIO = 16 / 9;
 const THUMB = 64;
+// Native: the gesture-handler scroll view, so scrolling the thumbnails wins over the card stepper's swipe.
+// Web: the browser's own horizontal scroll already takes the touch over (pointercancel).
+const ThumbStrip = Platform.OS === 'web' ? ScrollView : GestureScrollView;
 
 /** A tappable image at its natural aspect ratio (16:9 until loaded). A failed image is reported to the parent, which drops it with its credit. */
 function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; testID: string; onPress: () => void; onFail: () => void }) {
@@ -66,7 +70,7 @@ export default function ImagesCard({ content }: { content: Extract<CardContent, 
         </View>
       ))}
       {display === 'gallery' && images.length > 1 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbs}>
+        <ThumbStrip horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbs}>
           {images.map((image, i) => (
             <Pressable
               key={`${image.path}-${i}`}
@@ -80,7 +84,7 @@ export default function ImagesCard({ content }: { content: Extract<CardContent, 
               <Image source={{ uri: imageUrl(image.path) }} resizeMode="cover" accessible={false} style={styles.thumbImage} />
             </Pressable>
           ))}
-        </ScrollView>
+        </ThumbStrip>
       ) : null}
       {text ? <RichText source={text} /> : null}
       {viewerIndex !== null ? <ImageViewer images={images} index={viewerIndex} onClose={() => setViewerIndex(null)} /> : null}

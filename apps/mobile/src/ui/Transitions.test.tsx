@@ -87,6 +87,17 @@ describe('CardTransition', () => {
     expect(screen.queryByTestId('card-out')).toBeNull();
   });
 
+  it('with exit off (the old card was swiped away) the new card animates in without an outgoing overlay', async () => {
+    await render(card('1'));
+    await screen.rerender(
+      <CardTransition contentKey="2" direction="next" exit={false}>
+        <Text>Cartonaș 2</Text>
+      </CardTransition>,
+    );
+    expect(screen.queryByTestId('card-out', { includeHiddenElements: true })).toBeNull();
+    expect(incoming().opacity).toBe(0);
+  });
+
   it('hides the outgoing card from screen readers and touches during the overlap', async () => {
     await render(card('1'));
     await screen.rerender(card('2'));

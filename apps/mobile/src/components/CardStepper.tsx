@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Platform, StyleSheet, View } from 'react-native';
+import { GestureDetector, PointerType, usePanGesture } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { color, motion, radius, space, type Card } from '@prepio/shared';
-import { Button, CardTransition, ScreenLayout, timing } from '../ui';
+import { Button, CardTransition, ScreenLayout, easing, timing } from '../ui';
 import CardView from './cards/CardView';
 import type { LessonFrame } from './QuestionView';
+import { swipeOffset, swipeTarget, swipeTilt } from './swipeMath';
 
 // Prototype `.dots i` / `.dots i.on`.
 const DOT = 7;
 const DOT_ACTIVE = 22;
+
+// The pan only starts on a clearly horizontal move and gives way to vertical scrolling.
+const ACTIVE_X = 15;
+const FAIL_Y = 12;
 
 function Dot({ active }: { active: boolean }) {
   const width = useSharedValue(active ? DOT_ACTIVE : DOT);
@@ -22,6 +29,12 @@ function Dot({ active }: { active: boolean }) {
   return <Animated.View style={[styles.dot, style]} />;
 }
 
+/** Swiping is for touch: always on native; on web only on touch-first screens, so mouse drags still select text. */
+function touchScreen(): boolean {
+  if (Platform.OS !== 'web') return true;
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+}
+
 type Props = {
   cards: Card[];
   onFinish: () => void;
@@ -32,21 +45,101 @@ type Props = {
   onIndexChange?: (index: number) => void;
 };
 
-/** Learning cards one at a time (prototype `.stepper`): slide transition, dots, Înapoi / Continuă in the action bar. */
+/**
+ * Learning cards one at a time (prototype `.stepper`): slide transition, dots, Înapoi / Continuă in the action bar.
+ * On touch screens the card can also be swiped (left = next, right = previous); the buttons stay the primary,
+ * accessible path, and only the button finishes the lesson.
+ */
 export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Continuă', onIndexChange }: Props) {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  // The last change came from a swipe: the old card already flew off, so CardTransition skips its exit.
+  const [swiped, setSwiped] = useState(false);
+  const [swipeEnabled] = useState(touchScreen);
+  const reduced = useReducedMotion();
   const scrollRef = useRef<Animated.ScrollView>(null);
+
+  // Drag state lives on the UI thread: offset under the finger, card width, bounds, and the fly-off in progress.
+  const dx = useSharedValue(0);
+  const width = useSharedValue(0);
+  const canPrev = useSharedValue(index > 0);
+  const canNext = useSharedValue(index < cards.length - 1);
+  const flying = useSharedValue(false);
+  const ignored = useSharedValue(false);
+
   const card = cards[index];
-  if (!card) return null;
   const last = index === cards.length - 1;
 
-  const go = (to: number) => {
+  useEffect(() => {
+    canPrev.value = index > 0;
+    canNext.value = index < cards.length - 1;
+    // After a swipe the new card is in place (still hidden at the fly-off offset): bring the wrapper back.
+    if (flying.value) {
+      flying.value = false;
+      dx.value = 0;
+    }
+  }, [index, cards.length, canPrev, canNext, flying, dx]);
+
+  const go = (to: number, viaSwipe = false) => {
+    setSwiped(viaSwipe);
     setDirection(to > index ? 'next' : 'prev');
     setIndex(to);
     onIndexChange?.(to);
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
+  // Stable entry point for the gesture worklets, always calling the latest render's `go` (current index).
+  const latest = useRef({ go, index });
+  latest.current = { go, index };
+  const onSwipe = useRef((target: 'next' | 'prev') => {
+    const { go: goTo, index: from } = latest.current;
+    goTo(target === 'next' ? from + 1 : from - 1, true);
+  }).current;
+
+  const pan = usePanGesture({
+    enabled: swipeEnabled,
+    activeOffsetX: [-ACTIVE_X, ACTIVE_X],
+    failOffsetY: [-FAIL_Y, FAIL_Y],
+    onBegin: (e) => {
+      'worklet';
+      // A mouse on a touch-first web screen keeps its usual drag (text selection).
+      ignored.value = e.pointerType === PointerType.MOUSE || flying.value;
+    },
+    onUpdate: (e) => {
+      'worklet';
+      if (ignored.value || reduced) return;
+      dx.value = swipeOffset(e.translationX, width.value, { canPrev: canPrev.value, canNext: canNext.value });
+    },
+    onDeactivate: (e) => {
+      'worklet';
+      if (ignored.value) return;
+      const target = swipeTarget(e.translationX, e.velocityX, width.value, { canPrev: canPrev.value, canNext: canNext.value });
+      if (!target) {
+        dx.value = withTiming(0, timing(motion.duration.base, easing.out));
+        return;
+      }
+      if (reduced) {
+        scheduleOnRN(onSwipe, target);
+        return;
+      }
+      // The card keeps going the way it was thrown and fades, then the stepper moves on; the next card tilts in
+      // from the other side exactly like after a button press.
+      flying.value = true;
+      const off = (target === 'next' ? -1 : 1) * (width.value || Math.abs(dx.value) * 2);
+      dx.value = withTiming(off, timing(motion.duration.fast, easing.out), (finished) => {
+        if (finished) scheduleOnRN(onSwipe, target);
+      });
+    },
+  });
+
+  const drag = useAnimatedStyle(() => {
+    const w = width.value;
+    return {
+      opacity: w > 0 && flying.value ? 1 - Math.min(1, Math.abs(dx.value) / w) : 1,
+      transform: [{ translateX: dx.value }, { rotate: `${swipeTilt(dx.value, w)}deg` }],
+    };
+  });
+
+  if (!card) return null;
 
   return (
     <ScreenLayout
@@ -68,9 +161,14 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
         </>
       }
     >
-      <CardTransition contentKey={card.id} direction={direction}>
-        <CardView card={card} eyebrow={`Cartonaș ${index + 1} din ${cards.length}`} />
-      </CardTransition>
+      {/* pan-y: the browser keeps vertical scrolling; userSelect auto: text stays selectable. */}
+      <GestureDetector gesture={pan} touchAction="pan-y" userSelect="auto">
+        <Animated.View testID="card-swipe" style={drag} onLayout={(e) => (width.value = e.nativeEvent.layout.width)}>
+          <CardTransition contentKey={card.id} direction={direction} exit={!swiped}>
+            <CardView card={card} eyebrow={`Cartonaș ${index + 1} din ${cards.length}`} />
+          </CardTransition>
+        </Animated.View>
+      </GestureDetector>
       <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {cards.map((c, i) => (
           <Dot key={c.id} active={i === index} />

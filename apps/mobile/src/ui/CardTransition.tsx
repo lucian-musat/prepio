@@ -19,6 +19,8 @@ type Props = {
   contentKey: Key;
   /** 'next' slides the new card in from the right, 'prev' from the left. */
   direction: Direction;
+  /** False when the old card has already left (e.g. swiped off-screen): the change skips the outgoing overlay. */
+  exit?: boolean;
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 };
@@ -73,7 +75,7 @@ function Outgoing({ direction, children }: { direction: Direction; children: Rea
  * container's min-height eases from the old card's height to the new one, so a shorter card
  * doesn't make the page jump. With OS reduce motion the new card simply replaces the old one.
  */
-export default function CardTransition({ contentKey, direction, style, children }: Props) {
+export default function CardTransition({ contentKey, direction, exit = true, style, children }: Props) {
   const reduced = useReducedMotion();
   const [shownKey, setShownKey] = useState<Key>(contentKey);
   const [outgoing, setOutgoing] = useState<{ key: Key; children: ReactNode; direction: Direction } | null>(null);
@@ -95,10 +97,10 @@ export default function CardTransition({ contentKey, direction, style, children 
   useLayoutEffect(() => {
     const previous = committed.current;
     committed.current = { key: contentKey, children };
-    if (previous.key === contentKey || reduced) return;
+    if (previous.key === contentKey || reduced || !exit) return;
     setOutgoing({ key: previous.key, children: previous.children, direction });
     minHeight.value = height.current;
-  }, [contentKey, children, reduced, direction, minHeight]);
+  }, [contentKey, children, reduced, exit, direction, minHeight]);
 
   useEffect(() => {
     if (!outgoing) return;

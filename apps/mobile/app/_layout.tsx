@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { color } from '@prepio/shared';
 import { fontFiles } from '../src/theme/fonts';
@@ -57,10 +59,15 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
-    </SafeAreaProvider>
+    // Gesture detectors (the card stepper swipe) need a root view above them on native.
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

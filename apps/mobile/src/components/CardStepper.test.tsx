@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Card } from '@prepio/shared';
 import CardStepper from './CardStepper';
@@ -81,4 +82,105 @@ it('the two back buttons have distinct accessible names', async () => {
   expect(within(screen.getByTestId('top-bar')).getByRole('button', { name: 'Înapoi' })).toBeTruthy();
   expect(bar().getByRole('button', { name: PREV })).toBeTruthy();
   expect(bar().getByText('Înapoi')).toBeTruthy();
+});
+
+describe('swipe between cards', () => {
+  type PanEvent = { translationX: number; velocityX: number; pointerType: number };
+  type PanConfig = {
+    enabled?: boolean;
+    onBegin?: (e: PanEvent) => void;
+    onUpdate?: (e: PanEvent) => void;
+    onDeactivate?: (e: PanEvent) => void;
+  };
+  // Capture the pan the stepper registers (the global gesture mock is a no-op).
+  const rngh = jest.requireMock('react-native-gesture-handler');
+  const usePan = rngh.usePanGesture;
+  let pan: PanConfig = {};
+  beforeEach(() => {
+    jest.useFakeTimers();
+    rngh.usePanGesture = (config: PanConfig) => {
+      pan = config;
+      return {};
+    };
+  });
+  afterEach(() => {
+    rngh.usePanGesture = usePan;
+    jest.useRealTimers();
+  });
+
+  // The card area reports its width (no layout pass under Jest).
+  const layout = async () =>
+    fireEvent(screen.getByTestId('card-swipe'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 360, height: 400 } } });
+  const TOUCH = 0;
+  const MOUSE = 2;
+  // A whole drag (begin, move, lift), then enough time for the fly-off or spring-back animation.
+  const swipe = async (translationX: number, velocityX = 0, pointerType = TOUCH) => {
+    const e = { translationX, velocityX, pointerType };
+    await act(async () => {
+      pan.onBegin?.(e);
+      pan.onUpdate?.(e);
+      pan.onDeactivate?.(e);
+    });
+    await act(async () => jest.advanceTimersByTime(600));
+  };
+  const counter = (text: string) => expect(screen.getByText(text)).toBeTruthy();
+
+  it('a left swipe goes to the next card and a right swipe back, like the buttons', async () => {
+    const { onIndexChange } = await renderStepper([card(1), card(2), card(3)]);
+    await layout();
+    await swipe(-250);
+    counter('Cartonaș 2 din 3');
+    expect(onIndexChange).toHaveBeenLastCalledWith(1);
+    await swipe(250);
+    counter('Cartonaș 1 din 3');
+    expect(onIndexChange).toHaveBeenLastCalledWith(0);
+  });
+
+  it('a fast flick commits even when short; a slow short drag springs back', async () => {
+    const { onIndexChange } = await renderStepper([card(1), card(2)]);
+    await layout();
+    await swipe(-30);
+    counter('Cartonaș 1 din 2');
+    expect(onIndexChange).not.toHaveBeenCalled();
+    await swipe(-30, -900);
+    counter('Cartonaș 2 din 2');
+  });
+
+  it('never goes past the ends: no previous card on the first, no finishing on the last', async () => {
+    const { onIndexChange, onFinish } = await renderStepper([card(1), card(2)]);
+    await layout();
+    await swipe(300, 900);
+    counter('Cartonaș 1 din 2');
+    expect(onIndexChange).not.toHaveBeenCalled();
+    await swipe(-300);
+    counter('Cartonaș 2 din 2');
+    await swipe(-300, -900);
+    counter('Cartonaș 2 din 2');
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(onIndexChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('on web it is off for a mouse (fine pointer) and on for touch screens', async () => {
+    const os = Platform.OS;
+    const matchMedia = window.matchMedia;
+    const media = (coarse: boolean) =>
+      ((q: string) => ({ matches: (q === '(pointer: coarse)') === coarse })) as unknown as typeof window.matchMedia;
+    Platform.OS = 'web';
+    try {
+      window.matchMedia = media(false);
+      await renderStepper([card(1), card(2)]);
+      expect(pan.enabled).toBe(false);
+      await screen.unmount();
+      window.matchMedia = media(true);
+      await renderStepper([card(1), card(2)]);
+      await layout();
+      expect(pan.enabled).toBe(true);
+      // A mouse drag on a touch device is ignored.
+      await swipe(-300, -900, MOUSE);
+      counter('Cartonaș 1 din 2');
+    } finally {
+      Platform.OS = os;
+      window.matchMedia = matchMedia;
+    }
+  });
 });
