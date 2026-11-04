@@ -45,6 +45,9 @@ type Props = {
   onIndexChange?: (index: number) => void;
   /** Card to open on (a resumed lesson); default the first. */
   initialIndex?: number;
+  /** Shown as a secondary action above the navigation: go straight to the test. */
+  onSkip?: () => void;
+  skipLabel?: string;
 };
 
 /**
@@ -52,7 +55,16 @@ type Props = {
  * On touch screens the card can also be swiped (left = next, right = previous); the buttons stay the primary,
  * accessible path, and only the button finishes the lesson.
  */
-export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Continuă', onIndexChange, initialIndex = 0 }: Props) {
+export default function CardStepper({
+  cards,
+  onFinish,
+  frame,
+  finishLabel = 'Continuă',
+  onIndexChange,
+  initialIndex = 0,
+  onSkip,
+  skipLabel = 'Sari la exerciții',
+}: Props) {
   const [index, setIndex] = useState(initialIndex);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   // The last change came from a swipe: the old card already flew off, so CardTransition skips its exit.
@@ -162,17 +174,20 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
       onBack={frame.onBack}
       scrollRef={scrollRef}
       actions={
-        <>
-          <Button
-            flex
-            variant="secondary"
-            label="Înapoi"
-            accessibilityLabel="Înapoi la cartonașul anterior"
-            disabled={index === 0}
-            onPress={() => index > 0 && go(index - 1)}
-          />
-          <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
-        </>
+        <View style={styles.actions}>
+          {onSkip ? <Button variant="secondary" label={skipLabel} onPress={onSkip} /> : null}
+          <View style={styles.nav}>
+            <Button
+              flex
+              variant="secondary"
+              label="Înapoi"
+              accessibilityLabel="Înapoi la cartonașul anterior"
+              disabled={index === 0}
+              onPress={() => index > 0 && go(index - 1)}
+            />
+            <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
+          </View>
+        </View>
       }
     >
       {/* pan-y: the browser keeps vertical scrolling; userSelect auto: text stays selectable. */}
@@ -195,4 +210,7 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
 const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: space[1.5], marginTop: space[3.5] },
   dot: { height: DOT, borderRadius: radius.pill },
+  // The action bar lays its children out in a row: the optional skip sits above Înapoi / Continuă.
+  actions: { flex: 1, gap: space[2.5] },
+  nav: { flexDirection: 'row', gap: space[2.5] },
 });

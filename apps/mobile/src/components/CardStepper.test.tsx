@@ -226,3 +226,22 @@ it('starts on initialIndex', async () => {
   expect(screen.getByText('Cartonaș 2 din 3')).toBeTruthy();
   expect(isDisabled(bar().getByRole('button', { name: PREV }))).toBe(false);
 });
+
+it('shows the skip action only when onSkip is given', async () => {
+  const onSkip = jest.fn();
+  const { rerender } = await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <CardStepper cards={[card(1), card(2)]} onFinish={jest.fn()} frame={frame} onSkip={onSkip} />
+    </SafeAreaProvider>,
+  );
+  await fireEvent.press(bar().getByRole('button', { name: 'Sari la exerciții' }));
+  expect(onSkip).toHaveBeenCalledTimes(1);
+  // Continuă is still there.
+  expect(bar().getByRole('button', { name: 'Continuă' })).toBeTruthy();
+  await rerender(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <CardStepper cards={[card(1), card(2)]} onFinish={jest.fn()} frame={frame} />
+    </SafeAreaProvider>,
+  );
+  expect(bar().queryByRole('button', { name: 'Sari la exerciții' })).toBeNull();
+});

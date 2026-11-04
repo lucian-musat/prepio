@@ -84,9 +84,19 @@ type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress };
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
 type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error'; error?: string };
 
-/** Position writes never block the student: a failure is only logged. */
-const save = (lessonId: string, position: LessonPosition | null) =>
-  savePosition(lessonId, position).catch((e) => console.warn('Could not save the lesson position', e));
+/**
+ * Runs progress writes one after another: they are upserts on the same row, so a late position save must
+ * never land after the finished mark (or the cleared position) and bring a resume point back.
+ */
+function useWriteQueue() {
+  const tail = useRef<Promise<unknown>>(Promise.resolve());
+  return <T,>(write: () => Promise<T>): Promise<T> => {
+    // A failed write never breaks the chain: the next one runs after it settles either way.
+    const run = tail.current.catch(() => undefined).then(write);
+    tail.current = run;
+    return run;
+  };
+}
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -99,6 +109,12 @@ export default function LessonScreen() {
   const [results, setResults] = useState<Results>({});
   const [end, setEnd] = useState<End | null>(null);
   const mounted = useRef(true);
+  const enqueue = useWriteQueue();
+  // Position writes never block the student: a failure is only logged.
+  const save = (lessonId: string, position: LessonPosition | null) =>
+    enqueue(() => savePosition(lessonId, position)).catch((e) =>
+      console.warn('Could not save the lesson position', e),
+    );
 
   useEffect(() => {
     mounted.current = true;
@@ -143,7 +159,7 @@ export default function LessonScreen() {
   // Writes the finished mark; the result content waits for it, a failure offers a retry.
   const commit = (outcome: AttemptOutcome) => {
     setEnd({ outcome, status: 'saving' });
-    markFinished(lesson.id).then(
+    enqueue(() => markFinished(lesson.id)).then(
       () => mounted.current && setEnd({ outcome, status: 'saved' }),
       (e: Error) => mounted.current && setEnd({ outcome, status: 'error', error: e.message }),
     );
@@ -213,6 +229,7 @@ export default function LessonScreen() {
         frame={frame(lesson.title)}
         finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
         onIndexChange={(i) => goTo('cards', i, results)}
+        onSkip={somethingAfterCards ? startTest : undefined}
       />
     );
   }

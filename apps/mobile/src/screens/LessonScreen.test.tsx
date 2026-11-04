@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Lesson, LessonSummary } from '@prepio/shared';
 import LessonScreen, { lessonProgress } from './LessonScreen';
@@ -193,6 +193,19 @@ describe('start screen', () => {
   it('Începe învățarea opens the first card', async () => {
     await openLesson(lesson());
     expect(await screen.findByText('Corp card')).toBeTruthy();
+  });
+
+  it('the cards offer a skip to the test when there is one', async () => {
+    await openLesson(lesson());
+    expect(await screen.findByText('Corp card')).toBeTruthy();
+    await press('Sari la exerciții');
+    expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
+  });
+
+  it('the cards have no skip when the lesson has no test', async () => {
+    await openLesson(lesson({ questions: [], exercises: [] }));
+    expect(await screen.findByText('Corp card')).toBeTruthy();
+    expect(actionBar().queryByRole('button', { name: 'Sari la exerciții' })).toBeNull();
   });
 
   it('skipping goes straight to question 1', async () => {
@@ -450,6 +463,64 @@ describe('guided mode', () => {
     await screen.findByText('Continuă de unde ai rămas');
     await press('Știu deja — sari la exerciții');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
+    expect(mockedSave).toHaveBeenLastCalledWith('l1', { phase: 'questions', index: 0, results: {} });
+    // q2 alone is not enough: the saved q1 answer is gone, so the attempt fails on question 1.
+    await answer('Nu', 'Următoarea întrebare');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Ai greșit la: întrebarea 1')).toBeTruthy();
+  });
+
+  it('Revezi cardurile, then skipping from the cards starts a fresh test', async () => {
+    await openLesson(lesson({ exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Nu', 'Continuă');
+    await press('Revezi cardurile');
+    expect(await screen.findByText('Corp card')).toBeTruthy();
+    await press('Sari la exerciții');
+    expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
+    expect(actionBar().getByRole('button', { name: 'Verifică' })).toBeTruthy();
+    expect(mockedSave).toHaveBeenLastCalledWith('l1', { phase: 'questions', index: 0, results: {} });
+  });
+
+  it('waits for a pending position save before writing the finished mark', async () => {
+    let settle: () => void = () => {};
+    mockedSave
+      .mockResolvedValueOnce(undefined) // entering question 1
+      .mockReturnValueOnce(new Promise<void>((r) => (settle = r))); // the „Verifică” save, still in flight
+    await openLesson(lesson({ cards: [], exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    expect(mockedFinish).not.toHaveBeenCalled();
+    await act(async () => settle());
+    expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+  });
+
+  it('a new route id (next lesson) loads it afresh and shows its start screen', async () => {
+    mockedLesson.mockImplementation(async (id: string) =>
+      id === 'l2' ? lesson({ id: 'l2', title: 'Lecția doi', cards: [] }) : lesson({ exercises: [] }),
+    );
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <LessonScreen />
+      </SafeAreaProvider>,
+    );
+    await screen.findByText('Știu deja — sari la exerciții');
+    await press('Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    await press('Mergi la lecția următoare');
+    expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
+    // The router keeps the screen mounted and only changes the param.
+    mockId = 'l2';
+    mockedProgress.mockResolvedValue(progressOf(['l1'])); // l1 is finished now, so l2 is the current lesson
+    await screen.rerender(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <LessonScreen />
+      </SafeAreaProvider>,
+    );
+    expect(await screen.findByText('0 carduri · 2 exerciții')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-content')).getByText('Lecția doi')).toBeTruthy();
+    expect(mockedLesson).toHaveBeenLastCalledWith('l2');
+    expect(mockedProgress).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Lecție terminată! 🎉')).toBeNull();
   });
 
   it('the last lesson passed only offers Home', async () => {
