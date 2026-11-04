@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Adds the extra seed cards (packages/content/src/extraCards.ts) to the production lessons.
+# Dry run by default; pass --apply to write. Reads SUPABASE_ACCESS_TOKEN from the credentials file
+# (see scripts/lib/cloud-credentials.sh), fetches the project's service key with the Supabase CLI and hands
+# it to the content script through the environment only. Never prints a secret; never passes one as an argument.
+# Usage: bash scripts/content-cloud.sh [--apply]
+set -euo pipefail
+
+# shellcheck source=lib/cloud-credentials.sh
+. "$(dirname "$0")/lib/cloud-credentials.sh"
+
+cd "$(dirname "$0")/.."
+
+if ! keys_json="$(pnpm exec supabase projects api-keys --project-ref "$PROJECT_REF" --reveal -o json)"; then
+  echo "Could not list the API keys of $PROJECT_REF (check SUPABASE_ACCESS_TOKEN)." >&2
+  exit 1
+fi
+
+# Prefer a new-style secret key (sb_secret_…), fall back to the legacy service_role JWT.
+# The JSON goes through stdin (printf is a shell builtin), so the keys never appear in a process list.
+service_key="$(printf '%s' "$keys_json" | node -e '
+  let s = "";
+  process.stdin.on("data", (d) => (s += d)).on("end", () => {
+    let keys;
+    try { keys = JSON.parse(s); } catch { process.exit(2); }
+    if (!Array.isArray(keys)) process.exit(2);
+    const usable = (k) => k && typeof k.api_key === "string" && k.api_key && !k.api_key.includes("·");
+    const key = keys.find((k) => k.type === "secret" && usable(k)) ?? keys.find((k) => k.name === "service_role" && usable(k));
+    if (!key) process.exit(3);
+    process.stdout.write(key.api_key);
+  });
+')" || {
+  echo "No service key found in the API keys of $PROJECT_REF (needs a secret or service_role key)." >&2
+  exit 1
+}
+unset keys_json
+
+# Only the child process gets the project URL and the key; the management token and DB password are dropped.
+unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD
+export SUPABASE_URL="https://$PROJECT_REF.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="$service_key"
+unset service_key
+
+exec pnpm --filter @prepio/content add-cards "$@"

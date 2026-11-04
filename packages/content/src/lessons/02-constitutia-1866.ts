@@ -1,3 +1,4 @@
+import { EXTRA_CARDS } from '../extraCards';
 import type { SeedLesson } from '../types';
 
 export const constitutia1866: SeedLesson = {
@@ -150,6 +151,7 @@ export const constitutia1866: SeedLesson = {
         },
       ],
     },
+    ...(EXTRA_CARDS['constitutia-1866'] ?? []),
   ],
   questions: [
     {

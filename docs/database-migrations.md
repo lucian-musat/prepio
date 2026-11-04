@@ -84,4 +84,5 @@ There is no automatic down-migration. Write a new migration that reverts the cha
 | `pnpm db:cloud:status` | local vs production migration list |
 | `pnpm db:cloud:push:dry` | preview what would be applied to production |
 | `pnpm db:cloud:push` | apply pending migrations to production |
+| `pnpm content:cloud:add-cards [--apply]` | add new seed cards to production lessons (dry run by default; see [deploy.md](deploy.md#adding-content-to-production)) |
 | `pnpm db:cloud <args>` | any Supabase CLI command against production, e.g. `migration repair --linked …` (add `--linked` to commands that would otherwise default to the local DB) |

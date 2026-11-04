@@ -74,6 +74,17 @@ The card-types change (spec `docs/superpowers/specs/2026-11-03-card-types-design
 
   `SEED_RESET` semantics: by default the seed only inserts lessons when none exist; otherwise it leaves content untouched (images, settings and the admin user are still ensured). `SEED_RESET=1` (or `--reset`) replaces ALL content, including lessons written in the admin. Do not use it on production after real editing has started.
 
+## Adding content to production
+
+Seed cards written after the first production seed live in `packages/content/src/extraCards.ts` (the seed lessons append them, so a fresh local seed has them too). To add them to the existing production lessons without touching anything else:
+
+```bash
+pnpm content:cloud:add-cards           # dry run: prints, per lesson, the cards to add / already present and images to upload
+pnpm content:cloud:add-cards --apply   # inserts the missing cards at the end of each lesson
+```
+
+`scripts/content-cloud.sh` uses the same credentials file as `db:cloud` (only `SUPABASE_ACCESS_TOKEN` is needed), fetches the project's service key with `supabase projects api-keys --reveal` (a new `secret` key, or the legacy `service_role` one) and passes it to `packages/content/src/addCards.ts` through the environment only; nothing secret is printed or passed as an argument. The script finds each lesson by its exact seed title (renamed or duplicated lessons are reported and skipped, exit code 1), skips a card when the lesson already has one with the same type and title (re-running is safe), uploads missing images under `images/seed/` without overwriting, and never edits or deletes existing cards. Locally the same script runs with `pnpm --filter @prepio/content add-cards [--apply]` against the `.env` Supabase.
+
 ## Auth settings (Supabase dashboard)
 
 - Anonymous sign-ins: OFF. Sign-up and provider settings for student accounts: see [auth-setup.md](auth-setup.md). The Email provider stays ON (admin password login) with Confirm email ON; there is no email-only sign-up switch.

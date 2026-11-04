@@ -1,3 +1,4 @@
+import { EXTRA_CARDS } from '../extraCards';
 import type { SeedLesson } from '../types';
 
 export const independenta: SeedLesson = {
@@ -149,6 +150,7 @@ export const independenta: SeedLesson = {
         'Transilvaniei, Banatului, Crișanei și Maramureșului cu România. Unirile au fost recunoscute prin ' +
         'tratatele Conferinței de pace de la Paris (1919–1920). Așadar, s-a format România Mare.',
     },
+    ...(EXTRA_CARDS['independenta-relatii-internationale'] ?? []),
   ],
   questions: [
     {

@@ -1,3 +1,4 @@
+import { EXTRA_CARDS } from '../extraCards';
 import type { SeedLesson } from '../types';
 
 export const unireaPrincipatelor: SeedLesson = {
@@ -188,6 +189,7 @@ export const unireaPrincipatelor: SeedLesson = {
         'a fost preluată de o Locotenență domnească, iar politicienii au căutat un prinț străin, așa cum ' +
         'ceruseră Adunările ad-hoc.',
     },
+    ...(EXTRA_CARDS['unirea-principatelor-cuza'] ?? []),
   ],
   questions: [
     {

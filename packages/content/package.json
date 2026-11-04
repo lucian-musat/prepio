@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:int": "vitest run --config vitest.int.config.ts",
     "seed": "tsx src/seed.ts",
+    "add-cards": "tsx src/addCards.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

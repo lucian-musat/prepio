@@ -8,8 +8,8 @@ import { cardImagePaths, cardToRow } from '@prepio/shared';
 import { aiDefaults, lessons, tree, welcomeMessage } from './index';
 import type { SeedCard, SeedNode } from './types';
 
-const IMAGES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../images');
-const BUCKET = 'images';
+export const IMAGES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../images');
+export const BUCKET = 'images';
 
 export type SeedOptions = {
   adminEmail?: string;
@@ -19,7 +19,7 @@ export type SeedOptions = {
 };
 export type SeedResult = { contentSeeded: true; nodes: number; lessons: number } | { contentSeeded: false };
 
-function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
+export function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
   return res.data;
 }
@@ -35,15 +35,15 @@ function flattenTree(nodes: SeedNode[], parentId: string | null, ids: Map<string
   });
 }
 
-function contentType(file: string): string {
+export function contentType(file: string): string {
   const ext = file.slice(file.lastIndexOf('.') + 1).toLowerCase();
   return ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
 }
 
-const seedPath = (file: string): string => `seed/${file}`;
+export const seedPath = (file: string): string => `seed/${file}`;
 
 /** Rewrites the card's image file names to their storage paths (`seed/<file>`). */
-function withStoragePaths(card: SeedCard): SeedCard {
+export function withStoragePaths(card: SeedCard): SeedCard {
   switch (card.type) {
     case 'images':
       return { ...card, images: card.images.map((i) => ({ ...i, path: seedPath(i.path) })) };

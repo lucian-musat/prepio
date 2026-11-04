@@ -4,12 +4,14 @@ import { describe, expect, it } from 'vitest';
 import {
   CARD_TYPES,
   cardImagePaths,
+  parseRichText,
   validateCard,
   validateLesson,
   type Card,
   type Lesson,
   type Question,
 } from '@prepio/shared';
+import { EXTRA_CARDS } from './extraCards';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedLesson, type SeedNode } from './index';
 
 const imagesDir = fileURLToPath(new URL('../images/', import.meta.url));
@@ -120,11 +122,46 @@ describe('lessons', () => {
     expect([...types].sort()).toEqual([...CARD_TYPES].sort());
   });
 
+  it('has a gallery images card with at least 3 images', () => {
+    const galleries = lessons.flatMap((l) => l.cards).filter((c) => c.type === 'images' && c.display === 'gallery');
+    expect(galleries.some((c) => c.type === 'images' && c.images.length >= 3)).toBe(true);
+  });
+
+  it('uses every callout variant, a list and a heading in one text card', () => {
+    const texts = lessons.flatMap((l) => l.cards).flatMap((c) => (c.type === 'text' ? [parseRichText(c.text)] : []));
+    const full = texts.find((blocks) => {
+      const variants = new Set(blocks.flatMap((b) => (b.kind === 'callout' ? [b.variant] : [])));
+      return (
+        variants.size === 3 && blocks.some((b) => b.kind === 'list') && blocks.some((b) => b.kind === 'heading')
+      );
+    });
+    expect(full).toBeDefined();
+  });
+
+  it('appends the extra cards of every lesson key, which all exist', () => {
+    const keys = new Set(lessons.map((l) => l.key));
+    for (const [key, extras] of Object.entries(EXTRA_CARDS)) {
+      expect(keys.has(key), key).toBe(true);
+      const lesson = lessons.find((l) => l.key === key)!;
+      expect(lesson.cards.slice(-extras.length)).toEqual(extras);
+    }
+  });
+
   describe.each(lessons.map((l) => [l.key, l] as const))('%s', (_key, lesson) => {
-    it('has 6–10 cards, at least 2 with an image', () => {
+    it('has 6–16 cards, at least 2 with an image', () => {
       expect(lesson.cards.length).toBeGreaterThanOrEqual(6);
-      expect(lesson.cards.length).toBeLessThanOrEqual(10);
+      expect(lesson.cards.length).toBeLessThanOrEqual(16);
       expect(lesson.cards.filter((c) => cardImagePaths(c).length > 0).length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('has a card of every type', () => {
+      expect(new Set(lesson.cards.map((c) => c.type))).toEqual(new Set(CARD_TYPES));
+    });
+
+    it('has unique card titles (the add-cards script matches on type + title)', () => {
+      const titles = lesson.cards.map((c) => c.title);
+      expect(titles.every((t) => t?.trim())).toBe(true);
+      expect(new Set(titles).size).toBe(titles.length);
     });
 
     it('has only valid cards', () => {
