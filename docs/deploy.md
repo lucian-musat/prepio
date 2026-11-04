@@ -76,7 +76,7 @@ The card-types change (spec `docs/superpowers/specs/2026-11-03-card-types-design
 
 ## Adding content to production
 
-Seed cards written after the first production seed live in `packages/content/src/extraCards.ts` (the seed lessons append them, so a fresh local seed has them too). To add them to the existing production lessons without touching anything else:
+Seed cards written after the first production seed live in `packages/content/src/extraCards.ts` (the seed lessons append them, so a fresh local seed has them too). To add them to the existing production lessons without touching anything else (prerequisite: the migrations the cards need are pushed and admin/web are deployed; always run the dry run first and check that only the expected lessons and cards are listed):
 
 ```bash
 pnpm content:cloud:add-cards           # dry run: prints, per lesson, the cards to add / already present and images to upload
