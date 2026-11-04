@@ -18,6 +18,8 @@ const paths = {
   timeline: 'M3 12h18M6 12v-4M12 12v4M18 12v-4M6 7.5v.01M12 16.5v.01M18 7.5v.01',
   schema: 'M9 4h6v5H9zM3 15h6v5H3zM15 15h6v5h-6zM12 9v3M6 15v-3h12v3',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  plus: 'M12 5v14M5 12h14',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.01',
 } as const;
 
 export type IconName = keyof typeof paths;

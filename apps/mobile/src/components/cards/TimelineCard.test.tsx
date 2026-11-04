@@ -1,6 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import * as Reanimated from 'react-native-reanimated';
 import type { CardContent } from '@prepio/shared';
 import TimelineCard from './TimelineCard';
+
+// Reanimated's jest helper; the public typings only describe the no-op production stub.
+const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { transform: { rotate: string }[] } };
 
 type Timeline = Extract<CardContent, { type: 'timeline' }>;
 const point = (i: number, over: Partial<Timeline['points'][number]> = {}) => ({
@@ -56,4 +60,39 @@ it('a point without details is not a button', async () => {
 it('renders an empty timeline without crashing', async () => {
   await render(<TimelineCard content={timeline([])} />);
   expect(screen.queryByText(/^Data /)).toBeNull();
+});
+
+describe('tap affordance', () => {
+  const HINT = 'Atinge un punct pentru detalii';
+
+  it('shows the hint only when at least one point has details', async () => {
+    await render(<TimelineCard content={timeline([point(1), point(2)])} />);
+    expect(screen.queryByText(HINT)).toBeNull();
+    await render(<TimelineCard content={timeline([point(1), point(2, { details: 'Mai mult' })])} />);
+    expect(screen.getByText(HINT)).toBeTruthy();
+  });
+
+  it('only points with details get the chevron and a tap hint for screen readers', async () => {
+    await render(<TimelineCard content={timeline([point(1), point(2, { details: 'Mai mult' }), point(3)])} />);
+    expect(screen.getAllByTestId('timeline-chevron', { includeHiddenElements: true })).toHaveLength(1);
+    expect(screen.getByRole('button').props.accessibilityHint).toBe('Atinge pentru detalii');
+  });
+
+  it('the chevron turns over when the point opens and back when it closes', async () => {
+    jest.useFakeTimers();
+    try {
+      await render(<TimelineCard content={timeline([point(1, { details: 'Mai mult' })])} />);
+      const rotation = () =>
+        getAnimatedStyle(screen.getByTestId('timeline-chevron', { includeHiddenElements: true })).transform[0].rotate;
+      expect(rotation()).toBe('0deg');
+      await fireEvent.press(screen.getByRole('button'));
+      await act(async () => jest.advanceTimersByTime(600));
+      expect(rotation()).toBe('180deg');
+      await fireEvent.press(screen.getByRole('button'));
+      await act(async () => jest.advanceTimersByTime(600));
+      expect(rotation()).toBe('0deg');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

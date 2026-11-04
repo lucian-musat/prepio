@@ -6,6 +6,7 @@ export { default as ActionBar, type ActionTone } from './ActionBar';
 export { default as ScreenLayout, SCREEN_CONTENT_TOP } from './ScreenLayout';
 export { default as Enter } from './Enter';
 export { default as CardTransition, useCardLeaving } from './CardTransition';
+export { default as Reveal } from './Reveal';
 export { default as Button } from './Button';
 export { default as Surface, type SpaceKey } from './Surface';
 export { default as Chip } from './Chip';
