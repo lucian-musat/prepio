@@ -59,6 +59,16 @@ The card-types change (spec `docs/superpowers/specs/2026-11-03-card-types-design
 6. Production walk in Chrome: existing lessons render (converted text and image cards); in the admin, create a `[test]` draft lesson with one card of each type, check the live preview (Telefon / Desktop) against production web, then delete it; console clean.
 7. New EAS `preview` APK, **mandatory**: after the migration the installed APK shows empty or placeholder cards. New native modules: `react-native-webview`, `react-native-youtube-iframe`, `expo-web-browser` (config plugin in `app.json`). Run `npx expo install --check` before the build. Then the owner's phone-test list in `docs/STATUS.md`.
 
+## Learning modes rollout
+
+The learning-modes change (spec `docs/superpowers/specs/2026-11-04-learning-modes-design.md`) is additive: migration `20261104131121_learning_modes` adds the nullable `profiles.learning_mode` column and the `lesson_progress` table. Old builds of the student web and the APK don't read them and keep working, just without modes or saved progress. The new student web does read them, so the migration goes first. The admin code is unchanged.
+
+1. **Prerequisite (owner):** delete the production lessons „test” and „test 2” (section A) through the production admin, never by hand in the database. Otherwise guided mode puts them first and locks the real lessons behind them. Check that the student Home then lists only the real lessons.
+2. `pnpm db:cloud:push:dry` (must list only `20261104131121_learning_modes`) → `pnpm db:cloud:push`.
+3. `git push`: Vercel deploys `prepio-web` (and `prepio-admin`, no code change there) from `main`. Don't push before step 2: the new web selects `profiles.learning_mode` and would fail to load the profile.
+4. Production walk in Chrome: an existing account sees „Cum vrei să înveți?” once, then Home with the mode chip; guided Home locks all but the first lesson; open a lesson (start screen), go a few cards in, reload, „Continuă de unde ai rămas” resumes; switch the mode in the profile; console clean. Progress rows created during the walk are the walking account's own progress; never edit `lesson_progress` by hand.
+5. New EAS `preview` APK (no new native modules). Old APKs keep working without progress. Then the owner's phone-test list in `docs/STATUS.md`.
+
 ## Schema and content
 
 - Schema: migrations in `supabase/migrations/`, applied with `pnpm db:cloud:push` — full workflow, credentials setup and the one-time history repair in [database-migrations.md](database-migrations.md).
