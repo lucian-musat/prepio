@@ -91,9 +91,11 @@ describe('resumePoint', () => {
       phase: 'exercises', index: 0, results,
     });
   });
-  it('is null when all questions are answered and there are no exercises', () => {
+  it('stays on the last question, results kept, when all are answered and there are no exercises', () => {
     const results = { q1: true, q2: true };
-    expect(resumePoint(lesson(1, 2, 0), { phase: 'questions', index: 0, results })).toBeNull();
+    expect(resumePoint(lesson(1, 2, 0), { phase: 'questions', index: 0, results })).toEqual({
+      phase: 'questions', index: 1, results,
+    });
   });
   it('is null when the exercise index is past the end', () => {
     expect(resumePoint(lesson(1, 2, 1), { phase: 'exercises', index: 5, results: {} })).toBeNull();

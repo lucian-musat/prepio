@@ -4,6 +4,7 @@ import type { Lesson, LessonSummary } from '@prepio/shared';
 import LessonScreen, { lessonProgress } from './LessonScreen';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { fetchProgress, markFinished, savePosition, type LessonPosition } from '../lib/progress';
+import { AUTH_TIMEOUT_MS } from '../lib/supabase';
 
 jest.mock('../lib/content', () => ({
   fetchLesson: jest.fn(),
@@ -319,6 +320,44 @@ describe('free mode', () => {
   });
 });
 
+describe('stalled progress writes', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('a markFinished that never settles shows the save error after the timeout', async () => {
+    jest.useFakeTimers();
+    mockedFinish.mockReturnValueOnce(new Promise(() => {}));
+    await openLesson(lesson({ cards: [], questions: [], exercises: [] }), 'Știu deja — sari la exerciții');
+    expect(screen.queryByText('Ai terminat lecția!')).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(AUTH_TIMEOUT_MS);
+    });
+    expect(await screen.findByText('Progresul nu a putut fi salvat. Încearcă din nou.')).toBeTruthy();
+    await press('Reîncearcă');
+    expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
+  });
+
+  it('a hung position save does not hold the finished mark back forever', async () => {
+    jest.useFakeTimers();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockMode = 'guided';
+    mockedSave
+      .mockResolvedValueOnce(undefined) // entering question 1
+      .mockReturnValueOnce(new Promise(() => {})); // the „Verifică” save hangs
+    await openLesson(lesson({ cards: [], exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    expect(mockedFinish).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(AUTH_TIMEOUT_MS);
+    });
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(warn).toHaveBeenCalledWith('Could not save the lesson position', expect.anything());
+    warn.mockRestore();
+  });
+});
+
 describe('back', () => {
   it('back from the lesson goes home without history', async () => {
     await openLesson(lesson());
@@ -560,6 +599,57 @@ describe('guided mode', () => {
     await press('Reîncearcă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledTimes(2);
+  });
+
+  // After a free -> guided switch the finished lessons need not be a prefix of the order.
+  const fiveLessons = homeOf(...[1, 2, 3, 4, 5].map((n) => summary(`l${n}`, `Lecția ${n}`, n)));
+
+  it('passing the current lesson after a switch unlocks the first unfinished one, not the next in order', async () => {
+    mockedHome.mockResolvedValue(fiveLessons);
+    mockedProgress.mockResolvedValue(progressOf(['l1', 'l3']));
+    mockId = 'l2';
+    await openLesson(lesson({ id: 'l2', title: 'Lecția 2', exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(screen.getByText('Ai deblocat: Lecția 4')).toBeTruthy();
+    await press('Mergi la lecția următoare');
+    expect(mockReplace).toHaveBeenCalledWith('/lesson/l4');
+  });
+
+  it('redoing a finished lesson after a switch offers the current lesson, without an unlock line', async () => {
+    mockedHome.mockResolvedValue(fiveLessons);
+    mockedProgress.mockResolvedValue(progressOf(['l1', 'l4']));
+    mockId = 'l4';
+    await openLesson(lesson({ id: 'l4', title: 'Lecția 4', exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(screen.queryByText(/Ai deblocat/)).toBeNull();
+    await press('Mergi la lecția următoare');
+    expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('passing the only unfinished lesson after a switch offers only Home', async () => {
+    mockedHome.mockResolvedValue(homeOf(summary('l1', 'Lecția 1', 1), summary('l2', 'Lecția 2', 2)));
+    mockedProgress.mockResolvedValue(progressOf(['l2']));
+    await openLesson(lesson({ title: 'Lecția 1', exercises: [] }), 'Știu deja — sari la exerciții');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(screen.queryByText(/Ai deblocat/)).toBeNull();
+    expect(screen.queryByText('Mergi la lecția următoare')).toBeNull();
+  });
+
+  it('resumes on the last question when every question was answered and keeps the saved results', async () => {
+    mockedProgress.mockResolvedValue(
+      progressOf([], { l1: { phase: 'questions', index: 1, results: { q1: true, q2: true } } }),
+    );
+    await renderLesson(lesson({ questions: [question(1), question(2)], exercises: [] }));
+    await screen.findByText('Continuă de unde ai rămas');
+    await press('Continuă de unde ai rămas');
+    expect(await screen.findByText('Întrebarea 2 din 2')).toBeTruthy();
+    await answer('Da', 'Continuă');
+    // q1 is not asked again: its saved result counts.
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(screen.getByText('2 din 2 întrebări corecte')).toBeTruthy();
   });
 
   it('a lesson without questions passes at its end', async () => {

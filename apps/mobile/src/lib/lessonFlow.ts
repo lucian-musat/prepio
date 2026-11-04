@@ -55,7 +55,10 @@ export function resumePoint(lesson: Lesson, position: LessonPosition | null): Le
     for (let i = index; i < lesson.questions.length; i++) {
       if (!(lesson.questions[i].id in results)) return { phase, index: i, results };
     }
-    return lesson.exercises.length > 0 ? { phase: 'exercises', index: 0, results } : null;
+    if (lesson.exercises.length > 0) return { phase: 'exercises', index: 0, results };
+    // Every question answered and nothing after them: stay on the last question with the results kept, so
+    // leaving before its „Continuă” doesn't throw the attempt away (re-answering it finishes the lesson).
+    return { phase, index: lesson.questions.length - 1, results };
   }
   const items = phase === 'cards' ? lesson.cards : lesson.exercises;
   return index < items.length ? position : null;

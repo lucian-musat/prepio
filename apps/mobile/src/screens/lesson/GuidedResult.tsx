@@ -27,9 +27,9 @@ function Score({ outcome }: { outcome: AttemptOutcome }) {
 
 type PassedProps = {
   outcome: AttemptOutcome;
-  /** Title of the lesson this pass unlocked (only on a first pass with a lesson after it). */
+  /** Title of the lesson this pass unlocked (only when it was locked before this pass). */
   unlocked?: string;
-  /** Id of the next lesson in order, if there is one. */
+  /** Id of the lesson to go on to (the first unfinished one), if there is one. */
   nextId?: string;
 };
 

@@ -10,6 +10,7 @@ import { fetchHome, fetchLesson } from '../lib/content';
 import { modeOf } from '../lib/learningMode';
 import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
+import { withTimeout } from '../lib/supabase';
 import { AppText, Button, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import LessonStart from './lesson/LessonStart';
 import { GuidedFailed, GuidedPassed } from './lesson/GuidedResult';
@@ -82,7 +83,10 @@ function Loading() {
 
 type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress };
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
-type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error'; error?: string };
+type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error' };
+
+/** Shown for any failed finished mark: markFinished's own message, also used for a timeout. */
+const SAVE_FAILED = 'Progresul nu a putut fi salvat. Încearcă din nou.';
 
 /**
  * Runs progress writes one after another: they are upserts on the same row, so a late position save must
@@ -92,7 +96,9 @@ function useWriteQueue() {
   const tail = useRef<Promise<unknown>>(Promise.resolve());
   return <T,>(write: () => Promise<T>): Promise<T> => {
     // A failed write never breaks the chain: the next one runs after it settles either way.
-    const run = tail.current.catch(() => undefined).then(write);
+    // Each write is capped by the auth timeout, so a stalled connection can't hold the queue (or the end
+    // screen) forever: it fails like any other write.
+    const run = tail.current.catch(() => undefined).then(() => withTimeout(write()));
     tail.current = run;
     return run;
   };
@@ -161,7 +167,7 @@ export default function LessonScreen() {
     setEnd({ outcome, status: 'saving' });
     enqueue(() => markFinished(lesson.id)).then(
       () => mounted.current && setEnd({ outcome, status: 'saved' }),
-      (e: Error) => mounted.current && setEnd({ outcome, status: 'error', error: e.message }),
+      () => mounted.current && setEnd({ outcome, status: 'error' }),
     );
   };
 
@@ -279,7 +285,7 @@ function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCa
       <ScreenLayout title="Lecție" onBack={goBackOrHome} actions={<Button flex label="Reîncearcă" onPress={() => onRetrySave(outcome)} />}>
         <Surface style={styles.message}>
           <AppText role="small" color="danger" accessibilityRole="alert">
-            {end.error}
+            {SAVE_FAILED}
           </AppText>
         </Surface>
       </ScreenLayout>
@@ -289,10 +295,13 @@ function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCa
   if (!outcome.passed) {
     return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
   }
-  const at = order.findIndex((l) => l.id === lesson.id);
-  const next = at >= 0 ? order[at + 1] : undefined;
-  // "Ai deblocat" only on the pass that actually opened the next lesson, not on a redo.
-  const unlocked = next && !progress.finished.has(lesson.id) ? next.title : undefined;
+  // Go on to the lesson that is current once this pass counts: after a free → guided switch the finished
+  // lessons need not be a prefix of the order, so it is not always the next one. "Ai deblocat" only when this
+  // pass is what opened it (it was locked before), not on a redo.
+  const before = lessonAccess(order, progress.finished, 'guided');
+  const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided');
+  const next = order.find((l) => after.get(l.id) === 'current');
+  const unlocked = next && before.get(next.id) === 'locked' ? next.title : undefined;
   return <GuidedPassed outcome={outcome} unlocked={unlocked} nextId={next?.id} />;
 }
 
