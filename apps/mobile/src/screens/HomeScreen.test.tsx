@@ -4,9 +4,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import HomeScreen from './HomeScreen';
 import { fetchHome } from '../lib/content';
+import { fetchProgress } from '../lib/progress';
 
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
+// useFocusEffect runs its callback once, like an effect (the screen is focused on mount).
+jest.mock('expo-router', () => {
+  const { useEffect } = jest.requireActual('react');
+  return { router: { push: jest.fn() }, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
+});
 let mockProfile: { id: string; displayName: string | null; learningMode: 'guided' | 'free' | null } | null = {
   id: 'u1',
   displayName: 'ana',
@@ -15,6 +21,8 @@ let mockProfile: { id: string; displayName: string | null; learningMode: 'guided
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockProfile }) }));
 
 const mockedFetch = fetchHome as jest.Mock;
+const mockedProgress = fetchProgress as jest.Mock;
+const progressOf = (...ids: string[]) => ({ finished: new Set(ids), positions: new Map() });
 
 // Reanimated's jest helpers; the public typings only describe the no-op production stubs.
 const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { opacity: number } };
@@ -33,6 +41,7 @@ const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', 
 beforeEach(() => {
   jest.clearAllMocks();
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided' };
+  mockedProgress.mockResolvedValue(progressOf());
 });
 
 it('shows a profile button with the initial and opens the profile', async () => {
@@ -120,6 +129,7 @@ it('shows the total lesson count chip', async () => {
 });
 
 it('opens a lesson on press', async () => {
+  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free' };
   mockedFetch.mockResolvedValue({
     welcomeMessage: 'x',
     sections: [{ path: ['A'], lessons: [lesson('first', 'Prima'), lesson('second', 'A doua', 2)] }],
@@ -157,5 +167,63 @@ describe('entrance', () => {
     expect(opacity('enter-lesson-a1')).toBeGreaterThan(opacity('enter-lesson-a2'));
     await act(async () => jest.advanceTimersByTime(800));
     for (const id of ['enter-hero', 'enter-section-0', 'enter-lesson-a1', 'enter-lesson-a2']) expect(opacity(id)).toBe(1);
+  });
+});
+
+describe('lesson states', () => {
+  const threeLessons = () =>
+    mockedFetch.mockResolvedValue({
+      welcomeMessage: 'x',
+      sections: [{ path: ['A'], lessons: [lesson('l1', 'Unu'), lesson('l2', 'Doi', 2), lesson('l3', 'Trei', 3)] }],
+    });
+
+  it('loads home and progress together', async () => {
+    threeLessons();
+    await renderHome();
+    await screen.findByText('Unu');
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    expect(mockedProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('guided: finished, current and locked lessons; locked does not navigate', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    await renderHome();
+    expect(await screen.findByText('🧭 Traseu ghidat · 1 din 3 terminate')).toBeTruthy();
+    expect(screen.getByText('Terminată')).toBeTruthy();
+    expect(screen.getByText('Continuă')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Trei, blocată' }));
+    expect(router.push).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Doi' }));
+    expect(router.push).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('free: shows the free chip and opens every unfinished lesson', async () => {
+    mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free' };
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    await renderHome();
+    expect(await screen.findByText('🗺️ Explorare liberă · 1 din 3 terminate')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Trei' }));
+    expect(router.push).toHaveBeenCalledWith('/lesson/l3');
+  });
+
+  it('treats a missing profile (offline) as guided', async () => {
+    mockProfile = null;
+    threeLessons();
+    await renderHome();
+    expect(await screen.findByText('🧭 Traseu ghidat · 0 din 3 terminate')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Doi, blocată' })).toBeTruthy();
+  });
+
+  it('shows the error surface when progress fails and retry reloads both', async () => {
+    threeLessons();
+    mockedProgress.mockRejectedValueOnce(new Error('network'));
+    await renderHome();
+    expect(await screen.findByText(/Nu am putut încărca lecțiile/)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Reîncearcă'));
+    expect(await screen.findByText('Unu')).toBeTruthy();
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
+    expect(mockedProgress).toHaveBeenCalledTimes(2);
   });
 });

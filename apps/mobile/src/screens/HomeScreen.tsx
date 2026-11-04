@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { border, color, layout, radius, space } from '@prepio/shared';
-import { AppText, Button, Enter, Hero, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
+import { AppText, Button, Chip, Enter, Hero, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
 import { fetchHome, type HomeData } from '../lib/content';
 import { lessonCount } from '../lib/lessonCount';
+import { lessonAccess, orderedLessons, type LessonState } from '../lib/lessonFlow';
+import { MODE_INFO, modeOf } from '../lib/learningMode';
+import { fetchProgress, type Progress } from '../lib/progress';
 import { useAuth } from '../auth/AuthProvider';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
@@ -20,10 +23,10 @@ function pairs<T>(items: T[]): T[][] {
 }
 
 /** A section's lessons: one column on phones, a two-column grid on wide screens (prototype desktop `.lessons`). */
-function LessonList({ lessons, wide }: { lessons: Lesson[]; wide: boolean }) {
+function LessonList({ lessons, wide, access }: { lessons: Lesson[]; wide: boolean; access: Map<string, LessonState> }) {
   const item = (lesson: Lesson, i: number) => (
     <Enter key={lesson.id} testID={`enter-lesson-${lesson.id}`} index={stagger(i)} style={wide ? styles.cell : undefined}>
-      <LessonListItem index={i} title={lesson.title} onPress={() => router.push(`/lesson/${lesson.id}`)} />
+      <LessonListItem index={i} title={lesson.title} state={access.get(lesson.id)} onPress={() => router.push(`/lesson/${lesson.id}`)} />
     </Enter>
   );
   if (!wide) return <View style={styles.lessons}>{lessons.map(item)}</View>;
@@ -63,13 +66,36 @@ export default function HomeScreen() {
   const [data, setData] = useState<HomeData | null>(null);
   const [failed, setFailed] = useState(false);
 
-  const load = useCallback(() => {
-    setFailed(false);
-    setData(null);
-    fetchHome().then(setData, () => setFailed(true));
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const { profile } = useAuth();
+  const loaded = useRef(false);
+
+  // Home and progress load together. A refresh on refocus (back from a lesson) keeps the stale
+  // list on screen and ignores a failure; only the first load shows the error surface.
+  const fetchAll = useCallback(() => {
+    let live = true;
+    Promise.all([fetchHome(), fetchProgress()]).then(
+      ([home, prog]) => {
+        if (!live) return;
+        loaded.current = true;
+        setData(home);
+        setProgress(prog);
+      },
+      () => live && !loaded.current && setFailed(true),
+    );
+    return () => {
+      live = false;
+    };
   }, []);
 
-  useEffect(load, [load]);
+  useFocusEffect(fetchAll);
+
+  const retry = () => {
+    setFailed(false);
+    setData(null);
+    loaded.current = false;
+    fetchAll();
+  };
 
   if (failed) {
     return (
@@ -79,13 +105,13 @@ export default function HomeScreen() {
           <AppText role="small" color="textMuted">
             Verifică conexiunea la internet și încearcă din nou.
           </AppText>
-          <Button label="Reîncearcă" onPress={load} />
+          <Button label="Reîncearcă" onPress={retry} />
         </Surface>
       </ScreenLayout>
     );
   }
 
-  if (!data) {
+  if (!data || !progress) {
     return (
       <ScreenLayout logo trailing={<ProfileButton />}>
         <View style={styles.loader}>
@@ -96,12 +122,22 @@ export default function HomeScreen() {
   }
 
   const total = data.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+  const mode = modeOf(profile);
+  const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode);
+  const done = [...access.values()].filter((st) => st === 'finished').length;
 
   return (
     <ScreenLayout logo trailing={<ProfileButton />}>
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} />
       </Enter>
+      <View style={styles.modeChip}>
+        <Chip
+          label={`${MODE_INFO[mode].icon} ${MODE_INFO[mode].name} · ${done} din ${total} terminate`}
+          fg={color.primaryStrong}
+          bg={color.primarySubtle}
+        />
+      </View>
       {data.sections.map((section, s) => {
         const title = section.path.join(' › ');
         return (
@@ -114,7 +150,7 @@ export default function HomeScreen() {
                 {lessonCount(section.lessons.length)}
               </AppText>
             </Enter>
-            <LessonList lessons={section.lessons} wide={wide} />
+            <LessonList lessons={section.lessons} wide={wide} access={access} />
           </View>
         );
       })}
@@ -134,6 +170,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  modeChip: { marginBottom: space[4] },
   loader: { marginTop: space[12], alignItems: 'center' },
   // Prototype `.sec-title`: baseline-aligned title and count, 10 px above the list.
   header: {

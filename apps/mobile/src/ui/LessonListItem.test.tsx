@@ -51,3 +51,33 @@ it('lifts, tints the chevron and nudges it on hover (web), and resets on hover o
   await act(async () => jest.advanceTimersByTime(400));
   expect(transform()).toMatchObject({ translateY: 0 });
 });
+
+it('shows a finished lesson with a check tile and the caption "Terminată"', async () => {
+  await render(<LessonListItem index={0} title="Lecția" state="finished" onPress={() => {}} />);
+  expect(screen.getByText('Terminată')).toBeTruthy();
+  expect(screen.queryByText('1')).toBeNull();
+  expect(screen.getByTestId('lesson-check')).toBeTruthy();
+});
+
+it('marks the current lesson with the caption "Continuă" and a primary border', async () => {
+  await render(<LessonListItem index={1} title="Lecția" state="current" onPress={() => {}} />);
+  expect(screen.getByText('Continuă')).toBeTruthy();
+  expect(StyleSheet.flatten(screen.getByTestId('lesson-row').props.style).borderColor).toBe(color.primary);
+});
+
+it('blocks a locked lesson: disabled, labelled, no onPress', async () => {
+  const onPress = jest.fn();
+  await render(<LessonListItem index={2} title="Lecția" state="locked" onPress={onPress} />);
+  const row = screen.getByRole('button', { name: 'Lecția, blocată' });
+  expect(row.props.accessibilityState).toMatchObject({ disabled: true });
+  expect(screen.getByText('🔒')).toBeTruthy();
+  await fireEvent.press(row);
+  expect(onPress).not.toHaveBeenCalled();
+});
+
+it('keeps the plain look for open lessons', async () => {
+  await render(<LessonListItem index={0} title="Lecția" state="open" onPress={() => {}} />);
+  expect(screen.queryByText('Terminată')).toBeNull();
+  expect(screen.queryByText('Continuă')).toBeNull();
+  expect(screen.queryByText('🔒')).toBeNull();
+});

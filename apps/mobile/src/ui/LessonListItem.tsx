@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { border, color, difficultyTone, elevation, motion, pressScale, radius, space } from '@prepio/shared';
+import { border, color, difficultyTone, elevation, motion, opacity, pressScale, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import { Icon } from './IconButton';
 import { mixColors, solidShadow } from './elevation';
 import { timing } from './motion';
 import { type } from './typography';
+import type { LessonState } from '../lib/lessonFlow';
 
-type Props = { index: number; title: string; onPress: () => void };
+type Props = { index: number; title: string; state?: LessonState; onPress: () => void };
 
 // Prototype `.lesson .num` tile and the `.lesson:hover` / `:active` motion.
 const TILE = space[10] + space[1]; // 44 px
@@ -23,13 +24,18 @@ const tiles = [
   { bg: color.accentSubtle, fg: difficultyTone.medium.fg },
 ] as const;
 
-/** One lesson on Home (prototype B `.lesson`): number tile, title, chevron; lifts on hover, shrinks on press. */
-export default function LessonListItem({ index, title, onPress }: Props) {
+/**
+ * One lesson on Home (prototype B `.lesson`): number tile, title, chevron; lifts on hover, shrinks on press.
+ * `state` adds the learning-mode look: finished (check tile), current (primary border), locked (dimmed, inert).
+ */
+export default function LessonListItem({ index, title, state = 'open', onPress }: Props) {
   const [hovered, setHovered] = useState(false);
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
   const nudge = useSharedValue(0);
   const tile = tiles[index % 2];
+  const locked = state === 'locked';
+  const caption = state === 'finished' ? 'Terminată' : state === 'current' ? 'Continuă' : null;
 
   // CSS: `:active` replaces the hover transform, so pressing drops the lift while it shrinks.
   const t = () => timing(motion.duration.base);
@@ -51,24 +57,42 @@ export default function LessonListItem({ index, title, onPress }: Props) {
     // re-applies its React style when its pressed state re-renders, wiping the animated transform.
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={title}
-      onPress={onPress}
+      accessibilityLabel={locked ? `${title}, blocată` : title}
+      accessibilityState={{ disabled: locked }}
+      aria-disabled={locked}
+      disabled={locked}
+      onPress={locked ? undefined : onPress}
       onHoverIn={onHover(true)}
       onHoverOut={onHover(false)}
       onPressIn={onPressState(true)}
       onPressOut={onPressState(false)}
-      style={styles.hit}
+      style={[styles.hit, locked && styles.locked]}
     >
-      <Animated.View testID="lesson-row" style={[styles.row, hovered && styles.rowHover, rowStyle]}>
-        <View style={[styles.tile, { backgroundColor: tile.bg }]}>
-          <AppText style={[styles.num, { color: tile.fg }]}>{index + 1}</AppText>
+      <Animated.View testID="lesson-row" style={[styles.row, hovered && !locked && styles.rowHover, state === 'current' && styles.rowCurrent, rowStyle]}>
+        {state === 'finished' ? (
+          <View testID="lesson-check" style={[styles.tile, { backgroundColor: color.primary }]}>
+            <Icon name="check" tint={color.onPrimary} />
+          </View>
+        ) : (
+          <View style={[styles.tile, { backgroundColor: tile.bg }]}>
+            <AppText style={[styles.num, { color: tile.fg }]}>{index + 1}</AppText>
+          </View>
+        )}
+        <View style={styles.text}>
+          <AppText role="bodyStrong">{title}</AppText>
+          {caption ? (
+            <AppText role="caption" color={state === 'current' ? 'primary' : 'textMuted'}>
+              {caption}
+            </AppText>
+          ) : null}
         </View>
-        <AppText role="bodyStrong" style={styles.title}>
-          {title}
-        </AppText>
-        <Animated.View style={goStyle}>
-          <Icon name="chevron-right" tint={hovered ? color.primary : color.textMuted} />
-        </Animated.View>
+        {locked ? (
+          <AppText>🔒</AppText>
+        ) : (
+          <Animated.View style={goStyle}>
+            <Icon name="chevron-right" tint={hovered ? color.primary : color.textMuted} />
+          </Animated.View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -89,8 +113,10 @@ const styles = StyleSheet.create({
     boxShadow: solidShadow(elevation.card.offsetY, elevation.card.color),
   },
   rowHover: { borderColor: HOVER_BORDER },
+  rowCurrent: { borderColor: color.primary },
+  locked: { opacity: opacity.disabled },
   tile: { width: TILE, height: TILE, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   // Prototype `.num`: heading font 900 at 18 px, without the heading letter-spacing.
   num: { ...type('section'), letterSpacing: 0 },
-  title: { flex: 1 },
+  text: { flex: 1 },
 });
