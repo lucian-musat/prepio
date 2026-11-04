@@ -1,8 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Card } from '@prepio/shared';
 import CardStepper from './CardStepper';
+
+// Reanimated's jest helper; the public typings only describe the no-op production stub.
+const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { transform: Record<string, number | string>[] } };
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: () => false } }));
 
@@ -85,11 +89,12 @@ it('the two back buttons have distinct accessible names', async () => {
 });
 
 describe('swipe between cards', () => {
-  type PanEvent = { translationX: number; velocityX: number; pointerType: number };
+  type PanEvent = { translationX: number; velocityX: number; pointerType: number; canceled?: boolean };
   type PanConfig = {
     enabled?: boolean;
     onBegin?: (e: PanEvent) => void;
     onUpdate?: (e: PanEvent) => void;
+    onActivate?: (e: PanEvent) => void;
     onDeactivate?: (e: PanEvent) => void;
   };
   // Capture the pan the stepper registers (the global gesture mock is a no-op).
@@ -114,12 +119,12 @@ describe('swipe between cards', () => {
   const TOUCH = 0;
   const MOUSE = 2;
   // A whole drag (begin, move, lift), then enough time for the fly-off or spring-back animation.
-  const swipe = async (translationX: number, velocityX = 0, pointerType = TOUCH) => {
+  const swipe = async (translationX: number, velocityX = 0, pointerType = TOUCH, canceled = false) => {
     const e = { translationX, velocityX, pointerType };
     await act(async () => {
       pan.onBegin?.(e);
       pan.onUpdate?.(e);
-      pan.onDeactivate?.(e);
+      pan.onDeactivate?.({ ...e, canceled });
     });
     await act(async () => jest.advanceTimersByTime(600));
   };
@@ -160,6 +165,30 @@ describe('swipe between cards', () => {
     expect(onIndexChange).toHaveBeenCalledTimes(1);
   });
 
+  it('the card picks up where it is, without jumping by the activation distance', async () => {
+    await renderStepper([card(1), card(2)]);
+    await layout();
+    const e = (translationX: number) => ({ translationX, velocityX: 0, pointerType: TOUCH });
+    await act(async () => {
+      pan.onBegin?.(e(0));
+      pan.onActivate?.(e(15));
+      pan.onUpdate?.(e(15));
+    });
+    await act(async () => jest.advanceTimersByTime(20));
+    expect(getAnimatedStyle(screen.getByTestId('card-swipe')).transform[0]).toEqual({ translateX: 0 });
+    await act(async () => pan.onUpdate?.(e(-45)));
+    await act(async () => jest.advanceTimersByTime(20));
+    expect(getAnimatedStyle(screen.getByTestId('card-swipe')).transform[0]).toEqual({ translateX: -60 });
+  });
+
+  it('a cancelled pan (system gesture, a scroll view took over) never navigates', async () => {
+    const { onIndexChange } = await renderStepper([card(1), card(2)]);
+    await layout();
+    await swipe(-300, -900, TOUCH, true);
+    counter('Cartonaș 1 din 2');
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
   it('on web it is off for a mouse (fine pointer) and on for touch screens', async () => {
     const os = Platform.OS;
     const matchMedia = window.matchMedia;
@@ -175,6 +204,8 @@ describe('swipe between cards', () => {
       await renderStepper([card(1), card(2)]);
       await layout();
       expect(pan.enabled).toBe(true);
+      // In the gesture config itself, so web config updates keep vertical touch scrolling.
+      expect(pan).toMatchObject({ touchAction: 'pan-y', userSelect: 'auto' });
       // A mouse drag on a touch device is ignored.
       await swipe(-300, -900, MOUSE);
       counter('Cartonaș 1 din 2');

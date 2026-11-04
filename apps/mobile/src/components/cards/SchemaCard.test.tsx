@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import type { CardContent } from '@prepio/shared';
 import SchemaCard from './SchemaCard';
@@ -83,4 +84,9 @@ describe('tap affordance', () => {
     await fireEvent.press(screen.getByRole('button'));
     expect(screen.getByRole('button').props.accessibilityLabel).toBe('Autodeterminarea. Principiul lui Wilson');
   });
+});
+
+it('a box keeps its size until the detail opens (no flex gap reserved for the hidden detail)', async () => {
+  await render(<SchemaCard content={schema()} />);
+  expect(StyleSheet.flatten(screen.getByTestId('schema-box').props.style).gap).toBeUndefined();
 });

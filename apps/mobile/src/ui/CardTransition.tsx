@@ -83,6 +83,8 @@ export default function CardTransition({ contentKey, direction, exit = true, sty
   // Last committed card (key + children), written only in the layout effect below.
   const committed = useRef<{ key: Key; children: ReactNode }>({ key: contentKey, children });
   const height = useRef(0);
+  // The next layout eases the min-height (set on a key change; with an outgoing overlay every layout eases).
+  const easeNext = useRef(false);
   const minHeight = useSharedValue(0);
 
   // Key changed: the new card mounts animated (derived state from state, not refs: React re-renders
@@ -97,9 +99,10 @@ export default function CardTransition({ contentKey, direction, exit = true, sty
   useLayoutEffect(() => {
     const previous = committed.current;
     committed.current = { key: contentKey, children };
-    if (previous.key === contentKey || reduced || !exit) return;
-    setOutgoing({ key: previous.key, children: previous.children, direction });
+    if (previous.key === contentKey || reduced) return;
     minHeight.value = height.current;
+    easeNext.current = true;
+    if (exit) setOutgoing({ key: previous.key, children: previous.children, direction });
   }, [contentKey, children, reduced, exit, direction, minHeight]);
 
   useEffect(() => {
@@ -111,7 +114,9 @@ export default function CardTransition({ contentKey, direction, exit = true, sty
   const onLayout = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
     height.current = h;
-    minHeight.value = reduced || !outgoing ? h : withTiming(h, timing(motion.duration.base, easing.standard));
+    const ease = !reduced && (!!outgoing || easeNext.current);
+    easeNext.current = false;
+    minHeight.value = ease ? withTiming(h, timing(motion.duration.base, easing.standard)) : h;
   };
 
   const box = useAnimatedStyle(() => ({ minHeight: minHeight.value }));

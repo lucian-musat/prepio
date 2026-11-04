@@ -186,7 +186,7 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 |---|---|---|
 | `Enter` | `config` / `index`, `style`, `testID` | Fade + rise on mount; `index` staggers list items (40 + i x 50 ms). Remount (new `key`) to replay. |
 | `CardTransition` | `contentKey`, `direction` (next / prev), `exit` (default true), `style` | Card stepper: previous card slides out as an overlay, new card tilts in; container height eases between cards. `exit={false}` skips the overlay when the old card already left (swiped away). |
-| `Reveal` | `open`, `style`, `testID` | Expands to its content height with a fade (base, `out` curve) and collapses back; closing hides the content from screen readers at once and unmounts it at the end. Instant with reduce motion. |
+| `Reveal` | `open`, `style`, `testID` | Expands to its content height with a fade (base, `out` curve) once the content has been measured, and collapses back; closing hides the content from screen readers at once and unmounts it at the end. Instant with reduce motion. |
 
 ### Card types (`apps/mobile/src/components/cards/`)
 

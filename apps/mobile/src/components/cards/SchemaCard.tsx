@@ -66,7 +66,7 @@ function ExpandableBox({ box, tone, detail }: { box: SchemaBox; tone: Tone; deta
       {...handlers}
       style={[pointer, tone !== 'central' && styles.flexBox]}
     >
-      <Animated.View style={[styles.box, styles.boxTap, styles[tone], hoverTransition, hovered && { backgroundColor: HOVER_BG[tone] }, pressStyle]}>
+      <Animated.View testID="schema-box" style={[styles.box, styles.boxTap, styles[tone], hoverTransition, hovered && { backgroundColor: HOVER_BG[tone] }, pressStyle]}>
         <BoxText box={box} tone={tone} />
         <Reveal open={expanded}>
           <View style={[styles.detail, { borderTopColor: DIVIDER[tone] }]}>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   zone: { width: '100%', gap: space[1] },
   zoneLabel: { textAlign: 'center' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5], width: '100%' },
-  box: { borderRadius: radius.sm, paddingVertical: space[2], paddingHorizontal: space[2.5], gap: space[1], minWidth: 0 },
+  box: { borderRadius: radius.sm, paddingVertical: space[2], paddingHorizontal: space[2.5], minWidth: 0 },
   // Room for the badge on both sides, so the centred text never runs under it; fills the stretched pressable.
   boxTap: { paddingHorizontal: space[5], flexGrow: 1 },
   // Boxes share a row but wrap onto the next line when narrower than ~120 px.
@@ -142,7 +142,8 @@ const styles = StyleSheet.create({
   cause: { backgroundColor: color.primarySubtle, borderWidth: 2, borderColor: palette.teal[300] },
   central: { backgroundColor: color.primary, width: '100%' },
   consequence: { backgroundColor: color.accentSubtle, borderWidth: 2, borderColor: color.accent },
-  detail: { borderTopWidth: border.hairline, paddingTop: space[1.5], marginTop: space[1] },
+  // The spacing above the divider is inside the Reveal (not a flex gap), so nothing jumps before it opens.
+  detail: { borderTopWidth: border.hairline, paddingTop: space[1.5], marginTop: space[2] },
   badge: {
     position: 'absolute',
     top: -BADGE_OUTSET,

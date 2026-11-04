@@ -14,8 +14,9 @@ export const easing = {
   out: Easing.bezier(...curves.out),
 };
 
-/** withTiming config that always honours the OS reduce-motion setting. */
+/** withTiming config that always honours the OS reduce-motion setting. A worklet: gesture callbacks call it on the UI thread. */
 export function timing(duration: number, curve: typeof easing.standard = easing.standard) {
+  'worklet';
   return { duration, easing: curve, reduceMotion: ReduceMotion.System };
 }
 

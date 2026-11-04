@@ -47,6 +47,17 @@ it('opens by growing to the measured height and fading in', async () => {
   expect(style()).toMatchObject({ height: 48, opacity: 1 });
 });
 
+it('waits for the first measure before opening, so the growth runs over the real height', async () => {
+  await render(reveal(false));
+  await screen.rerender(reveal(true));
+  await act(async () => jest.advanceTimersByTime(600));
+  expect(style().opacity).toBe(0); // not run yet: nothing measured
+  await measure(48);
+  expect(style().opacity).toBeLessThan(1); // now animating
+  await act(async () => jest.advanceTimersByTime(600));
+  expect(style()).toMatchObject({ height: 48, opacity: 1 });
+});
+
 it('closing hides the content from screen readers at once and unmounts it after the animation', async () => {
   await render(reveal(true));
   await measure(48);

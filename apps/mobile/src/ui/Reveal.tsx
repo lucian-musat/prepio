@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { motion } from '@prepio/shared';
 import { easing, timing } from './motion';
+
+const TIMING = timing(motion.duration.base, easing.out);
 
 type Props = {
   open: boolean;
@@ -22,6 +24,9 @@ export default function Reveal({ open, style, testID, children }: Props) {
   const [mounted, setMounted] = useState(open);
   const p = useSharedValue(open ? 1 : 0);
   const height = useSharedValue(0);
+  // Opening waits for the content's first measure (height 0 until then would make the growth jump mid-way).
+  const measured = useRef(false);
+  const pendingOpen = useRef(false);
 
   if (open && !mounted) setMounted(true);
   if (!open && mounted && reduced) setMounted(false);
@@ -31,13 +36,26 @@ export default function Reveal({ open, style, testID, children }: Props) {
       p.value = open ? 1 : 0;
       return;
     }
-    const t = timing(motion.duration.base, easing.out);
+    if (open && !measured.current) {
+      pendingOpen.current = true;
+      return;
+    }
+    pendingOpen.current = false;
     p.value = open
-      ? withTiming(1, t)
-      : withTiming(0, t, (finished) => {
+      ? withTiming(1, TIMING)
+      : withTiming(0, TIMING, (finished) => {
           if (finished) scheduleOnRN(setMounted, false);
         });
   }, [open, reduced, p]);
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    height.value = e.nativeEvent.layout.height;
+    measured.current = true;
+    if (pendingOpen.current) {
+      pendingOpen.current = false;
+      p.value = withTiming(1, TIMING);
+    }
+  };
 
   const animated = useAnimatedStyle(() => ({ height: height.value * p.value, opacity: p.value }));
 
@@ -50,7 +68,7 @@ export default function Reveal({ open, style, testID, children }: Props) {
       importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
       aria-hidden={!open}
     >
-      <View testID={testID ? `${testID}-content` : undefined} style={styles.content} onLayout={(e) => (height.value = e.nativeEvent.layout.height)}>
+      <View testID={testID ? `${testID}-content` : undefined} style={styles.content} onLayout={onLayout}>
         {children}
       </View>
     </Animated.View>

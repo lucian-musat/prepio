@@ -98,6 +98,26 @@ describe('CardTransition', () => {
     expect(incoming().opacity).toBe(0);
   });
 
+  it('with exit off the container height still eases from the old card to the new one', async () => {
+    const box = () => getAnimatedStyle(screen.getByTestId('card-box')) as unknown as { minHeight: number };
+    const layout = async (height: number) => {
+      await fireEvent(screen.getByTestId('card-in'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 360, height } } });
+      await act(async () => jest.advanceTimersByTime(20));
+    };
+    await render(card('1'));
+    await layout(300);
+    await screen.rerender(
+      <CardTransition contentKey="2" direction="next" exit={false}>
+        <Text>Cartonaș 2</Text>
+      </CardTransition>,
+    );
+    expect(box().minHeight).toBe(300);
+    await layout(200);
+    expect(box().minHeight).toBeGreaterThan(200); // easing, not a jump
+    await act(async () => jest.advanceTimersByTime(600));
+    expect(box().minHeight).toBe(200);
+  });
+
   it('hides the outgoing card from screen readers and touches during the overlap', async () => {
     await render(card('1'));
     await screen.rerender(card('2'));

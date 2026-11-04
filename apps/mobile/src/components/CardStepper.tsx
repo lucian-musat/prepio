@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { GestureDetector, PointerType, usePanGesture } from 'react-native-gesture-handler';
+import { GestureDetector, PointerType, usePanGesture, type PanGestureConfig } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { color, motion, radius, space, type Card } from '@prepio/shared';
@@ -66,6 +66,8 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
   const canNext = useSharedValue(index < cards.length - 1);
   const flying = useSharedValue(false);
   const ignored = useSharedValue(false);
+  // Finger travel at activation (past the ±15 px dead zone): subtracted so the card doesn't jump on pickup.
+  const startX = useSharedValue(0);
 
   const card = cards[index];
   const last = index === cards.length - 1;
@@ -103,16 +105,22 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
       'worklet';
       // A mouse on a touch-first web screen keeps its usual drag (text selection).
       ignored.value = e.pointerType === PointerType.MOUSE || flying.value;
+      startX.value = 0;
+    },
+    onActivate: (e) => {
+      'worklet';
+      startX.value = e.translationX;
     },
     onUpdate: (e) => {
       'worklet';
       if (ignored.value || reduced) return;
-      dx.value = swipeOffset(e.translationX, width.value, { canPrev: canPrev.value, canNext: canNext.value });
+      dx.value = swipeOffset(e.translationX - startX.value, width.value, { canPrev: canPrev.value, canNext: canNext.value });
     },
     onDeactivate: (e) => {
       'worklet';
       if (ignored.value) return;
-      const target = swipeTarget(e.translationX, e.velocityX, width.value, { canPrev: canPrev.value, canNext: canNext.value });
+      // Cancelled or failed (system gesture, a scroll view took over): never navigate, just settle back.
+      const target = e.canceled ? null : swipeTarget(e.translationX, e.velocityX, width.value, { canPrev: canPrev.value, canNext: canNext.value });
       if (!target) {
         dx.value = withTiming(0, timing(motion.duration.base, easing.out));
         return;
@@ -129,7 +137,11 @@ export default function CardStepper({ cards, onFinish, frame, finishLabel = 'Con
         if (finished) scheduleOnRN(onSwipe, target);
       });
     },
-  });
+    // Also in the gesture config (web only): every config update resets the web handler, which drops the
+    // detector's touchAction back to 'none' and blocks vertical touch scrolling. Whitelisted, not in the public type.
+    touchAction: Platform.OS === 'web' ? 'pan-y' : undefined,
+    userSelect: Platform.OS === 'web' ? 'auto' : undefined,
+  } as PanGestureConfig);
 
   const drag = useAnimatedStyle(() => {
     const w = width.value;
