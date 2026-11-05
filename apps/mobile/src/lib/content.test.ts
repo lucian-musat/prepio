@@ -75,10 +75,6 @@ describe('fetchLesson', () => {
             { id: 'q2', position: 2, type: 'single_choice', prompt: 'p2', difficulty: 'easy', explanation: null, options: [] },
             { id: 'q1', position: 1, type: 'chronological_order', prompt: 'p1', difficulty: 'hard', explanation: 'e', options: [{ id: 'o', text: 't' }] },
           ],
-          writing_exercises: [
-            { id: 'w2', position: 2, prompt: 'pw2', criteria: 'c2' },
-            { id: 'w1', position: 1, prompt: 'pw1', criteria: 'c1' },
-          ],
         },
       },
     });
@@ -96,8 +92,6 @@ describe('fetchLesson', () => {
     });
     expect(lesson?.cards[1]).toEqual({ id: 'k2', position: 2, title: null, type: 'text', text: 'b2' });
     expect(lesson?.questions.map((q) => q.id)).toEqual(['q1', 'q2']);
-    expect(lesson?.exercises.map((e) => e.id)).toEqual(['w1', 'w2']);
-    expect(lesson?.exercises[0]).toEqual({ id: 'w1', position: 1, prompt: 'pw1', criteria: 'c1' });
   });
 
   it('returns null when the lesson is not visible', async () => {

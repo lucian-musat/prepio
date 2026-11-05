@@ -84,17 +84,6 @@ export type Lesson = LessonSummary & { status: LessonStatus; cards: Card[]; ques
 
 export type TreeNode = { id: string; parentId: string | null; title: string; position: number };
 
-export type EvaluateErrorCode =
-  | 'empty'
-  | 'too_long'
-  | 'not_found'
-  | 'rate_limited'
-  | 'ai_failed'
-  | 'bad_request'
-  | 'unauthorized';
-/** `message` is in Romanian. */
-export type EvaluateError = { error: EvaluateErrorCode; message: string };
-
 /** Error replies of `POST /api/account/delete` (success is 204, no body). */
 export type AccountDeleteErrorCode = 'unauthorized' | 'forbidden' | 'bad_request' | 'server_error';
 /** `message` is in Romanian. */

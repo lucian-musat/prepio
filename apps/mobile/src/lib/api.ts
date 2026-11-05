@@ -1,16 +1,16 @@
 import type {
   AccountDeleteError,
   AccountDeleteErrorCode,
-  EvaluateError,
-  EvaluateErrorCode,
-  EvaluateRequest,
-  EvaluateResponse,
+  ConsolidationEvaluateError,
+  ConsolidationEvaluateErrorCode,
+  ConsolidationEvaluateRequest,
+  ConsolidationEvaluateResponse,
 } from '@prepio/shared';
 import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
 
 export class EvaluateApiError extends Error {
-  code: EvaluateErrorCode;
-  constructor(code: EvaluateErrorCode, message: string) {
+  code: ConsolidationEvaluateErrorCode;
+  constructor(code: ConsolidationEvaluateErrorCode, message: string) {
     super(message);
     this.name = 'EvaluateApiError';
     this.code = code;
@@ -66,10 +66,10 @@ async function bearerToken(outage: () => Error): Promise<string | null> {
   }
 }
 
-export async function evaluateEssay(req: EvaluateRequest): Promise<EvaluateResponse> {
+export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): Promise<ConsolidationEvaluateResponse> {
   const base = apiUrl();
   if (!base) {
-    missingApiUrl('evaluateEssay');
+    missingApiUrl('evaluateConsolidation');
     throw new EvaluateApiError('ai_failed', NOT_CONFIGURED);
   }
   const token = await bearerToken(() => new EvaluateApiError('ai_failed', OFFLINE));
@@ -80,7 +80,7 @@ export async function evaluateEssay(req: EvaluateRequest): Promise<EvaluateRespo
   try {
     let res: Response;
     try {
-      res = await fetch(`${base}/api/evaluate`, {
+      res = await fetch(`${base}/api/consolidation/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(req),
@@ -97,10 +97,10 @@ export async function evaluateEssay(req: EvaluateRequest): Promise<EvaluateRespo
       throw new EvaluateApiError('ai_failed', controller.signal.aborted ? TIMEOUT : AI_FAILED);
     }
     if (!res.ok) {
-      const e = body as Partial<EvaluateError> | null;
+      const e = body as Partial<ConsolidationEvaluateError> | null;
       throw new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED);
     }
-    return body as EvaluateResponse;
+    return body as ConsolidationEvaluateResponse;
   } finally {
     clearTimeout(timer);
   }

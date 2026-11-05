@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { cardFromRow, type Card, type Lesson, LessonSummary, Question, TreeNode, WritingExercise } from '@prepio/shared';
+import { cardFromRow, type Card, type Lesson, LessonSummary, Question, TreeNode } from '@prepio/shared';
 import { getSupabase } from './supabase';
 
 export type HomeData = {
@@ -82,7 +82,7 @@ export async function fetchLesson(
 ): Promise<Lesson | null> {
   const { data, error } = await client
     .from('lessons')
-    .select('*, cards(*), questions(*), writing_exercises(*)')
+    .select('*, cards(*), questions(*)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
@@ -98,12 +98,6 @@ export async function fetchLesson(
     explanation: q.explanation,
     options: q.options,
   }));
-  const exercises: WritingExercise[] = (data.writing_exercises ?? []).map((w: any) => ({
-    id: w.id,
-    position: w.position,
-    prompt: w.prompt,
-    criteria: w.criteria,
-  }));
   return {
     id: data.id,
     nodeId: data.node_id,
@@ -112,6 +106,5 @@ export async function fetchLesson(
     status: data.status,
     cards: cards.sort(byPosition),
     questions: questions.sort(byPosition),
-    exercises: exercises.sort(byPosition),
   };
 }

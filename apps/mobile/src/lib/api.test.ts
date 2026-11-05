@@ -1,4 +1,4 @@
-import { deleteAccount, evaluateEssay, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
+import { deleteAccount, evaluateConsolidation, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
 import { getAccessToken, signOut } from './supabase';
 
 jest.mock('./supabase', () => {
@@ -34,26 +34,26 @@ afterEach(() => {
   else process.env.EXPO_PUBLIC_API_URL = ORIGINAL_API_URL;
 });
 
-const req = { exerciseId: 'e1', text: 'Eseu' };
+const req = { exerciseId: 'e1', target: 'exercise' as const, answer: { type: 'comparison' as const, text: 'Eseu' } };
 const json = (status: number, body: unknown) => ({ ok: status < 300, status, json: async () => body });
 
 it('posts JSON to EXPO_PUBLIC_API_URL and returns the parsed response', async () => {
-  const ok = { grade: 8, gradeMin: 1, gradeMax: 10, summary: 'Bine', suggestions: ['a'] };
+  const ok = { items: [{ key: 'whole', verdict: 'ok', title: 'T', good: ['a'], improve: [], ai: true }] };
   fetchMock.mockResolvedValue(json(200, ok));
-  await expect(evaluateEssay(req)).resolves.toEqual(ok);
+  await expect(evaluateConsolidation(req)).resolves.toEqual(ok);
   const [url, init] = fetchMock.mock.calls[0];
-  expect(url).toBe('https://api.prepio.test/api/evaluate');
+  expect(url).toBe('https://api.prepio.test/api/consolidation/evaluate');
   expect(init.method).toBe('POST');
   expect(init.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'Bearer token-1' });
   expect(JSON.parse(init.body)).toEqual(req);
 });
 
 it('reads the access token at call time (a refreshed token is used by the next call)', async () => {
-  const ok = { grade: 8, gradeMin: 1, gradeMax: 10, summary: 'Bine', suggestions: [] };
+  const ok = { items: [] };
   fetchMock.mockResolvedValue(json(200, ok));
   mockToken.mockResolvedValueOnce('token-1').mockResolvedValueOnce('token-2');
-  await evaluateEssay(req);
-  await evaluateEssay(req);
+  await evaluateConsolidation(req);
+  await evaluateConsolidation(req);
   expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer token-1');
   expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer token-2');
   expect(mockToken).toHaveBeenCalledTimes(2);
@@ -61,7 +61,7 @@ it('reads the access token at call time (a refreshed token is used by the next c
 
 it('maps 401 to unauthorized with the session-expired message and signs out', async () => {
   fetchMock.mockResolvedValue(json(401, { error: 'unauthorized', message: 'Trebuie să fii autentificat.' }));
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('unauthorized');
   expect(err.message).toBe('Sesiunea a expirat. Intră din nou în cont.');
@@ -70,7 +70,7 @@ it('maps 401 to unauthorized with the session-expired message and signs out', as
 
 it('without a session, fails as unauthorized and signs out without calling the API', async () => {
   mockToken.mockResolvedValue(null);
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('unauthorized');
   expect(err.message).toBe('Sesiunea a expirat. Intră din nou în cont.');
@@ -80,7 +80,7 @@ it('without a session, fails as unauthorized and signs out without calling the A
 
 it('an auth outage (expired token, offline refresh) is a connection error and keeps the session', async () => {
   mockToken.mockRejectedValue(new MockOutage());
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('ai_failed');
   expect(err.message).toBe('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
@@ -90,7 +90,7 @@ it('an auth outage (expired token, offline refresh) is a connection error and ke
 
 it('keeps the session on a server error (5xx is not a logout)', async () => {
   fetchMock.mockResolvedValue(json(502, { error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' }));
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err.code).toBe('ai_failed');
   expect(mockSignOut).not.toHaveBeenCalled();
 });
@@ -176,7 +176,7 @@ describe('deleteAccount', () => {
 it('fails with a clear ai_failed error and never calls localhost when EXPO_PUBLIC_API_URL is unset', async () => {
   delete process.env.EXPO_PUBLIC_API_URL;
   const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('ai_failed');
   expect(err.message).toBe('Evaluarea nu este disponibilă momentan. Încearcă din nou mai târziu.');
@@ -186,7 +186,7 @@ it('fails with a clear ai_failed error and never calls localhost when EXPO_PUBLI
 
 it('throws EvaluateApiError with the server code and message on 429', async () => {
   fetchMock.mockResolvedValue(json(429, { error: 'rate_limited', message: 'Prea multe cereri.' }));
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('rate_limited');
   expect(err.message).toBe('Prea multe cereri.');
@@ -194,7 +194,7 @@ it('throws EvaluateApiError with the server code and message on 429', async () =
 
 it('maps a network failure to ai_failed with the connection message', async () => {
   fetchMock.mockRejectedValue(new TypeError('Network request failed'));
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('ai_failed');
   expect(err.message).toBe('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
@@ -202,7 +202,7 @@ it('maps a network failure to ai_failed with the connection message', async () =
 
 it('maps an unparseable error body to ai_failed', async () => {
   fetchMock.mockResolvedValue({ ok: false, status: 500, json: async () => { throw new Error('x'); } });
-  const err = await evaluateEssay(req).catch((e) => e);
+  const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err.code).toBe('ai_failed');
   expect(err.message).toBe('Evaluarea nu a reușit. Încearcă din nou.');
 });
@@ -218,7 +218,7 @@ it('aborts after 65 s and reports that the evaluation took too long', async () =
         init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
       }),
   );
-  const pending = evaluateEssay(req).catch((e) => e);
+  const pending = evaluateConsolidation(req).catch((e) => e);
   await jest.advanceTimersByTimeAsync(64_999);
   expect(signal?.aborted).toBe(false);
   await jest.advanceTimersByTimeAsync(1);
@@ -231,7 +231,7 @@ it('aborts after 65 s and reports that the evaluation took too long', async () =
 
 it('clears the timeout once the response arrives', async () => {
   jest.useFakeTimers();
-  fetchMock.mockResolvedValue(json(200, { grade: 8, gradeMin: 1, gradeMax: 10, summary: 'Bine', suggestions: [] }));
-  await evaluateEssay(req);
+  fetchMock.mockResolvedValue(json(200, { items: [] }));
+  await evaluateConsolidation(req);
   expect(jest.getTimerCount()).toBe(0);
 });
