@@ -76,27 +76,14 @@ export type CardRow = {
   content: Record<string, unknown>;
 };
 
-export type WritingExercise = { id: string; position: number; prompt: string; criteria: string };
+export * from './consolidation/types';
 
 export type LessonStatus = 'draft' | 'published';
 export type LessonSummary = { id: string; nodeId: string; title: string; position: number };
-export type Lesson = LessonSummary & {
-  status: LessonStatus;
-  cards: Card[];
-  questions: Question[];
-  exercises: WritingExercise[];
-};
+export type Lesson = LessonSummary & { status: LessonStatus; cards: Card[]; questions: Question[] };
 
 export type TreeNode = { id: string; parentId: string | null; title: string; position: number };
 
-export type EvaluateRequest = { exerciseId: string; text: string };
-export type EvaluateResponse = {
-  grade: number;
-  gradeMin: number;
-  gradeMax: number;
-  summary: string;
-  suggestions: string[];
-};
 export type EvaluateErrorCode =
   | 'empty'
   | 'too_long'

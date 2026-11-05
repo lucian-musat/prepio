@@ -6,3 +6,4 @@ export * from './theme';
 export * from './localSupabase';
 export * from './richText';
 export * from './previewProtocol';
+export * from './consolidation/normalize';

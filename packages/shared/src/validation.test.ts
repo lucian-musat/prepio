@@ -67,13 +67,12 @@ const lesson: Lesson = {
   status: 'draft',
   cards: [textCard],
   questions: [validSingle],
-  exercises: [{ id: 'e1', position: 0, prompt: 'Scrie', criteria: 'Criterii' }],
 };
 
 describe('validateLesson', () => {
   it('accepts a valid lesson, including a minimal one', () => {
     expect(validateLesson(lesson)).toEqual([]);
-    expect(validateLesson({ ...lesson, cards: [], questions: [], exercises: [] })).toEqual([]);
+    expect(validateLesson({ ...lesson, cards: [], questions: [] })).toEqual([]);
   });
 
   it('rejects an empty title', () => {
@@ -96,10 +95,5 @@ describe('validateLesson', () => {
     const bad2: Question = { ...validSingle, id: 'q2', options: [opt('a', false), opt('b', false)] };
     const errors = validateLesson({ ...lesson, questions: [bad, bad2] });
     expect(errors.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('rejects exercises with empty prompt or criteria', () => {
-    expect(validateLesson({ ...lesson, exercises: [{ id: 'e', position: 0, prompt: '', criteria: 'c' }] })).not.toEqual([]);
-    expect(validateLesson({ ...lesson, exercises: [{ id: 'e', position: 0, prompt: 'p', criteria: ' ' }] })).not.toEqual([]);
   });
 });

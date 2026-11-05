@@ -36,9 +36,5 @@ export function validateLesson(l: Lesson): string[] {
   l.questions.forEach((q, i) => {
     for (const e of validateQuestion(q)) errors.push(`Întrebarea ${i + 1}: ${e}`);
   });
-  l.exercises.forEach((x, i) => {
-    if (blank(x.prompt)) errors.push(`Exercițiul ${i + 1}: enunțul nu poate fi gol.`);
-    if (blank(x.criteria)) errors.push(`Exercițiul ${i + 1}: criteriile nu pot fi goale.`);
-  });
   return errors;
 }
