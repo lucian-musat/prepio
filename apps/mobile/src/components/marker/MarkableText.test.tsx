@@ -173,6 +173,73 @@ it('a handle being dragged stays mounted at the moving end', async () => {
   expect(screen.queryByTestId('handle-start', hidden)).toBeNull();
 });
 
+it('a tap on a handle that does not move keeps the mark selected (no tap reaches the text)', async () => {
+  const dispatch = jest.fn();
+  const marks = [mark(1, 3)];
+  await render(<MarkableText source={source} state={state({ marks })} dispatch={dispatch} />);
+  await layoutWords();
+  await screen.rerender(<MarkableText source={source} state={state({ marks, active: 0 })} dispatch={dispatch} />);
+  // The start handle sits at word 1's top-left corner (50, 2); the end handle at word 3's bottom-right (190, 22).
+  await act(async () => {
+    tap.onActivate?.({ x: 54, y: 6 });
+    tap.onActivate?.({ x: 186, y: 18 });
+  });
+  expect(dispatch).not.toHaveBeenCalled();
+  await act(async () => tap.onActivate?.({ x: 110, y: 12 })); // word 2, away from both handles
+  expect(dispatch).toHaveBeenCalledWith({ type: 'tap', sourceId: 's1', i: 2 });
+});
+
+it('the tap slop is the mouse slop (6 px) on web and 10 px on native', async () => {
+  const { Platform } = require('react-native');
+  await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
+  expect((tap as { maxDistance?: number }).maxDistance).toBe(10);
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  try {
+    await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
+    expect((tap as { maxDistance?: number }).maxDistance).toBe(6);
+  } finally {
+    Platform.OS = os;
+  }
+});
+
+it('web touch: after the 280 ms hold activates the drag, moving the finger does not fail it', async () => {
+  const { Platform } = require('react-native');
+  const { GestureStateManager, PointerType } = rngh;
+  const os = Platform.OS;
+  Platform.OS = 'web';
+  jest.useFakeTimers();
+  try {
+    await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
+    type Touches = { onTouchesDown: (e: unknown) => void; onTouchesMove: (e: unknown) => void };
+    const web = mainPan() as unknown as Touches;
+    GestureStateManager.activate.mockClear();
+    GestureStateManager.fail.mockClear();
+    web.onTouchesDown({ handlerTag: 7, pointerType: PointerType.TOUCH, changedTouches: [{ x: 60, y: 12 }] });
+    jest.advanceTimersByTime(300);
+    expect(GestureStateManager.activate).toHaveBeenCalledWith(7);
+    web.onTouchesMove({ handlerTag: 7, allTouches: [{ x: 160, y: 40 }] });
+    expect(GestureStateManager.fail).not.toHaveBeenCalled();
+    // A touch that moves before the hold fails (the browser scrolls instead).
+    web.onTouchesDown({ handlerTag: 7, pointerType: PointerType.TOUCH, changedTouches: [{ x: 60, y: 12 }] });
+    web.onTouchesMove({ handlerTag: 7, allTouches: [{ x: 60, y: 60 }] });
+    expect(GestureStateManager.fail).toHaveBeenCalledWith(7);
+  } finally {
+    jest.useRealTimers();
+    Platform.OS = os;
+  }
+});
+
+it('hands its drag gesture to the parent (so a scroll view can wait for it) and exposes word positions', async () => {
+  const onDragGesture = jest.fn();
+  const wordBox = { current: null as null | ((i: number) => { y: number; height: number } | null) };
+  await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} onDragGesture={onDragGesture} wordBoxRef={wordBox} />);
+  expect(onDragGesture).toHaveBeenCalled();
+  await layoutWords();
+  expect(wordBox.current?.(8)).toMatchObject({ y: 40, height: 24 });
+  expect(wordBox.current?.(99)).toBeNull();
+});
+
 it('read-only: gestures disabled, no handles, no anchor', async () => {
   await render(
     <MarkableText source={source} state={state({ marks: [mark(1, 3)], active: 0, anchor: { sourceId: 's1', i: 5 } })} dispatch={jest.fn()} readOnly />,

@@ -7,8 +7,11 @@ export type MarkerState = {
   marks: MarkerMark[];
   /** First word of a tap-tap selection, waiting for the last one. */
   anchor: { sourceId: string; i: number } | null;
-  /** A selection being dragged: `a` stays fixed, `b` follows the finger or mouse. */
-  drag: { sourceId: string; pen: Pen; a: number; b: number } | null;
+  /**
+   * A selection being dragged: `a` stays fixed, `b` follows the finger or mouse. A handle drag keeps the mark it
+   * lifted (and its index), so `cancel` can put it back.
+   */
+  drag: { sourceId: string; pen: Pen; a: number; b: number; lifted?: { index: number; mark: MarkerMark } } | null;
   /** Index in `marks` of the selected mark (it shows the handles). */
   active: number | null;
 };
@@ -23,7 +26,7 @@ export type MarkerAction =
   | { type: 'setPen'; pen: Pen }
   | { type: 'remove'; index: number }
   | { type: 'swapRoles' }
-  | { type: 'cancel' }; // drop the anchor, the selection and an unfinished drag (e.g. the reader closes)
+  | { type: 'cancel' }; // drop the anchor, the selection and an unfinished drag; a lifted mark goes back (e.g. the reader closes)
 
 export function initialMarker(cfg: MarkerConfig, marks: MarkerMark[] = []): MarkerState {
   return { pen: cfg.pens[0] ?? 'info', marks, anchor: null, drag: null, active: null };
@@ -69,7 +72,7 @@ export function markerReducer(cfg: MarkerConfig): (s: MarkerState, a: MarkerActi
         return {
           ...s,
           marks: s.marks.filter((_, k) => k !== s.active),
-          drag: { sourceId: m.sourceId, pen: m.pen, a: fixed, b: moving },
+          drag: { sourceId: m.sourceId, pen: m.pen, a: fixed, b: moving, lifted: { index: s.active!, mark: m } },
           anchor: null,
           active: null,
         };
@@ -85,8 +88,12 @@ export function markerReducer(cfg: MarkerConfig): (s: MarkerState, a: MarkerActi
         const swap = (p: Pen): Pen => (p === 'cause' ? 'effect' : p === 'effect' ? 'cause' : p);
         return { ...s, marks: s.marks.map((m) => ({ ...m, pen: swap(m.pen) })) };
       }
-      case 'cancel':
-        return { ...s, anchor: null, active: null, drag: null };
+      case 'cancel': {
+        // A handle drag that never finished puts its mark back, unchanged; a new selection is just dropped.
+        const lifted = s.drag?.lifted;
+        const marks = lifted ? [...s.marks.slice(0, lifted.index), lifted.mark, ...s.marks.slice(lifted.index)] : s.marks;
+        return { ...s, marks, anchor: null, active: null, drag: null };
+      }
     }
   };
 }

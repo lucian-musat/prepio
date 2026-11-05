@@ -152,7 +152,7 @@ describe('handles', () => {
     const s = run(support, [tap(8), tap(9), tap(2), tap(5)]);
     const lifted = run(support, [{ type: 'handleStart', end: 'end' }], s);
     expect(lifted.marks).toEqual([{ sourceId: A, from: 8, to: 9, pen: 'support' }]);
-    expect(lifted.drag).toEqual({ sourceId: A, pen: 'support', a: 2, b: 5 });
+    expect(lifted.drag).toMatchObject({ sourceId: A, pen: 'support', a: 2, b: 5 });
     expect(lifted.active).toBeNull();
     const done = run(support, [{ type: 'dragMove', i: 6 }, { type: 'dragEnd' }], lifted);
     expect(done.marks).toEqual([
@@ -164,7 +164,7 @@ describe('handles', () => {
 
   it('dragging the start handle adjusts the start', () => {
     const s = run(info, [tap(2), tap(5), { type: 'handleStart', end: 'start' }]);
-    expect(s.drag).toEqual({ sourceId: A, pen: 'info', a: 5, b: 2 });
+    expect(s.drag).toMatchObject({ sourceId: A, pen: 'info', a: 5, b: 2 });
     expect(run(info, [{ type: 'dragMove', i: 4 }, { type: 'dragEnd' }], s).marks).toEqual([{ sourceId: A, from: 4, to: 5, pen: 'info' }]);
   });
 
@@ -209,5 +209,15 @@ describe('other actions', () => {
     expect(run(info, [{ type: 'cancel' }], s)).toMatchObject({ anchor: null, active: null, drag: null, marks: s.marks });
     const d = run(info, [{ type: 'dragStart', sourceId: A, i: 1 }, { type: 'cancel' }]);
     expect(d).toMatchObject({ drag: null, marks: [] });
+  });
+
+  it('cancel during a handle drag puts the lifted mark back where it was, unchanged', () => {
+    const s = run(support, [tap(0), tap(1), tap(4), tap(5), tap(0)]); // the first mark is active
+    expect(s.active).toBe(0);
+    const lifted = run(support, [{ type: 'handleStart', end: 'end' }, { type: 'dragMove', i: 3 }], s);
+    expect(lifted.marks).toHaveLength(1);
+    const c = run(support, [{ type: 'cancel' }], lifted);
+    expect(c.marks).toEqual(s.marks);
+    expect(c).toMatchObject({ drag: null, anchor: null, active: null });
   });
 });

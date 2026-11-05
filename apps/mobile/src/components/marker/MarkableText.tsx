@@ -30,7 +30,7 @@ const READING_TEXT = { size: 17, lineHeight: 24, lineGap: 3.5 };
 const BODY_TEXT = { size: typeScale.body.size, lineHeight: 23, lineGap: 2 };
 const HINT = 'Atinge primul și ultimul cuvânt al informației ca s-o marchezi.';
 
-const PEN_LABEL: Record<Pen, string> = { info: 'Informație', cause: 'Cauză', effect: 'Efect', support: 'Informație-suport' };
+export const PEN_LABEL: Record<Pen, string> = { info: 'Informație', cause: 'Cauză', effect: 'Efect', support: 'Informație-suport' };
 const VERDICT_COLOR: Record<Verdict, string> = { ok: color.success, almost: color.accent, no: color.danger };
 
 type Props = {
@@ -41,7 +41,15 @@ type Props = {
   readOnly?: boolean;
   /** Reader typography (Literata), instead of the app's body text. */
   reading?: boolean;
+  /**
+   * Receives the text's drag gesture, so a gesture-handler ScrollView around it can `requireToFail` it: the
+   * scroll waits while a press may still become a marker drag, and a quick swipe (which fails the drag) scrolls.
+   */
+  onDragGesture?: (gesture: DragGesture) => void;
+  /** Filled with a lookup of a word's box (y, height) in the text's own coordinates, e.g. to scroll to a mark. */
+  wordBoxRef?: { current: ((i: number) => { y: number; height: number } | null) | null };
 };
+export type DragGesture = ReturnType<typeof usePanGesture>;
 type Point = { x: number; y: number };
 type Rect = { x: number; y: number; width: number; height: number };
 
@@ -51,7 +59,16 @@ type Rect = { x: number; y: number; width: number; height: number };
  * Touch: hold ~280 ms, then drag (a normal swipe keeps scrolling the parent). Mouse (web): drag straight away.
  * Tap-tap: first word, then last word. The active mark shows two handles that drag one end.
  */
-export default function MarkableText({ source, state, dispatch, verdicts, readOnly = false, reading = false }: Props) {
+export default function MarkableText({
+  source,
+  state,
+  dispatch,
+  verdicts,
+  readOnly = false,
+  reading = false,
+  onDragGesture,
+  wordBoxRef,
+}: Props) {
   const web = Platform.OS === 'web';
   const words = useMemo(() => tokenizeSource(source.body).words, [source.body]);
   const paragraphs = useMemo(() => {
@@ -84,9 +101,21 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
   const [, setLayoutTick] = useState(0);
   const onRootLayout = useCallback(() => requestAnimationFrame(() => setLayoutTick((t) => t + 1)), []);
 
-  // Gesture callbacks are created once and read the latest props through this ref.
-  const live = useRef({ dispatch, sourceId: source.id, hit });
-  live.current = { dispatch, sourceId: source.id, hit };
+  useEffect(() => {
+    if (!wordBoxRef) return;
+    wordBoxRef.current = (i) => {
+      const b = boxOf(i);
+      return b ? { y: b.y, height: b.height } : null;
+    };
+    return () => void (wordBoxRef.current = null);
+  }, [wordBoxRef, boxOf]);
+
+  // Gesture callbacks are created once and read the latest props through this ref. `handleAreas` are the touch
+  // areas of the visible handles: a tap there belongs to the handle (it must not toggle the mark off).
+  const live = useRef({ dispatch, sourceId: source.id, hit, handleAreas: [] as Rect[] });
+  live.current = { ...live.current, dispatch, sourceId: source.id, hit };
+  const onHandle = (x: number, y: number) =>
+    live.current.handleAreas.some((r) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height);
 
   const dragging = useRef(false);
   const begin = useRef<{ x: number; y: number; touch: boolean } | null>(null);
@@ -110,6 +139,8 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
         onActivate: (e: { x: number; y: number }) => {
           const { dispatch: d, sourceId, hit: h } = live.current;
           const start = begin.current ?? { x: e.x, y: e.y, touch: true };
+          // A press that started on a handle belongs to the handle's own pan (e.g. held still past the long-press).
+          if (onHandle(start.x, start.y)) return;
           const i = h(start.x, start.y);
           if (i === null) return;
           dragging.current = true;
@@ -140,9 +171,15 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
               onTouchesDown: (e: { handlerTag: number; pointerType: PointerType; changedTouches: Point[] }) => {
                 const t = e.changedTouches[0];
                 if (!t || press.current) return;
+                if (onHandle(t.x, t.y)) return void GestureStateManager.fail(e.handlerTag);
                 const mouse = e.pointerType === PointerType.MOUSE;
                 press.current = { x: t.x, y: t.y, mouse };
-                if (!mouse) press.current.timer = setTimeout(() => GestureStateManager.activate(e.handlerTag), LONG_PRESS_MS);
+                if (!mouse)
+                  press.current.timer = setTimeout(() => {
+                    // The press is decided: later moves are the drag itself, not a reason to fail.
+                    press.current = null;
+                    GestureStateManager.activate(e.handlerTag);
+                  }, LONG_PRESS_MS);
               },
               onTouchesMove: (e: { handlerTag: number; allTouches: Point[] }) => {
                 const p = press.current;
@@ -170,8 +207,11 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
       ({
         runOnJS: true,
         enabled: !readOnly,
-        maxDistance: 10,
+        // Web: the mouse slop, so a click that moved a few px (no drag yet) still counts as a tap, and anything
+        // the pan would treat as a drag is never also a tap.
+        maxDistance: web ? MOUSE_SLOP : 10,
         onActivate: (e: { x: number; y: number }) => {
+          if (onHandle(e.x, e.y)) return;
           const i = live.current.hit(e.x, e.y);
           if (i !== null) live.current.dispatch({ type: 'tap', sourceId: live.current.sourceId, i });
         },
@@ -182,6 +222,7 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
   const tap = useTapGesture(tapConfig);
   // The pan wins; a tap is recognised once the pan has failed (released before the long-press / mouse slop).
   const gesture = useExclusiveGestures(pan, tap);
+  useEffect(() => onDragGesture?.(pan), [onDragGesture, pan]);
 
   // Touch web: once a drag is active, stop the browser from scrolling (touch-action pan-y would otherwise let it).
   const rootRef = useRef<ComponentRef<typeof View>>(null);
@@ -246,6 +287,12 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
   } else if (!readOnly && !drag && activeMark?.sourceId === source.id) {
     handles.push({ end: 'start', i: activeMark.from, side: 'start' }, { end: 'end', i: activeMark.to, side: 'end' });
   }
+  const handleSize = HANDLE + 2 * HANDLE_SLOP;
+  const placed = handles.flatMap((h) => {
+    const at = handlePoint(h.side, h.i);
+    return at ? [{ ...h, at }] : [];
+  });
+  live.current.handleAreas = placed.map(({ at }) => ({ x: at.x - handleSize / 2, y: at.y - handleSize / 2, width: handleSize, height: handleSize }));
 
   // ---- Paint ----
   const metrics = reading ? READING_TEXT : BODY_TEXT;
@@ -311,10 +358,9 @@ export default function MarkableText({ source, state, dispatch, verdicts, readOn
             ))}
           </View>
         ))}
-        {handles.map((h) => {
-          const at = handlePoint(h.side, h.i);
-          return at ? <Handle key={h.end} end={h.end} wordIndex={h.i} at={at} callbacks={handleCallbacks} /> : null;
-        })}
+        {placed.map((h) => (
+          <Handle key={h.end} end={h.end} wordIndex={h.i} at={h.at} callbacks={handleCallbacks} />
+        ))}
       </View>
     </GestureDetector>
   );
