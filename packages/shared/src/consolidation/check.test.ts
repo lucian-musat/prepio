@@ -321,3 +321,40 @@ it('an answer of another type is a no', () => {
   const f = check(ex({ type: 'argument' }, []), { type: 'comparison', text: 'x' });
   expect(f.verdict).toBe('no');
 });
+
+describe('extra answers are ignored', () => {
+  it('source_info judges only the first `count` marks', () => {
+    const e = ex({ type: 'source_info', count: 1, spans: [spanOf('a', S1.replace(/\.$/, ''))] });
+    const f = check(e, { type: 'source_info', marks: [markOf(S2), markOf(S1), markOf(S3)] });
+    expect(f.verdict).toBe('no');
+    expect(f.marks).toHaveLength(1);
+    expect(f.items).toHaveLength(1);
+  });
+  it('viewpoint judges only the first `count` marks', () => {
+    const e = ex({ type: 'viewpoint', count: 1, spans: [spanOf('a', S1.replace(/\.$/, ''))] });
+    const f = check(e, { type: 'viewpoint', text: 'x', marks: [markOf(S1), markOf(S2)] });
+    expect(f.items.map((i) => i.key)).toEqual(['support-0']);
+  });
+  it('multi_answer judges only the first `count` texts', () => {
+    const e = ex({ type: 'multi_answer', count: 1, groups: [{ id: 'm', variants: ['Moldova'] }, { id: 't', variants: ['Muntenia'] }] }, []);
+    const f = check(e, { type: 'multi_answer', texts: ['x', 'Moldova', 'Muntenia'] });
+    expect(f.verdict).toBe('no');
+    expect(f.fields).toEqual(['no']);
+  });
+});
+
+describe('cause_effect colours in none/unrelated', () => {
+  it('cause colour is the best cause-role judgement over all pairs', () => {
+    const CAUSE = 'Prin legea din 1863 averile mănăstirești au trecut în proprietatea statului';
+    const e = ex({
+      type: 'cause_effect',
+      pairs: [
+        { id: 'p', cause: spanOf('c', 'Domnul urma să fie ales pe viață'), effect: spanOf('f', 'Adunarea electivă'), explanation: null },
+        { id: 'q', cause: spanOf('c2', CAUSE), effect: spanOf('f2', 'un sfert din teritoriu a devenit patrimoniu al statului'), explanation: null },
+      ],
+    });
+    const f = check(e, { type: 'cause_effect', cause: markOf(CAUSE), effect: markOf(S2) });
+    expect(f.verdict).toBe('no');
+    expect(f.marks!.map((m) => m.verdict)).toEqual(['almost', 'no']);
+  });
+});

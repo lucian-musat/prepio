@@ -102,7 +102,7 @@ export function checkExercise(ex: ConsolidationExercise, sources: Source[], answ
 
     case 'multi_answer': {
       const a = answer as Extract<ExerciseAnswer, { type: 'multi_answer' }>;
-      const matches = matchGroups(a.texts, ex.groups);
+      const matches = matchGroups(a.texts.slice(0, ex.count), ex.groups);
       const fields = matches.map((m): Verdict => (m.groupId === null ? 'no' : m.duplicate ? 'almost' : 'ok'));
       const hits = fields.filter((f) => f === 'ok').length;
       const hasDuplicate = matches.some((m) => m.duplicate);
@@ -123,11 +123,12 @@ export function checkExercise(ex: ConsolidationExercise, sources: Source[], answ
     case 'source_info': {
       const a = answer as Extract<ExerciseAnswer, { type: 'source_info' }>;
       const reveal = ex.spans.map(spanText);
-      if (a.marks.length === 0) {
+      const marks = a.marks.slice(0, ex.count);
+      if (marks.length === 0) {
         return { verdict: 'no', items: [item('mark-0', 'no', 'Mai lucrează', { improve: ['Marchează în text informația cerută.'] })], marks: [], reveal };
       }
       const t = tok(ex.sources[0]?.sourceId ?? '');
-      const r = judgeMarkItems(ex, t, a.marks, (i) => `mark-${i}`);
+      const r = judgeMarkItems(ex, t, marks, (i) => `mark-${i}`);
       const items = r.items;
       if (ex.count > 1 && r.verdict !== 'ok') {
         items.push(item('answer', r.verdict, plainTitle(r.verdict), { improve: [`Ai găsit ${r.okCount} din ${ex.count} informații.`] }));
@@ -213,9 +214,10 @@ export function checkExercise(ex: ConsolidationExercise, sources: Source[], answ
     case 'viewpoint': {
       const a = answer as Extract<ExerciseAnswer, { type: 'viewpoint' }>;
       const t = tok(ex.sources[0]?.sourceId ?? '');
-      const r = judgeMarkItems({ ...ex, count: Math.max(ex.count, 2) }, t, a.marks, (i) => `support-${i}`);
+      const marks = a.marks.slice(0, ex.count);
+      const r = judgeMarkItems(ex, t, marks, (i) => `support-${i}`);
       const items = r.items;
-      for (let i = a.marks.length; i < ex.count; i++) {
+      for (let i = marks.length; i < ex.count; i++) {
         items.push(item(`support-${i}`, 'no', `Informația ${i + 1}: lipsește`, { improve: ['Marchează încă o informație din sursă.'] }));
       }
       return { verdict: null, items, marks: r.marks };

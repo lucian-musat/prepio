@@ -338,9 +338,14 @@ export function validateExercise(ex: ConsolidationExercise, sources: Source[], a
   const ids = new Set(ex.sources.map((s) => s.sourceId));
   for (const s of spansOf(ex)) {
     const src = ids.has(s.sourceId) ? sources.find((x) => x.id === s.sourceId) : undefined;
-    if (!src || src.body.slice(s.start, s.end) !== s.text) {
+    const degenerate = blank(s.text) || s.start < 0 || s.start >= s.end;
+    if (!src || degenerate || s.end > src.body.length || src.body.slice(s.start, s.end) !== s.text) {
       errors.push(`Răspunsul marcat „${s.text}” nu mai există în sursă.`);
     }
+  }
+  if (ex.type === 'source_letter' && ex.evidence) {
+    const correctId = ex.sources.find((s) => s.label === ex.correct)?.sourceId;
+    if (ex.evidence.sourceId !== correctId) errors.push('Fragmentul-dovadă trebuie să fie din sursa corectă.');
   }
 
   if (ai) {

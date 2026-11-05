@@ -291,3 +291,24 @@ describe('validateExercise', () => {
     });
   });
 });
+
+describe('validateExercise: degenerate spans and letter evidence', () => {
+  const msg = (t: string) => `Răspunsul marcat „${t}” nu mai există în sursă.`;
+  const run = (c: object, refs: SourceRef[]) => validateExercise(make(c, refs), [SRC_A, SRC_B], null);
+  it('rejects empty, reversed and out-of-range spans', () => {
+    const info = (s: object) => ({ type: 'source_info', count: 1, spans: [s] });
+    expect(run(info({ ...S1, start: 0, end: 0, text: '' }), [REF_A])).toEqual([msg('')]);
+    expect(run(info({ ...S1, start: 5, end: 2, text: '' }), [REF_A])).toEqual([msg('')]);
+    expect(run(info({ ...S1, start: 3, end: 3, text: 'x' }), [REF_A])).toEqual([msg('x')]);
+    expect(run(info({ ...S1, start: -1, end: 2, text: 'x' }), [REF_A])).toEqual([msg('x')]);
+    expect(run(info({ ...S1, start: 0, end: 2, text: '  ' }), [REF_A])).toEqual([msg('  ')]);
+    expect(run(info(S1), [REF_A])).toEqual([]);
+  });
+  it('source_letter evidence must be in the source labelled correct', () => {
+    const evB = spanOf('eb', 'Altă sursă', 'sb', SRC_B.body);
+    expect(run({ type: 'source_letter', correct: 'B', evidence: evB }, [REF_A, REF_B])).toEqual([]);
+    expect(run({ type: 'source_letter', correct: 'A', evidence: evB }, [REF_A, REF_B])).toEqual([
+      'Fragmentul-dovadă trebuie să fie din sursa corectă.',
+    ]);
+  });
+});
