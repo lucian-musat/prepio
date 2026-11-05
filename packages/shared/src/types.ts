@@ -92,8 +92,6 @@ export type AccountDeleteError = { error: AccountDeleteErrorCode; message: strin
 /** Omit fields from every member of a union (plain `Omit` collapses unions). */
 export type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
 
-export const MAX_ESSAY_CHARS = 3000;
-
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   easy: 'ușor',
   medium: 'mediu',

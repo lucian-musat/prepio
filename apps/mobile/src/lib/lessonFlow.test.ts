@@ -3,11 +3,10 @@ import { attemptOutcome, lessonAccess, orderedLessons, resumePoint } from './les
 
 const summary = (id: string): LessonSummary => ({ id, nodeId: 'n', title: id, position: 0 }) as LessonSummary;
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `q${i + 1}`);
-const lesson = (cards: number, questions: number, exercises: number): Lesson =>
+const lesson = (cards: number, questions: number): Lesson =>
   ({
     cards: Array.from({ length: cards }, (_, i) => ({ id: `c${i + 1}` })),
     questions: ids(questions).map((id) => ({ id })),
-    exercises: Array.from({ length: exercises }, (_, i) => ({ id: `e${i + 1}` })),
   }) as unknown as Lesson;
 
 describe('orderedLessons', () => {
@@ -46,7 +45,7 @@ describe('lessonAccess', () => {
 });
 
 describe('attemptOutcome', () => {
-  const l = lesson(1, 5, 1);
+  const l = lesson(1, 5);
   const all = Object.fromEntries(ids(5).map((id) => [id, true]));
 
   it('counts wrong answers in lesson order', () => {
@@ -64,43 +63,38 @@ describe('attemptOutcome', () => {
     expect(out.wrong).toContain(5);
   });
   it('passes a lesson without questions', () => {
-    expect(attemptOutcome(lesson(2, 0, 1), {})).toEqual({ passed: true, correct: 0, total: 0, wrong: [] });
+    expect(attemptOutcome(lesson(2, 0), {})).toEqual({ passed: true, correct: 0, total: 0, wrong: [] });
   });
 });
 
 describe('resumePoint', () => {
   it('is null without a position', () => {
-    expect(resumePoint(lesson(2, 2, 1), null)).toBeNull();
+    expect(resumePoint(lesson(2, 2), null)).toBeNull();
   });
   it('is null when the card index is past the end', () => {
-    expect(resumePoint(lesson(2, 2, 1), { phase: 'cards', index: 3, results: {} })).toBeNull();
+    expect(resumePoint(lesson(2, 2), { phase: 'cards', index: 3, results: {} })).toBeNull();
   });
   it('keeps a valid cards position', () => {
     const p = { phase: 'cards' as const, index: 1, results: {} };
-    expect(resumePoint(lesson(2, 2, 1), p)).toEqual(p);
+    expect(resumePoint(lesson(2, 2), p)).toEqual(p);
   });
   it('moves to the first unanswered question at or after the index', () => {
     const results = { q1: true, q2: false };
-    expect(resumePoint(lesson(1, 4, 1), { phase: 'questions', index: 1, results })).toEqual({
+    expect(resumePoint(lesson(1, 4), { phase: 'questions', index: 1, results })).toEqual({
       phase: 'questions', index: 2, results,
     });
   });
-  it('goes to the first exercise when all questions are answered', () => {
+  it('stays on the last question, results kept, when all are answered', () => {
     const results = { q1: true, q2: true };
-    expect(resumePoint(lesson(1, 2, 1), { phase: 'questions', index: 0, results })).toEqual({
-      phase: 'exercises', index: 0, results,
-    });
-  });
-  it('stays on the last question, results kept, when all are answered and there are no exercises', () => {
-    const results = { q1: true, q2: true };
-    expect(resumePoint(lesson(1, 2, 0), { phase: 'questions', index: 0, results })).toEqual({
+    expect(resumePoint(lesson(1, 2), { phase: 'questions', index: 0, results })).toEqual({
       phase: 'questions', index: 1, results,
     });
   });
-  it('is null when the exercise index is past the end', () => {
-    expect(resumePoint(lesson(1, 2, 1), { phase: 'exercises', index: 5, results: {} })).toBeNull();
+  it('is null for a saved exercises position (the phase no longer exists)', () => {
+    const old = { phase: 'exercises', index: 0, results: {} } as never;
+    expect(resumePoint(lesson(1, 2), old)).toBeNull();
   });
   it('is null when the phase has no items', () => {
-    expect(resumePoint(lesson(1, 0, 1), { phase: 'questions', index: 0, results: {} })).toBeNull();
+    expect(resumePoint(lesson(1, 0), { phase: 'questions', index: 0, results: {} })).toBeNull();
   });
 });

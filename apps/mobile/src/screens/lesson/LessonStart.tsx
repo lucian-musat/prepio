@@ -1,11 +1,17 @@
 import { StyleSheet, View } from 'react-native';
-import { space, type Lesson } from '@prepio/shared';
+import { router } from 'expo-router';
+import { color, space, type Lesson } from '@prepio/shared';
 import { AppText, Button, Enter, ScreenLayout, Surface, TextButton, goBackOrHome } from '../../ui';
 import { countLabel } from '../../lib/lessonCount';
+import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
 
 type Props = {
   lesson: Lesson;
   guided: boolean;
+  /** The lesson is finished: its zones show ✓ and consolidation opens. */
+  finished: boolean;
+  /** Number of consolidation exercises; the zone is hidden at 0. */
+  consolidation: number;
   /** Set when the student has a saved position in this lesson. */
   onResume?: () => void;
   onLearn: () => void;
@@ -13,9 +19,7 @@ type Props = {
 };
 
 /** Mockup screen 3: shown every time a lesson is opened, before the cards. */
-export default function LessonStart({ lesson, guided, onResume, onLearn, onSkip }: Props) {
-  // The test is the questions plus the writing exercises.
-  const tests = lesson.questions.length + lesson.exercises.length;
+export default function LessonStart({ lesson, guided, finished, consolidation, onResume, onLearn, onSkip }: Props) {
   const hasCards = lesson.cards.length > 0;
   return (
     <ScreenLayout
@@ -27,11 +31,11 @@ export default function LessonStart({ lesson, guided, onResume, onLearn, onSkip 
           {hasCards ? (
             <Button label="Începe învățarea" variant={onResume ? 'secondary' : 'primary'} onPress={onLearn} />
           ) : null}
-          {/* With nothing to learn first, going to the exercises is the main action; otherwise a quiet link. */}
+          {/* With nothing to learn first, going to the verification is the main action; otherwise a quiet link. */}
           {onResume || hasCards ? (
-            <TextButton label="Știu deja — sari la exerciții" onPress={onSkip} />
+            <TextButton label="Știu deja — sari la verificare" onPress={onSkip} />
           ) : (
-            <Button label="Știu deja — sari la exerciții" onPress={onSkip} />
+            <Button label="Știu deja — sari la verificare" onPress={onSkip} />
           )}
         </View>
       }
@@ -43,9 +47,34 @@ export default function LessonStart({ lesson, guided, onResume, onLearn, onSkip 
           </AppText>
         </Enter>
         <Enter index={1}>
-          <AppText role="lead" color="textMuted">
-            {`${countLabel(lesson.cards.length, 'card', 'carduri')} · ${countLabel(tests, 'exercițiu', 'exerciții')}`}
-          </AppText>
+          <View style={styles.zones}>
+            <ZoneRow
+              icon="📖"
+              title="Învățare"
+              subtitle={countLabel(lesson.cards.length, 'card', 'carduri')}
+              marker={finished ? '✓' : undefined}
+            />
+            <ZoneRow
+              icon="✅"
+              title="Verificare"
+              subtitle={countLabel(lesson.questions.length, 'întrebare', 'întrebări')}
+              tint={color.accentSubtle}
+              marker={finished ? '✓' : undefined}
+            />
+            {consolidation > 0 ? (
+              <ZoneRow
+                icon="🎯"
+                title="Consolidare"
+                subtitle={`${countLabel(consolidation, 'exercițiu', 'exerciții')} tip BAC`}
+                hint={finished ? undefined : 'Se deschide după ce termini verificarea'}
+                tint={CONSOLIDATION_TINT}
+                marker={finished ? 'Începe ›' : undefined}
+                highlight={finished}
+                dimmed={!finished}
+                onPress={finished ? () => router.push(`/lesson/${lesson.id}/consolidare`) : undefined}
+              />
+            ) : null}
+          </View>
         </Enter>
         {guided ? (
           <Enter index={2}>
@@ -60,6 +89,7 @@ export default function LessonStart({ lesson, guided, onResume, onLearn, onSkip 
 }
 
 const styles = StyleSheet.create({
+  zones: { gap: space[2], marginTop: space[1] },
   card: { gap: space[2] },
   // Stacked full-width buttons in the action bar (it lays its children out in a row).
   stack: { flex: 1, gap: space[2.5] },

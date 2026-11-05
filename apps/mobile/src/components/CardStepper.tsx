@@ -39,7 +39,7 @@ type Props = {
   cards: Card[];
   onFinish: () => void;
   frame: LessonFrame;
-  /** Label of the button on the last card: "La exerciții" when questions/exercises follow. */
+  /** Label of the button on the last card, e.g. "La verificare" when the questions follow. */
   finishLabel?: string;
   /** Reports the current card so the lesson can update its progress bar. */
   onIndexChange?: (index: number) => void;
@@ -63,7 +63,7 @@ export default function CardStepper({
   onIndexChange,
   initialIndex = 0,
   onSkip,
-  skipLabel = 'Sari la exerciții',
+  skipLabel = 'Sari la verificare',
 }: Props) {
   const [index, setIndex] = useState(initialIndex);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');

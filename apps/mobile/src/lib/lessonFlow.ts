@@ -36,8 +36,7 @@ export function lessonAccess(
 export type AttemptOutcome = { passed: boolean; correct: number; total: number; wrong: number[] };
 
 export function attemptOutcome(lesson: Lesson, results: Record<string, boolean>): AttemptOutcome {
-  // Only questions are graded. Writing exercises are "aprofundare" (deepening): they have no
-  // right/wrong answer, so they always count as correct and never block passing.
+  // Only the questions are graded.
   const wrong: number[] = [];
   lesson.questions.forEach((q, i) => {
     if (results[q.id] !== true) wrong.push(i + 1); // unanswered counts as wrong
@@ -55,11 +54,10 @@ export function resumePoint(lesson: Lesson, position: LessonPosition | null): Le
     for (let i = index; i < lesson.questions.length; i++) {
       if (!(lesson.questions[i].id in results)) return { phase, index: i, results };
     }
-    if (lesson.exercises.length > 0) return { phase: 'exercises', index: 0, results };
-    // Every question answered and nothing after them: stay on the last question with the results kept, so
+    // Every question answered: stay on the last question with the results kept, so
     // leaving before its „Continuă” doesn't throw the attempt away (re-answering it finishes the lesson).
     return { phase, index: lesson.questions.length - 1, results };
   }
-  const items = phase === 'cards' ? lesson.cards : lesson.exercises;
-  return index < items.length ? position : null;
+  if (phase === 'cards') return index < lesson.cards.length ? position : null;
+  return null; // a position saved in a phase that no longer exists (the old exercises phase)
 }

@@ -31,7 +31,7 @@ const PREV = 'Înapoi la cartonașul anterior';
 const isDisabled = (el: any) => !!el.props.accessibilityState?.disabled || !!el.props['aria-disabled'];
 
 it('shows the first card with a counter and steps through the cards within bounds', async () => {
-  const { onFinish, onIndexChange } = await renderStepper([card(1), card(2), card(3)], { finishLabel: 'La exerciții' });
+  const { onFinish, onIndexChange } = await renderStepper([card(1), card(2), card(3)], { finishLabel: 'La verificare' });
   expect(screen.getByText('Titlu 1')).toBeTruthy();
   expect(screen.getByText('Cartonaș 1 din 3')).toBeTruthy();
 
@@ -48,7 +48,7 @@ it('shows the first card with a counter and steps through the cards within bound
   await fireEvent.press(bar().getByRole('button', { name: 'Continuă' }));
   expect(screen.getByText('Cartonaș 3 din 3')).toBeTruthy();
   expect(onFinish).not.toHaveBeenCalled();
-  await fireEvent.press(bar().getByRole('button', { name: 'La exerciții' }));
+  await fireEvent.press(bar().getByRole('button', { name: 'La verificare' }));
   expect(onFinish).toHaveBeenCalledTimes(1);
 });
 
@@ -234,7 +234,7 @@ it('shows the skip action only when onSkip is given', async () => {
       <CardStepper cards={[card(1), card(2)]} onFinish={jest.fn()} frame={frame} onSkip={onSkip} />
     </SafeAreaProvider>,
   );
-  await fireEvent.press(bar().getByRole('button', { name: 'Sari la exerciții' }));
+  await fireEvent.press(bar().getByRole('button', { name: 'Sari la verificare' }));
   expect(onSkip).toHaveBeenCalledTimes(1);
   // Continuă is still there.
   expect(bar().getByRole('button', { name: 'Continuă' })).toBeTruthy();
@@ -243,5 +243,5 @@ it('shows the skip action only when onSkip is given', async () => {
       <CardStepper cards={[card(1), card(2)]} onFinish={jest.fn()} frame={frame} />
     </SafeAreaProvider>,
   );
-  expect(bar().queryByRole('button', { name: 'Sari la exerciții' })).toBeNull();
+  expect(bar().queryByRole('button', { name: 'Sari la verificare' })).toBeNull();
 });

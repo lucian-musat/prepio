@@ -3,14 +3,14 @@ import { getSupabase } from './supabase';
 
 /** Where the student left a lesson; `results` maps question id → answered correctly in the current attempt. */
 export type LessonPosition = {
-  phase: 'cards' | 'questions' | 'exercises';
+  phase: 'cards' | 'questions';
   index: number;
   results: Record<string, boolean>;
 };
 
 export type Progress = { finished: Set<string>; positions: Map<string, LessonPosition> };
 
-const PHASES: ReadonlyArray<LessonPosition['phase']> = ['cards', 'questions', 'exercises'];
+const PHASES: ReadonlyArray<LessonPosition['phase']> = ['cards', 'questions'];
 const SAVE_FAILED = 'Progresul nu a putut fi salvat. Încearcă din nou.';
 const ON_CONFLICT = 'user_id,lesson_id';
 

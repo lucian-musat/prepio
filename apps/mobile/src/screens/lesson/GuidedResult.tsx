@@ -3,10 +3,23 @@ import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { color, feedbackText, radius, space } from '@prepio/shared';
 import { AppText, Button, Confetti, Enter, ScoreRing, ScreenLayout, goBackOrHome } from '../../ui';
+import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
 import type { AttemptOutcome } from '../../lib/lessonFlow';
 
 const CONFETTI_DELAY_MS = 200;
 const goHome = () => router.replace('/');
+
+/** Opens the consolidation run of a lesson. */
+export const startConsolidation = (lessonId: string) => router.push(`/lesson/${lessonId}/consolidare`);
+
+/** Mockup flow screen 2: the card that announces the unlocked consolidation. */
+export function ConsolidationUnlocked() {
+  return (
+    <Enter index={4} style={styles.unlocked}>
+      <ZoneRow icon="🎯" title="Consolidare deblocată" subtitle="Exersează cerințele de BAC pe lecția asta" tint={CONSOLIDATION_TINT} />
+    </Enter>
+  );
+}
 
 /** Ring plus the same score line as the free-mode done screen; nothing for a lesson without questions. */
 function Score({ outcome }: { outcome: AttemptOutcome }) {
@@ -31,10 +44,13 @@ type PassedProps = {
   unlocked?: string;
   /** Id of the lesson to go on to (the first unfinished one), if there is one. */
   nextId?: string;
+  /** Lesson id and number of consolidation exercises; the consolidation card and button show when n > 0. */
+  consolidation?: { lessonId: string; count: number };
 };
 
 /** Mockup screen 4, right: every answer correct, the lesson is finished. */
-export function GuidedPassed({ outcome, unlocked, nextId }: PassedProps) {
+export function GuidedPassed({ outcome, unlocked, nextId, consolidation }: PassedProps) {
+  const hasConsolidation = !!consolidation && consolidation.count > 0;
   const [burst, setBurst] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
@@ -48,8 +64,18 @@ export function GuidedPassed({ outcome, unlocked, nextId }: PassedProps) {
         onBack={goBackOrHome}
         actions={
           <View style={styles.stack}>
-            {nextId ? <Button label="Mergi la lecția următoare" onPress={() => router.replace(`/lesson/${nextId}`)} /> : null}
-            <Button label="Înapoi acasă" variant={nextId ? 'secondary' : 'primary'} onPress={goHome} />
+            {hasConsolidation ? <Button label="Începe consolidarea" onPress={() => startConsolidation(consolidation.lessonId)} /> : null}
+            {nextId ? (
+              <Button
+                label="Mergi la lecția următoare"
+                variant={hasConsolidation ? 'secondary' : 'primary'}
+                onPress={() => router.replace(`/lesson/${nextId}`)}
+              />
+            ) : null}
+            {/* The next lesson is the secondary action; with none (or without consolidation) home takes that place. */}
+            {!nextId || !hasConsolidation ? (
+              <Button label="Înapoi acasă" variant={nextId || hasConsolidation ? 'secondary' : 'primary'} onPress={goHome} />
+            ) : null}
           </View>
         }
       >
@@ -67,6 +93,7 @@ export function GuidedPassed({ outcome, unlocked, nextId }: PassedProps) {
               </AppText>
             </Enter>
           ) : null}
+          {hasConsolidation ? <ConsolidationUnlocked /> : null}
         </View>
       </ScreenLayout>
       <Confetti trigger={burst} />
@@ -131,4 +158,5 @@ const styles = StyleSheet.create({
   },
   noteText: { color: feedbackText.wrong, textAlign: 'center' },
   stack: { flex: 1, gap: space[2.5] },
+  unlocked: { alignSelf: 'stretch', marginTop: space[3] },
 });

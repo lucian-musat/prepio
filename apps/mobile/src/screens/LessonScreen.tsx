@@ -4,31 +4,29 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { space, type Lesson, type LessonSummary } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
-import { WritingExercise } from '../components/WritingExercise';
 import { useAuth } from '../auth/AuthProvider';
 import { fetchHome, fetchLesson } from '../lib/content';
+import { countConsolidation } from '../lib/consolidation';
 import { modeOf } from '../lib/learningMode';
 import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
 import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import LessonStart from './lesson/LessonStart';
-import { GuidedFailed, GuidedPassed } from './lesson/GuidedResult';
+import { ConsolidationUnlocked, GuidedFailed, GuidedPassed, startConsolidation } from './lesson/GuidedResult';
 
-export type Phase = 'start' | 'cards' | 'questions' | 'exercises' | 'done';
+export type Phase = 'start' | 'cards' | 'questions' | 'done';
 type Results = LessonPosition['results'];
 /** A phase inside the lesson (everything after the start screen). */
 type Step = Exclude<Phase, 'start'>;
 
-const PHASES: Step[] = ['cards', 'questions', 'exercises', 'done'];
+const PHASES: Step[] = ['cards', 'questions', 'done'];
 const sizeOf = (lesson: Lesson, phase: Phase) =>
   phase === 'cards'
     ? lesson.cards.length
     : phase === 'questions'
       ? lesson.questions.length
-      : phase === 'exercises'
-        ? lesson.exercises.length
-        : 1;
+      : 1;
 
 /** First phase at or after `from` that has content ("done" always does). */
 const firstNonEmpty = (lesson: Lesson, from: Step): Step =>
@@ -37,16 +35,16 @@ const nextPhase = (lesson: Lesson, current: Step): Step =>
   firstNonEmpty(lesson, PHASES[PHASES.indexOf(current) + 1] ?? 'done');
 
 /**
- * Share of the lesson reached: steps are cards + questions + exercises, the current step counts as
+ * Share of the lesson reached: steps are cards + questions, the current step counts as
  * reached, and the done screen is 1.
  */
 export function lessonProgress(lesson: Lesson, phase: Phase, index: number): number {
   const c = lesson.cards.length;
   const q = lesson.questions.length;
-  const total = c + q + lesson.exercises.length;
+  const total = c + q;
   if (phase === 'done' || total === 0) return 1;
   if (phase === 'start') return 0;
-  const offset = phase === 'cards' ? 0 : phase === 'questions' ? c : c + q;
+  const offset = phase === 'cards' ? 0 : c;
   return Math.min(1, (offset + index + 1) / total);
 }
 
@@ -81,7 +79,7 @@ function Loading() {
   );
 }
 
-type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress };
+type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress; consolidation: number };
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
 type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error' };
 
@@ -107,11 +105,11 @@ function useWriteQueue() {
 /** What skipping the cards means, per mode: shown before the student goes straight to the test. */
 export const SKIP_MESSAGE = {
   guided:
-    'Treci peste cartonașe și începi direct exercițiile. Ca să termini lecția și să o deblochezi pe următoarea, ' +
-    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cartonașele, apoi reiei exercițiile de la început.',
-  free: 'Treci peste cartonașe și începi direct exercițiile. Lecția e terminată când ajungi la final. Poți reveni oricând la cartonașe.',
+    'Treci peste cartonașe și începi direct verificarea. Ca să termini lecția și să o deblochezi pe următoarea, ' +
+    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cartonașele, apoi reiei verificarea de la început.',
+  free: 'Treci peste cartonașe și începi direct verificarea. Lecția e terminată când ajungi la final. Poți reveni oricând la cartonașe.',
 } as const;
-export const SKIP_CONFIRM = 'Da, sari la exerciții';
+export const SKIP_CONFIRM = 'Da, sari la verificare';
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -146,8 +144,14 @@ export default function LessonScreen() {
     setFailed(false);
     setPhase('start');
     setEnd(null);
-    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress()]).then(
-      ([lesson, home, progress]) => !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress } : null),
+    // A failed consolidation count only hides that zone: it never blocks the lesson.
+    const count = countConsolidation(String(id)).catch((e) => {
+      console.warn('Could not count the consolidation exercises', e);
+      return 0;
+    });
+    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress(), count]).then(
+      ([lesson, home, progress, consolidation]) =>
+        !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress, consolidation } : null),
       () => !cancelled && setFailed(true),
     );
     return () => {
@@ -167,7 +171,7 @@ export default function LessonScreen() {
   if (data === undefined) return <Loading />;
   if (data === null) return <Message title="Lecția nu a fost găsită" />;
 
-  const { lesson, order, progress } = data;
+  const { lesson, order, progress, consolidation } = data;
   if (mode === 'guided' && lessonAccess(order, progress.finished, mode).get(lesson.id) === 'locked') {
     return <Message title="Lecția este blocată" body="Termină mai întâi lecțiile de dinainte, în ordine." />;
   }
@@ -207,7 +211,7 @@ export default function LessonScreen() {
   const skipDialog = (
     <ConfirmDialog
       visible={confirmSkip}
-      title="Sari la exerciții?"
+      title="Sari la verificare?"
       message={SKIP_MESSAGE[mode]}
       confirmLabel={SKIP_CONFIRM}
       onConfirm={() => {
@@ -225,6 +229,8 @@ export default function LessonScreen() {
         <LessonStart
           lesson={lesson}
           guided={mode === 'guided'}
+          finished={progress.finished.has(lesson.id)}
+          consolidation={consolidation}
           onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
           onLearn={startCards}
           onSkip={requestSkip}
@@ -249,9 +255,8 @@ export default function LessonScreen() {
 
   const frame = (title: string): LessonFrame => ({ title, progress: lessonProgress(lesson, phase, index), onBack: goBackOrHome });
   const question = lesson.questions[index];
-  const exercise = lesson.exercises[index];
   const advance = () => goTo(nextPhase(lesson, phase), 0, results);
-  const somethingAfterCards = lesson.questions.length + lesson.exercises.length > 0;
+  const somethingAfterCards = lesson.questions.length > 0;
   const nextIn = (size: number) => () => (index + 1 < size ? goTo(phase, index + 1, results) : advance());
 
   if (phase === 'cards') {
@@ -262,7 +267,7 @@ export default function LessonScreen() {
           initialIndex={index}
           onFinish={advance}
           frame={frame(lesson.title)}
-          finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
+          finishLabel={somethingAfterCards ? 'La verificare' : 'Continuă'}
           onIndexChange={(i) => goTo('cards', i, results)}
           onSkip={somethingAfterCards ? requestSkip : undefined}
         />
@@ -284,18 +289,6 @@ export default function LessonScreen() {
     );
   }
 
-  if (phase === 'exercises' && exercise) {
-    return (
-      <WritingExercise
-        key={exercise.id}
-        exercise={exercise}
-        frame={frame(`Exercițiul ${index + 1} din ${lesson.exercises.length}`)}
-        nextLabel={index + 1 < lesson.exercises.length ? 'Următorul exercițiu' : 'Continuă'}
-        onNext={nextIn(lesson.exercises.length)}
-      />
-    );
-  }
-
   return <Loading />;
 }
 
@@ -308,7 +301,7 @@ type EndProps = Loaded & {
 };
 
 /** The screen after the last step: waits for the finished mark, then the free or guided result. */
-function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCards, onRetake }: EndProps) {
+function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetrySave, onReviewCards, onRetake }: EndProps) {
   if (!end || end.status === 'saving') return <Loading />;
   const { outcome } = end;
   if (end.status === 'error') {
@@ -322,7 +315,13 @@ function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCa
       </ScreenLayout>
     );
   }
-  if (mode === 'free') return <LessonDone title={lesson.title} correct={outcome.correct} total={outcome.total} />;
+  if (mode === 'free') return <LessonDone
+        lessonId={lesson.id}
+        title={lesson.title}
+        correct={outcome.correct}
+        total={outcome.total}
+        consolidation={consolidation}
+      />;
   if (!outcome.passed) {
     return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
   }
@@ -333,7 +332,12 @@ function LessonEnd({ lesson, order, progress, mode, end, onRetrySave, onReviewCa
   const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided');
   const next = order.find((l) => after.get(l.id) === 'current');
   const unlocked = next && before.get(next.id) === 'locked' ? next.title : undefined;
-  return <GuidedPassed outcome={outcome} unlocked={unlocked} nextId={next?.id} />;
+  return <GuidedPassed
+      outcome={outcome}
+      unlocked={unlocked}
+      nextId={next?.id}
+      consolidation={{ lessonId: lesson.id, count: consolidation }}
+    />;
 }
 
 /** 🎓 that pops in (prototype `.done-wrap .big`: `pop 600ms` spring). */
@@ -346,7 +350,19 @@ function Cap() {
 }
 
 /** Lesson done (prototype `finish()`): centred cap, heading, lesson title, score; confetti on enter. */
-function LessonDone({ title, correct, total }: { title: string; correct: number; total: number }) {
+function LessonDone({
+  lessonId,
+  title,
+  correct,
+  total,
+  consolidation,
+}: {
+  lessonId: string;
+  title: string;
+  correct: number;
+  total: number;
+  consolidation: number;
+}) {
   const [burst, setBurst] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
@@ -358,7 +374,16 @@ function LessonDone({ title, correct, total }: { title: string; correct: number;
         title="Lecție terminată"
         progress={1}
         onBack={goBackOrHome}
-        actions={<Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />}
+        actions={
+          consolidation > 0 ? (
+            <View style={styles.stack}>
+              <Button label="Începe consolidarea" onPress={() => startConsolidation(lessonId)} />
+              <Button label="Înapoi la lecții" variant="secondary" onPress={() => router.replace('/')} />
+            </View>
+          ) : (
+            <Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />
+          )
+        }
       >
         <View style={styles.done}>
           {/* Prototype: `.done-wrap .big` only pops (its own animation replaces the stagger rise). */}
@@ -380,6 +405,7 @@ function LessonDone({ title, correct, total }: { title: string; correct: number;
               </AppText>
             </Enter>
           ) : null}
+          {consolidation > 0 ? <ConsolidationUnlocked /> : null}
         </View>
       </ScreenLayout>
       <Confetti trigger={burst} />
@@ -405,4 +431,5 @@ const styles = StyleSheet.create({
   doneTitle: { marginTop: space[2.5], marginBottom: space[1.5], textAlign: 'center' },
   centre: { textAlign: 'center' },
   score: { marginTop: space[5] },
+  stack: { flex: 1, gap: space[2.5] },
 });

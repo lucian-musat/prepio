@@ -28,6 +28,7 @@ describe('positionFromJson', () => {
     expect(positionFromJson(null)).toBeNull();
     expect(positionFromJson('cards')).toBeNull();
     expect(positionFromJson({ phase: 'done', index: 0, results: {} })).toBeNull();
+    expect(positionFromJson({ phase: 'exercises', index: 0, results: {} })).toBeNull(); // the phase was removed
     expect(positionFromJson({ phase: 'cards', index: -1, results: {} })).toBeNull();
     expect(positionFromJson({ phase: 'cards', index: 1.5, results: {} })).toBeNull();
     expect(positionFromJson({ phase: 'cards', index: 0, results: 'x' })).toBeNull();

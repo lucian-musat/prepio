@@ -12,7 +12,8 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Prepio' }} />
-      <Stack.Screen name="lesson/[id]" options={{ title: 'Lecție' }} />
+      <Stack.Screen name="lesson/[id]/index" options={{ title: 'Lecție' }} />
+      <Stack.Screen name="lesson/[id]/consolidare" options={{ title: 'Consolidare' }} />
       <Stack.Screen name="profile" options={{ title: 'Profil' }} />
     </Stack>
   );
