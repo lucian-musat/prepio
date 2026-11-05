@@ -203,6 +203,10 @@ Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, on
 
 **Documented palette exceptions** (the only `palette.*` uses in the student app; there is no semantic token for these decorative strokes yet): `palette.teal[300]` / `palette.teal[700]` for the timeline line gradient, `palette.yellow[600]` for the key-moment dot ring, `palette.teal[300]` for the schema cause-box edge. If another component needs them, promote them to semantic tokens (e.g. `timelineLineStart/End`, `keyMarkerBorder`, `schemaCauseBorder`) in `theme.ts` instead of adding more exceptions.
 
+**Documented exception: marker pens.** The consolidation marker (`apps/mobile/src/components/marker/`) highlights source words with fixed highlighter colours from the approved mockups, kept as the `markerPen` token in `theme.ts` (not palette steps): `info` (Informație) `#FFE38A`, `cause` (Cauză) `#99F6E4`, `effect` (Efect) `#FFD0A8`, `support` (Informație-suport) `#C9D7FF`. `text` stays AA on each (tested). Marks have 5 px rounded ends; the active mark has two 13 px `text` handle dots with a 2 px `surface` ring (touch area: dot + 12 px each side); the tap-tap anchor is a blinking 2 px dashed `primary` outline; verdict underlines are 3 px `success` / `accent` / `danger` (ok / almost / no); „[...]” omissions are `textMuted`.
+
+**Reading typeface.** Source texts in the reader use Literata (family keys `reading` = 400, `readingMedium` = 500 in `fonts.ts`; covers ș ț ă â î and „ ”), 17 px, line height 24 plus a 3.5 px gap per line (~1.8 pitch). It is not a type role: only `MarkableText` (with `reading`) and the reader use it.
+
 **Accessibility on web.** react-native-web 0.21 ignores `accessibilityState`; expanded / selected / checked states are set with `aria-expanded` / `aria-selected` / `aria-checked`, which react-native 0.88 also maps on native. `accessibilityRole="imagebutton"` has no web role, so tappable images use `button`.
 
 ## How to add things

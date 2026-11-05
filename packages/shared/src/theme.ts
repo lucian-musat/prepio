@@ -53,6 +53,10 @@ export const color = {
 // Feedback text tones, AA on the matching subtle background. Deviation: good is #1A7C49, not the plan's #1C814C (only 4.39:1).
 export const feedbackText = { good: palette.green[600], wrong: palette.red[700] } as const;
 
+// Marker pens (highlighter backgrounds behind source text), from the approved consolidation mockups.
+// A documented exception (docs/design-system.md): fixed highlighter colours, not palette steps.
+export const markerPen = { info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' } as const;
+
 // Difficulty badge colours (medium uses a darker yellow for AA on accentSubtle).
 export const difficultyTone: Record<Difficulty, { fg: string; bg: string }> = {
   easy: { fg: color.success, bg: color.successSubtle },

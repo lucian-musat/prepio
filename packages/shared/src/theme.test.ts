@@ -8,6 +8,7 @@ import {
   feedbackText,
   gradient,
   layout,
+  markerPen,
   motion,
   opacity,
   palette,
@@ -20,6 +21,11 @@ import {
 } from './theme';
 
 describe('design tokens', () => {
+  it('marker pens are the approved mockup colours, and text stays AA on each', () => {
+    expect(markerPen).toEqual({ info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' });
+    for (const bg of Object.values(markerPen)) expect(contrastRatio(color.text, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('semantic colours match the approved variant B', () => {
     expect(color).toEqual({
       bg: '#F3FAF7',

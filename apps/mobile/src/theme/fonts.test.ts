@@ -1,6 +1,6 @@
 import { typeScale } from '@prepio/shared';
 import { type } from '../ui/typography';
-import { fontFiles } from './fonts';
+import { fontFamily, fontFiles } from './fonts';
 
 it('every typography role uses a loaded, CSS-safe family', () => {
   for (const role of Object.keys(typeScale) as (keyof typeof typeScale)[]) {
@@ -13,4 +13,10 @@ it('every typography role uses a loaded, CSS-safe family', () => {
 it('headings use Nunito and text uses Nunito Sans', () => {
   expect(type('title').fontFamily).toBe('Nunito-Black');
   expect(type('body').fontFamily).toBe('NunitoSans');
+});
+
+it('the reading typeface (Literata) is loaded under CSS-safe family names', () => {
+  expect(fontFamily.reading).toBe('Literata');
+  expect(fontFamily.readingMedium).toBe('Literata-Medium');
+  expect(Object.keys(fontFiles)).toEqual(expect.arrayContaining(['Literata', 'Literata-Medium']));
 });
