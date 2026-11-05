@@ -26,6 +26,7 @@ let student: SupabaseClient;
 let studentId: string | null = null;
 let rootId: string;
 let lessonId: string;
+let templateId: string | null = null;
 
 async function login(page: Page) {
   await page.goto('/login');
@@ -51,6 +52,13 @@ test.beforeAll(async () => {
   rootId = (await createNode(db, null, `[test] editor ${Date.now()}`)).id;
   const node = await createNode(db, rootId, '[test] capitol');
   lessonId = (await createLesson(db, node.id, '[test] lecție editor')).id;
+  const tpl = await service
+    .from('solution_templates')
+    .insert({ title: '[test] șablon răspuns scurt', exercise_type: 'short_answer', points: 'Un punct', body: 'Citește sursa.' })
+    .select('id')
+    .single();
+  if (tpl.error) throw tpl.error;
+  templateId = tpl.data.id;
 });
 
 // Each step runs even if another fails; failures are reported together.
@@ -74,11 +82,13 @@ test.afterAll(async () => {
     });
   }
   if (rootId) await step(`node ${rootId}`, async () => db.from('nodes').delete().eq('id', rootId)); // cascades
+  // after the node: its exercises reference the template
+  if (templateId) await step(`template ${templateId}`, async () => service.from('solution_templates').delete().eq('id', templateId!));
   if (studentId) await step(`user ${studentId}`, async () => service.auth.admin.deleteUser(studentId!));
   if (failures.length) throw new Error(`[test] cleanup failed: ${failures.join('; ')}`);
 });
 
-test('lesson editor: card with image, three question types, exercise, reorder, publish, student visibility', async ({ page }) => {
+test('lesson editor: card with image, three question types, consolidation exercises, reorder, publish, student visibility', async ({ page }) => {
   await login(page);
   await page.goto(`/lessons/${lessonId}`);
   await expect(page.getByLabel('Titlul lecției')).toHaveValue('[test] lecție editor');
@@ -115,7 +125,7 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   await expect(page.getByTestId('card-item')).toContainText('Unirea');
 
   // Questions: one of each type
-  await page.getByRole('tab', { name: /Întrebări/ }).click();
+  await page.getByRole('tab', { name: /Verificare/ }).click();
   const add = async (fill: () => Promise<void>) => {
     await page.getByRole('button', { name: 'Adaugă întrebare' }).click();
     await fill();
@@ -163,17 +173,82 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   });
   await expect(page.getByTestId('question-item')).toHaveCount(3);
 
-  // Exercise
-  await page.getByRole('tab', { name: /Exerciții de redactare/ }).click();
+  // Consolidation: a source, a short answer with a template, a cause-effect pair marked by mouse selection
+  await page.getByRole('tab', { name: /Consolidare/ }).click();
+  await page.getByRole('button', { name: 'Adaugă sursă' }).click();
+  const sourceForm = page.getByTestId('source-form');
+  await sourceForm.getByLabel('Autor').fill('[test] D. Berindei');
+  await sourceForm.getByLabel('Lucrare').fill('Istoria românilor');
+  await sourceForm.getByLabel('Text').fill('Cuza a fost ales domn. Unirea a fost recunoscută.');
+  await sourceForm.getByRole('button', { name: 'Salvează sursa' }).click();
+  await expect(page.getByTestId('source-item')).toHaveCount(1);
+  await expect(page.getByTestId('source-item')).toContainText('9 cuvinte');
+  await expect(page.getByTestId('source-item')).toContainText('nefolosită încă');
+
+  const exForm = page.getByTestId('exercise-form');
   await page.getByRole('button', { name: 'Adaugă exercițiu' }).click();
-  await page.getByTestId('exercise-form').getByLabel('Enunț').fill('Prezintă domnia lui Alexandru Ioan Cuza.');
-  await page.getByTestId('exercise-form').getByLabel('Criterii de evaluare').fill('Context istoric\nReforme');
-  await page.getByTestId('exercise-form').getByRole('button', { name: 'Salvează' }).click();
+  await page.getByRole('radiogroup').getByText('Răspuns scurt', { exact: true }).click();
+  await exForm.getByLabel('Enunț').fill('Cine a fost ales domn?');
+  await exForm.getByLabel('Sursa A').selectOption({ index: 1 });
+  await exForm.getByLabel('Șablon de rezolvare').selectOption({ label: '[test] șablon răspuns scurt' });
+  await exForm.getByLabel('Variante acceptate (una pe rând)').fill('Cuza\nAl. I. Cuza');
+  await exForm.getByRole('button', { name: 'Salvează' }).click();
   await expect(page.getByTestId('exercise-item')).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Adaugă exercițiu' }).click();
+  await page.getByRole('radiogroup').getByText('Cauză-efect', { exact: true }).click();
+  await exForm.getByLabel('Enunț').fill('Marchează cauza și efectul.');
+  await exForm.getByLabel('Sursa A').selectOption({ index: 1 });
+  // a real mouse drag over the first occurrence of `word` in the source text
+  const select = async (word: string) => {
+    const box = await page.getByTestId('span-marker-text').evaluate((root, w) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const at = n.textContent!.indexOf(w);
+        if (at < 0) continue;
+        const r = document.createRange();
+        r.setStart(n, at);
+        r.setEnd(n, at + w.length);
+        const b = r.getBoundingClientRect();
+        return { x: b.x, y: b.y + b.height / 2, w: b.width };
+      }
+      return null;
+    }, word);
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + 1, box!.y);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.w - 1, box!.y, { steps: 5 });
+    await page.mouse.up();
+  };
+  await exForm.getByRole('button', { name: 'Adaugă pereche' }).click();
+  await select('Cuza');
+  await exForm.getByRole('button', { name: 'Marchează cauza' }).click();
+  await select('Unirea');
+  await exForm.getByRole('button', { name: 'Marchează efectul' }).click();
+  await exForm.getByRole('button', { name: 'Salvează' }).click();
+  await expect(page.getByTestId('exercise-item')).toHaveCount(2);
+
+  // the list shows both, neither flagged invalid; the source is now in use
+  const items = page.getByTestId('exercise-item');
+  await expect(items.nth(0)).toContainText('Răspuns scurt');
+  await expect(items.nth(1)).toContainText('Cauză-efect');
+  await expect(items.nth(1)).toContainText('Marchează cauza și efectul.');
+  await expect(page.getByText('Invalid', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('source-item')).toContainText('folosită în 2 exerciții');
+  const saved = await service
+    .from('consolidation_exercises')
+    .select('type,template_id,content')
+    .eq('lesson_id', lessonId)
+    .order('position');
+  expect(saved.error).toBeNull();
+  expect(saved.data?.map((r) => r.type)).toEqual(['short_answer', 'cause_effect']);
+  expect(saved.data?.[0]?.template_id).toBe(templateId);
+  expect(saved.data?.[1]?.content.pairs).toHaveLength(1);
+  expect(saved.data?.[1]?.content.pairs[0].cause.text).toBe('Cuza');
 
   // Draft is hidden from students, published is visible
   const fetchPublished = () =>
-    student.from('lessons').select('id,title,cards(*),questions(*),writing_exercises(*)').eq('id', lessonId).maybeSingle();
+    student.from('lessons').select('id,title,cards(*),questions(*)').eq('id', lessonId).maybeSingle();
   expect((await fetchPublished()).data).toBeNull();
 
   await page.getByRole('button', { name: 'Publică' }).click();
@@ -199,13 +274,14 @@ test('lesson editor: card with image, three question types, exercise, reorder, p
   expect(data?.questions.map((q: { type: string }) => q.type).sort()).toEqual(['chronological_order', 'multiple_choice', 'single_choice']);
   const order = data?.questions.find((q: { type: string }) => q.type === 'chronological_order');
   expect(order.options.map((o: { label?: string }) => o.label)).toEqual(['1859', '1918']);
-  expect(data?.writing_exercises).toHaveLength(1);
 
   // Reload: everything persisted
   await page.reload();
   await expect(page.getByTestId('card-item')).toHaveCount(1);
-  await page.getByRole('tab', { name: /Întrebări/ }).click();
+  await page.getByRole('tab', { name: /Verificare/ }).click();
   await expect(page.getByTestId('question-item')).toHaveCount(3);
+  await page.getByRole('tab', { name: /Consolidare \(2\)/ }).click();
+  await expect(page.getByTestId('exercise-item')).toHaveCount(2);
 });
 
 test('lesson editor: unknown lesson id is a 404', async ({ page }) => {

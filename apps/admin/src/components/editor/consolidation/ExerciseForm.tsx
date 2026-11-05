@@ -3,11 +3,13 @@
 import { useId, useState, type ComponentType } from 'react';
 import { Alert, Button, ButtonGroup, Form, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import {
-  AI_TYPES, CONSOLIDATION_TYPES, CONSOLIDATION_TYPE_LABELS,
+  CONSOLIDATION_TYPES, CONSOLIDATION_TYPE_LABELS,
   type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel, type SourceRef,
 } from '@prepio/shared';
 import type { ActionResult } from '@/lib/actionResult';
 import type { ExerciseInput } from '@/lib/data/consolidation';
+import { ArgumentFields, ComparisonFields, FactsFields, ViewpointFields } from './AiFields';
+import EssayFields from './EssayFields';
 import LetterFields from './LetterFields';
 import MultiAnswerFields from './MultiAnswerFields';
 import PairsFields from './PairsFields';
@@ -18,13 +20,18 @@ import { changeType, cleanDraft, hasTypeContent, sourceName, type ExerciseDraft,
 // SpansFields serves both span types; the per-type map needs it narrowed to each one.
 const SpansFor = <T extends 'source_info' | 'viewpoint'>() => SpansFields as unknown as ComponentType<FieldsProps<T>>;
 
-/** Field groups per exercise type. The AI types (facts, comparison, viewpoint, argument, essay) are added in the next step. */
-export const FIELDS: { [T in ConsolidationType]?: ComponentType<FieldsProps<T>> } = {
+/** Field groups per exercise type. */
+export const FIELDS: { [T in ConsolidationType]: ComponentType<FieldsProps<T>> } = {
   short_answer: ShortAnswerFields,
   multi_answer: MultiAnswerFields,
   source_info: SpansFor<'source_info'>(),
   source_letter: LetterFields,
   cause_effect: PairsFields,
+  facts: FactsFields,
+  comparison: ComparisonFields,
+  viewpoint: ViewpointFields,
+  argument: ArgumentFields,
+  essay: EssayFields,
 };
 
 const newId = () => crypto.randomUUID();
@@ -107,7 +114,7 @@ export default function ExerciseForm({ initial, sources, templates, errors, onSa
     }
   }
 
-  const Fields = FIELDS[draft.type] as ComponentType<FieldsProps<ConsolidationType>> | undefined;
+  const Fields = FIELDS[draft.type] as ComponentType<FieldsProps<ConsolidationType>>;
 
   return (
     <Form onSubmit={submit} noValidate data-testid="exercise-form">
@@ -170,23 +177,20 @@ export default function ExerciseForm({ initial, sources, templates, errors, onSa
         {!draft.templateId && <Form.Text className="text-warning-emphasis d-block">Exercițiul nu are șablon de rezolvare.</Form.Text>}
       </Form.Group>
 
-      {Fields ? (
-        <Fields key={draft.type} idPrefix={idPrefix} draft={draft} onChange={(next) => setDraft(next)} sources={resolved} />
-      ) : (
-        <p className="text-secondary border rounded p-3">
-          Câmpurile pentru „{CONSOLIDATION_TYPE_LABELS[draft.type]}” {AI_TYPES.has(draft.type) ? '(cu verificare AI) ' : ''}vor fi disponibile în pasul următor.
-        </p>
-      )}
+      <Fields key={draft.type} idPrefix={idPrefix} draft={draft} onChange={(next) => setDraft(next)} sources={resolved} templates={templates} />
 
-      <Form.Group className="mb-3" controlId={`${idPrefix}-model`}>
-        <Form.Label>Răspuns model (opțional)</Form.Label>
-        <Form.Control
-          as="textarea"
-          rows={2}
-          value={draft.modelAnswer ?? ''}
-          onChange={(e) => setDraft((d) => ({ ...d, modelAnswer: e.target.value === '' ? null : e.target.value }))}
-        />
-      </Form.Group>
+      {/* the essay's model answers belong to its requirements */}
+      {draft.type !== 'essay' && (
+        <Form.Group className="mb-3" controlId={`${idPrefix}-model`}>
+          <Form.Label>Răspuns model (opțional)</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={2}
+            value={draft.modelAnswer ?? ''}
+            onChange={(e) => setDraft((d) => ({ ...d, modelAnswer: e.target.value === '' ? null : e.target.value }))}
+          />
+        </Form.Group>
+      )}
       <Form.Group className="mb-3" controlId={`${idPrefix}-explanation`}>
         <Form.Label>Explicație (opțional)</Form.Label>
         <Form.Control

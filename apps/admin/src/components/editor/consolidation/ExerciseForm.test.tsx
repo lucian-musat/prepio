@@ -91,12 +91,6 @@ describe('Consolidare: exercises', () => {
     expect(screen.getByLabelText('Enunț')).toBeTruthy();
   });
 
-  it('the AI types show a placeholder for now', async () => {
-    const { user } = setup();
-    await openNew(user, 'Argumentare');
-    expect(screen.getByText(/disponibile în pasul următor/)).toBeTruthy();
-  });
-
   it('an exercise with errors shows the Invalid badge and its errors in the list', () => {
     setup(
       data({

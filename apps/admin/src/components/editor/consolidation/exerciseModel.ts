@@ -1,7 +1,8 @@
 import {
-  emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type Source, type SourceLabel,
+  emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel,
 } from '@prepio/shared';
 import type { ExerciseInput } from '@/lib/data/consolidation';
+import { plural } from './plural';
 
 /** The form edits an `ExerciseInput` directly; list fields keep raw lines until `cleanDraft`. */
 export type ExerciseDraft = ExerciseInput;
@@ -72,6 +73,15 @@ export function cleanDraft(d: ExerciseDraft): ExerciseDraft {
       return { ...base, accepted: lines(base.accepted), mistakes: base.mistakes.filter((m) => m.answer.trim() !== '') };
     case 'multi_answer':
       return { ...base, groups: base.groups.map((g) => ({ ...g, variants: lines(g.variants) })) };
+    case 'essay': {
+      const ids = new Set(base.requirements.map((r) => r.id));
+      const requirements = Object.fromEntries(Object.entries(base.ai.requirements).filter(([id]) => ids.has(id)));
+      return {
+        ...base,
+        requirements: base.requirements.map((r) => ({ ...r, modelAnswer: orNull(r.modelAnswer) })),
+        ai: { ...base.ai, requirements },
+      };
+    }
     default:
       return base;
   }
@@ -89,6 +99,8 @@ export type FieldsProps<T extends ConsolidationType> = {
   onChange: (next: DraftOf<T>) => void;
   /** The exercise's chosen sources, resolved, in label order (A, B). */
   sources: Array<{ label: SourceLabel; source: Source }>;
+  /** All solution templates (the essay's requirements pick their own). */
+  templates: SolutionTemplate[];
 };
 
 /** The source's title, or its first words. */
@@ -99,8 +111,4 @@ export function sourceName(s: Source): string {
 }
 
 /** „1 exercițiu”, „2 exerciții”, „20 de exerciții”. */
-export function exercisesCount(n: number): string {
-  if (n === 1) return '1 exercițiu';
-  const de = n >= 20 && (n % 100 === 0 || n % 100 >= 20);
-  return `${n} ${de ? 'de ' : ''}exerciții`;
-}
+export const exercisesCount = (n: number) => plural(n, 'exercițiu', 'exerciții');
