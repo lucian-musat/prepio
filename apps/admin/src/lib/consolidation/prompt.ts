@@ -87,6 +87,11 @@ export function buildConsolidationPrompt(a: PromptArgs): { instructions: string;
     a.rules,
   ].join('\n');
 
+  const reference = (modelAnswer: string | null | undefined): string[] =>
+    modelAnswer && modelAnswer.trim() !== ''
+      ? ['Răspuns model (referință pentru profesor; nu îl dezvălui integral elevului, folosește-l doar ca reper):', modelAnswer, '']
+      : [];
+
   const lines: string[] = ['Enunțul exercițiului:', a.exercise.prompt, ''];
   const ex = a.exercise;
   const ans = a.answer;
@@ -95,13 +100,14 @@ export function buildConsolidationPrompt(a: PromptArgs): { instructions: string;
     if (a.target === 'whole') {
       lines.push('Eseul are următoarele cerințe, în ordine. Pentru fiecare: cerința, contextul profesorului și textul elevului.');
       ex.requirements.forEach((r, i) => {
-        lines.push('', `Cerința ${i + 1}: ${r.text}`, `Contextul profesorului: ${a.context.requirements[r.id] ?? ''}`);
+        lines.push('', `Cerința ${i + 1}: ${r.text}`, `Contextul profesorului: ${a.context.requirements[r.id] ?? ''}`, ...reference(r.modelAnswer));
         const c = a.deterministic.requirementConnectors?.[r.id];
         if (c) lines.push(connectorLine(c));
         lines.push(`Textul elevului pentru cerința ${i + 1}:`, wrap(ans.parts[r.id] ?? ''));
       });
       lines.push(
         '',
+        ...reference(ex.modelAnswer),
         'Evaluează eseul întreg pe criteriile de scriere de la bacalaureat:',
         ...WHOLE_CRITERIA.map((c) => `- ${c}`),
         '',
@@ -116,12 +122,13 @@ export function buildConsolidationPrompt(a: PromptArgs): { instructions: string;
         'Contextul profesorului:',
         a.context.requirements[id] ?? '',
         '',
+        ...reference(r?.modelAnswer),
       );
       if (a.deterministic.connectors) lines.push(connectorLine(a.deterministic.connectors), '');
       lines.push('Textul elevului:', wrap(ans.parts[id] ?? ''), '', `Cheia elementului așteptat: ${id} (verdictul pentru această cerință).`);
     }
   } else {
-    lines.push('Contextul profesorului:', a.context.main, '');
+    lines.push('Contextul profesorului:', a.context.main, '', ...reference(ex.modelAnswer));
     switch (ex.type) {
       case 'facts': {
         const texts = ans.type === 'facts' ? ans.texts : [];

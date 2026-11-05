@@ -189,13 +189,22 @@ describe('handleConsolidationEvaluate', () => {
       async () => { throw new Error('boom secret'); },
       async () => ({ nope: true }),
       async () => ({ items: [{ key: 'fact-0', verdict: 'great', title: 'T', good: [], improve: [] }] }),
-      async () => ({ items: [{ key: 'fact-0', verdict: 'ok', title: 'x'.repeat(121), good: [], improve: [] }] }),
     ];
     for (const evaluate of bad) {
       const r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate }));
       expect(r.status).toBe(502);
       expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
     }
+  });
+
+  it('truncates over-long model output instead of failing', async () => {
+    const long = { key: 'fact-0', verdict: 'ok', title: 'x'.repeat(300), good: ['g'.repeat(900)], improve: [] };
+    const evaluate = async () => ({ items: [long, { ...long, key: 'fact-1' }] });
+    const r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate }));
+    expect(r.status).toBe(200);
+    const first = (r.json as { items: { title: string; good: string[] }[] }).items[0]!;
+    expect(first.title).toHaveLength(120);
+    expect(first.good[0]).toHaveLength(400);
   });
 
   it('drops unexpected keys and fails on a missing key', async () => {

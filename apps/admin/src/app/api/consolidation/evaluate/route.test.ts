@@ -12,12 +12,14 @@ vi.mock('@/lib/consolidation/handler', async (importOriginal) => ({
   handleConsolidationEvaluate: (...args: unknown[]) => handleConsolidationEvaluate(...args),
 }));
 
+import type { ConsolidationEvaluateRequest } from '@prepio/shared';
 import { OPTIONS, POST, maxDuration } from './route';
 
 const ALLOWED = 'http://localhost:8081';
 const ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '99999999-9999-4999-8999-999999999999';
 const ok = { items: [] };
+const REQUEST: ConsolidationEvaluateRequest = { exerciseId: ID, target: 'exercise', answer: { type: 'comparison', text: 'Un text.' } };
 
 function post(opts: { origin?: string; contentType?: string | null; body?: string; token?: string | null } = {}) {
   const headers = new Headers();
@@ -27,7 +29,7 @@ function post(opts: { origin?: string; contentType?: string | null; body?: strin
   return new Request('http://localhost:3000/api/consolidation/evaluate', {
     method: 'POST',
     headers,
-    body: opts.body ?? JSON.stringify({ exerciseId: ID, text: 'Un text.' }),
+    body: opts.body ?? JSON.stringify(REQUEST),
   });
 }
 
@@ -59,7 +61,7 @@ describe('/api/consolidation/evaluate route', () => {
     expect(r.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
     expect(authenticateBearer).toHaveBeenCalledWith(expect.any(Request), expect.any(Object));
-    expect(handleConsolidationEvaluate).toHaveBeenCalledWith({ exerciseId: ID, text: 'Un text.' }, USER_ID, expect.any(Object));
+    expect(handleConsolidationEvaluate).toHaveBeenCalledWith(REQUEST, USER_ID, expect.any(Object));
   });
 
   it('returns 401 unauthorized without a valid token, before evaluating', async () => {

@@ -12,7 +12,7 @@ import {
   GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS, type RateLimit,
 } from '@/lib/evaluate/rateLimit';
 import { buildConsolidationPrompt, expectedKeys, type Deterministic } from './prompt';
-import { aiOutputSchema } from './schema';
+import { aiOutputSchema, normalizeAiOutput } from './schema';
 
 export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit };
 export type HandlerResult = { status: number; json: ConsolidationEvaluateResponse | ConsolidationEvaluateError };
@@ -216,9 +216,10 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const parsed = aiOutputSchema.safeParse(raw);
     if (!parsed.success) throw new Error('model output failed validation');
 
+    const normalized = normalizeAiOutput(parsed.data);
     const items: FeedbackItem[] = [];
     for (const key of expectedKeys(exercise, req.target, deterministic)) {
-      const found = parsed.data.items.find((i) => i.key === key);
+      const found = normalized.items.find((i) => i.key === key);
       if (!found) throw new Error(`model output is missing item "${key}"`);
       items.push({ key, verdict: found.verdict, title: found.title, good: found.good, improve: found.improve, ai: true });
     }
