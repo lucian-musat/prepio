@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { space, type Lesson } from '@prepio/shared';
-import { AppText, Button, Enter, ScreenLayout, Surface, goBackOrHome } from '../../ui';
+import { AppText, Button, Enter, ScreenLayout, Surface, TextButton, goBackOrHome } from '../../ui';
 import { countLabel } from '../../lib/lessonCount';
 
 type Props = {
@@ -27,11 +27,12 @@ export default function LessonStart({ lesson, guided, onResume, onLearn, onSkip 
           {hasCards ? (
             <Button label="Începe învățarea" variant={onResume ? 'secondary' : 'primary'} onPress={onLearn} />
           ) : null}
-          <Button
-            label="Știu deja — sari la exerciții"
-            variant={onResume || hasCards ? 'secondary' : 'primary'}
-            onPress={onSkip}
-          />
+          {/* With nothing to learn first, going to the exercises is the main action; otherwise a quiet link. */}
+          {onResume || hasCards ? (
+            <TextButton label="Știu deja — sari la exerciții" onPress={onSkip} />
+          ) : (
+            <Button label="Știu deja — sari la exerciții" onPress={onSkip} />
+          )}
         </View>
       }
     >

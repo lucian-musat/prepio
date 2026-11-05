@@ -11,7 +11,7 @@ import { modeOf } from '../lib/learningMode';
 import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
-import { AppText, Button, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import LessonStart from './lesson/LessonStart';
 import { GuidedFailed, GuidedPassed } from './lesson/GuidedResult';
 
@@ -104,6 +104,15 @@ function useWriteQueue() {
   };
 }
 
+/** What skipping the cards means, per mode: shown before the student goes straight to the test. */
+export const SKIP_MESSAGE = {
+  guided:
+    'Treci peste cartonașe și începi direct exercițiile. Ca să termini lecția și să o deblochezi pe următoarea, ' +
+    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cartonașele, apoi reiei exercițiile de la început.',
+  free: 'Treci peste cartonașe și începi direct exercițiile. Lecția e terminată când ajungi la final. Poți reveni oricând la cartonașe.',
+} as const;
+export const SKIP_CONFIRM = 'Da, sari la exerciții';
+
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const mode = modeOf(useAuth().profile);
@@ -114,6 +123,7 @@ export default function LessonScreen() {
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<Results>({});
   const [end, setEnd] = useState<End | null>(null);
+  const [confirmSkip, setConfirmSkip] = useState(false);
   const mounted = useRef(true);
   const enqueue = useWriteQueue();
   // Position writes never block the student: a failure is only logged.
@@ -192,17 +202,35 @@ export default function LessonScreen() {
   };
   const startCards = () => goTo('cards', 0, {});
   const startTest = () => goTo(firstNonEmpty(lesson, 'questions'), 0, {});
+  // Skipping from the start screen or the cards asks first; the failed-test screen's retake does not.
+  const requestSkip = () => setConfirmSkip(true);
+  const skipDialog = (
+    <ConfirmDialog
+      visible={confirmSkip}
+      title="Sari la exerciții?"
+      message={SKIP_MESSAGE[mode]}
+      confirmLabel={SKIP_CONFIRM}
+      onConfirm={() => {
+        setConfirmSkip(false);
+        startTest();
+      }}
+      onCancel={() => setConfirmSkip(false)}
+    />
+  );
 
   if (phase === 'start') {
     const resume = resumePoint(lesson, progress.positions.get(lesson.id) ?? null);
     return (
-      <LessonStart
-        lesson={lesson}
-        guided={mode === 'guided'}
-        onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
-        onLearn={startCards}
-        onSkip={startTest}
-      />
+      <>
+        <LessonStart
+          lesson={lesson}
+          guided={mode === 'guided'}
+          onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
+          onLearn={startCards}
+          onSkip={requestSkip}
+        />
+        {skipDialog}
+      </>
     );
   }
 
@@ -228,15 +256,18 @@ export default function LessonScreen() {
 
   if (phase === 'cards') {
     return (
-      <CardStepper
-        cards={lesson.cards}
-        initialIndex={index}
-        onFinish={advance}
-        frame={frame(lesson.title)}
-        finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
-        onIndexChange={(i) => goTo('cards', i, results)}
-        onSkip={somethingAfterCards ? startTest : undefined}
-      />
+      <>
+        <CardStepper
+          cards={lesson.cards}
+          initialIndex={index}
+          onFinish={advance}
+          frame={frame(lesson.title)}
+          finishLabel={somethingAfterCards ? 'La exerciții' : 'Continuă'}
+          onIndexChange={(i) => goTo('cards', i, results)}
+          onSkip={somethingAfterCards ? requestSkip : undefined}
+        />
+        {skipDialog}
+      </>
     );
   }
 

@@ -4,7 +4,7 @@ import { GestureDetector, PointerType, usePanGesture, type PanGestureConfig } fr
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { color, motion, radius, space, type Card } from '@prepio/shared';
-import { Button, CardTransition, ScreenLayout, easing, timing } from '../ui';
+import { Button, CardTransition, ScreenLayout, TextButton, easing, timing } from '../ui';
 import CardView from './cards/CardView';
 import type { LessonFrame } from './QuestionView';
 import { swipeOffset, swipeTarget, swipeTilt } from './swipeMath';
@@ -45,7 +45,7 @@ type Props = {
   onIndexChange?: (index: number) => void;
   /** Card to open on (a resumed lesson); default the first. */
   initialIndex?: number;
-  /** Shown as a secondary action above the navigation: go straight to the test. */
+  /** Shown as a quiet link under the navigation: go straight to the test. */
   onSkip?: () => void;
   skipLabel?: string;
 };
@@ -175,7 +175,6 @@ export default function CardStepper({
       scrollRef={scrollRef}
       actions={
         <View style={styles.actions}>
-          {onSkip ? <Button variant="secondary" label={skipLabel} onPress={onSkip} /> : null}
           <View style={styles.nav}>
             <Button
               flex
@@ -187,6 +186,7 @@ export default function CardStepper({
             />
             <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
           </View>
+          {onSkip ? <TextButton label={skipLabel} onPress={onSkip} /> : null}
         </View>
       }
     >
@@ -210,7 +210,7 @@ export default function CardStepper({
 const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: space[1.5], marginTop: space[3.5] },
   dot: { height: DOT, borderRadius: radius.pill },
-  // The action bar lays its children out in a row: the optional skip sits above Înapoi / Continuă.
+  // The action bar lays its children out in a row: the optional skip link sits under Înapoi / Continuă.
   actions: { flex: 1, gap: space[2.5] },
   nav: { flexDirection: 'row', gap: space[2.5] },
 });

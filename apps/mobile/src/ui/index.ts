@@ -8,6 +8,8 @@ export { default as Enter } from './Enter';
 export { default as CardTransition, useCardLeaving } from './CardTransition';
 export { default as Reveal } from './Reveal';
 export { default as Button } from './Button';
+export { default as TextButton } from './TextButton';
+export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as Surface, type SpaceKey } from './Surface';
 export { default as Chip } from './Chip';
 export { default as OptionRow, type OptionState } from './OptionRow';

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Lesson, LessonSummary } from '@prepio/shared';
-import LessonScreen, { lessonProgress } from './LessonScreen';
+import LessonScreen, { SKIP_CONFIRM, SKIP_MESSAGE, lessonProgress } from './LessonScreen';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { fetchProgress, markFinished, savePosition, type LessonPosition } from '../lib/progress';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
@@ -83,11 +83,17 @@ const press = async (name: string) => {
   await screen.findByTestId('action-bar');
   await fireEvent.press(actionBar().getByRole('button', { name }));
 };
-/** Opens the lesson and leaves the start screen with the given button. */
+const SKIP = 'Știu deja — sari la exerciții';
+/** Presses a skip link (start screen or cards) and confirms the dialog. */
+const skip = async (name: string = SKIP) => {
+  await press(name);
+  await fireEvent.press(await screen.findByRole('button', { name: SKIP_CONFIRM }));
+};
+/** Opens the lesson and leaves the start screen with the given button (the skip is confirmed). */
 const openLesson = async (l: Lesson | null, start = 'Începe învățarea') => {
   await renderLesson(l);
-  await screen.findByText('Știu deja — sari la exerciții');
-  await press(start);
+  await screen.findByText(SKIP);
+  await (start === SKIP ? skip() : press(start));
 };
 const answer = async (text: 'Da' | 'Nu', next: string) => {
   await fireEvent.press(await screen.findByText(text));
@@ -199,7 +205,7 @@ describe('start screen', () => {
   it('the cards offer a skip to the test when there is one', async () => {
     await openLesson(lesson());
     expect(await screen.findByText('Corp card')).toBeTruthy();
-    await press('Sari la exerciții');
+    await skip('Sari la exerciții');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
   });
 
@@ -218,6 +224,36 @@ describe('start screen', () => {
   it('skipping without questions goes to the exercises', async () => {
     await openLesson(lesson({ questions: [] }), 'Știu deja — sari la exerciții');
     expect(await screen.findByText('Scrie un eseu')).toBeTruthy();
+  });
+
+  it('skipping asks first and explains guided mode; Anulează stays on the start screen', async () => {
+    mockMode = 'guided';
+    await renderLesson(lesson());
+    await screen.findByText(SKIP);
+    await press(SKIP);
+    expect(await screen.findByText('Sari la exerciții?')).toBeTruthy();
+    expect(screen.getByText(SKIP_MESSAGE.guided)).toBeTruthy();
+    expect(mockedSave).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Anulează' }));
+    expect(screen.queryByText('Sari la exerciții?')).toBeNull();
+    expect(screen.queryByText('Prima întrebare?')).toBeNull();
+    expect(actionBar().getByRole('button', { name: 'Începe învățarea' })).toBeTruthy();
+  });
+
+  it('the skip dialog explains free mode', async () => {
+    await renderLesson(lesson());
+    await screen.findByText(SKIP);
+    await press(SKIP);
+    expect(await screen.findByText(SKIP_MESSAGE.free)).toBeTruthy();
+  });
+
+  it('skipping from the cards asks too; Anulează keeps the card', async () => {
+    await openLesson(lesson());
+    expect(await screen.findByText('Corp card')).toBeTruthy();
+    await press('Sari la exerciții');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Anulează' }));
+    expect(screen.getByText('Corp card')).toBeTruthy();
+    expect(screen.queryByText('Prima întrebare?')).toBeNull();
   });
 
   it('a lesson without cards hides Începe învățarea', async () => {
@@ -500,7 +536,7 @@ describe('guided mode', () => {
     );
     await renderLesson(lesson({ questions: [question(1), question(2)], exercises: [] }));
     await screen.findByText('Continuă de unde ai rămas');
-    await press('Știu deja — sari la exerciții');
+    await skip();
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
     expect(mockedSave).toHaveBeenLastCalledWith('l1', { phase: 'questions', index: 0, results: {} });
     // q2 alone is not enough: the saved q1 answer is gone, so the attempt fails on question 1.
@@ -514,7 +550,7 @@ describe('guided mode', () => {
     await answer('Nu', 'Continuă');
     await press('Revezi cardurile');
     expect(await screen.findByText('Corp card')).toBeTruthy();
-    await press('Sari la exerciții');
+    await skip('Sari la exerciții');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
     expect(actionBar().getByRole('button', { name: 'Verifică' })).toBeTruthy();
     expect(mockedSave).toHaveBeenLastCalledWith('l1', { phase: 'questions', index: 0, results: {} });
@@ -543,7 +579,7 @@ describe('guided mode', () => {
       </SafeAreaProvider>,
     );
     await screen.findByText('Știu deja — sari la exerciții');
-    await press('Știu deja — sari la exerciții');
+    await skip();
     await answer('Da', 'Continuă');
     await press('Mergi la lecția următoare');
     expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
