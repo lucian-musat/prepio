@@ -5,10 +5,10 @@ import type { ActionResult } from '@/lib/actionResult';
 import { GENERIC_ERROR, UserError, type Direction } from '@/lib/data/db';
 import * as lesson from '@/lib/data/lesson';
 import { fetchLinkPreview, type LinkMetadata } from '@/lib/linkPreview';
-import type { CardInput, ExerciseInput, ItemTable, QuestionInput } from '@/lib/data/lesson';
+import type { CardInput, ItemTable, QuestionInput } from '@/lib/data/lesson';
 import { createServerClient } from '@/lib/supabase/server';
 
-const TABLES: readonly string[] = ['cards', 'questions', 'writing_exercises'];
+const TABLES: readonly string[] = ['cards', 'questions', 'consolidation_exercises', 'sources'];
 
 async function run<T = void>(fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<T>): Promise<ActionResult<T>> {
   try {
@@ -38,9 +38,6 @@ export async function saveCard(lessonId: string, card: CardInput): Promise<Actio
 }
 export async function saveQuestion(lessonId: string, q: QuestionInput): Promise<ActionResult<{ id: string }>> {
   return run((db) => lesson.saveQuestion(db, lessonId, q));
-}
-export async function saveExercise(lessonId: string, e: ExerciseInput): Promise<ActionResult<{ id: string }>> {
-  return run((db) => lesson.saveExercise(db, lessonId, e));
 }
 export async function deleteItem(t: ItemTable, id: string): Promise<ActionResult> {
   return run((db) => lesson.deleteItem(db, table(t), id));

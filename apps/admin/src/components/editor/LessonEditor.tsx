@@ -3,12 +3,11 @@
 import { Tab, Tabs } from 'react-bootstrap';
 import type { LessonForEdit } from '@/lib/data/lesson';
 import CardsEditor from './CardsEditor';
-import ExercisesEditor from './ExercisesEditor';
 import LessonHeader from './LessonHeader';
 import QuestionsEditor from './QuestionsEditor';
 
 export default function LessonEditor({ data }: { data: LessonForEdit }) {
-  const { lesson, cards, questions, exercises } = data;
+  const { lesson, cards, questions } = data;
   return (
     <>
       <LessonHeader id={lesson.id} title={lesson.title} status={lesson.status} />
@@ -18,9 +17,6 @@ export default function LessonEditor({ data }: { data: LessonForEdit }) {
         </Tab>
         <Tab eventKey="questions" title={`Întrebări (${questions.length})`}>
           <QuestionsEditor lessonId={lesson.id} questions={questions} />
-        </Tab>
-        <Tab eventKey="exercises" title={`Exerciții de redactare (${exercises.length})`}>
-          <ExercisesEditor lessonId={lesson.id} exercises={exercises} />
         </Tab>
       </Tabs>
     </>

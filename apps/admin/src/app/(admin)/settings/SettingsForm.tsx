@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, Col, Form, Row } from 'react-bootstrap';
+import { Button, Card, Form } from 'react-bootstrap';
 import { useRunner } from '@/components/editor/common';
 import type { SettingsInput } from '@/lib/data/settings';
 import { saveSettings } from './actions';
@@ -9,8 +9,6 @@ import { saveSettings } from './actions';
 export default function SettingsForm({ initial }: { initial: SettingsInput }) {
   const [welcomeMessage, setWelcomeMessage] = useState(initial.welcomeMessage);
   const [rules, setRules] = useState(initial.rules);
-  const [gradeMin, setGradeMin] = useState(String(initial.gradeMin));
-  const [gradeMax, setGradeMax] = useState(String(initial.gradeMax));
   const [model, setModel] = useState(initial.model);
   const [saved, setSaved] = useState(false);
   const { run, pending, alert } = useRunner();
@@ -21,10 +19,8 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
       onSubmit={(e) => {
         e.preventDefault();
         setSaved(false);
-        // Number('') is 0, so empty fields are sent as NaN and rejected by validation.
-        const num = (s: string) => (s.trim() === '' ? NaN : Number(s));
         run(
-          () => saveSettings({ welcomeMessage, rules, gradeMin: num(gradeMin), gradeMax: num(gradeMax), model }),
+          () => saveSettings({ welcomeMessage, rules, model }),
           () => setSaved(true),
         );
       }}
@@ -48,20 +44,6 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
             <Form.Control as="textarea" rows={14} value={rules} onChange={(e) => touch(setRules)(e.target.value)} />
             <Form.Text muted>Instrucțiunile trimise modelului AI pentru evaluarea eseurilor.</Form.Text>
           </Form.Group>
-          <Row className="mb-3">
-            <Col xs={6} md={3}>
-              <Form.Group controlId="grade-min">
-                <Form.Label>Nota minimă</Form.Label>
-                <Form.Control type="number" step={1} value={gradeMin} onChange={(e) => touch(setGradeMin)(e.target.value)} />
-              </Form.Group>
-            </Col>
-            <Col xs={6} md={3}>
-              <Form.Group controlId="grade-max">
-                <Form.Label>Nota maximă</Form.Label>
-                <Form.Control type="number" step={1} value={gradeMax} onChange={(e) => touch(setGradeMax)(e.target.value)} />
-              </Form.Group>
-            </Col>
-          </Row>
           <Form.Group controlId="ai-model">
             <Form.Label>Model</Form.Label>
             <Form.Control value={model} onChange={(e) => touch(setModel)(e.target.value)} />

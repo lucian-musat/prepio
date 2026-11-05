@@ -3,24 +3,23 @@ import {
   CARD_TYPES, cardFromRow, cardImagePaths, cardToRow, validateCard, validateQuestion,
   type Card, type CardRow, type DistributiveOmit, type LessonStatus, type Question,
 } from '@prepio/shared';
+import { deleteSource, getConsolidation, type EditorConsolidation } from './consolidation';
 import { GENERIC_ERROR, UserError, check, isUuid, checkAffected, siblings, swapInGroup, renumber, type Direction } from './db';
 
 export { UserError };
 
-export type ItemTable = 'cards' | 'questions' | 'writing_exercises';
+export type ItemTable = 'cards' | 'questions' | 'consolidation_exercises' | 'sources';
 
 export type EditorCard = Card;
-export type EditorExercise = { id: string; position: number; prompt: string; criteria: string };
 export type LessonForEdit = {
   lesson: { id: string; title: string; status: LessonStatus };
   cards: Card[];
   questions: Question[];
-  exercises: EditorExercise[];
+  consolidation: EditorConsolidation;
 };
 
 export type CardInput = DistributiveOmit<Card, 'id' | 'position'> & { id?: string };
 export type QuestionInput = DistributiveOmit<Question, 'id' | 'position'> & { id?: string };
-export type ExerciseInput = { id?: string; prompt: string; criteria: string };
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -31,16 +30,16 @@ const orNull = (s: string | null | undefined) => (blank(s) ? null : s!.trim());
 export async function getLessonForEdit(db: SupabaseClient, id: string): Promise<LessonForEdit | null> {
   const lesson = check(await db.from('lessons').select('id,title,status').eq('id', id).maybeSingle());
   if (!lesson) return null;
-  const [cards, questions, exercises] = await Promise.all([
+  const [cards, questions, consolidation] = await Promise.all([
     db.from('cards').select('id,position,title,type,content').eq('lesson_id', id).order('position'),
     db.from('questions').select('id,position,type,prompt,difficulty,explanation,options').eq('lesson_id', id).order('position'),
-    db.from('writing_exercises').select('id,position,prompt,criteria').eq('lesson_id', id).order('position'),
+    getConsolidation(db, id),
   ]);
   return {
     lesson: lesson as LessonForEdit['lesson'],
     cards: (check(cards) as unknown as CardRow[]).map(cardFromRow),
     questions: check(questions) as Question[],
-    exercises: check(exercises) as EditorExercise[],
+    consolidation,
   };
 }
 
@@ -56,7 +55,7 @@ async function nextPosition(db: SupabaseClient, table: ItemTable, lessonId: stri
 }
 
 /** Inserts (no id, appended at the end) or updates (keeps position) a row of a lesson. */
-async function upsert(db: SupabaseClient, table: ItemTable, lessonId: string, id: string | undefined, fields: Record<string, unknown>) {
+export async function upsert(db: SupabaseClient, table: ItemTable, lessonId: string, id: string | undefined, fields: Record<string, unknown>) {
   if (id) {
     checkAffected(await db.from(table).update(fields).eq('id', id).eq('lesson_id', lessonId).select('id'));
     return { id };
@@ -150,18 +149,14 @@ export async function saveQuestion(db: SupabaseClient, lessonId: string, q: Ques
   });
 }
 
-export async function saveExercise(db: SupabaseClient, lessonId: string, e: ExerciseInput) {
-  if (blank(e.prompt)) throw new UserError('Enunțul exercițiului nu poate fi gol.');
-  if (blank(e.criteria)) throw new UserError('Criteriile nu pot fi goale.');
-  return upsert(db, 'writing_exercises', lessonId, e.id, { prompt: e.prompt.trim(), criteria: e.criteria.trim() });
-}
-
 async function lessonOf(db: SupabaseClient, table: ItemTable, id: string): Promise<string> {
   const row = check(await db.from(table).select('lesson_id').eq('id', id).single()) as unknown as { lesson_id: string };
   return row.lesson_id;
 }
 
 export async function deleteItem(db: SupabaseClient, table: ItemTable, id: string) {
+  // Sources are referenced by exercises (RESTRICT FK): deleteSource turns that into a friendly error.
+  if (table === 'sources') return deleteSource(db, id);
   const lessonId = await lessonOf(db, table, id);
   const old = table === 'cards' ? await storedCard(db, lessonId, id) : null;
   checkAffected(await db.from(table).delete().eq('id', id).select('id'));

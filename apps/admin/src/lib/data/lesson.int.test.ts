@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { UserError } from './db';
 import { createLesson, createNode } from './tree';
 import {
-  type CardInput, deleteItem, getLessonForEdit, moveItem, saveCard, saveExercise, saveQuestion, updateLesson, uploadCardImage,
+  type CardInput, deleteItem, getLessonForEdit, moveItem, saveCard, saveQuestion, updateLesson, uploadCardImage,
 } from './lesson';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
@@ -27,7 +27,7 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
   let lessonId: string;
   const uploaded: string[] = [];
 
-  const rows = async (table: 'cards' | 'questions' | 'writing_exercises', col: string) =>
+  const rows = async (table: 'cards' | 'questions', col: string) =>
     (await db.from(table).select(`${col},position`).eq('lesson_id', lessonId).order('position')).data!.map(
       (r) => {
         const x = r as unknown as Record<string, unknown>;
@@ -304,24 +304,12 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
     expect(await rows('questions', 'prompt')).toEqual([['Q3', 0], ['Q2', 1]]);
   });
 
-  it('saves, edits, moves and deletes exercises', async () => {
-    const a = await saveExercise(db, lessonId, { prompt: 'E1', criteria: 'c1\nc2' });
-    const b = await saveExercise(db, lessonId, { prompt: 'E2', criteria: 'c' });
-    await saveExercise(db, lessonId, { id: a.id, prompt: 'E1b', criteria: 'c1' });
-    await moveItem(db, 'writing_exercises', b.id, 'up');
-    expect(await rows('writing_exercises', 'prompt')).toEqual([['E2', 0], ['E1b', 1]]);
-    await expect(saveExercise(db, lessonId, { prompt: '', criteria: 'x' })).rejects.toThrow('Enunțul exercițiului nu poate fi gol.');
-    await expect(saveExercise(db, lessonId, { prompt: 'x', criteria: ' ' })).rejects.toThrow('Criteriile nu pot fi goale.');
-    await deleteItem(db, 'writing_exercises', b.id);
-    expect(await rows('writing_exercises', 'prompt')).toEqual([['E1b', 0]]);
-  });
-
   it('getLessonForEdit returns the lesson with ordered items, null for an unknown id', async () => {
     const data = await getLessonForEdit(db, lessonId);
     expect(data?.lesson.title).toBe('[test] nou');
     expect(data?.cards.map((c) => (c.type === 'text' ? c.text : null))).toEqual(['A', 'C']);
     expect(data?.questions.map((q) => q.prompt)).toEqual(['Q3', 'Q2']);
-    expect(data?.exercises.map((e) => e.prompt)).toEqual(['E1b']);
+    expect(data?.consolidation).toEqual({ sources: [], exercises: [], templates: expect.any(Array) });
     expect(await getLessonForEdit(db, '00000000-0000-0000-0000-000000000000')).toBeNull();
   });
 

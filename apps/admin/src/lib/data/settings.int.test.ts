@@ -27,7 +27,7 @@ describe.skipIf(!url || !anon)('settings data functions (local Supabase)', () =>
     if (original) await saveSettings(db, original);
   });
 
-  const valid: SettingsInput = { welcomeMessage: '[test] Bun venit', rules: '[test] reguli', gradeMin: 2, gradeMax: 9, model: 'test-model' };
+  const valid: SettingsInput = { welcomeMessage: '[test] Bun venit', rules: '[test] reguli', model: 'test-model' };
 
   it('persists both rows', async () => {
     await saveSettings(db, valid);
@@ -35,9 +35,6 @@ describe.skipIf(!url || !anon)('settings data functions (local Supabase)', () =>
   });
 
   it.each([
-    ['gradeMin >= gradeMax', { gradeMin: 5, gradeMax: 5 }],
-    ['non-integer grade', { gradeMin: 1.5 }],
-    ['NaN grade', { gradeMax: NaN }],
     ['empty model', { model: '  ' }],
     ['empty welcome message', { welcomeMessage: ' ' }],
     ['empty rules', { rules: '' }],
