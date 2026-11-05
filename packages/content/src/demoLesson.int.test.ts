@@ -18,10 +18,10 @@ describe.skipIf(!url || !serviceKey)('seedDemo (integration)', () => {
   const demoLessons = async () => {
     const { data, error } = await client
       .from('lessons')
-      .select('id, status, cards(count), questions(count), writing_exercises(count)')
+      .select('id, status, cards(count), questions(count), consolidation_exercises(count)')
       .eq('title', DEMO_LESSON_TITLE);
     if (error) throw error;
-    return data as { id: string; status: string; cards: { count: number }[]; questions: { count: number }[]; writing_exercises: { count: number }[] }[];
+    return data as { id: string; status: string; cards: { count: number }[]; questions: { count: number }[]; consolidation_exercises: { count: number }[] }[];
   };
 
   beforeAll(async () => {
@@ -52,7 +52,7 @@ describe.skipIf(!url || !serviceKey)('seedDemo (integration)', () => {
     expect(lesson?.status).toBe('published');
     expect(lesson?.cards[0]?.count).toBe(DEMO_CARDS.length);
     expect(lesson?.questions[0]?.count).toBe(DEMO_QUESTIONS.length);
-    expect(lesson?.writing_exercises[0]?.count).toBe(0);
+    expect(lesson?.consolidation_exercises[0]?.count).toBe(0);
   });
 
   it('a second run refreshes the same lesson, stays first and resets progress in it', async () => {

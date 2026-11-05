@@ -17,7 +17,7 @@ type LessonRow = {
   status: string;
   cards: { count: number }[];
   questions: { count: number }[];
-  writing_exercises: { count: number }[];
+  consolidation_exercises: { count: number }[];
 };
 
 async function lessonImages(client: SupabaseClient, id: string): Promise<string[]> {
@@ -40,7 +40,7 @@ export async function removeTestLessons(
     const rows = check(
       await client
         .from('lessons')
-        .select('id, status, cards(count), questions(count), writing_exercises(count)')
+        .select('id, status, cards(count), questions(count), consolidation_exercises(count)')
         .eq('title', title),
       `find lesson ${title}`,
     ) as LessonRow[];
@@ -58,7 +58,7 @@ export async function removeTestLessons(
       lessonStatus: row.status,
       cards: row.cards[0]?.count ?? 0,
       questions: row.questions[0]?.count ?? 0,
-      exercises: row.writing_exercises[0]?.count ?? 0,
+      exercises: row.consolidation_exercises[0]?.count ?? 0,
       images,
     });
     if (!opts.apply) continue;

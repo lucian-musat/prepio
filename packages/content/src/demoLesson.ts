@@ -157,7 +157,7 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
 
   let lessonId = lessons[0]?.id;
   if (lessonId) {
-    for (const table of ['cards', 'questions', 'writing_exercises', 'lesson_progress'] as const) {
+    for (const table of ['cards', 'questions', 'consolidation_exercises', 'lesson_progress'] as const) {
       check(await client.from(table).delete().eq('lesson_id', lessonId), `clear demo ${table}`);
     }
   } else {

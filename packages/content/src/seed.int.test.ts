@@ -38,7 +38,7 @@ const EXPECTED = {
   lessons: 3,
   cards: lessons.reduce((n, l) => n + l.cards.length, 0),
   questions: lessons.reduce((n, l) => n + l.questions.length, 0),
-  writing_exercises: lessons.reduce((n, l) => n + l.exercises.length, 0),
+  consolidation_exercises: lessons.reduce((n, l) => n + l.exercises.length, 0),
 };
 
 async function count(client: SupabaseClient, table: string): Promise<number> {
@@ -68,7 +68,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     lessons: await count(client, 'lessons'),
     cards: await count(client, 'cards'),
     questions: await count(client, 'questions'),
-    writing_exercises: await count(client, 'writing_exercises'),
+    consolidation_exercises: await count(client, 'consolidation_exercises'),
   });
 
   beforeAll(() => {
@@ -102,7 +102,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
 
     const { data: dbLessons, error } = await client
       .from('lessons')
-      .select('title,status,cards(id),questions(id),writing_exercises(id)');
+      .select('title,status,cards(id),questions(id),consolidation_exercises(id)');
     if (error) throw error;
     for (const l of lessons) {
       const row = dbLessons!.find((r) => r.title === l.title);
@@ -110,7 +110,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       expect(row!.status).toBe('published');
       expect(row!.cards).toHaveLength(l.cards.length);
       expect(row!.questions).toHaveLength(l.questions.length);
-      expect(row!.writing_exercises).toHaveLength(l.exercises.length);
+      expect(row!.consolidation_exercises).toHaveLength(l.exercises.length);
     }
 
     expect(await seed(client, { reset: true })).toEqual({ contentSeeded: true, nodes: 14, lessons: 3 });

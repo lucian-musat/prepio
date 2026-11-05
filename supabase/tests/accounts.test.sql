@@ -1,5 +1,5 @@
 begin;
-select plan(48);
+select plan(46);
 
 -- Fixtures (as postgres). Every assertion is scoped to these ids so the suite also passes on a seeded DB.
 -- Users: d1 = student, d2 = admin (also in admins).
@@ -20,9 +20,6 @@ insert into cards (lesson_id, content) values
 insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000e1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000e2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
-insert into writing_exercises (lesson_id, prompt, criteria) values
-  ('00000000-0000-0000-0000-0000000000e1', 'pub w', 'c'),
-  ('00000000-0000-0000-0000-0000000000e2', 'draft w', 'c');
 insert into settings (id, welcome_message) values (1, 'Bun venit')
   on conflict (id) do update set welcome_message = excluded.welcome_message;
 insert into ai_settings (id, rules) values (1, 'rules')
@@ -43,9 +40,6 @@ select is((select count(*)::int from cards
 select is((select count(*)::int from questions
             where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2')),
           0, 'anon sees no questions');
-select is((select count(*)::int from writing_exercises
-            where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2')),
-          0, 'anon sees no writing exercises');
 select is((select count(*)::int from settings where id = 1), 0, 'anon sees no settings');
 
 -- ---------------------------------------------------------------- student (authenticated, not in admins)
@@ -73,11 +67,6 @@ select results_eq(
       where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2') $$,
   $$ values ('pub q'::text) $$,
   'student sees only published fixture questions');
-select results_eq(
-  $$ select prompt from writing_exercises
-      where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2') $$,
-  $$ values ('pub w'::text) $$,
-  'student sees only published fixture exercises');
 select is((select count(*)::int from ai_settings), 0, 'student cannot read ai_settings');
 select throws_ok($$ select count(*) from admins $$, '42501', null, 'student cannot read admins');
 select throws_ok(

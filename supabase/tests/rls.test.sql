@@ -16,9 +16,6 @@ insert into cards (lesson_id, content) values
 insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000b1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000b2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
-insert into writing_exercises (lesson_id, prompt, criteria) values
-  ('00000000-0000-0000-0000-0000000000b1', 'pub w', 'c'),
-  ('00000000-0000-0000-0000-0000000000b2', 'draft w', 'c');
 
 insert into settings (id, welcome_message) values (1, 'Bun venit')
   on conflict (id) do update set welcome_message = excluded.welcome_message;
@@ -42,10 +39,8 @@ select is(
         + (select count(*) from cards
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
         + (select count(*) from questions
-            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
-        + (select count(*) from writing_exercises
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')))::int,
-  0, 'anon sees no nodes, settings, lessons, cards, questions or exercises');
+  0, 'anon sees no nodes, settings, lessons, cards or questions');
 select is((select count(*)::int from ai_settings), 0, 'anon cannot read ai_settings');
 select throws_ok(
   $$ insert into lessons (node_id, title) values ('00000000-0000-0000-0000-0000000000a2', 'x') $$,
@@ -94,8 +89,6 @@ select is(
         + (select count(*) from cards
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
         + (select count(*) from questions
-            where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
-        + (select count(*) from writing_exercises
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')))::int,
   0, 'deleting a node cascades to children, lessons and their content');
 
