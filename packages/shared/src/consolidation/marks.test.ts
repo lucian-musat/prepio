@@ -115,6 +115,17 @@ describe('judgeMarks', () => {
   });
 });
 
+describe('judgeMarks assignment', () => {
+  it('a mark that fits two spans does not take the only span another ok mark fits', () => {
+    const x = span('x', CORE);
+    const y = span('y', 'ceea ce a mărit suprafața de care dispuneau autoritățile');
+    const r = judgeMarks(T, [mark(SENTENCE), mark(CORE)], [x, y], 2);
+    expect(r.verdict).toBe('ok');
+    expect(r.perMark.map((m) => m.spanId)).toEqual(['y', 'x']);
+    expect(r.perMark.every((m) => m.judgement === 'ok' && !m.duplicate)).toBe(true);
+  });
+});
+
 describe('judgePair', () => {
   const P1 = {
     id: 'p1',

@@ -45,20 +45,36 @@ export function judgeMarks(
     const top = judged.reduce<MarkJudgement>((acc, x) => best(acc, x.j), 'none');
     return { top, ids: judged.filter((x) => x.j === top && top !== 'none').map((x) => x.id) };
   });
-  // Better marks claim spans first, so a weak mark never makes a good one a duplicate.
-  const order = marks.map((_, i) => i).sort((a, b) => RANK[candidates[b]!.top] - RANK[candidates[a]!.top] || a - b);
+  // Better marks claim spans first (ok, then long, then short), and within a tier a maximum
+  // matching is used, so a mark that fits several spans never steals the only span of another.
   const claimed = new Set<string>();
-  const okSpans = new Set<string>();
-  for (const i of order) {
-    const { top, ids } = candidates[i]!;
-    if (top === 'none') continue;
-    const free = ids.find((id) => !claimed.has(id));
-    const spanId = free ?? ids[0]!;
-    perMark[i] = { judgement: top, spanId, duplicate: free === undefined };
-    claimed.add(spanId);
-    if (top === 'ok') okSpans.add(spanId);
+  let okCount = 0;
+  for (const tier of ['ok', 'long', 'short'] as const) {
+    const tierMarks = marks.map((_, i) => i).filter((i) => candidates[i]!.top === tier);
+    const owner = new Map<string, number>(); // span id -> mark index
+    const augment = (i: number, seen: Set<string>): boolean => {
+      for (const id of candidates[i]!.ids) {
+        if (claimed.has(id) || seen.has(id)) continue;
+        seen.add(id);
+        const holder = owner.get(id);
+        if (holder === undefined || augment(holder, seen)) {
+          owner.set(id, i);
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const i of tierMarks) augment(i, new Set());
+    for (const [id, i] of owner) {
+      perMark[i] = { judgement: tier, spanId: id, duplicate: false };
+      claimed.add(id);
+    }
+    if (tier === 'ok') okCount = owner.size;
+    for (const i of tierMarks) {
+      if (perMark[i]!.spanId === null) perMark[i] = { judgement: tier, spanId: candidates[i]!.ids[0]!, duplicate: true };
+    }
   }
-  const verdict: Verdict = okSpans.size >= count ? 'ok' : perMark.some((m) => m.judgement !== 'none') ? 'almost' : 'no';
+  const verdict: Verdict = okCount >= count ? 'ok' : perMark.some((m) => m.judgement !== 'none') ? 'almost' : 'no';
   return { perMark, verdict };
 }
 

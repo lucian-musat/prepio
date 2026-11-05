@@ -7,3 +7,8 @@ export * from './localSupabase';
 export * from './richText';
 export * from './previewProtocol';
 export * from './consolidation/normalize';
+export * from './consolidation/sourceText';
+export * from './consolidation/marks';
+export * from './consolidation/connectors';
+export * from './consolidation/exercises';
+export * from './consolidation/check';
