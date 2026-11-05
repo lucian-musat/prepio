@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import type { ActionResult } from '@/lib/actionResult';
 import { GENERIC_ERROR, UserError, type Direction } from '@/lib/data/db';
+import * as consolidation from '@/lib/data/consolidation';
+import type { ExerciseInput, SourceImpact, SourceInput } from '@/lib/data/consolidation';
 import * as lesson from '@/lib/data/lesson';
 import { fetchLinkPreview, type LinkMetadata } from '@/lib/linkPreview';
 import type { CardInput, ItemTable, QuestionInput } from '@/lib/data/lesson';
@@ -10,12 +12,17 @@ import { createServerClient } from '@/lib/supabase/server';
 
 const TABLES: readonly string[] = ['cards', 'questions', 'consolidation_exercises', 'sources'];
 
-async function run<T = void>(fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<T>): Promise<ActionResult<T>> {
+async function run<T = void>(
+  fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<T>,
+  { revalidate = true }: { revalidate?: boolean } = {},
+): Promise<ActionResult<T>> {
   try {
     const db = await createServerClient();
     const data = await fn(db);
-    revalidatePath('/lessons/[id]', 'page');
-    revalidatePath('/');
+    if (revalidate) {
+      revalidatePath('/lessons/[id]', 'page');
+      revalidatePath('/');
+    }
     return { ok: true, data };
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
@@ -38,6 +45,22 @@ export async function saveCard(lessonId: string, card: CardInput): Promise<Actio
 }
 export async function saveQuestion(lessonId: string, q: QuestionInput): Promise<ActionResult<{ id: string }>> {
   return run((db) => lesson.saveQuestion(db, lessonId, q));
+}
+export async function saveSource(lessonId: string, input: SourceInput): Promise<ActionResult<{ id: string }>> {
+  return run((db) => consolidation.saveSource(db, lessonId, input));
+}
+/** Read-only: the marked answers the new text would detach, per exercise. */
+export async function previewSourceImpact(sourceId: string, body: string): Promise<ActionResult<SourceImpact>> {
+  return run(async (db) => {
+    if (typeof sourceId !== 'string' || typeof body !== 'string') throw new UserError(GENERIC_ERROR);
+    return consolidation.sourceImpact(db, sourceId, body);
+  }, { revalidate: false });
+}
+export async function deleteSource(id: string): Promise<ActionResult> {
+  return run((db) => consolidation.deleteSource(db, id));
+}
+export async function saveConsolidationExercise(lessonId: string, input: ExerciseInput): Promise<ActionResult<{ id: string }>> {
+  return run((db) => consolidation.saveConsolidationExercise(db, lessonId, input));
 }
 export async function deleteItem(t: ItemTable, id: string): Promise<ActionResult> {
   return run((db) => lesson.deleteItem(db, table(t), id));
