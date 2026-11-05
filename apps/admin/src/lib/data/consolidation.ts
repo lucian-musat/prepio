@@ -24,7 +24,7 @@ const EXERCISE_COLUMNS = 'id,position,type,prompt,content,template_id';
 
 type JoinRow = { exercise_id: string; source_id: string; label: string };
 
-function aiFromJson(v: unknown): AiContext {
+export function aiFromJson(v: unknown): AiContext {
   const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {};
   const reqs = typeof o.requirements === 'object' && o.requirements !== null ? (o.requirements as Record<string, unknown>) : {};
   return {

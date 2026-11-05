@@ -96,3 +96,24 @@ export type ConsolidationRow = {
   content: Record<string, unknown>;
   template_id: string | null;
 };
+
+/** `POST /api/consolidation/evaluate`: asks the AI to judge one item of an AI-checked exercise. */
+export type ConsolidationEvaluateRequest = {
+  exerciseId: string;
+  target: 'exercise' | 'whole' | { requirementId: string };
+  answer: ExerciseAnswer;
+};
+/** `ai: true` on every item. */
+export type ConsolidationEvaluateResponse = { items: FeedbackItem[] };
+export type ConsolidationEvaluateErrorCode =
+  | 'empty'
+  | 'too_long'
+  | 'not_found'
+  | 'rate_limited'
+  | 'ai_failed'
+  | 'bad_request'
+  | 'unauthorized';
+/** `message` is in Romanian. */
+export type ConsolidationEvaluateError = { error: ConsolidationEvaluateErrorCode; message: string };
+/** Per text field; the essay "whole" check sends up to 6 fields. */
+export const MAX_ANSWER_CHARS = 3000;

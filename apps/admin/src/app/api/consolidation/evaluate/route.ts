@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateBearer } from '@/lib/auth/bearer';
 import { allowedOrigins, corsHeaders } from '@/lib/evaluate/cors';
-import { errorResult, handleEvaluate, type Deps } from '@/lib/evaluate/handler';
+import { errorResult, handleConsolidationEvaluate, type Deps } from '@/lib/consolidation/handler';
 import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 
@@ -62,10 +62,10 @@ export async function POST(request: Request) {
             throw new Error('OPENAI_API_KEY is not configured');
           },
     };
-    const r = await handleEvaluate(body, auth.userId, deps);
+    const r = await handleConsolidationEvaluate(body, auth.userId, deps);
     return reply(r.status, r.json, request);
   } catch (e) {
-    console.error('[evaluate] unexpected failure:', e);
+    console.error('[consolidation/evaluate] unexpected failure:', e);
     const r = errorResult('ai_failed');
     return reply(r.status, r.json, request);
   }

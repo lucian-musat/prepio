@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Auth gate (Next 16 renamed `middleware` to `proxy`). /login and /api/* are public:
-// /api/evaluate is called by the student app and does its own checks.
+// /api/consolidation/evaluate is called by the student app and does its own checks.
 function isPublic(pathname: string): boolean {
   return pathname === '/login' || pathname === '/api' || pathname.startsWith('/api/');
 }

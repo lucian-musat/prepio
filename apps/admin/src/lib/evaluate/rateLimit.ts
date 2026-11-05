@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-/** Per-user limit: 10 evaluations per rolling hour. */
-export const USER_RATE_LIMIT = 10;
+/** Per-user limit: 30 evaluations per rolling hour. */
+export const USER_RATE_LIMIT = 30;
 export const USER_RATE_WINDOW_SECONDS = 3600;
 
 /** Global spend guard: at most 300 evaluations per day across all callers. */

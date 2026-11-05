@@ -1,7 +1,7 @@
 import 'server-only';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
-import { evaluationSchema } from './prompt';
+import { aiOutputSchema } from '@/lib/consolidation/schema';
 
 export type Evaluator = (a: { model: string; instructions: string; input: string }) => Promise<unknown>;
 
@@ -16,7 +16,7 @@ export function createOpenAIEvaluator(apiKey: string): Evaluator {
         instructions,
         input,
         store: false,
-        text: { format: zodTextFormat(evaluationSchema, 'evaluation') },
+        text: { format: zodTextFormat(aiOutputSchema, 'evaluation') },
       },
       { timeout: OPENAI_TIMEOUT_MS },
     );
