@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surse lungi — machete</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;600;700&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3FAF7;--surface:#fff;--muted-bg:#E6F4EF;--text:#0F2E28;--muted:#4C6A63;--border:#D8EAE3;
+  --primary:#0F766E;--primary-strong:#0A5C55;--primary-subtle:#E0F5F1;
+  --accent-subtle:#FFF6D9;--accent-text:#8A6A00;
+  --ok:#22A55B;--ok-bg:#E5F7EC;--ok-text:#1A7C49;--almost:#E0AA14;--almost-bg:#FFF6D9;--almost-text:#8A6A00;--bad:#E5484D;--bad-bg:#FDECEC;--bad-text:#A54042;
+  --pen-cause:#99F6E4;--pen-effect:#FFD0A8;--paper:#FFFDF8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EAF2EF;color:var(--text);font-family:'Nunito Sans',system-ui,sans-serif}
+.page{max-width:1240px;margin:0 auto;padding:24px 16px 80px}
+h1{font-family:Nunito;font-weight:900;font-size:26px;margin:0 0 4px}
+h2{font-family:Nunito;font-weight:900;font-size:20px;margin:34px 0 6px}
+.lead{color:var(--muted);margin:0 0 18px;max-width:860px;line-height:1.5}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.notes{flex:1;min-width:300px;max-width:470px;font-size:14.5px;line-height:1.55}
+.notes ul{padding-left:18px;margin:6px 0}
+.notes li{margin-bottom:5px}
+.cap{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin:0 0 8px}
+
+/* phone */
+.phone{width:360px;height:760px;background:var(--bg);border-radius:34px;border:10px solid #0F2E28;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 20px 40px -20px rgba(0,0,0,.35);flex-shrink:0}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
+.back{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--primary);cursor:pointer;flex-shrink:0}
+.prog{flex:1;height:10px;background:var(--muted-bg);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;width:45%;background:linear-gradient(90deg,#0D9488,#2DD4BF)}
+.count{font-size:12px;font-weight:700;color:var(--muted)}
+.scroll{flex:1;overflow-y:auto;padding:6px 16px 18px}
+.eyebrow{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 8px}
+.chip{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--primary-subtle);border-radius:99px;padding:4px 10px;white-space:nowrap}
+.hintbtn{white-space:nowrap;font-size:13px;font-weight:700;color:var(--accent-text);background:var(--accent-subtle);border:1.5px solid #FFE38A;border-radius:99px;padding:5px 11px}
+.prompt{font-family:Nunito;font-weight:900;font-size:19px;line-height:1.3;margin:0 0 12px}
+.actionbar{padding:12px 16px 16px;background:#fff;border-top:1px solid var(--border)}
+.btn{width:100%;border:0;background:var(--primary);color:#fff;font-weight:700;font-size:16px;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 0 var(--primary-strong);font-family:inherit}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* source card (collapsed preview) */
+.srccard{background:var(--paper);border:1px solid var(--border);border-radius:16px;box-shadow:0 2px 0 var(--border);overflow:hidden;cursor:pointer}
+.srccard-h{display:flex;align-items:center;gap:10px;padding:12px 13px 6px}
+.srcicon{width:36px;height:36px;border-radius:10px;background:var(--primary-subtle);color:var(--primary);display:flex;align-items:center;justify-content:center;font-family:Nunito;font-weight:900;font-size:16px;flex-shrink:0}
+.srccard-h b{display:block;font-size:15px}
+.srccard-h span{font-size:12.5px;color:var(--muted)}
+.preview{position:relative;padding:2px 14px 0;font-family:Literata,Georgia,serif;font-size:15px;line-height:1.7;max-height:104px;overflow:hidden;color:#24413a}
+.preview::after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(rgba(255,253,248,0),var(--paper))}
+.open-src{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 12px 12px;border-radius:12px;padding:11px;background:var(--primary);color:#fff;font-weight:700;font-size:15px;box-shadow:0 3px 0 var(--primary-strong)}
+.slot{display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;font-size:14px;line-height:1.4;margin-top:8px;cursor:pointer}
+.slot .bar{width:6px;align-self:stretch;border-radius:3px;flex-shrink:0}
+.slot .k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px}
+.slot.empty{border-style:dashed;color:var(--muted);background:transparent}
+.slot .go{margin-left:auto;color:var(--primary);font-weight:800;font-size:13px;white-space:nowrap}
+.arrow{text-align:center;font-weight:900;color:var(--muted);font-size:13px;margin:4px 0 -2px}
+.lbl{font-size:13px;font-weight:700;color:var(--muted);margin:16px 0 0}
+
+/* reader (full-screen) */
+.reader{position:absolute;inset:0;background:var(--paper);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .32s cubic-bezier(.22,1,.36,1);z-index:4}
+.phone.reading .reader{transform:none}
+.r-top{display:flex;align-items:center;gap:10px;padding:12px 14px 10px;border-bottom:1px solid var(--border);background:var(--paper)}
+.r-top .tt{flex:1;min-width:0}
+.r-top b{font-family:Nunito;font-weight:900;font-size:16px;display:block}
+.r-top span{font-size:12px;color:var(--muted)}
+.task{margin:0 14px;padding:9px 11px;background:var(--primary-subtle);border-radius:0 0 12px 12px;font-size:13.5px;line-height:1.4;cursor:pointer;position:relative}
+.task .q{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;padding-right:22px}
+.task.open .q{-webkit-line-clamp:unset}
+.task::after{content:"▾";position:absolute;right:10px;top:8px;color:var(--primary);font-weight:900}
+.task.open::after{content:"▴"}
+.r-body{flex:1;overflow-y:auto;padding:16px 22px 150px;position:relative}
+.r-text{font-family:Literata,Georgia,serif;font-size:17px;line-height:1.85;color:#1d3832}
+.r-cite{font-family:'Nunito Sans';font-size:13px;color:var(--muted);font-style:italic;margin-top:14px;text-align:right}
+.mini{position:absolute;right:4px;top:70px;bottom:150px;width:4px;border-radius:2px;background:var(--muted-bg)}
+.mini i{position:absolute;left:-1px;width:6px;border-radius:3px}
+.tray{position:absolute;left:10px;right:10px;bottom:10px;background:#fff;border-radius:18px;box-shadow:0 10px 30px -8px rgba(15,46,40,.35),0 0 0 1px var(--border);padding:10px;z-index:3}
+.pens{display:flex;gap:8px}
+.pen{flex:1;display:flex;align-items:center;gap:8px;border:2px solid var(--border);background:#fff;border-radius:12px;padding:8px 10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)}
+.pen .sw{width:20px;height:12px;border-radius:4px;transform:skew(-12deg);flex-shrink:0}
+.pen .ck{margin-left:auto;font-size:12px;color:var(--ok-text)}
+.pen.on{border-color:var(--text);box-shadow:0 2px 0 var(--text)}
+.tray-msg{font-size:12.5px;color:var(--muted);margin:8px 2px 8px;line-height:1.35;min-height:17px}
+.tray .btn{padding:11px;font-size:15px}
+
+/* marker */
+.mk-src{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.w,.sp{padding:2px 0}.w{cursor:text}
+.sp.pbr{display:block;height:14px}
+.w.om{color:var(--muted)}
+.w.anchor{outline:2px dashed var(--primary);outline-offset:1px;border-radius:3px;animation:blink 1s infinite}
+@keyframes blink{50%{outline-color:transparent}}
+.m-cause{background:var(--pen-cause)} .m-effect{background:var(--pen-effect)}
+.m-s{border-top-left-radius:5px;border-bottom-left-radius:5px;padding-left:2px;margin-left:-2px}
+.m-e{border-top-right-radius:5px;border-bottom-right-radius:5px;padding-right:2px;margin-right:-2px}
+.w.h-s,.w.h-e{position:relative}
+.w.h-s::before,.w.h-e::after{content:"";position:absolute;width:13px;height:13px;border-radius:50%;background:var(--text);border:2px solid #fff;top:-9px}
+.w.h-s::before{left:-7px} .w.h-e::after{right:-7px;top:auto;bottom:-9px}
+
+/* desktop */
+.desk{width:100%;max-width:1100px;background:var(--bg);border-radius:14px;border:1px solid #c9dbd4;box-shadow:0 20px 40px -24px rgba(0,0,0,.35);overflow:hidden}
+.desk-bar{display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border-bottom:1px solid var(--border)}
+.desk-bar .prog{max-width:420px}
+.split{display:grid;grid-template-columns:1.15fr 1fr;height:600px}
+.split .left{background:var(--paper);border-right:1px solid var(--border);overflow-y:auto;padding:22px 34px}
+.split .left .r-text{font-size:17.5px;max-width:62ch}
+.split .right{overflow-y:auto;padding:22px 26px}
+.split .pens{max-width:360px}
+.tabs-src{display:flex;gap:6px;margin-bottom:14px}
+.tabs-src span{border:1.5px solid var(--border);border-radius:99px;padding:5px 12px;font-weight:700;font-size:13px;background:#fff}
+.tabs-src span.on{border-color:var(--primary);color:var(--primary);background:var(--primary-subtle)}
+@media (max-width:760px){.phone{width:100%;max-width:360px}.split{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Surse lungi: cum le citește și le marchează elevul</h1>
+  <p class="lead">Propunere: în ecranul exercițiului, sursa e doar o <b>carte de previzualizare</b> (primele rânduri, autorul, timpul de citire). Textul se citește și se marchează într-un <b>cititor pe tot ecranul</b>: tipografie de lectură, paragrafe ca în manual, cerința fixată sus, markerele într-o tavă jos. Pe desktop, sursa și cerința stau una lângă alta, ca pe foaia de examen. Marker-ul e același.</p>
+
+  <div class="row">
+    <div>
+      <p class="cap">Telefon: interactiv (deschide sursa, marchează, „Gata”)</p>
+      <div class="phone" id="ph">
+        <div class="topbar"><div class="back">‹</div><div class="prog"><i></i></div><span class="count">5/9</span></div>
+        <div class="scroll">
+          <div class="eyebrow"><span class="chip">Cauză-efect</span><span class="hintbtn">💡 Cum rezolv</span></div>
+          <p class="prompt">Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B, precizând rolul fiecăreia.</p>
+          <div class="srccard" onclick="openReader()">
+            <div class="srccard-h"><div class="srcicon">B</div><div><b>Sursa B</b><span>F. Constantiniu · 3 paragrafe · ~1 min</span></div></div>
+            <div class="preview" id="prev"></div>
+            <div class="open-src">📖 Citește și marchează</div>
+          </div>
+          <p class="lbl">Răspunsul tău</p>
+          <div id="slots"></div>
+        </div>
+        <div class="actionbar"><button class="btn" id="verif" disabled>Verifică</button></div>
+
+        <div class="reader">
+          <div class="r-top"><div class="back" onclick="closeReader()">✕</div><div class="tt"><b>Sursa B</b><span>F. Constantiniu, O istorie sinceră a poporului român</span></div></div>
+          <div class="task" onclick="this.classList.toggle('open')"><div class="q"><b>Cerința:</b> Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B, precizând rolul fiecăreia.</div></div>
+          <div class="r-body" id="rbody"><div class="r-text" id="mk"></div><div class="r-cite">(F. Constantiniu, O istorie sinceră a poporului român)</div></div>
+          <div class="mini" id="mini"></div>
+          <div class="tray">
+            <div class="pens" id="pens"></div>
+            <div class="tray-msg" id="msg"></div>
+            <button class="btn" onclick="closeReader()">Gata</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="cap">Ce rezolvă</p>
+      <ul>
+        <li><b>Ecranul exercițiului rămâne scurt.</b> Cerința, o carte de sursă cu 3-4 rânduri estompate și sloturile răspunsului. Nu mai derulezi peste un perete de text ca să ajungi la răspuns.</li>
+        <li><b>Cititor pe tot ecranul.</b> Font de lectură (serif), 17 px, rânduri aerisite, paragrafele păstrate ca în sursă, „[...]” estompat. Seamănă cu o pagină de manual, nu cu un formular.</li>
+        <li><b>Cerința e mereu la vedere</b>, pe un rând sub antet; o atingi și o vezi întreagă.</li>
+        <li><b>Tava de jos</b> are markerele și starea lor (✓ când e marcat) și un mesaj scurt cu pasul următor. „Gata” te duce înapoi la exercițiu.</li>
+        <li><b>Banda din dreapta</b> arată unde ai marcaje în textul lung, ca în editoarele de cod.</li>
+        <li><b>Atingi un slot</b> („Efect: marchează în text”): cititorul se deschide cu markerul ăla deja ales și sare la marcaj, dacă există.</li>
+        <li><b>Surse scurte</b> (sub ~70 de cuvinte, ex. un citat de 2 rânduri) rămân afișate direct în exercițiu, fără cititor.</li>
+        <li><b>Două surse (A, B):</b> două cărți una sub alta; în cititor, taburi A / B sus.</li>
+      </ul>
+      <p class="cap" style="margin-top:16px">În admin</p>
+      <ul><li>Sursa se scrie cu paragrafe (rând liber între ele); „[...]” se recunoaște automat. Pragul „sursă scurtă” e automat, nu se configurează.</li></ul>
+    </div>
+  </div>
+
+  <h2>Desktop (web, ecran lat): sursa și cerința una lângă alta</h2>
+  <p class="lead">De la ~900 px în sus nu mai e nevoie de cititor separat: sursa ocupă coloana stângă (derulare proprie, lățime de lectură ~62 de caractere), iar cerința, markerele și răspunsul stau fixe în dreapta.</p>
+  <div class="desk">
+    <div class="desk-bar"><div class="back">‹</div><b style="font-family:Nunito;font-weight:900">Unirea Principatelor · Consolidare</b><div class="prog"><i></i></div><span class="count">5/9</span></div>
+    <div class="split">
+      <div class="left"><div class="tabs-src"><span>Sursa A</span><span class="on">Sursa B</span></div><div class="r-text" id="mk2"></div><div class="r-cite">(F. Constantiniu, O istorie sinceră a poporului român)</div></div>
+      <div class="right">
+        <div class="eyebrow"><span class="chip">Cauză-efect</span><span class="hintbtn">💡 Cum rezolv</span></div>
+        <p class="prompt">Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B, precizând rolul fiecăreia.</p>
+        <div class="pens" id="pens2"></div>
+        <div id="slots2"></div>
+        <button class="btn" style="margin-top:16px;max-width:260px">Verifică</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SRC = `Începuturile domniei lui Al. I. Cuza au fost anevoioase fiindcă domnul era obligat să colaboreze cu două guverne, unul la Iaşi şi celălalt la Bucureşti. Abia la sfârșitul anului 1861, Imperiul Otoman a recunoscut unirea politico-administrativă a Moldovei cu Țara Românească pe timpul domniei lui Cuza [...].
+
+Unirea, odată realizată, neînțelegerile politice au reapărut cu puteri sporite de însemnătatea problemelor de rezolvat, între care cea mai dificilă era, desigur, elaborarea Legii rurale [...]. O altă problemă a estompat temporar confruntarea în jurul Legii rurale: secularizarea averilor mănăstirești [...]. Prin legea din [...] 1863 au fost trecute în proprietatea statului „toate averile mănăstirești“.
+
+Ca urmare, aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului, ceea ce a mărit suprafața de care dispuneau autoritățile pentru viitoarea împroprietărire. Cu scopul de a elimina obstacolele din calea împroprietăririi, ca şi a altor reforme, Cuza [...] a promulgat o nouă constituție (Statutul Dezvoltător), care întărea puterea domnului în detrimentul legislativului.`;
+const PENS={cause:{label:'Cauză',cls:'m-cause',color:'var(--pen-cause)'},effect:{label:'Efect',cls:'m-effect',color:'var(--pen-effect)'}};
+const $=s=>document.querySelector(s);
+
+function tokenize(text){const toks=[];const re=/\S+|\s+/g;let m,wi=0;while((m=re.exec(text))){if(/\S/.test(m[0]))toks.push({w:true,t:m[0],i:wi++});else toks.push({w:false,t:m[0]});}return toks;}
+
+function Marker(el, opts){
+  const toks=tokenize(SRC); const words=toks.filter(t=>t.w);
+  const st=opts.state; // shared state between phone and desktop
+  el.classList.add('mk-src');
+  el.innerHTML=toks.map((t,k)=>t.w?`<span class="w${t.t==='[...]'||t.t.startsWith('[...]')?' om':''}" data-i="${t.i}">${t.t}</span>`:`<span class="sp${t.t.includes('\n')?' pbr':''}" data-k="${k}"> </span>`).join('');
+  const wEls=[...el.querySelectorAll('.w')], spEls=[...el.querySelectorAll('.sp')];
+  const spPrev=spEls.map(sp=>toks.slice(0,+sp.dataset.k).filter(t=>t.w).length-1);
+  const markAt=i=>st.marks.find(m=>i>=m.s&&i<=m.e);
+  function paint(){
+    const d=st.drag&&st.drag.el===el?st.drag:null;
+    wEls.forEach((w,i)=>{w.className='w'+(words[i].t.startsWith('[...]')?' om':'');
+      if(d&&i>=Math.min(d.a,d.b)&&i<=Math.max(d.a,d.b)){w.classList.add(PENS[d.pen].cls);if(i===Math.min(d.a,d.b))w.classList.add('m-s');if(i===Math.max(d.a,d.b))w.classList.add('m-e');return;}
+      const m=markAt(i); if(m){w.classList.add(PENS[m.pen].cls);if(i===m.s)w.classList.add('m-s');if(i===m.e)w.classList.add('m-e');if(m===st.active){if(i===m.s)w.classList.add('h-s');if(i===m.e)w.classList.add('h-e');}}
+      if(st.anchor&&st.anchor.el===el&&st.anchor.i===i)w.classList.add('anchor');});
+    spEls.forEach((sp,k)=>{const br=sp.classList.contains('pbr');sp.className='sp'+(br?' pbr':'');if(br)return;const p=spPrev[k];
+      if(d&&p>=Math.min(d.a,d.b)&&p+1<=Math.max(d.a,d.b)){sp.classList.add(PENS[d.pen].cls);return;}
+      const m=markAt(p);if(m&&p+1<=m.e)sp.classList.add(PENS[m.pen].cls);});
+  }
+  function commit(pen,a,b){const s=Math.min(a,b),e=Math.max(a,b);st.marks=st.marks.filter(m=>m.e<s||m.s>e&&true).filter(m=>m.pen!==pen);const m={pen,s,e};st.marks.push(m);st.active=m;
+    if(pen==='cause'&&!st.marks.some(x=>x.pen==='effect'))st.pen='effect';}
+  const idxAt=(x,y)=>{const t=document.elementFromPoint(x,y);return t&&t.classList.contains('w')&&el.contains(t)?+t.dataset.i:null;};
+  let press=null;
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('pointerdown',e=>{const t=e.target;if(!t.classList.contains('w'))return;const i=+t.dataset.i;const m=markAt(i);
+    if(m&&m===st.active&&(i===m.s||i===m.e)){const fixed=i===m.s?m.e:m.s;st.marks.splice(st.marks.indexOf(m),1);st.drag={el,pen:m.pen,a:fixed,b:i};st.active=null;opts.update();e.preventDefault();return;}
+    press={i,x:e.clientX,y:e.clientY,type:e.pointerType,timer:null};
+    if(e.pointerType!=='mouse')press.timer=setTimeout(()=>{if(press){st.drag={el,pen:st.pen,a:i,b:i};st.anchor=null;opts.update();if(navigator.vibrate)navigator.vibrate(10);}},280);});
+  window.addEventListener('pointermove',e=>{
+    if(st.drag&&st.drag.el===el){const j=idxAt(e.clientX,e.clientY);if(j!==null&&j!==st.drag.b){st.drag.b=j;opts.update();}return;}
+    if(!press)return;
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)>6){if(press.type==='mouse'){st.drag={el,pen:st.pen,a:press.i,b:press.i};st.anchor=null;const j=idxAt(e.clientX,e.clientY);if(j!==null)st.drag.b=j;opts.update();}else{clearTimeout(press.timer);press=null;}}});
+  el.addEventListener('touchmove',e=>{if(st.drag)e.preventDefault();},{passive:false});
+  window.addEventListener('pointerup',()=>{
+    if(st.drag&&st.drag.el===el){commit(st.drag.pen,st.drag.a,st.drag.b);st.drag=null;press=null;opts.update();return;}
+    if(!press)return;clearTimeout(press.timer);const i=press.i;press=null;const m=markAt(i);
+    if(m&&!st.anchor){st.active=st.active===m?null:m;opts.update();return;}
+    if(!st.anchor||st.anchor.el!==el){st.anchor={el,i};st.active=null;opts.update();}
+    else{const a=st.anchor.i;st.anchor=null;commit(st.pen,a,i);opts.update();}});
+  return {paint,text:m=>words.slice(m.s,m.e+1).map(w=>w.t).join(' '),wEls,count:words.length};
+}
+
+const state={pen:'cause',marks:[],active:null,anchor:null,drag:null};
+let A,B;
+function update(){A.paint();B.paint();renderUI();}
+function pensHTML(){return ['cause','effect'].map(p=>{const has=state.marks.some(m=>m.pen===p);return `<button class="pen ${state.pen===p?'on':''}" onclick="setPen('${p}')"><span class="sw" style="background:${PENS[p].color}"></span>${PENS[p].label}<span class="ck">${has?'✓':''}</span></button>`}).join('');}
+function slotsHTML(api,clickable){
+  const s=p=>{const m=state.marks.find(x=>x.pen===p);return m?`<div class="slot" ${clickable?`onclick="openReader('${p}')"`:''}><span class="bar" style="background:${PENS[p].color}"></span><div><div class="k">${PENS[p].label}</div>„${api.text(m)}”</div><span class="go">${clickable?'Modifică':''}</span></div>`
+    :`<div class="slot empty" ${clickable?`onclick="openReader('${p}')"`:''}><span class="bar" style="background:${PENS[p].color}"></span>${PENS[p].label}: marchează în text<span class="go">${clickable?'›':''}</span></div>`;};
+  return s('cause')+'<div class="arrow">↓ a dus la</div>'+s('effect');
+}
+function renderUI(){
+  $('#pens').innerHTML=pensHTML(); $('#pens2').innerHTML=pensHTML();
+  $('#slots').innerHTML=slotsHTML(A,true); $('#slots2').innerHTML=slotsHTML(B,false);
+  const c=state.marks.some(m=>m.pen==='cause'),e=state.marks.some(m=>m.pen==='effect');
+  $('#msg').innerHTML= state.anchor?'Atinge ultimul cuvânt al informației.' : !c&&!e?'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.' : c&&!e?'Cauza e marcată. Acum marchează <b>efectul</b>.' : !c&&e?'Acum marchează <b>cauza</b>.' : 'Ambele marcate. Apasă „Gata” sau ajustează capetele.';
+  $('#verif').disabled=!(c&&e);
+  // minimap
+  $('#mini').innerHTML=state.marks.map(m=>{const top=m.s/A.count*100,h=Math.max(2,(m.e-m.s+1)/A.count*100);return `<i style="top:${top}%;height:${h}%;background:${PENS[m.pen].color}"></i>`}).join('');
+}
+window.setPen=p=>{state.pen=p;state.anchor=null;update();};
+window.openReader=p=>{if(p)state.pen=p;update();$('#ph').classList.add('reading');
+  const m=p&&state.marks.find(x=>x.pen===p); if(m){A.wEls[m.s].scrollIntoView({block:'center'});} };
+window.closeReader=()=>{state.anchor=null;state.active=null;$('#ph').classList.remove('reading');update();};
+
+$('#prev').textContent=SRC.split('\n')[0];
+A=Marker($('#mk'),{state,update:()=>update()});
+B=Marker($('#mk2'),{state,update:()=>update()});
+update();
+</script>
+</body>
+</html>

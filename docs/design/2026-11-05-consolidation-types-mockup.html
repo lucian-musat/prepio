@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consolidare — machete</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3FAF7;--surface:#fff;--muted-bg:#E6F4EF;--text:#0F2E28;--muted:#4C6A63;--border:#D8EAE3;
+  --primary:#0F766E;--primary-strong:#0A5C55;--primary-subtle:#E0F5F1;
+  --accent:#FFC93C;--accent-subtle:#FFF6D9;--accent-text:#8A6A00;
+  --ok:#22A55B;--ok-bg:#E5F7EC;--ok-text:#1A7C49;
+  --bad:#E5484D;--bad-bg:#FDECEC;--bad-text:#A54042;
+  --almost:#E0AA14;--almost-bg:#FFF6D9;--almost-text:#8A6A00;
+  --pen-info:#FFE38A;--pen-cause:#99F6E4;--pen-effect:#FFD0A8;--pen-arg:#C9D7FF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EAF2EF;color:var(--text);font-family:'Nunito Sans',system-ui,sans-serif}
+.page{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+h1{font-family:Nunito;font-weight:900;font-size:26px;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 18px;max-width:820px;line-height:1.5}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.tab{border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:7px 13px;font-weight:700;font-size:13.5px;cursor:pointer;color:var(--text)}
+.tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.tab small{opacity:.7;font-weight:600}
+.stage{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.side{flex:1;min-width:300px;max-width:520px}
+.side h2{font-family:Nunito;font-weight:900;font-size:21px;margin:4px 0 6px}
+.side .bac{background:#fff;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:14px;margin:10px 0 14px}
+.side h3{font-family:Nunito;font-weight:800;font-size:15px;margin:16px 0 6px}
+.side ul{margin:0;padding-left:18px;line-height:1.55;font-size:14.5px}
+.side li{margin-bottom:4px}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;margin-right:4px;vertical-align:1px}
+.tag.noai{background:var(--ok-bg);color:var(--ok-text)}
+.tag.ai{background:#EEE8FF;color:#5B3FB0}
+.tag.mix{background:var(--accent-subtle);color:var(--accent-text)}
+.try{background:var(--primary-subtle);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5;margin-top:12px}
+
+/* phone */
+.phone{width:360px;height:760px;background:var(--bg);border-radius:34px;border:10px solid #0F2E28;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 20px 40px -20px rgba(0,0,0,.35);flex-shrink:0}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 14px 8px;background:var(--bg)}
+.back{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--primary)}
+.prog{flex:1;height:10px;background:var(--muted-bg);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,#0D9488,#2DD4BF);border-radius:99px}
+.count{font-size:12px;font-weight:700;color:var(--muted)}
+.scroll{flex:1;overflow-y:auto;padding:6px 16px 18px}
+.eyebrow{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 8px}
+.chip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--primary-subtle);border-radius:99px;padding:4px 10px}
+.hintbtn{white-space:nowrap;flex-shrink:0;font-size:13px;font-weight:700;color:var(--accent-text);background:var(--accent-subtle);border:1.5px solid #FFE38A;border-radius:99px;padding:5px 11px;cursor:pointer}
+.prompt{font-family:Nunito;font-weight:900;font-size:19px;line-height:1.3;margin:0 0 12px;letter-spacing:-.2px}
+.src{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 13px;margin-bottom:12px;box-shadow:0 2px 0 var(--border)}
+.src-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;cursor:pointer}
+.src-body{font-size:15.5px;line-height:1.75}
+.src-cite{font-size:12.5px;color:var(--muted);margin-top:6px;font-style:italic}
+.src.collapsed .src-body,.src.collapsed .src-cite{display:none}
+.seg{display:flex;background:var(--muted-bg);border-radius:12px;padding:3px;margin-bottom:8px}
+.seg button{flex:1;border:0;background:transparent;padding:7px;border-radius:9px;font-weight:800;font-family:Nunito;cursor:pointer;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 0 var(--border)}
+label.fl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:10px 0 5px}
+input.in,textarea.in{width:100%;border:2px solid var(--border);border-radius:12px;padding:11px 12px;font:inherit;font-size:16px;background:#fff;color:var(--text);outline:none}
+input.in:focus,textarea.in:focus{border-color:var(--primary)}
+textarea.in{min-height:110px;resize:vertical;line-height:1.5}
+.in.ok{border-color:var(--ok)} .in.almost{border-color:var(--almost)} .in.no{border-color:var(--bad)}
+.cc{font-size:12px;color:var(--muted);text-align:right;margin-top:3px}
+.opt{display:flex;align-items:center;gap:12px;background:#fff;border:2px solid var(--border);border-radius:14px;padding:13px;margin-bottom:9px;cursor:pointer;font-weight:600;box-shadow:0 3px 0 var(--border)}
+.opt .l{width:34px;height:34px;border-radius:10px;background:var(--primary-subtle);color:var(--primary);display:flex;align-items:center;justify-content:center;font-family:Nunito;font-weight:900}
+.opt.sel{border-color:var(--primary);background:var(--primary-subtle)}
+.opt.ok{border-color:var(--ok);background:var(--ok-bg)} .opt.no{border-color:var(--bad);background:var(--bad-bg)}
+.actionbar{padding:12px 16px 16px;background:#fff;border-top:1px solid var(--border)}
+.btn{width:100%;border:0;background:var(--primary);color:#fff;font-weight:700;font-size:16px;border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 4px 0 var(--primary-strong);font-family:inherit}
+.btn:disabled{opacity:.45;cursor:default}
+.btn2{width:100%;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-weight:700;font-size:15px;border-radius:14px;padding:12px;cursor:pointer;font-family:inherit;margin-top:8px}
+.small-btn{border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-weight:700;font-size:13.5px;border-radius:10px;padding:7px 11px;cursor:pointer;font-family:inherit}
+
+/* marker */
+.pens{display:flex;gap:8px;margin:0 0 8px;flex-wrap:wrap}
+.pen{display:flex;align-items:center;gap:7px;border:2px solid var(--border);background:#fff;border-radius:12px;padding:7px 11px;font-weight:700;font-size:13.5px;cursor:pointer}
+.pen .sw{width:22px;height:12px;border-radius:4px;transform:skew(-12deg)}
+.pen.on{border-color:var(--text);box-shadow:0 2px 0 var(--text)}
+.pen .n{font-size:11.5px;color:var(--muted);font-weight:600}
+.howto{font-size:12.5px;color:var(--muted);margin:0 0 8px;line-height:1.4}
+.mk-src{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.w,.sp{border-radius:0}
+.w{cursor:text;padding:2px 0}
+.w.anchor{outline:2px dashed var(--primary);outline-offset:1px;border-radius:3px;animation:blink 1s infinite}
+@keyframes blink{50%{outline-color:transparent}}
+.m-info{background:var(--pen-info)} .m-cause{background:var(--pen-cause)} .m-effect{background:var(--pen-effect)} .m-arg{background:var(--pen-arg)}
+.m-s{border-top-left-radius:5px;border-bottom-left-radius:5px;padding-left:2px;margin-left:-2px}
+.m-e{border-top-right-radius:5px;border-bottom-right-radius:5px;padding-right:2px;margin-right:-2px}
+.w.live{background:#B9EDE4}
+.w.h-s,.w.h-e{position:relative}
+.w.h-s::before,.w.h-e::after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:var(--text);border:2px solid #fff;top:-9px;cursor:ew-resize}
+.w.h-s::before{left:-7px} .w.h-e::after{right:-7px;top:auto;bottom:-9px}
+.v-ok{box-shadow:inset 0 -3px 0 var(--ok)} .v-almost{box-shadow:inset 0 -3px 0 var(--almost)} .v-no{box-shadow:inset 0 -3px 0 var(--bad)}
+.marks{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.mark{display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid var(--border);border-radius:12px;padding:9px 10px;font-size:14px;line-height:1.4}
+.mark .bar{width:6px;align-self:stretch;border-radius:3px;flex-shrink:0}
+.mark .k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px}
+.mark .x{margin-left:auto;border:0;background:var(--muted-bg);border-radius:8px;width:28px;height:28px;cursor:pointer;font-weight:900;color:var(--muted);flex-shrink:0}
+.mark.empty{border-style:dashed;color:var(--muted);background:transparent}
+.swap{align-self:center;border:1.5px solid var(--border);background:#fff;border-radius:99px;padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer;color:var(--primary)}
+.arrow{align-self:center;font-weight:900;color:var(--muted);margin:-4px 0}
+
+/* feedback */
+.fb{border-radius:14px;padding:12px 13px;margin-top:12px;font-size:14.5px;line-height:1.5;animation:pop .3s}
+@keyframes pop{from{transform:scale(.96);opacity:0}}
+.fb .vt{font-family:Nunito;font-weight:900;font-size:16.5px;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.fb .ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.fb.ok{background:var(--ok-bg);color:var(--ok-text)} .fb.ok .ic{background:var(--ok)}
+.fb.almost{background:var(--almost-bg);color:var(--almost-text)} .fb.almost .ic{background:var(--almost)}
+.fb.no{background:var(--bad-bg);color:var(--bad-text)} .fb.no .ic{background:var(--bad)}
+.fb ul{margin:4px 0 0;padding-left:18px}
+.fb .sub{font-weight:800;margin-top:8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.fb details{margin-top:8px;color:var(--text)}
+.fb summary{cursor:pointer;font-weight:700;color:var(--primary)}
+.fb .model{background:#fff;border-radius:10px;padding:9px 10px;margin-top:6px;font-size:14px}
+.ai-note{font-size:11.5px;color:var(--muted);margin-top:6px}
+.loading{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:12px;font-size:14px;color:var(--muted)}
+.dots i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);margin-right:3px;animation:b 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{50%{transform:translateY(-5px);opacity:.4}}
+.conn{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.conn span{font-size:12.5px;font-weight:700;border-radius:99px;padding:4px 10px;background:var(--muted-bg);color:var(--muted)}
+.conn span.on{background:var(--ok-bg);color:var(--ok-text)}
+
+/* essay */
+.part{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:10px;box-shadow:0 2px 0 var(--border);overflow:hidden}
+.part-h{display:flex;gap:10px;align-items:center;padding:11px 12px;cursor:pointer}
+.part-n{width:28px;height:28px;border-radius:9px;background:var(--primary-subtle);color:var(--primary);font-family:Nunito;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.part-t{font-size:14px;font-weight:700;line-height:1.35;flex:1}
+.st{font-size:11px;font-weight:800;border-radius:99px;padding:3px 8px;white-space:nowrap}
+.st.none{background:var(--muted-bg);color:var(--muted)} .st.ok{background:var(--ok-bg);color:var(--ok-text)} .st.almost{background:var(--almost-bg);color:var(--almost-text)} .st.no{background:var(--bad-bg);color:var(--bad-text)}
+.part-b{padding:0 12px 12px;display:none}
+.part.open .part-b{display:block}
+
+/* sheet */
+.sheet-bg{position:absolute;inset:0;background:rgba(15,46,40,.45);display:none;z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:86%;background:#fff;border-radius:22px 22px 0 0;z-index:6;transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column}
+.phone.sheet-open .sheet{transform:none} .phone.sheet-open .sheet-bg{display:block}
+.grab{width:42px;height:5px;border-radius:9px;background:var(--border);margin:9px auto 4px}
+.sheet-in{overflow-y:auto;padding:4px 18px 20px;font-size:14.5px;line-height:1.55}
+.sheet h4{font-family:Nunito;font-weight:900;font-size:19px;margin:4px 0 2px}
+.sheet .sk{font-size:12px;color:var(--accent-text);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.sheet h5{font-family:Nunito;font-weight:800;font-size:14.5px;margin:14px 0 4px}
+.sheet ol{padding-left:20px;margin:0}
+.sheet .ex{background:var(--bg);border-left:4px solid var(--primary);border-radius:8px;padding:8px 10px}
+.sheet .warn{background:var(--bad-bg);color:var(--bad-text);border-radius:8px;padding:8px 10px}
+.pts{display:inline-block;background:var(--accent-subtle);color:var(--accent-text);border-radius:6px;padding:0 6px;font-weight:700;font-size:12.5px}
+
+/* flow */
+.flow{display:flex;gap:22px;flex-wrap:wrap}
+.flow .phone{height:640px}
+.cap{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin:0 0 8px}
+.ring{width:96px;height:96px;border-radius:50%;border:9px solid var(--primary);display:flex;align-items:center;justify-content:center;font-family:Nunito;font-weight:900;font-size:22px;color:var(--primary);margin:24px auto 10px}
+.ctr{text-align:center}
+.t{font-family:Nunito;font-weight:900;font-size:22px;margin:4px 0}
+.m{color:var(--muted);font-size:14.5px;line-height:1.45;margin:4px 0}
+.zone{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;margin-bottom:9px;box-shadow:0 2px 0 var(--border)}
+.zone .zi{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.zone b{display:block;font-size:15px}
+.zone span{font-size:13px;color:var(--muted)}
+.zone .r{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--primary);white-space:nowrap}
+.zone.lock{opacity:.55}
+.ex-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);font-size:14px}
+.ex-row:last-child{border:0}
+.dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+@media (max-width:760px){.phone{width:100%;max-width:360px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Exerciții de consolidare: machete pentru fiecare tip</h1>
+  <p class="lead">Machete interactive: poți scrie, selecta pe text și apăsa „Verifică”. Feedback-ul AI e simulat. La fiecare tip, în dreapta: cerința de BAC pe care o antrenează, cum se verifică și ce completezi în admin. Butonul 💡 deschide șablonul de rezolvare. Spune-mi în terminal ce e greșit sau ce lipsește.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+// ---------- data ----------
+const SRC_A = `În 1858, cele șapte puteri au semnat Convenția de la Paris. Era un document cu unele dispoziții foarte înaintate și altele retrograde. În problema unirii Moldovei cu Țara Românească - fundamentală pentru români - se alesese o cale de compromis. Menținute sub suzeranitatea Porții și sub „garanția colectivă“ a puterilor, cele două țări urmau „să se administreze liber și în afara oricărei ingerințe a Înaltei Porți“, purtând denumirea de „Principatele Unite ale Moldovei și Țării Românești“, separația administrativ-politică fiind însă menținută mai departe. Fiecare Principat urma să fie condus de câte un domn și miniștrii săi, ultimii supuși responsabilității ministeriale. Puterea legislativă trebuia să fie exercitată colectiv de domn, Adunarea din țara respectivă și Comisia centrală nou instituită, comună Principatelor. Domnul urma să fie ales în fiecare țară pe viață de către Adunarea electivă. Domn putea fi fiecare muntean sau moldovean, cu un venit de 3 000 de galbeni și având îndeplinite funcții publice timp de zece ani.`;
+const CITE_A = 'D. Berindei, Istoria românilor';
+const SRC_B = `Începuturile domniei lui Al. I. Cuza au fost anevoioase fiindcă domnul era obligat să colaboreze cu două guverne, unul la Iaşi şi celălalt la Bucureşti. Abia la sfârșitul anului 1861, Imperiul Otoman a recunoscut unirea politico-administrativă a Moldovei cu Țara Românească pe timpul domniei lui Cuza. Unirea, odată realizată, neînțelegerile politice au reapărut cu puteri sporite de însemnătatea problemelor de rezolvat, între care cea mai dificilă era, desigur, elaborarea Legii rurale. O altă problemă a estompat temporar confruntarea în jurul Legii rurale: secularizarea averilor mănăstirești. Prin legea din 1863 au fost trecute în proprietatea statului „toate averile mănăstirești“. Ca urmare, aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului, ceea ce a mărit suprafața de care dispuneau autoritățile pentru viitoarea împroprietărire. Cu scopul de a elimina obstacolele din calea împroprietăririi, ca şi a altor reforme, Cuza a promulgat o nouă constituție (Statutul Dezvoltător), care întărea puterea domnului în detrimentul legislativului.`;
+const CITE_B = 'F. Constantiniu, O istorie sinceră a poporului român';
+const SRC_M = `Moldova începe să participe activ în politica internațională în timpul lui Lațcu (1369-1375) când a apărut pericolul reluării expansiunii maghiare în spațiul est-carpatic sub motivul „readucerii“ populației de aici la catolicism. Pentru a preîntâmpina acest pericol, Lațcu a adresat papei Urban al V-lea rugămintea de a înființa o episcopie catolică în Moldova. Astfel, Siretul, devenit de curând capitală a Moldovei, obținea şi statutul de reședință episcopală. Moldova continuă să se afirme în relațiile internaționale din Europa de Est şi Sud-Est în timpul lui Petru I Mușat (1375-1391). Evenimentul cel mai important în politica externă a lui Petru I Mușat a fost semnarea Tratatului moldo-polon de la Lemberg (Liov). Pentru Moldova, importanța politică a acestui tratat consta în faptul că Petru I Mușat își asigura astfel protecția Poloniei împotriva vechilor pretenții maghiare la pământurile est-carpatice. Pentru consolidarea țării şi recunoașterea ei internațională, Petru I Mușat a hotărât să înființeze o mitropolie ortodoxă.`;
+const CITE_M = 'I. Țurcanu, Istoria românilor';
+
+const PENS = {
+  info:{label:'Informație',cls:'m-info',color:'var(--pen-info)'},
+  cause:{label:'Cauză',cls:'m-cause',color:'var(--pen-cause)'},
+  effect:{label:'Efect',cls:'m-effect',color:'var(--pen-effect)'},
+  arg:{label:'Informație-suport',cls:'m-arg',color:'var(--pen-arg)'},
+};
+
+const HINTS = {
+  short:{k:'Șablon · Răspuns scurt',t:'Cum răspunzi la „Numiți / Precizați”',steps:['Caută în sursa indicată (A sau B) exact termenul cerut.','Scrie doar denumirea, fără explicații: la „Numiți” se punctează denumirea exactă.','Păstrează forma din text (ex. „Statutul Dezvoltător”), cu majusculă dacă e nume propriu.'],ex:'Cerință: Numiți noua constituție precizată în sursa B.<br><b>Răspuns:</b> Statutul Dezvoltător.',warn:'Nu adăuga informații din afara sursei: dacă scrii două variante și una e greșită, pierzi punctajul.',pts:'2 puncte'},
+  multi:{k:'Șablon · Răspunsuri multiple',t:'Cum răspunzi la „Menționați două…”',steps:['Citește condiția: „atât în sursa A, cât și în sursa B” înseamnă că termenul trebuie să apară în ambele.','Subliniază pe ciornă termenii din A, apoi verifică-i în B.','Scrie fiecare răspuns separat, numerotat (1, 2).'],ex:'<b>1.</b> Moldova; <b>2.</b> Țara Românească.',warn:'Două formulări ale aceluiași spațiu („Principatele” și „Moldova și Țara Românească”) contează o singură dată.',pts:'2 × 3 puncte'},
+  info:{k:'Șablon · Informație din sursă',t:'Cum selectezi o informație din sursă',steps:['Găsește cuvântul-cheie din cerință (aici: „domn”).','Ia propoziția care spune ceva <i>despre</i> el, nu doar îl pomenește.','Transcrie informația complet, dar fără să adaugi propoziții vecine.'],ex:'„Domnul urma să fie ales în fiecare țară pe viață de către Adunarea electivă.”',warn:'O informație trunchiată („Domnul urma să fie ales”) nu spune nimic: ia fragmentul până la capătul ideii.',pts:'2 puncte'},
+  letter:{k:'Șablon · Litera sursei',t:'Cum alegi sursa potrivită',steps:['Reformulează afirmația din cerință cu cuvintele tale (aici: „s-a ajuns la o înțelegere parțială privind unirea”).','Caută în fiecare sursă un fragment cu același sens, nu neapărat aceleași cuvinte.','Scrie doar litera.'],ex:'Afirmația: „puterile ajung la un compromis”. Sursa A: „se alesese o cale de compromis” → <b>A</b>.',warn:'Nu scrie fragmentul sau explicații, se cere doar litera.',pts:'3 puncte'},
+  cause:{k:'Șablon · Relația cauză-efect',t:'Cum construiești o relație cauză-efect',steps:['Caută conectorii din text: „fiindcă”, „ca urmare”, „astfel”, „cu scopul de a”, „ceea ce”.','Partea de după „fiindcă” e cauza; partea de după „ca urmare” e efectul.','Selectează <b>două informații</b> din aceeași sursă și scrie rolul fiecăreia.','Formulează: „Cauza: …; efectul: …”.'],ex:'<b>Cauza:</b> „Prin legea din 1863 au fost trecute în proprietatea statului «toate averile mănăstirești»”<br><b>Efectul:</b> „aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului”.',warn:'Greșeala clasică: rolurile inversate. Întreabă-te: „Care s-a întâmplat din cauza celeilalte?”',pts:'7 puncte: 2 + 2 informații, 3 relația'},
+  facts:{k:'Șablon · Prezentarea unui fapt istoric',t:'Cum prezinți un fapt istoric',steps:['Alege un fapt din perioada cerută (verifică anii!).','<b>Prezentare</b> ≠ menționare: spune ce s-a întâmplat, când, cine a fost implicat și o consecință sau un detaliu.','Două-trei propoziții pentru fiecare fapt.'],ex:'„În 1866, România adoptă prima constituție internă, de inspirație belgiană, care consacra principiul separației puterilor în stat și monarhia constituțională.”',warn:'„Constituția din 1866” singur e doar o menționare: se punctează parțial.',pts:'2 × 3 puncte'},
+  sim:{k:'Șablon · Asemănare',t:'Cum formulezi o asemănare',steps:['Identifică cele două acțiuni din perioada cerută.','Găsește ce au în comun: scop, aliați, rezultat, tip de acțiune.','Formulează o propoziție care le numește pe amândouă și ce au în comun.'],ex:'„Atât la Conferința de Pace de la Paris (1919-1920), cât și la tratatul de la Trianon (1920), România urmărea recunoașterea internațională a Marii Uniri.”',warn:'Nu descrie acțiunile separat: asemănarea trebuie spusă explicit („atât… cât și…”, „ambele”).',pts:'4 puncte'},
+  pov:{k:'Șablon · Punct de vedere',t:'Cum formulezi și susții un punct de vedere',steps:['Formulează o <b>apreciere</b>, nu o informație: „Consider că…”, „În opinia mea…”.','Punctul de vedere trebuie să se refere exact la ce cere cerința (aici: acțiunile conducătorilor, 1369-1391).','Alege din sursă <b>două informații</b> care chiar îl susțin.'],ex:'„Consider că acțiunile conducătorilor Moldovei au urmărit consolidarea independenței față de Ungaria.” Susținut de: episcopia catolică cerută de Lațcu; protecția Poloniei prin tratatul de la Lemberg.',warn:'„Lațcu a cerut o episcopie” e o informație, nu un punct de vedere.',pts:'10 puncte: 4 punctul de vedere + 2 × 3 informațiile'},
+  arg:{k:'Șablon · Argumentarea unei afirmații',t:'Cum construiești un argument istoric',steps:['Alege un fapt istoric relevant pentru afirmație (perioada, actorii).','Prezintă faptul, nu doar îl numi.','Leagă-l de afirmație cu un <b>conector de cauzalitate</b> (deoarece, pentru că, întrucât).','Închide cu un <b>conector de concluzie</b> (așadar, prin urmare, în concluzie).'],ex:'„Românii participă la acțiuni antiotomane în secolul al XV-lea, <u>deoarece</u> Ștefan cel Mare refuză plata tributului și învinge armata otomană la Vaslui, în 1475. <u>Așadar</u>, afirmația este adevărată.”',warn:'Fără conectori se pierde o parte din punctaj chiar dacă faptul e corect.',pts:'4 puncte'},
+  essay:{k:'Șablon · Eseul',t:'Cum construiești eseul pe cerințe',steps:['Tratează fiecare cerință într-un paragraf separat, în ordinea dată.','Respectă cronologia faptelor.','Folosește limbaj istoric: termeni de epocă, date, nume.','Evidențiază o relație cauză-efect.','La „punct de vedere”: formulează-l și susține-l cu un argument (fapt + conectori).'],ex:'Paragraful 1: „În etapa stalinismului, România adoptă în 1948 o nouă constituție, care proclama Republica Populară Română și…”',warn:'Încadrarea în spațiu (aprox. 2 pagini) se punctează: nu scrie prea puțin pe o cerință.',pts:'30 de puncte'},
+};
+
+// ---------- utils ----------
+const $ = s => document.querySelector(s);
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++)m[i][j]=i?Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)):j}return m[a.length][b.length]}
+function matchShort(ans, accepted){
+  const n = norm(ans); if(!n) return {v:'empty'};
+  for(const a of accepted){ if(norm(a)===n) return {v:'ok',a}; }
+  for(const a of accepted){ const na=norm(a); if(lev(na,n)<=Math.max(1,Math.floor(na.length/8))) return {v:'typo',a}; }
+  return {v:'no'};
+}
+function fb(v,title,body){
+  const ic={ok:'✓',almost:'!',no:'✕'}[v];
+  return `<div class="fb ${v}"><div class="vt"><span class="ic">${ic}</span>${title}</div>${body||''}</div>`;
+}
+function loading(){return `<div class="loading"><span class="dots"><i></i><i></i><i></i></span>Se analizează răspunsul…</div>`}
+
+// ---------- phone shell ----------
+function phone(o){
+  return `<div class="phone" id="ph">
+    <div class="topbar"><div class="back">‹</div><div class="prog"><i style="width:${o.p||40}%"></i></div><span class="count">${o.n||'3/9'}</span></div>
+    <div class="scroll" id="scr">
+      <div class="eyebrow"><span class="chip">${o.chip}</span><button class="hintbtn" onclick="openHint('${o.hint}')">💡 Cum se rezolvă</button></div>
+      <p class="prompt">${o.prompt}</p>
+      ${o.body}
+      <div id="out"></div>
+    </div>
+    <div class="actionbar" id="ab"><button class="btn" id="check">Verifică</button></div>
+    <div class="sheet-bg" onclick="closeHint()"></div>
+    <div class="sheet" id="sheet"></div>
+  </div>`;
+}
+function srcBox(id,label,text,cite,collapsed){
+  return `<div class="src ${collapsed?'collapsed':''}" id="${id}"><div class="src-h" onclick="this.parentNode.classList.toggle('collapsed')"><span>${label}</span><span>${collapsed?'Arată ▾':'Ascunde ▴'}</span></div><div class="src-body">${text}</div><div class="src-cite">(${cite})</div></div>`;
+}
+function openHint(k){
+  const h=HINTS[k];
+  $('#sheet').innerHTML=`<div class="grab"></div><div class="sheet-in"><div class="sk">${h.k}</div><h4>${h.t}</h4><span class="pts">La BAC: ${h.pts}</span>
+  <h5>Pașii</h5><ol>${h.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+  <h5>Exemplu</h5><div class="ex">${h.ex}</div>
+  <h5>Atenție</h5><div class="warn">${h.warn}</div>
+  <button class="btn" style="margin-top:16px" onclick="closeHint()">Am înțeles</button></div>`;
+  $('#ph').classList.add('sheet-open');
+}
+function closeHint(){ $('#ph').classList.remove('sheet-open'); }
+function afterCheck(){ $('#ab').innerHTML='<button class="btn" onclick="render(cur)">Continuă</button><button class="btn2" onclick="render(cur)">Încearcă din nou</button>'; }
+
+// ---------- marker (selection on text) ----------
+function tokenize(text){
+  const toks=[]; const re=/\S+|\s+/g; let m, wi=0;
+  while((m=re.exec(text))){ if(/\S/.test(m[0])) toks.push({w:true,t:m[0],i:wi++,start:m.index}); else toks.push({w:false,t:m[0]}); }
+  return toks;
+}
+function wordRange(toks, frag){
+  // char span of frag -> [firstWord,lastWord]
+  const text = toks.map(t=>t.t).join(''); const at=text.indexOf(frag); if(at<0) throw new Error('fragment not found: '+frag);
+  const end=at+frag.length; let s=null,e=null;
+  for(const t of toks){ if(!t.w) continue; const te=t.start+t.t.length; if(s===null && te>at) s=t.i; if(t.start<end) e=t.i; }
+  return [s,e];
+}
+function sentenceOf(toks,[s,e]){
+  const words=toks.filter(t=>t.w); let a=s, b=e;
+  while(a>0 && !/[.!?]["“”»]?$/.test(words[a-1].t)) a--;
+  while(b<words.length-1 && !/[.!?]["“”»)]?$/.test(words[b].t)) b++;
+  return [a,b];
+}
+function Marker(el, text, cfg){
+  // cfg: {pens:[...], limits:{pen:n}, onChange}
+  const toks=tokenize(text); const words=toks.filter(t=>t.w);
+  const st={pen:cfg.pens[0], marks:[], anchor:null, drag:null, active:null, verdict:{}};
+  el.classList.add('mk-src');
+  el.innerHTML=toks.map((t,k)=>t.w?`<span class="w" data-i="${t.i}">${t.t}</span>`:`<span class="sp" data-k="${k}">${t.t}</span>`).join('');
+  const wEls=[...el.querySelectorAll('.w')]; const spEls=[...el.querySelectorAll('.sp')];
+  const spBetween = spEls.map(sp=>{ const k=+sp.dataset.k; const prev=toks.slice(0,k).filter(t=>t.w).length-1; return prev; }); // space after word prev
+  function markAt(i){ return st.marks.find(m=>i>=m.s&&i<=m.e); }
+  function paint(){
+    wEls.forEach((w,i)=>{ w.className='w'; const m=markAt(i);
+      if(st.drag && i>=Math.min(st.drag.a,st.drag.b)&&i<=Math.max(st.drag.a,st.drag.b)){ w.classList.add(PENS[st.drag.pen].cls); if(i===Math.min(st.drag.a,st.drag.b))w.classList.add('m-s'); if(i===Math.max(st.drag.a,st.drag.b))w.classList.add('m-e'); return; }
+      if(m){ w.classList.add(PENS[m.pen].cls); if(i===m.s)w.classList.add('m-s'); if(i===m.e)w.classList.add('m-e');
+        if(m===st.active){ if(i===m.s)w.classList.add('h-s'); if(i===m.e)w.classList.add('h-e'); }
+        if(m.v) w.classList.add('v-'+m.v); }
+      if(st.anchor===i) w.classList.add('anchor');
+    });
+    spEls.forEach((sp,k)=>{ sp.className='sp'; const p=spBetween[k];
+      const inDrag = st.drag && p>=Math.min(st.drag.a,st.drag.b) && p+1<=Math.max(st.drag.a,st.drag.b);
+      if(inDrag){ sp.classList.add(PENS[st.drag.pen].cls); return; }
+      const m=markAt(p); if(m && p+1<=m.e){ sp.classList.add(PENS[m.pen].cls); if(m.v) sp.classList.add('v-'+m.v); } });
+    cfg.onChange && cfg.onChange(api);
+  }
+  function commit(pen,a,b){
+    const s=Math.min(a,b), e=Math.max(a,b);
+    // strip leading/trailing punctuation-only tokens
+    st.marks = st.marks.filter(m=> m.e<s || m.s>e);
+    const lim=cfg.limits[pen]||1; const same=st.marks.filter(m=>m.pen===pen);
+    if(same.length>=lim){ st.marks.splice(st.marks.indexOf(same[0]),1); }
+    const m={pen,s,e}; st.marks.push(m); st.active=m; st.marks.forEach(x=>delete x.v);
+    // auto-advance pen (cause -> effect)
+    if(cfg.autoNext && cfg.autoNext[pen] && !st.marks.some(x=>x.pen===cfg.autoNext[pen])) setPen(cfg.autoNext[pen]);
+  }
+  function idxFromPoint(x,y){ const t=document.elementFromPoint(x,y); if(t&&t.classList&&t.classList.contains('w')&&el.contains(t)) return +t.dataset.i; return null; }
+  let press=null;
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('pointerdown',e=>{
+    const t=e.target; if(!t.classList.contains('w')) return; const i=+t.dataset.i;
+    const m=markAt(i);
+    // drag a handle of the active mark
+    if(m && m===st.active && (i===m.s||i===m.e)){ const fixed = i===m.s? m.e : m.s; st.marks.splice(st.marks.indexOf(m),1); st.drag={pen:m.pen,a:fixed,b:i}; st.active=null; paint(); e.preventDefault(); return; }
+    press={i,x:e.clientX,y:e.clientY,type:e.pointerType,moved:false,timer:null};
+    if(e.pointerType==='mouse'){ press.armed=true; }
+    else { press.timer=setTimeout(()=>{ if(press){ press.armed=true; st.drag={pen:st.pen,a:i,b:i}; st.anchor=null; paint(); if(navigator.vibrate)navigator.vibrate(10);} },280); }
+  });
+  window.addEventListener('pointermove',e=>{
+    if(st.drag){ const j=idxFromPoint(e.clientX,e.clientY); if(j!==null&&j!==st.drag.b){ st.drag.b=j; paint(); } return; }
+    if(!press) return;
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)>6){
+      if(press.armed && press.type==='mouse'){ st.drag={pen:st.pen,a:press.i,b:press.i}; st.anchor=null; const j=idxFromPoint(e.clientX,e.clientY); if(j!==null) st.drag.b=j; paint(); }
+      else { clearTimeout(press.timer); press=null; }
+    }
+  });
+  el.addEventListener('touchmove',e=>{ if(st.drag) e.preventDefault(); },{passive:false});
+  window.addEventListener('pointerup',e=>{
+    if(st.drag){ commit(st.drag.pen,st.drag.a,st.drag.b); st.drag=null; press=null; paint(); return; }
+    if(!press) return; clearTimeout(press.timer); const i=press.i; press=null;
+    const m=markAt(i);
+    if(m && st.anchor===null){ st.active = (st.active===m? null : m); paint(); return; }
+    if(st.anchor===null){ st.anchor=i; st.active=null; paint(); }
+    else { const a=st.anchor; st.anchor=null; commit(st.pen,a,i); paint(); }
+  });
+  function setPen(p){ st.pen=p; st.anchor=null; document.querySelectorAll('.pen').forEach(b=>b.classList.toggle('on',b.dataset.pen===p)); }
+  const api={st,toks,words,paint,setPen,
+    text:m=>words.slice(m.s,m.e+1).map(w=>w.t).join(' '),
+    remove:m=>{ st.marks.splice(st.marks.indexOf(m),1); if(st.active===m)st.active=null; paint(); },
+    range:f=>wordRange(toks,f), sentence:r=>sentenceOf(toks,r)};
+  paint(); return api;
+}
+// judge one mark against an answer span {core:[a,b], max:[A,B]}
+function judgeSpan(m, ans){
+  const [a,b]=ans.core, [A,B]=ans.max;
+  const overlap = Math.max(0, Math.min(m.e,b)-Math.max(m.s,a)+1);
+  if(!overlap) return 'no';
+  if(m.s<=a && m.e>=b && m.s>=A && m.e<=B) return 'ok';
+  if(m.s<=a && m.e>=b) return 'long';
+  return 'short';
+}
+function spanFrom(api, core){ const r=api.range(core); return {core:r, max:api.sentence(r), text:core}; }
+function penBar(pens, api, counts){
+  return `<div class="pens">${pens.map(p=>`<button class="pen ${p===pens[0]?'on':''}" data-pen="${p}" onclick="cur_api.setPen('${p}')"><span class="sw" style="background:${PENS[p].color}"></span>${PENS[p].label}${counts&&counts[p]?` <span class="n">× ${counts[p]}</span>`:''}</button>`).join('')}</div>`;
+}
+let cur_api=null;
+
+// ---------- screens ----------
+const SCREENS = [
+ {id:'flow',name:'Parcursul lecției',render:renderFlow},
+ {id:'short',name:'Răspuns scurt',render:renderShort},
+ {id:'multi',name:'Răspunsuri multiple',render:renderMulti},
+ {id:'info',name:'Informație din sursă',render:renderInfo},
+ {id:'letter',name:'Litera sursei',render:renderLetter},
+ {id:'cause',name:'Cauză-efect',render:renderCause},
+ {id:'facts',name:'Prezentare fapte',render:renderFacts},
+ {id:'sim',name:'Asemănare / deosebire',render:renderSim},
+ {id:'pov',name:'Punct de vedere',render:renderPov},
+ {id:'arg',name:'Argumentare',render:renderArg},
+ {id:'essay',name:'Eseu pe cerințe',render:renderEssay},
+];
+let cur='flow';
+function render(id){
+  cur=id; cur_api=null;
+  $('#tabs').innerHTML=SCREENS.map((s,k)=>`<button class="tab ${s.id===id?'on':''}" onclick="render('${s.id}')"><small>${k?k+'.':''}</small> ${s.name}</button>`).join('');
+  SCREENS.find(s=>s.id===id).render();
+}
+function side(o){
+  return `<div class="side"><h2>${o.title}</h2>${o.bac?`<div class="bac"><b>La BAC:</b> ${o.bac}</div>`:''}
+  <h3>Cum se verifică</h3><ul>${o.check.map(x=>`<li>${x}</li>`).join('')}</ul>
+  <h3>Ce completezi în admin</h3><ul>${o.admin.map(x=>`<li>${x}</li>`).join('')}</ul>
+  ${o.try?`<div class="try"><b>Încearcă:</b> ${o.try}</div>`:''}</div>`;
+}
+
+function renderFlow(){
+  $('#stage').innerHTML=`<div class="flow">
+   <div><p class="cap">1 · Începutul lecției: cele trei zone</p><div class="phone"><div class="scroll" style="padding-top:20px">
+     <p class="t">Unirea Principatelor</p><p class="m">Parcurge zonele în ordine.</p><div style="height:10px"></div>
+     <div class="zone"><div class="zi" style="background:var(--primary-subtle)">📖</div><div><b>Învățare</b><span>9 carduri</span></div><span class="r">✓</span></div>
+     <div class="zone"><div class="zi" style="background:var(--accent-subtle)">✅</div><div><b>Verificare</b><span>6 întrebări · toate corecte</span></div><span class="r">✓</span></div>
+     <div class="zone" style="border:2px solid var(--primary)"><div class="zi" style="background:#EEE8FF">🎯</div><div><b>Consolidare</b><span>9 exerciții tip BAC</span></div><span class="r">Începe ›</span></div>
+     <p class="m" style="margin-top:14px">Lecția e completă după Verificare. Consolidarea e opțională și nu blochează lecția următoare.</p>
+   </div></div></div>
+   <div><p class="cap">2 · După Verificare (Traseu ghidat)</p><div class="phone"><div class="scroll ctr">
+     <div class="ring">6/6</div><p class="t">Lecție terminată! 🎉</p><p class="m">Ai deblocat: Domnia lui Cuza</p>
+     <div class="zone" style="text-align:left;margin-top:18px;border:2px solid #C9B8FF"><div class="zi" style="background:#EEE8FF">🎯</div><div><b>Consolidare deblocată</b><span>Exersează cerințele de BAC pe lecția asta</span></div></div>
+     <button class="btn" style="margin-top:6px">Începe consolidarea</button><button class="btn2">Mergi la lecția următoare</button>
+   </div></div></div>
+   <div><p class="cap">3 · Finalul consolidării</p><div class="phone"><div class="scroll">
+     <p class="t ctr" style="margin-top:18px">Consolidare parcursă</p><p class="m ctr">Fără note, doar unde mai ai de lucrat.</p>
+     <div class="src" style="margin-top:14px">
+      <div class="ex-row"><span class="dot" style="background:var(--ok)"></span>Răspuns scurt<span style="margin-left:auto" class="st ok">Corect</span></div>
+      <div class="ex-row"><span class="dot" style="background:var(--ok)"></span>Informație din sursă<span style="margin-left:auto" class="st ok">Corect</span></div>
+      <div class="ex-row"><span class="dot" style="background:var(--almost)"></span>Cauză-efect<span style="margin-left:auto" class="st almost">Aproape</span></div>
+      <div class="ex-row"><span class="dot" style="background:var(--bad)"></span>Punct de vedere<span style="margin-left:auto" class="st no">Mai lucrează</span></div>
+      <div class="ex-row"><span class="dot" style="background:var(--almost)"></span>Eseu (4 cerințe)<span style="margin-left:auto" class="st almost">2 din 4</span></div>
+     </div>
+     <button class="btn">Reia consolidarea</button><button class="btn2">Reia doar ce nu a fost corect</button><button class="btn2">Mergi la lecția următoare</button>
+   </div></div></div></div>`;
+}
+
+function renderShort(){
+  const acc=['Statutul Dezvoltător','Statutul dezvoltator al Convenției de la Paris'];
+  $('#stage').innerHTML = phone({chip:'Răspuns scurt',hint:'short',prompt:'Numiți noua constituție precizată în sursa B.',
+    body: srcBox('sb','Sursa B',SRC_B,CITE_B,false)+`<label class="fl">Răspunsul tău</label><input class="in" id="a1" placeholder="Scrie denumirea…" autocomplete="off">`})
+  + side({title:'Răspuns scurt',bac:'„Numiți…”, „Precizați secolul…”, „Menționați conducătorul…” (Subiectul I.1, II.1-3).',
+    check:['<span class="tag noai">fără AI</span> Răspunsul se compară cu lista de variante acceptate.','Nu contează diacriticele, majusculele, punctuația și spațiile („statutul dezvoltator” = corect).','Greșeli mici de scriere (1 literă la ~8) → „Corect, atenție la scriere: Statutul Dezvoltător”.','Pentru secole/ani: „XIV”, „14”, „al XIV-lea”, „secolul al XIV-lea” sunt echivalente (normalizare dedicată).','Și variantele greșite frecvente pot avea mesaj propriu (ex. „Constituția din 1866” → „Asta e altă constituție, din 1866. Caută în sursa B.”).'],
+    admin:['Sursa (sau sursele) atașată: text + autor/lucrare.','Enunțul cerinței.','Variante acceptate (una pe rând).','Opțional: greșeli frecvente + mesajul pentru fiecare.','Șablonul de rezolvare (din bibliotecă).'],
+    try:'„statutul dezvoltator”, „Statutul Dezvoltatr”, „Constituția din 1866”.'});
+  $('#check').onclick=()=>{
+    const r=matchShort($('#a1').value,acc); const inp=$('#a1');
+    if(r.v==='empty') return;
+    if(norm($('#a1').value).includes('1866')){ inp.className='in no'; $('#out').innerHTML=fb('no','Mai lucrează','Constituția din 1866 vine după domnia lui Cuza. Caută în sursa B constituția promulgată de Cuza.'); }
+    else if(r.v==='ok'){ inp.className='in ok'; $('#out').innerHTML=fb('ok','Corect!','Statutul Dezvoltător, promulgat de Cuza în 1864.'); }
+    else if(r.v==='typo'){ inp.className='in ok'; $('#out').innerHTML=fb('ok','Corect, atenție la scriere',`Forma corectă: <b>${r.a}</b>.`); }
+    else { inp.className='in no'; $('#out').innerHTML=fb('no','Mai lucrează','Nu am găsit răspunsul în sursa B. Caută cuvântul „constituție”.'+`<details><summary>Vezi răspunsul</summary><div class="model">Statutul Dezvoltător</div></details>`); }
+    afterCheck();
+  };
+}
+
+function renderMulti(){
+  const groups=[{label:'Moldova',acc:['Moldova']},{label:'Țara Românească',acc:['Țara Românească','Tara Romaneasca','Muntenia','Valahia']}];
+  $('#stage').innerHTML = phone({chip:'Răspunsuri multiple',hint:'multi',prompt:'Menționați două spații istorice, precizate atât în sursa A, cât și în sursa B.',
+    body:`<div class="seg"><button class="on" onclick="segSrc(this,'A')">Sursa A</button><button onclick="segSrc(this,'B')">Sursa B</button></div>`+
+      `<div class="src"><div class="src-body" id="segbody">${SRC_A}</div><div class="src-cite" id="segcite">(${CITE_A})</div></div>`+
+      `<label class="fl">1.</label><input class="in" id="m1" autocomplete="off"><label class="fl">2.</label><input class="in" id="m2" autocomplete="off">`})
+  + side({title:'Răspunsuri multiple (N din M)',bac:'„Menționați două spații istorice / două informații / doi conducători…” (Subiectul I.3).',
+    check:['<span class="tag noai">fără AI</span> Fiecare câmp se compară cu <b>grupurile</b> de răspunsuri acceptate.','Un grup = un răspuns cu sinonimele lui (Țara Românească / Muntenia / Valahia).','Două câmpuri din același grup → „Ai scris același spațiu de două ori”.','Feedback pe fiecare câmp (verde / roșu), plus un verdict general.'],
+    admin:['Câte răspunsuri se cer (N).','Grupurile acceptate, fiecare cu variantele lui (pot fi mai multe decât N: elevul alege oricare N).','Sursele atașate (1 sau 2: apar ca taburi A / B).'],
+    try:'„Muntenia” și „Valahia” (același grup), apoi „Moldova” + „Tara Romaneasca”.'});
+  window.segSrc=(b,k)=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b)); $('#segbody').textContent=k==='A'?SRC_A:SRC_B; $('#segcite').textContent='('+(k==='A'?CITE_A:CITE_B)+')';};
+  $('#check').onclick=()=>{
+    const res=['m1','m2'].map(id=>{const v=$('#'+id).value; const g=groups.findIndex(g=>matchShort(v,g.acc).v==='ok'||matchShort(v,g.acc).v==='typo'); return {id,g};});
+    const dup = res[0].g>=0 && res[0].g===res[1].g;
+    res.forEach((r,k)=>$('#'+r.id).className='in '+(r.g<0?'no':(dup&&k===1?'almost':'ok')));
+    const good=res.filter(r=>r.g>=0).length - (dup?1:0);
+    if(good===2) $('#out').innerHTML=fb('ok','Corect!','Ambele spații apar și în sursa A, și în sursa B.');
+    else if(dup) $('#out').innerHTML=fb('almost','Aproape','Ai scris de două ori același spațiu (Muntenia = Țara Românească = Valahia). Mai caută unul.');
+    else $('#out').innerHTML=fb(good?'almost':'no',good?'Aproape':'Mai lucrează',`${good} din 2 corecte. Caută denumiri care apar în <b>ambele</b> surse.`);
+    afterCheck();
+  };
+}
+
+function renderInfo(){
+  $('#stage').innerHTML = phone({chip:'Informație din sursă',hint:'info',prompt:'Precizați, din sursa A, o informație referitoare la domn.',
+    body:`<p class="howto">Marchează informația direct în text: <b>trage cu degetul</b> peste cuvinte (ține apăsat o clipă, apoi trage) sau <b>atinge primul și ultimul cuvânt</b>. Ajustezi capetele trăgând de bulinele negre.</p>`+
+      `<div class="src"><div class="src-h"><span>Sursa A</span></div><div class="src-body" id="mk"></div><div class="src-cite">(${CITE_A})</div></div>`+
+      `<div class="marks" id="marks"></div>`})
+  + side({title:'Informație din sursă (selecție pe text)',bac:'„Precizați, din sursa A, o informație referitoare la…”, „Menționați două informații referitoare la marcă” (I.2, II.4).',
+    check:['<span class="tag noai">fără AI</span> Elevul marchează liber, la nivel de cuvânt; textul nu e împărțit în bucăți vizibile.','În admin marchezi pe același text <b>miezul</b> fiecărei informații corecte.','<b>Corect:</b> marcajul cuprinde tot miezul și nu iese din propoziția lui.','<b>Aproape, prea puțin:</b> a prins doar o parte din miez („Ai prins începutul, ia informația până la capăt”).','<b>Aproape, prea mult:</b> a inclus și altă propoziție („Ai selectat și o informație în plus”).','<b>Mai lucrează:</b> marcajul nu atinge nicio informație corectă.','Marcajul se lipește automat de cuvinte întregi; ghilimelele și punctuația de la capete nu contează.'],
+    admin:['Sursa: textul o singură dată; poate fi refolosită de mai multe exerciții.','Pe text, cu același marker: miezul fiecărei informații corecte (oricâte).','Opțional, pe fiecare informație: o limită mai largă decât propoziția (dacă informația continuă în propoziția următoare).','Câte informații se cer (1 sau 2).'],
+    try:'marchează „Domnul urma să fie ales în fiecare țară pe viață de către Adunarea electivă.” Apoi doar „Domnul urma să fie ales”, apoi două propoziții deodată.'});
+  const api=Marker($('#mk'),SRC_A,{pens:['info'],limits:{info:1},onChange:a=>drawMarks(a,1)});
+  cur_api=api;
+  const answers=['Fiecare Principat urma să fie condus de câte un domn și miniștrii săi','Puterea legislativă trebuia să fie exercitată colectiv de domn','Domnul urma să fie ales în fiecare țară pe viață de către Adunarea electivă','Domn putea fi fiecare muntean sau moldovean, cu un venit de 3 000 de galbeni și având îndeplinite funcții publice timp de zece ani'].map(c=>spanFrom(api,c));
+  $('#check').onclick=()=>{
+    const m=api.st.marks[0]; if(!m) return;
+    const js=answers.map(a=>judgeSpan(m,a));
+    let v= js.includes('ok')?'ok': js.includes('long')?'long': js.includes('short')?'short':'no';
+    m.v = v==='ok'?'ok':v==='no'?'no':'almost'; api.st.active=null; api.paint();
+    const model=`<details><summary>Vezi toate informațiile corecte</summary><div class="model">${answers.map(a=>'• '+a.text).join('<br>')}</div></details>`;
+    $('#out').innerHTML = v==='ok'?fb('ok','Corect!','Ai găsit o informație completă despre domn.'+model)
+      : v==='long'?fb('almost','Aproape','Informația e acolo, dar ai selectat și text în plus. La BAC se cere <b>o</b> informație: oprește-te la capătul propoziției.'+model)
+      : v==='short'?fb('almost','Aproape','Ai prins doar o parte. Ia informația până la capătul ideii: ce anume se spune despre domn?'+model)
+      : fb('no','Mai lucrează','Fragmentul ales nu spune nimic despre domn. Caută propozițiile în care apare cuvântul „domn”.'+model);
+    afterCheck();
+  };
+}
+function drawMarks(api,n){
+  const ms=api.st.marks; let h='';
+  for(let k=0;k<n;k++){ const m=ms[k];
+    h+= m? `<div class="mark"><span class="bar" style="background:${PENS[m.pen].color}"></span><div><div class="k">Informația ${n>1?k+1:''}</div>„${api.text(m)}”</div><button class="x" onclick="cur_api.remove(cur_api.st.marks[${k}])">✕</button></div>`
+         : `<div class="mark empty">Nicio informație marcată încă</div>`; }
+  $('#marks').innerHTML=h;
+}
+
+function renderLetter(){
+  $('#stage').innerHTML = phone({chip:'Litera sursei',hint:'letter',prompt:'Alegeți litera corespunzătoare sursei care susține că puterile ajung la un compromis în problema unirii românilor.',
+    body:`<div class="seg"><button class="on" onclick="segSrc(this,'A')">Sursa A</button><button onclick="segSrc(this,'B')">Sursa B</button></div>`+
+    `<div class="src" style="max-height:230px;overflow:auto"><div class="src-body" id="segbody">${SRC_A}</div><div class="src-cite" id="segcite">(${CITE_A})</div></div>`+
+    `<div class="opt" data-v="A" onclick="pick(this)"><span class="l">A</span>Sursa A</div><div class="opt" data-v="B" onclick="pick(this)"><span class="l">B</span>Sursa B</div>`})
+  + side({title:'Litera sursei',bac:'„Scrieți litera corespunzătoare sursei care susține că…” (I.4).',
+    check:['<span class="tag noai">fără AI</span> Alegere simplă; refolosește componenta existentă de alegere, cu sursele afișate ca taburi.','După verificare evidențiem în sursa corectă fragmentul care susține afirmația (marcat în admin).'],
+    admin:['Sursele A și B (2 sau mai multe).','Litera corectă.','Fragmentul-dovadă din sursa corectă (marcat pe text).'],
+    try:'alege B, apoi A.'});
+  window.segSrc=(b,k)=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b)); $('#segbody').innerHTML=k==='A'?SRC_A:SRC_B; $('#segcite').textContent='('+(k==='A'?CITE_A:CITE_B)+')';};
+  let sel=null; window.pick=el=>{sel=el.dataset.v; document.querySelectorAll('.opt').forEach(o=>o.classList.toggle('sel',o===el));};
+  $('#check').onclick=()=>{ if(!sel) return; document.querySelectorAll('.opt').forEach(o=>{o.classList.remove('sel'); if(o.dataset.v==='A')o.classList.add('ok'); else if(o.dataset.v===sel)o.classList.add('no');});
+    document.querySelectorAll('.seg button')[0].click();
+    $('#segbody').innerHTML=SRC_A.replace('se alesese o cale de compromis','<mark style="background:var(--ok-bg);box-shadow:inset 0 -3px 0 var(--ok)">se alesese o cale de compromis</mark>');
+    $('#out').innerHTML= sel==='A'?fb('ok','Corect!','Sursa A: „se alesese o cale de compromis” (vezi fragmentul evidențiat).'):fb('no','Mai lucrează','Sursa B vorbește despre domnia lui Cuza, după unire. Compromisul apare în sursa A (evidențiat).');
+    afterCheck(); };
+}
+
+function renderCause(){
+  $('#stage').innerHTML = phone({chip:'Cauză-efect',hint:'cause',prompt:'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B, precizând rolul fiecăreia.',
+    body:`<p class="howto">Alege markerul, apoi marchează în text. Începi cu <b>Cauza</b>; după ea markerul trece singur la <b>Efect</b>.</p>`+
+    `<div id="pens"></div><div class="src"><div class="src-h"><span>Sursa B</span></div><div class="src-body" id="mk"></div><div class="src-cite">(${CITE_B})</div></div><div class="marks" id="marks"></div>`})
+  + side({title:'Cauză-efect (două markere)',bac:'„Scrieți o relație cauză-efect… precizând rolul fiecăreia (cauză, respectiv efect)” (I.5, 7 puncte).',
+    check:['<span class="tag noai">fără AI</span> Elevul marchează o cauză și un efect cu markere de culori diferite.','În admin definești <b>perechile valide</b> (setul de variații): fiecare pereche = miez cauză + miez efect, marcate pe text.','Corect: cauza se potrivește cu cauza unei perechi și efectul cu efectul <b>aceleiași</b> perechi (aceeași toleranță ca la „Informație din sursă”).','Roluri inversate → „Aproape: ai găsit relația, dar ai inversat rolurile” + buton ⇅.','Cauza și efectul sunt corecte separat, dar din perechi diferite → „Fiecare informație e bună, dar nu sunt legate între ele”.','Elevul vede relația construită: Cauză → Efect, citită ca o frază.'],
+    admin:['Sursa.','Perechile valide: marchezi cauza, apoi efectul (oricâte perechi).','Opțional: o explicație per pereche, afișată după verificare.'],
+    try:'cauza „Prin legea din 1863 au fost trecute în proprietatea statului «toate averile mănăstirești»” și efectul „aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului”. Apoi inversează-le.'});
+  $('#pens').innerHTML=penBar(['cause','effect']);
+  const api=Marker($('#mk'),SRC_B,{pens:['cause','effect'],limits:{cause:1,effect:1},autoNext:{cause:'effect'},onChange:drawCE});
+  cur_api=api;
+  const P=(c,e)=>({cause:spanFrom(api,c),effect:spanFrom(api,e)});
+  const pairs=[P('domnul era obligat să colaboreze cu două guverne','Începuturile domniei lui Al. I. Cuza au fost anevoioase'),
+   P('au fost trecute în proprietatea statului „toate averile mănăstirești“','aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului'),
+   P('aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului','a mărit suprafața de care dispuneau autoritățile pentru viitoarea împroprietărire'),
+   P('Cu scopul de a elimina obstacolele din calea împroprietăririi','Cuza a promulgat o nouă constituție (Statutul Dezvoltător)')];
+  // effects inside the same sentence as the cause: relax max to the core itself
+  pairs.forEach(p=>{['cause','effect'].forEach(r=>{p[r].max=[p[r].max[0],p[r].max[1]];});});
+  window.swapCE=()=>{const ms=api.st.marks; ms.forEach(m=>{m.pen=m.pen==='cause'?'effect':'cause'; delete m.v;}); api.paint();};
+  $('#check').onclick=()=>{
+    const c=api.st.marks.find(m=>m.pen==='cause'), e=api.st.marks.find(m=>m.pen==='effect'); if(!c||!e) return;
+    const loose=(m,s)=>{const j=judgeSpan(m,s);return j==='ok'||j==='long';};
+    const exact=pairs.find(p=>judgeSpan(c,p.cause)==='ok'&&judgeSpan(e,p.effect)==='ok');
+    const near=pairs.find(p=>loose(c,p.cause)&&loose(e,p.effect));
+    const swapped=pairs.find(p=>loose(c,p.effect)&&loose(e,p.cause));
+    const partial=pairs.find(p=>judgeSpan(c,p.cause)!=='no'&&judgeSpan(e,p.effect)!=='no');
+    const model=`<details><summary>Vezi relațiile posibile din sursă</summary><div class="model">${pairs.map(p=>`<b>Cauză:</b> ${p.cause.text}<br><b>Efect:</b> ${p.effect.text}`).join('<hr style="border:0;border-top:1px solid var(--border)">')}</div></details>`;
+    let out;
+    if(exact){c.v=e.v='ok';out=fb('ok','Corect!','Ai stabilit o relație cauză-efect validă și ai precizat corect rolurile.'+model);}
+    else if(near){c.v=e.v='almost';out=fb('almost','Aproape','Relația e corectă, dar ai selectat și text în plus. Păstrează doar cele două informații.'+model);}
+    else if(swapped){c.v=e.v='almost';out=fb('almost','Aproape: ai inversat rolurile','Informațiile sunt legate, dar cauza e cealaltă. Întreabă-te: care s-a întâmplat din cauza celeilalte? <div style="margin-top:8px"><button class="small-btn" onclick="swapCE()">⇅ Inversează rolurile</button></div>'+model);}
+    else if(partial){c.v=e.v='almost';out=fb('almost','Aproape','Ai găsit relația, dar una dintre informații e incompletă. Ia fiecare informație până la capătul ideii.'+model);}
+    else { const cOk=pairs.some(p=>loose(c,p.cause)), eOk=pairs.some(p=>loose(e,p.effect));
+      c.v=cOk?'almost':'no'; e.v=eOk?'almost':'no';
+      out=fb('no','Mai lucrează', cOk&&eOk?'Fiecare informație poate fi cauză, respectiv efect, dar nu sunt legate între ele.':'Caută conectorii din text: „fiindcă”, „ca urmare”, „cu scopul de a”. Ei arată unde e cauza și unde e efectul.'+model); }
+    api.st.active=null; api.paint(); $('#out').innerHTML=out; afterCheck();
+  };
+}
+function drawCE(api){
+  if(!$('#marks')) return;
+  const c=api.st.marks.find(m=>m.pen==='cause'), e=api.st.marks.find(m=>m.pen==='effect');
+  const card=(m,pen)=> m? `<div class="mark"><span class="bar" style="background:${PENS[pen].color}"></span><div><div class="k">${PENS[pen].label}</div>„${api.text(m)}”</div><button class="x" onclick="cur_api.remove(cur_api.st.marks.find(x=>x.pen==='${pen}'))">✕</button></div>`
+    : `<div class="mark empty"><span class="bar" style="background:${PENS[pen].color}"></span>${PENS[pen].label}: marchează în text</div>`;
+  $('#marks').innerHTML = card(c,'cause') + `<div class="arrow">↓ a dus la</div>` + card(e,'effect') + (c&&e?`<button class="swap" onclick="swapCE()">⇅ Inversează rolurile</button>`:'');
+}
+
+function aiFlow(after){ $('#out').innerHTML=loading(); $('#check').disabled=true; setTimeout(()=>{ after(); afterCheck(); },1300); }
+
+function renderFacts(){
+  $('#stage').innerHTML = phone({chip:'Prezentare fapte',hint:'facts',prompt:'Prezentați două fapte istorice din perioada 1866-1886 referitoare la România.',
+    body:`<label class="fl">Faptul istoric 1</label><textarea class="in" id="f1" placeholder="Ce s-a întâmplat, când, cine…">În 1866 s-a adoptat Constituția.</textarea>
+    <label class="fl">Faptul istoric 2</label><textarea class="in" id="f2">În 1877, România își proclamă independența de stat, iar în urma războiului ruso-româno-otoman din 1877-1878 independența este recunoscută prin Congresul de pace de la Berlin.</textarea>`})
+  + side({title:'Prezentare fapte istorice',bac:'„Prezentați două fapte istorice din perioada… referitoare la…” (I.6, 6 puncte).',
+    check:['<span class="tag ai">AI</span> Câte un câmp pentru fiecare fapt; feedback separat pe fiecare.','AI-ul primește <b>contextul obligatoriu</b> din admin: perioada, ce faptele trebuie să privească și o listă de fapte de referință (nu exhaustivă).','Criterii fixe trimise AI-ului: e un fapt real, e în perioadă, privește subiectul, e <b>prezentat</b> (nu doar menționat).','Verdict pe fapt: Corect / Aproape (ex. doar menționat) / Mai lucrează (în afara perioadei, inexact), plus „ce poți adăuga”.','Fără AI, imediat: același fapt scris de două ori; câmp gol sau foarte scurt.'],
+    admin:['Enunțul.','Context pentru AI (obligatoriu): perioada, tema, fapte de referință, observații („Constituția din 1866 se acceptă doar dacă e prezentată”).','Un răspuns model, arătat după feedback.'],
+    try:'apasă „Verifică” (feedback simulat).'});
+  $('#check').onclick=()=>aiFlow(()=>{ $('#f1').className='in almost'; $('#f2').className='in ok';
+    $('#out').innerHTML=`<div class="sub" style="font-weight:800;font-size:12.5px;color:var(--muted);margin-top:10px">FAPTUL 1</div>`+fb('almost','Aproape: e doar menționat','<b>Bine:</b> faptul este în perioadă și privește România.<div class="sub">Ce poți îmbunătăți</div><ul><li>Prezintă-l: ce prevedea constituția? (ex. monarhia constituțională, separația puterilor, drepturi și libertăți).</li><li>Precizează cine a adoptat-o (Adunarea Constituantă) sau sub ce domnie (Carol I).</li></ul>')
+     +`<div class="sub" style="font-weight:800;font-size:12.5px;color:var(--muted);margin-top:10px">FAPTUL 2</div>`+fb('ok','Corect','Fapt prezentat complet: dată, context, consecință.')
+     +`<div class="ai-note">Feedback generat cu AI pe baza indicațiilor profesorului. Poate greși.</div>`;});
+}
+
+function renderSim(){
+  $('#stage').innerHTML = phone({chip:'Asemănare',hint:'sim',prompt:'Menționați o asemănare între două acțiuni desfășurate de România în relațiile internaționale din perioada 1917-1920.',
+    body:`<label class="fl">Răspunsul tău</label><textarea class="in" id="s1">România a participat la Conferința de Pace de la Paris și a semnat tratatul de la Trianon.</textarea><div class="cc">94 / 600</div>`})
+  + side({title:'Asemănare / deosebire',bac:'„Menționați o asemănare / deosebire între două acțiuni…” (I.7, 4 puncte).',
+    check:['<span class="tag ai">AI</span> Context obligatoriu: perioada, acțiunile de referință și asemănările acceptate.','Criterii: numește două acțiuni din perioadă, spune explicit ce au în comun (sau prin ce diferă).','Greșeala tipică, recunoscută de AI: descrie acțiunile, dar nu spune asemănarea.','<i>Variantă:</i> același tip acoperă și „deosebire”; în admin alegi Asemănare / Deosebire.'],
+    admin:['Enunțul și alegerea Asemănare / Deosebire.','Context pentru AI (obligatoriu): acțiuni de referință, asemănări acceptate.','Răspuns model.'],
+    try:'apasă „Verifică”.'});
+  $('#check').onclick=()=>aiFlow(()=>{ $('#s1').className='in almost';
+    $('#out').innerHTML=fb('almost','Aproape','<b>Bine:</b> ai ales două acțiuni corecte din perioadă.<div class="sub">Ce lipsește</div><ul><li>Nu ai spus ce au în comun. Formulează explicit: „Atât…, cât și… au urmărit…”.</li></ul><details><summary>Vezi un răspuns model</summary><div class="model">Atât participarea la Conferința de Pace de la Paris, cât și semnarea tratatului de la Trianon au urmărit recunoașterea internațională a Marii Uniri.</div></details>')+`<div class="ai-note">Feedback generat cu AI pe baza indicațiilor profesorului. Poate greși.</div>`;});
+}
+
+function renderPov(){
+  $('#stage').innerHTML = phone({chip:'Punct de vedere',hint:'pov',prompt:'Formulați, pe baza sursei date, un punct de vedere referitor la acțiunile conducătorilor Moldovei, în perioada 1369-1391, susținându-l cu două informații selectate din sursă.',
+    body:`<label class="fl">1 · Punctul tău de vedere</label><textarea class="in" id="pv" style="min-height:80px">Consider că acțiunile conducătorilor Moldovei au urmărit apărarea țării față de pretențiile Ungariei.</textarea>
+    <label class="fl">2 · Marchează în sursă două informații care îl susțin</label>
+    <div class="src"><div class="src-h"><span>Sursa</span></div><div class="src-body" id="mk"></div><div class="src-cite">(${CITE_M})</div></div><div class="marks" id="marks"></div>`})
+  + side({title:'Punct de vedere + informații din sursă',bac:'„Formulați… un punct de vedere…, susținându-l cu două informații selectate din sursă” (II.5, 10 puncte).',
+    check:['<span class="tag mix">mixt</span> Exercițiul are două părți, verificate diferit.','<b>Informațiile:</b> marker pe text, fără AI (aceeași regulă ca la „Informație din sursă”), față de informațiile marcate în admin.','<b>Punctul de vedere:</b> AI. Context: tema, perioada, puncte de vedere acceptabile. Criterii: e o apreciere (nu o informație), privește tema și perioada.','<b>Legătura:</b> AI primește și informațiile marcate și spune dacă chiar susțin punctul de vedere.','Feedback pe 3 rânduri: punct de vedere · informația 1 · informația 2.'],
+    admin:['Sursa.','Informațiile valide, marcate pe text.','Context pentru AI (obligatoriu): tema, perioada, exemple de puncte de vedere bune și greșite.'],
+    try:'marchează două informații (ex. cererea lui Lațcu către papă și protecția Poloniei), apoi „Verifică”.'});
+  const api=Marker($('#mk'),SRC_M,{pens:['arg'],limits:{arg:2},onChange:a=>drawMarks(a,2)}); cur_api=api;
+  const answers=['Lațcu a adresat papei Urban al V-lea rugămintea de a înființa o episcopie catolică în Moldova','Siretul, devenit de curând capitală a Moldovei, obținea şi statutul de reședință episcopală','semnarea Tratatului moldo-polon de la Lemberg (Liov)','Petru I Mușat își asigura astfel protecția Poloniei împotriva vechilor pretenții maghiare la pământurile est-carpatice','Petru I Mușat a hotărât să înființeze o mitropolie ortodoxă'].map(c=>spanFrom(api,c));
+  $('#check').onclick=()=>{ const ms=api.st.marks; if(ms.length<2) return;
+    const res=ms.map(m=>{const js=answers.map(a=>judgeSpan(m,a)); return js.includes('ok')?'ok':(js.includes('long')||js.includes('short'))?'almost':'no';});
+    ms.forEach((m,k)=>m.v=res[k]); api.st.active=null; api.paint();
+    aiFlow(()=>{ $('#pv').className='in ok';
+      const line=(k)=>res[k]==='ok'?fb('ok',`Informația ${k+1}: corectă și susține punctul de vedere`,''):res[k]==='almost'?fb('almost',`Informația ${k+1}: incompletă sau cu text în plus`,'Ia informația până la capătul ideii, fără propoziția vecină.'):fb('no',`Informația ${k+1}: nu susține punctul de vedere`,'Caută acțiuni prin care Moldova se apără de Ungaria.');
+      $('#out').innerHTML=fb('ok','Punctul de vedere: corect','Este o apreciere, se referă la acțiunile conducătorilor și la perioadă. <b>Sugestie:</b> poți fi mai precis („…au urmărit consolidarea independenței față de Ungaria”).')+line(0)+line(1)+`<div class="ai-note">Punctul de vedere e evaluat cu AI; informațiile sunt verificate exact.</div>`;});
+  };
+}
+
+const CONN={cauz:['deoarece','pentru ca','intrucat','fiindca','din cauza','datorita','ca urmare','cauza'],concl:['asadar','prin urmare','in concluzie','deci','astfel','in consecinta']};
+function renderArg(){
+  $('#stage').innerHTML = phone({chip:'Argumentare',hint:'arg',prompt:'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia în secolul al XV-lea românii participă la acțiuni militare cu caracter antiotoman.',
+    body:`<label class="fl">Argumentul tău</label><textarea class="in" id="ar" style="min-height:150px">Românii participă la acțiuni antiotomane deoarece Ștefan cel Mare învinge armata otomană la Vaslui.</textarea>
+    <div class="conn" id="conn"></div>`})
+  + side({title:'Argumentare (fapt + conectori)',bac:'„Argumentați, printr-un fapt istoric relevant, afirmația… (Se punctează prezentarea unui fapt istoric relevant și utilizarea conectorilor…)” (II.6 și în eseu).',
+    check:['<span class="tag mix">mixt</span> <b>Conectorii</b> se verifică fără AI, <b>în timp ce scrie</b>: cele două etichete se aprind când apare un conector de cauzalitate, respectiv de concluzie.','<b>Faptul istoric</b>: AI, cu context (afirmația, perioada, fapte relevante de referință). Criterii: relevant, din perioadă, prezentat (nu doar numit).','Același modul de argumentare se refolosește la ultima cerință din eseu.'],
+    admin:['Afirmația de argumentat.','Context pentru AI (obligatoriu): perioada, fapte relevante acceptate.','Lista de conectori e globală (în Setări), nu pe exercițiu.'],
+    try:'adaugă la final „Așadar, afirmația este adevărată.” și urmărește etichetele.'});
+  const upd=()=>{const t=' '+norm($('#ar').value)+' '; const has=l=>l.some(c=>t.includes(' '+c+' '));
+    $('#conn').innerHTML=`<span class="${has(CONN.cauz)?'on':''}">${has(CONN.cauz)?'✓':'○'} Conector de cauzalitate</span><span class="${has(CONN.concl)?'on':''}">${has(CONN.concl)?'✓':'○'} Conector de concluzie</span>`;};
+  $('#ar').oninput=upd; upd();
+  $('#check').onclick=()=>aiFlow(()=>{ const t=' '+norm($('#ar').value)+' '; const concl=CONN.concl.some(c=>t.includes(' '+c+' '));
+    $('#out').innerHTML=fb(concl?'ok':'almost',concl?'Corect':'Aproape','<b>Faptul istoric:</b> relevant și din secolul al XV-lea. <b>Sugestie:</b> adaugă anul (1475) și contextul (refuzul tributului).'+(concl?'':'<div class="sub">Ce lipsește</div><ul><li>Un conector de concluzie la final: „Așadar, …”, „Prin urmare, …”.</li></ul>'))+`<div class="ai-note">Conectorii sunt verificați automat; faptul istoric cu AI.</div>`;});
+}
+
+function renderEssay(){
+  const parts=[
+    {t:'Prezentarea constituției României adoptate în etapa stalinismului, în a doua jumătate a secolului al XX-lea',v:'În 1952 a fost adoptată o nouă constituție, după modelul sovietic, care consfințea rolul conducător al partidului comunist.',st:'ok',fb:fb('ok','Corect','Constituție prezentată: anul, modelul, o prevedere. Bine!')},
+    {t:'Menționarea a două acțiuni politice desfășurate de România în relațiile internaționale din perioada 1955-1969',v:'România a intrat în ONU.',st:'almost',fb:fb('almost','Aproape: o singură acțiune','<b>Bine:</b> aderarea la ONU (1955) e corectă.<div class="sub">Ce lipsește</div><ul><li>Încă o acțiune din 1955-1969 (ex. aderarea la Tratatul de la Varșovia, 1955; condamnarea invadării Cehoslovaciei, 1968).</li></ul>')},
+    {t:'Precizarea unei practici politice utilizate în România, în perioada 1970-1988 și menționarea a două aspecte referitoare la aceasta',v:'',st:'none'},
+    {t:'Formularea unui punct de vedere referitor la democrația din România în perioada 1990-1997 și susținerea acestuia printr-un argument istoric',v:'',st:'none',arg:true},
+  ];
+  const stl={none:'Necompletat',ok:'Corect',almost:'Aproape',no:'Mai lucrează'};
+  $('#stage').innerHTML = phone({chip:'Eseu · 4 cerințe',hint:'essay',prompt:'Elaborați un eseu despre evoluția politică a României în a doua jumătate a secolului al XX-lea.',
+    body:`<p class="howto">Scrie fiecare cerință în câmpul ei. Le poți verifica pe rând; la final primești și feedback pe eseul întreg (structură, cronologie, limbaj).</p>`+
+    parts.map((p,k)=>`<div class="part ${k===2?'open':''}" id="pt${k}"><div class="part-h" onclick="this.parentNode.classList.toggle('open')"><span class="part-n">${k+1}</span><span class="part-t">${p.t}</span><span class="st ${p.st}" id="pst${k}">${stl[p.st]}</span></div>
+      <div class="part-b"><textarea class="in" id="pv${k}" placeholder="Scrie aici…">${p.v}</textarea>${p.arg?'<div class="conn"><span>○ Conector de cauzalitate</span><span>○ Conector de concluzie</span></div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="cc" style="margin:0">${p.v.length} caractere</span><button class="small-btn" onclick="checkPart(${k})">Verifică cerința</button></div><div id="pf${k}">${p.fb||''}</div></div></div>`).join('')
+    +`<div class="src" style="margin-top:6px"><div style="font-weight:800;font-size:14px">Eseul întreg</div><p class="m" style="font-size:13px">Structură (introducere, cuprins, încheiere), cronologie, limbaj istoric, relația cauză-efect, încadrare în spațiu.</p><p class="m" style="font-size:12.5px">Disponibil după ce toate cele 4 cerințe sunt scrise · <b>2 din 4</b></p></div>`})
+  + side({title:'Eseu împărțit pe cerințe',bac:'Subiectul III: eseu de ~2 pagini, cu 4 cerințe + criterii de redactare (limbaj, structură, cauză-efect, argument, cronologie, spațiu).',
+    check:['<span class="tag ai">AI</span> Câte un câmp și câte un feedback pentru fiecare cerință; elevul poate verifica o cerință înainte să le scrie pe celelalte.','Context obligatoriu <b>pe fiecare cerință</b> (ce se acceptă, fapte de referință), plus regulile generale ale eseului.','Cerința cu „punct de vedere + argument” refolosește verificarea automată a conectorilor.','<b>Eseul întreg</b> (al doilea pas, după ce toate cerințele sunt scrise): AI primește cerințele lipite în ordine și dă feedback pe criteriile de redactare.','Starea fiecărei cerințe e vizibilă pe antet (Necompletat / Corect / Aproape / Mai lucrează).','<i>Întrebare deschisă:</i> câmpuri separate pentru Introducere și Încheiere? La BAC se punctează structura.'],
+    admin:['Tema eseului.','Lista de cerințe (2-6), fiecare cu: textul, contextul pentru AI (obligatoriu), un răspuns model și opțional un șablon de rezolvare propriu (ex. cerința de argument → șablonul „Argumentare”).','Criteriile de redactare: implicit cele din nota BAC, editabile.'],
+    try:'deschide cerința 3, scrie ceva și apasă „Verifică cerința”.'});
+  $('#ab').innerHTML='<button class="btn" disabled>Verifică eseul întreg</button>';
+  window.checkPart=k=>{ const v=$('#pv'+k).value.trim(); if(!v) return; $('#pf'+k).innerHTML=loading();
+    setTimeout(()=>{ $('#pf'+k).innerHTML=fb('almost','Aproape','<b>Bine:</b> ai precizat o practică politică (cultul personalității).<div class="sub">Ce lipsește</div><ul><li>Două aspecte referitoare la ea (ex. glorificarea lui Nicolae Ceaușescu în presă și în manifestări precum „Cântarea României”).</li></ul>'); $('#pst'+k).className='st almost'; $('#pst'+k).textContent='Aproape'; },1200); };
+}
+
+render('flow');
+</script>
+</body>
+</html>
