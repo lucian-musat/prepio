@@ -95,6 +95,17 @@ pnpm content:cloud:add-cards --apply   # inserts the missing cards at the end of
 
 `scripts/content-cloud.sh` uses the same credentials file as `db:cloud` (only `SUPABASE_ACCESS_TOKEN` is needed), fetches the project's service key with `supabase projects api-keys --reveal` (a new `secret` key, or the legacy `service_role` one) and passes it to `packages/content/src/addCards.ts` through the environment only; nothing secret is printed or passed as an argument. The script finds each lesson by its exact seed title (renamed or duplicated lessons are reported and skipped, exit code 1), skips a card when the lesson already has one with the same type and title (re-running is safe), uploads missing images under `images/seed/` without overwriting, and never edits or deletes existing cards. Locally the same script runs with `pnpm --filter @prepio/content add-cards [--apply]` against the `.env` Supabase.
 
+## Demo lesson (testing, pre-launch only)
+
+`packages/content/src/demoLesson.ts` defines „[demo] Toate funcționalitățile” in its own root node „Demo”: one card of every type (both image layouts, every rich-text block) and three single-choice questions whose first option is always correct, no writing exercises. The node is placed before every other root node, so the demo is the first lesson (open in guided mode). When a new lesson feature is added, add it to the demo lesson and re-run the script.
+
+```bash
+pnpm content:cloud:demo                    # dry run: create or refresh?
+pnpm content:cloud:demo --apply            # creates it, or replaces its cards/questions in place (same lesson id) and resets everyone's progress in it
+pnpm content:cloud:demo --remove --apply   # deletes the demo node and lesson (do this before real students use the app)
+pnpm content:demo --apply                  # the same against the local .env Supabase
+```
+
 ## Auth settings (Supabase dashboard)
 
 - Anonymous sign-ins: OFF. Sign-up and provider settings for student accounts: see [auth-setup.md](auth-setup.md). The Email provider stays ON (admin password login) with Confirm email ON; there is no email-only sign-up switch.

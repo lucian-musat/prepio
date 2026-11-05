@@ -11,6 +11,7 @@
     "seed": "tsx src/seed.ts",
     "add-cards": "tsx src/addCards.ts",
     "remove-test-lessons": "tsx src/removeTestLessons.ts",
+    "demo": "tsx src/demoLesson.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
