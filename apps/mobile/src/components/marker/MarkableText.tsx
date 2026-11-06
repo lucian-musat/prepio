@@ -244,17 +244,21 @@ export default function MarkableText({
   // ---- Handles ----
   const [lifted, setLifted] = useState<'start' | 'end' | null>(null);
   const liftOrigin = useRef<Point | null>(null);
-  const centre = (i: number): Point | null => {
+  // Where a lifted handle's moves start: its own edge of the word (1 px inside), at mid-line. Starting from the
+  // word centre would shift the result by half the word's width (a long last word made the handle land a word early).
+  const grip = (end: 'start' | 'end', i: number): Point | null => {
     const b = boxOf(i);
-    return b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : null;
+    const inner = layout.current.inner.get(i);
+    if (!b || !inner) return null;
+    return { x: end === 'start' ? b.x + inner.x + 1 : b.x + inner.x + inner.width - 1, y: b.y + b.height / 2 };
   };
-  const handleLive = useRef({ centre });
-  handleLive.current = { centre };
+  const handleLive = useRef({ grip });
+  handleLive.current = { grip };
   const activeMark = state.active === null ? undefined : state.marks[state.active];
   const handleCallbacks = useMemo(
     () => ({
       lift: (end: 'start' | 'end', i: number) => {
-        liftOrigin.current = handleLive.current.centre(i);
+        liftOrigin.current = handleLive.current.grip(end, i);
         setLifted(end);
         live.current.dispatch({ type: 'handleStart', end });
       },

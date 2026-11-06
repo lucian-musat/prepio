@@ -163,6 +163,23 @@ it('the active mark shows two handles; dragging the end handle lifts it and move
   ]);
 });
 
+it('a dragged handle moves from where it sits (the word edge), not from the word centre', async () => {
+  const dispatch = jest.fn();
+  const marks = [mark(1, 3)];
+  await render(<MarkableText source={source} state={state({ marks })} dispatch={dispatch} />);
+  await layoutWords();
+  await screen.rerender(<MarkableText source={source} state={state({ marks, active: 0 })} dispatch={dispatch} />);
+  const end = pans[pans.length - 1]!;
+  await act(async () => {
+    // The end handle sits at word 3's right edge (x = 190); the finger moves it 135 px left, onto word 1 (50–90).
+    (end.onBegin as (e: unknown) => void)({ absoluteX: 190, absoluteY: 22 });
+    end.onActivate?.({ x: 0, y: 0 });
+    (end.onUpdate as (e: unknown) => void)({ absoluteX: 55, absoluteY: 22 });
+    end.onFinalize?.({ x: 0, y: 0 });
+  });
+  expect(dispatch.mock.calls).toEqual([[{ type: 'handleStart', end: 'end' }], [{ type: 'dragMove', i: 1 }], [{ type: 'dragEnd' }]]);
+});
+
 it('a handle being dragged stays mounted at the moving end', async () => {
   await render(<MarkableText source={source} state={state({ marks: [mark(1, 3)] })} dispatch={jest.fn()} />);
   await layoutWords();
