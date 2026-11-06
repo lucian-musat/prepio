@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode, type Ref } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode, type Ref } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -32,7 +32,13 @@ type Props = {
   /** Changing it replays the content's enter animation (e.g. next question on the same route). */
   contentKey?: string;
   scrollRef?: Ref<Animated.ScrollView>;
+  /** On desktop, content up to `layout.maxWideContentWidth` instead of 720 px (a source beside the answer). */
+  wide?: boolean;
 };
+
+/** Height the content can use without scrolling (the scroll viewport minus its paddings); null before layout. */
+const ViewportContext = createContext<number | null>(null);
+export const useScreenViewport = () => useContext(ViewportContext);
 
 /** Top padding of the scroll content: the content wrapper sits this far below the scroll origin. */
 export const SCREEN_CONTENT_TOP = space[3];
@@ -60,14 +66,17 @@ export default function ScreenLayout({
   children,
   contentKey,
   scrollRef,
+  wide: wideContent = false,
 }: Props) {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const m = useRef({ y: 0, viewH: 0, contentH: 0 });
   const [topRaised, setTopRaised] = useState(false);
   const [bottomRaised, setBottomRaised] = useState(false);
+  const [viewH, setViewH] = useState<number | null>(null);
   const { bottom } = useSafeAreaInsets();
   // Without an action bar nothing else clears the gesture bar / home indicator, so the content does.
-  const insetPad = !actions && bottom ? { paddingBottom: (wide ? space[10] : space[6]) + bottom } : null;
+  const bottomPad = (wide ? space[10] : space[6]) + (actions ? 0 : bottom);
+  const insetPad = !actions && bottom ? { paddingBottom: bottomPad } : null;
 
   const update = useCallback(() => {
     const { y, viewH, contentH } = m.current;
@@ -87,6 +96,7 @@ export default function ScreenLayout({
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       m.current.viewH = e.nativeEvent.layout.height;
+      setViewH(e.nativeEvent.layout.height);
       update();
     },
     [update],
@@ -116,8 +126,15 @@ export default function ScreenLayout({
           showsVerticalScrollIndicator={false}
         >
           {/* Keyed: new content remounts with a fresh, hidden enter animation. */}
-          <Enter key={contentKey} testID="screen-content" config={SCREEN_ENTER} style={[styles.inner, wide && styles.innerWide]}>
-            {children}
+          <Enter
+            key={contentKey}
+            testID="screen-content"
+            config={SCREEN_ENTER}
+            style={[styles.inner, wide && styles.innerWide, wide && wideContent && styles.innerSplit]}
+          >
+            <ViewportContext.Provider value={viewH === null ? null : Math.max(0, viewH - SCREEN_CONTENT_TOP - bottomPad)}>
+              {children}
+            </ViewportContext.Provider>
           </Enter>
         </Animated.ScrollView>
         {actions ? (
@@ -144,4 +161,5 @@ const styles = StyleSheet.create({
   // Prototype .inner is 720 px including its gutters.
   inner: { width: '100%', maxWidth: layout.maxContentWidth - 2 * layout.gutter, alignSelf: 'center' },
   innerWide: { maxWidth: layout.maxContentWidth - 2 * layout.gutterWide },
+  innerSplit: { maxWidth: layout.maxWideContentWidth - 2 * layout.gutterWide },
 });

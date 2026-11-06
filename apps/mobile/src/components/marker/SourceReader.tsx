@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   border,
   color,
+  consolidationColor,
   feedbackText,
   markerPen,
   radius,
@@ -22,7 +23,16 @@ import MarkableText, { PEN_LABEL, type DragGesture } from './MarkableText';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
 
 export type PanelSource = { source: Source; label: SourceLabel };
-export type PanelMarker = { cfg: MarkerConfig; state: MarkerState; dispatch: (a: MarkerAction) => void; verdicts?: ExerciseFeedback['marks'] };
+/** `readOnly` (after checking): the marks and verdicts stay visible, but nothing can be marked and no pens show. */
+export type PanelMarker = {
+  cfg: MarkerConfig;
+  state: MarkerState;
+  dispatch: (a: MarkerAction) => void;
+  verdicts?: ExerciseFeedback['marks'];
+  readOnly?: boolean;
+};
+/** The marker can mark (present and not read-only). */
+export const canMark = (m?: PanelMarker): m is PanelMarker => !!m && !m.readOnly;
 
 export const HINT = {
   start: 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.',
@@ -128,7 +138,7 @@ export function ReadingText({ source, marker, wordBoxRef, onDragGesture, onTextL
           state={marker?.state ?? NO_MARKS}
           dispatch={marker?.dispatch ?? noop}
           verdicts={marker?.verdicts}
-          readOnly={!marker}
+          readOnly={!canMark(marker)}
           reading
           onDragGesture={onDragGesture}
           wordBoxRef={wordBoxRef}
@@ -144,8 +154,10 @@ export function ReadingText({ source, marker, wordBoxRef, onDragGesture, onTextL
 /**
  * Scrolls `scroll` so the mark's first word sits a third of the way down. The words are measured after the
  * first frames, so it retries for a short while; it gives up quietly (the text then simply starts at the top).
+ * `offset`: how far the text's parent sits below the scroll content's top (e.g. the content padding), since the
+ * text's layout y is relative to its parent.
  */
-export function useScrollToMark(target: Mark | null, deps: unknown[]) {
+export function useScrollToMark(target: Mark | null, deps: unknown[], offset = 0) {
   const scrollRef = useRef<{ scrollTo: (o: { y: number; animated: boolean }) => void } | null>(null);
   const wordBoxRef = useRef<((i: number) => { y: number; height: number } | null) | null>(null);
   const textTop = useRef(0);
@@ -157,7 +169,7 @@ export function useScrollToMark(target: Mark | null, deps: unknown[]) {
     const tryScroll = () => {
       const box = wordBoxRef.current?.(target.from);
       if (box && scrollRef.current) {
-        scrollRef.current.scrollTo({ y: Math.max(0, textTop.current + box.y - viewport.current / 3), animated: false });
+        scrollRef.current.scrollTo({ y: Math.max(0, offset + textTop.current + box.y - viewport.current / 3), animated: false });
         return;
       }
       if (++frames < 30) raf = requestAnimationFrame(tryScroll);
@@ -207,6 +219,9 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
 
   const count = Math.max(1, tokenizeSource(current.source.body).words.length);
   const marks = marker?.state.marks.filter((m) => m.sourceId === current.source.id) ?? [];
+  // The tray floats above the gesture bar / home indicator; the text and the minimap end above the tray.
+  const trayBottom = insets.bottom + space[2.5];
+  const aboveTray = trayBottom + tray;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -247,7 +262,7 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
               ref={scrollRef as never}
               testID="reader-scroll"
               style={styles.fill}
-              contentContainerStyle={[styles.body, { paddingBottom: tray + space[6] }]}
+              contentContainerStyle={[styles.body, { paddingBottom: aboveTray + space[6] }]}
               requireToFail={drag}
             >
               <SourceTabs sources={sources} label={current.label} onLabel={onLabel} testPrefix="reader" />
@@ -260,7 +275,7 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
                 onTextLayout={onTextLayout}
               />
             </ScrollView>
-            <View pointerEvents="none" style={[styles.mini, { bottom: tray + space[2] }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <View pointerEvents="none" style={[styles.mini, { bottom: aboveTray + space[2] }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               {marks.map((m, k) => (
                 <View
                   key={k}
@@ -273,8 +288,8 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
               ))}
             </View>
           </View>
-          <View style={[styles.tray, { bottom: insets.bottom + space[2.5] }]} onLayout={(e) => setTray(e.nativeEvent.layout.height)}>
-            {marker ? (
+          <View style={[styles.tray, { bottom: trayBottom }]} onLayout={(e) => setTray(e.nativeEvent.layout.height)}>
+            {canMark(marker) ? (
               <>
                 <PenBar marker={marker} />
                 <AppText role="caption" color="textMuted" style={styles.hint} accessibilityLiveRegion="polite">
@@ -292,7 +307,7 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  reader: { flex: 1, backgroundColor: color.surface },
+  reader: { flex: 1, backgroundColor: consolidationColor.paper },
   top: {
     flexDirection: 'row',
     alignItems: 'center',

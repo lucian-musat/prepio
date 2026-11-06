@@ -42,7 +42,9 @@ Each hue has a 50-900 scale (`palette.teal[700]` ...): `teal`, `yellow`, `green`
 | `accent` / `accentSubtle` / `onAccent` | `#FFC93C` / `#FFF6D9` / `#3A2C00` | Highlights, confetti |
 | `success` / `successSubtle` | `#22A55B` / `#E5F7EC` | Correct state |
 | `danger` / `dangerSubtle` | `#E5484D` / `#FDECEC` | Wrong state, errors |
-| `feedbackText.good` / `.wrong` | `#1A7C49` / `#A54042` | Verdict text (AA on the subtle backgrounds) |
+| `feedbackText.good` / `.almost` / `.wrong` | `#1A7C49` / `#8A6A00` / `#A54042` | Verdict text (AA on successSubtle / accentSubtle / dangerSubtle); `.almost` is the consolidation „Aproape” |
+| `consolidationColor.paper` | `#FFFDF8` | Warm paper behind long source texts: the source card, the reader, the desktop split's source column (mockup `--paper`) |
+| `consolidationColor.tint` | `#EEE8FF` | Lilac of the consolidation zone and its „Consolidare deblocată” card (mockup) |
 | `difficultyTone` | easy: success on successSubtle; medium: `#8A6A00` on accentSubtle; hard: danger on dangerSubtle | Difficulty badge |
 
 Contrast (WCAG 2.x, `contrastRatio()` in the theme, covered by tests):
@@ -81,7 +83,7 @@ Both are readonly tuples: spread/cast them for `expo-linear-gradient`.
 |---|---|
 | `space` (key = step) | 1: 4, 1.5: 6, 2: 8, 2.5: 10, 3: 12, 3.5: 14, 4: 16, 4.5: 18, 5: 20, 5.5: 22, 6: 24, 8: 32, 10: 40, 12: 48 |
 | `radius` | xs 9, sm 12, md 14, lg 20, xl 26, pill 999 |
-| `layout` | maxContentWidth 720, gutter 16, gutterWide 32, wideBreakpoint 768, minTouch 48 |
+| `layout` | maxContentWidth 720, maxWideContentWidth 1180 (`ScreenLayout wide`: the consolidation source split), gutter 16, gutterWide 32, wideBreakpoint 768, minTouch 48 |
 
 ### Type roles
 
@@ -152,7 +154,7 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 
 | Component | Props | Use |
 |---|---|---|
-| `ScreenLayout` | `title`, `logo`, `progress`, `onBack`, `actions`, `feedback`, `tone`, `contentKey`, `scrollRef` | Frame of every screen: fixed `TopBar`, scrolling content (max 720, enters with a slide), fixed `ActionBar` when `actions` is set. Changing `contentKey` remounts and replays the enter. testIDs `top-bar`, `screen-scroll`, `action-bar`. |
+| `ScreenLayout` | `title`, `logo`, `progress`, `onBack`, `actions`, `feedback`, `tone`, `contentKey`, `scrollRef`, `wide` | Frame of every screen: fixed `TopBar`, scrolling content (max 720, enters with a slide; `wide`: max 1180 on desktop), fixed `ActionBar` when `actions` is set. Changing `contentKey` remounts and replays the enter. `useScreenViewport()` gives children the height the content can use without scrolling (the desktop source column fills it). testIDs `top-bar`, `screen-scroll`, `action-bar`. |
 | `TopBar` | `title`, `logo`, `progress`, `onBack`, `raised` | Used by `ScreenLayout`. `goBackOrHome()` goes back, or to `/` when there is no history (direct `/lesson/<id>` links). |
 | `ActionBar` | `tone` (neutral / good / wrong), feedback slot, children | Bottom bar (padding 14 + safe-area inset); good/wrong tint with the verdict slot above the buttons. |
 | `Surface` | `padding` (space key), `radius` (lg / xl) | White card with the solid card shadow. |
@@ -166,7 +168,7 @@ Compose screens from these; reach for raw `View`/`Text` styles only for layout g
 | `Button` | `label`, `onPress`, `variant` (primary / secondary), `tone` (primary / success / danger), `disabled`, `loading`, `flex`, `accessibilityLabel` (defaults to `label`; set it when the visible text isn't enough for screen readers) | Every action. 3D press, 48 px minimum, `loading` shows a spinner and sets busy. |
 | `IconButton` / `Icon` | icons: back, chevron-right, check, close, up, down, card types (text, images, video, timeline, schema, link), plus, info | 48 px hit area, 40 px visual; `Icon` draws the svg glyphs. |
 | `OptionRow` | `label`, `marker` ('A'... or 'checkbox'), `state` (idle / selected / correct / wrong), `checked`, `onPress`, `disabled`, `accessibilityLabel` (defaults to `label`; the caller adds any verdict suffix) | Answer options: press scale, pop on correct, shake on wrong; radio/checkbox semantics. |
-| `TextArea` | `value`, `onChangeText`, `accessibilityLabel`, `placeholder`, `invalid` | Multiline input with focus ring; `invalid` turns border and ring to danger. |
+| `TextArea` | `value`, `onChangeText`, `accessibilityLabel`, `placeholder`, `invalid`, `status`, `editable`, `maxLength`, `minHeight` | Multiline input with focus ring; `invalid` turns border and ring to danger. `status` (`ok` / `almost` / `no`, also on `TextField`) colours the border of a checked answer success / accent / danger. |
 
 ### Feedback and status
 
@@ -203,7 +205,7 @@ Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, on
 
 **Documented palette exceptions** (the only `palette.*` uses in the student app; there is no semantic token for these decorative strokes yet): `palette.teal[300]` / `palette.teal[700]` for the timeline line gradient, `palette.yellow[600]` for the key-moment dot ring, `palette.teal[300]` for the schema cause-box edge. If another component needs them, promote them to semantic tokens (e.g. `timelineLineStart/End`, `keyMarkerBorder`, `schemaCauseBorder`) in `theme.ts` instead of adding more exceptions.
 
-**Documented exception: marker pens.** The consolidation marker (`apps/mobile/src/components/marker/`) highlights source words with fixed highlighter colours from the approved mockups, kept as the `markerPen` token in `theme.ts` (not palette steps): `info` (Informație) `#FFE38A`, `cause` (Cauză) `#99F6E4`, `effect` (Efect) `#FFD0A8`, `support` (Informație-suport) `#C9D7FF`. `text` stays AA on each (tested). Marks have 5 px rounded ends; the active mark has two 13 px `text` handle dots with a 2 px `surface` ring (touch area: dot + 12 px each side); the tap-tap anchor is a blinking 2 px dashed `primary` outline; verdict underlines are 3 px `success` / `accent` / `danger` (ok / almost / no); „[...]” omissions are `textMuted`.
+**Documented exception: marker pens.** The consolidation marker (`apps/mobile/src/components/marker/`) highlights source words with fixed highlighter colours from the approved mockups, kept as the `markerPen` token in `theme.ts` (not palette steps): `info` (Informație) `#FFE38A`, `cause` (Cauză) `#99F6E4`, `effect` (Efect) `#FFD0A8`, `support` (Informație-suport) `#C9D7FF`. `text` stays AA on each (tested). Likewise `consolidationColor` (`paper`, `tint`) is a fixed pair from the mockups, not palette steps; `text` and `textMuted` stay AA on both (tested). Marks have 5 px rounded ends; the active mark has two 13 px `text` handle dots with a 2 px `surface` ring (touch area: dot + 12 px each side); the tap-tap anchor is a blinking 2 px dashed `primary` outline; verdict underlines are 3 px `success` / `accent` / `danger` (ok / almost / no); „[...]” omissions are `textMuted`.
 
 **Reading typeface.** Source texts in the reader use Literata (family keys `reading` = 400, `readingMedium` = 500 in `fonts.ts`; covers ș ț ă â î and „ ”), 17 px, line height 24 plus a 3.5 px gap per line (~1.8 pitch). It is not a type role: only `MarkableText` (with `reading`) and the reader use it.
 

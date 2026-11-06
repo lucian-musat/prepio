@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, radius, space } from '@prepio/shared';
+import { border, color, consolidationColor, radius, space } from '@prepio/shared';
 import { AppText } from '../../ui';
 
-/** Tint of the consolidation zone (mockup `#EEE8FF`). */
-export const CONSOLIDATION_TINT = '#EEE8FF';
+/** Tint of the consolidation zone (the lilac `consolidationColor.tint`). */
+export const CONSOLIDATION_TINT = consolidationColor.tint;
 
 type Props = {
   icon: string;

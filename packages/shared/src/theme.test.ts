@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   border,
   color,
+  consolidationColor,
   contrastRatio,
   difficultyTone,
   elevation,
@@ -24,6 +25,14 @@ describe('design tokens', () => {
   it('marker pens are the approved mockup colours, and text stays AA on each', () => {
     expect(markerPen).toEqual({ info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' });
     for (const bg of Object.values(markerPen)) expect(contrastRatio(color.text, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('consolidation colours are the approved mockup paper and lilac; text stays AA on both', () => {
+    expect(consolidationColor).toEqual({ paper: '#FFFDF8', tint: '#EEE8FF' });
+    for (const bg of Object.values(consolidationColor)) {
+      expect(contrastRatio(color.text, bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color.textMuted, bg)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it('semantic colours match the approved variant B', () => {
@@ -68,7 +77,7 @@ describe('design tokens', () => {
       danger: palette.red[500],
       dangerSubtle: palette.red[50],
     });
-    expect(feedbackText).toEqual({ good: palette.green[600], wrong: palette.red[700] });
+    expect(feedbackText).toEqual({ good: palette.green[600], almost: palette.yellow[700], wrong: palette.red[700] });
   });
 
   it('type scale is the prototype values', () => {
@@ -125,7 +134,7 @@ describe('design tokens', () => {
   });
 
   it('layout and gradients are the prototype values', () => {
-    expect(layout).toEqual({ maxContentWidth: 720, gutter: 16, gutterWide: 32, wideBreakpoint: 768, minTouch: 48 });
+    expect(layout).toEqual({ maxContentWidth: 720, maxWideContentWidth: 1180, gutter: 16, gutterWide: 32, wideBreakpoint: 768, minTouch: 48 });
     expect(gradient).toEqual({
       hero: { colors: ['#0D9488', '#14B8A6', '#5EEAD4'], locations: [0, 0.55, 1], angle: 135 },
       progress: { colors: ['#0D9488', '#2DD4BF'], angle: 90 },
@@ -148,11 +157,12 @@ describe('design tokens', () => {
       ['medium/accentSubtle', difficultyTone.medium.fg, color.accentSubtle],
       ['feedback wrong/dangerSubtle', feedbackText.wrong, color.dangerSubtle],
       ['feedback good/successSubtle', feedbackText.good, color.successSubtle],
+      ['feedback almost/accentSubtle', feedbackText.almost, color.accentSubtle],
     ];
     for (const [name, fg, bg] of pairs) {
       expect(contrastRatio(fg, bg), name).toBeGreaterThanOrEqual(4.5);
     }
-    expect(feedbackText).toEqual({ good: '#1A7C49', wrong: '#A54042' });
+    expect(feedbackText).toEqual({ good: '#1A7C49', almost: '#8A6A00', wrong: '#A54042' });
   });
 
   it('button label meets AA', () => {

@@ -1,8 +1,8 @@
 import { useReducer } from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
+import { consolidationColor, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
 import { initialMarker, markerReducer, type MarkerAction, type MarkerConfig, type MarkerMark, type MarkerState } from './markerReducer';
 import MarkSlots from './MarkSlots';
 import SourcePanel from './SourcePanel';
@@ -189,9 +189,61 @@ it('at 1000 px wide it renders the split, with no card and no reader', async () 
   expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
 });
 
+it('a read-only marker (after checking) keeps the marks but offers no pens and only reading', async () => {
+  const state = initialMarker(ce, [{ sourceId: 'b', from: 2, to: 4, pen: 'cause' }]);
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <SourcePanel sources={[{ source: long('b'), label: 'B' }]} prompt={PROMPT} marker={{ cfg: ce, state, dispatch: jest.fn(), readOnly: true }}>
+        <Text>answer-area</Text>
+      </SourcePanel>
+    </SafeAreaProvider>,
+  );
+  expect(screen.getByText('📖 Citește sursa')).toBeTruthy();
+  await press(screen.getByTestId('source-card-B'));
+  expect(screen.queryByTestId('pen-cause')).toBeNull();
+  expect(screen.getByText('Gata')).toBeTruthy();
+});
+
+it('the split column is as tall as the screen viewport it sits in; its text sits on paper', async () => {
+  width = 1000;
+  const { ScreenLayout } = require('../../ui');
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ScreenLayout title="x" actions={<Text>Verifică</Text>}>
+        <SourcePanel sources={[{ source: long('b'), label: 'B' }]} prompt={PROMPT}>
+          <Text>answer-area</Text>
+        </SourcePanel>
+      </ScreenLayout>
+    </SafeAreaProvider>,
+  );
+  await act(async () => void fireEvent(screen.getByTestId('screen-scroll'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 1000, height: 700 } } }));
+  const left = StyleSheet.flatten(screen.getByTestId('split-left').props.style);
+  expect(left.height).toBe(700 - 12 - 40);
+  expect(left.backgroundColor).toBe(consolidationColor.paper);
+});
+
 describe('MarkSlots', () => {
   const src = long('b');
   const base = (patch: Partial<MarkerState>): MarkerState => ({ ...initialMarker(info), ...patch });
+
+  it('disabled: no ✕ and no swap; a verdict shows on its slot; ✕ reaches 48 px', async () => {
+    const both = base({
+      marks: [
+        { sourceId: 'b', from: 0, to: 1, pen: 'cause' },
+        { sourceId: 'b', from: 5, to: 6, pen: 'effect' },
+      ],
+    });
+    const r = await render(
+      <MarkSlots kind="cause_effect" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} onSwap={jest.fn()} disabled verdictOf={(i) => (i === 0 ? 'ok' : 'no')} />,
+    );
+    expect(screen.queryByLabelText('Șterge cauza')).toBeNull();
+    expect(screen.queryByText('⇅ Inversează rolurile')).toBeNull();
+    expect(screen.getByLabelText('Verdict: Corect')).toBeTruthy();
+    expect(screen.getByLabelText('Verdict: Mai lucrează')).toBeTruthy();
+    await r.rerender(<MarkSlots kind="cause_effect" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} />);
+    const x = screen.getByLabelText('Șterge cauza');
+    expect(28 + x.props.hitSlop.top + x.props.hitSlop.bottom).toBeGreaterThanOrEqual(48);
+  });
 
   it('info: filled slots show the quoted text with ✕, empty ones invite to mark', async () => {
     const onRemove = jest.fn();

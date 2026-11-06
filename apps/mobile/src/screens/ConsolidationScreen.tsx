@@ -1,0 +1,194 @@
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { space, type LessonSummary } from '@prepio/shared';
+import { useAuth } from '../auth/AuthProvider';
+import {
+  fetchAttempts,
+  fetchConsolidation,
+  fetchRun,
+  newRun,
+  resolveRun,
+  saveAttempt,
+  saveRun,
+  type Attempt,
+  type ConsolidationData,
+  type Run,
+} from '../lib/consolidation';
+import { fetchHome } from '../lib/content';
+import { modeOf, type LearningMode } from '../lib/learningMode';
+import { lessonAccess, orderedLessons } from '../lib/lessonFlow';
+import { fetchProgress } from '../lib/progress';
+import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import ConsolidationEnd from './consolidation/ConsolidationEnd';
+import ExerciseScreen from './consolidation/ExerciseScreen';
+
+type Loaded = {
+  data: ConsolidationData;
+  finished: Set<string>;
+  order: LessonSummary[];
+  attempts: Map<string, Attempt>;
+};
+
+function Message({ title, body, action }: { title: string; body?: string; action: { label: string; onPress: () => void } }) {
+  return (
+    <ScreenLayout title="Consolidare" onBack={goBackOrHome}>
+      <Surface style={styles.message}>
+        <AppText role="section">{title}</AppText>
+        {body ? (
+          <AppText role="small" color="textMuted">
+            {body}
+          </AppText>
+        ) : null}
+        <Button label={action.label} onPress={action.onPress} />
+      </Surface>
+    </ScreenLayout>
+  );
+}
+
+/** The lesson to go on to after consolidation: guided, the current one; free, the next in order. */
+function nextLesson(order: LessonSummary[], finished: Set<string>, lessonId: string, mode: LearningMode) {
+  if (mode === 'guided') {
+    const access = lessonAccess(order, finished, 'guided');
+    return order.find((l) => access.get(l.id) === 'current');
+  }
+  const at = order.findIndex((l) => l.id === lessonId);
+  return at >= 0 ? order[at + 1] : undefined;
+}
+
+// Run and attempt writes never block the student: a failure is only logged, like lesson positions.
+const persistRun = (lessonId: string, run: Run) => saveRun(lessonId, run).catch((e) => console.warn('Could not save the consolidation run', e));
+
+/**
+ * `/lesson/[id]/consolidare`: the lesson's consolidation run (spec "Consolidation run"). Only for a finished lesson.
+ * Opening resumes an unfinished run, shows the summary after a finished one, or starts a new full run.
+ */
+export default function ConsolidationScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const lessonId = String(id);
+  const mode = modeOf(useAuth().profile);
+  const [loaded, setLoaded] = useState<Loaded | null | undefined>(undefined);
+  const [reload, setReload] = useState(0);
+  const [run, setRun] = useState<Run | null>(null);
+  const [tries, setTries] = useState(0);
+  const runRef = useRef<Run | null>(null);
+  runRef.current = run;
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoaded(undefined);
+    (async () => {
+      const [data, progress, home] = await Promise.all([fetchConsolidation(lessonId), fetchProgress(), fetchHome()]);
+      const finished = progress.finished;
+      const order = orderedLessons(home.sections);
+      if (!finished.has(lessonId) || data.exercises.length === 0) return { data, finished, order, attempts: new Map(), start: null };
+      const ids = data.exercises.map((e) => e.id);
+      const [attempts, saved] = await Promise.all([fetchAttempts(ids), fetchRun(lessonId)]);
+      return { data, finished, order, attempts, start: resolveRun(ids, saved, attempts) };
+    })().then(
+      ({ start, ...l }) => {
+        if (cancelled) return;
+        setLoaded(l);
+        if (start?.kind === 'new') persistRun(lessonId, start.run);
+        setRun(start && start.kind !== 'end' ? start.run : null);
+      },
+      (e) => {
+        console.warn('Could not load the consolidation', e);
+        if (!cancelled) setLoaded(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId, reload]);
+
+  if (loaded === null) {
+    return (
+      <Message
+        title="Nu am putut încărca consolidarea"
+        body="Verifică conexiunea la internet și încearcă din nou."
+        action={{ label: 'Reîncearcă', onPress: () => setReload((n) => n + 1) }}
+      />
+    );
+  }
+  if (loaded === undefined) {
+    return (
+      <ScreenLayout title="Consolidare" onBack={goBackOrHome}>
+        <View style={styles.loader}>
+          <Spinner />
+        </View>
+      </ScreenLayout>
+    );
+  }
+
+  const { data, finished, order, attempts } = loaded;
+  const backToLesson = { label: 'Înapoi la lecție', onPress: () => router.replace(`/lesson/${lessonId}`) };
+  if (!finished.has(lessonId)) {
+    return <Message title="Consolidarea e blocată" body="Consolidarea se deschide după ce termini lecția." action={backToLesson} />;
+  }
+  if (data.exercises.length === 0) {
+    return <Message title="Lecția nu are exerciții de consolidare" action={backToLesson} />;
+  }
+
+  const ids = data.exercises.map((e) => e.id);
+  const start = (onlyNotCorrect: boolean) => {
+    const r = newRun(ids, attempts, onlyNotCorrect);
+    setTries(0);
+    setRun(r);
+    persistRun(lessonId, r);
+  };
+
+  const exercise = run ? data.exercises.find((e) => e.id === run.exerciseIds[run.index]) : undefined;
+  if (!run || !exercise) {
+    const next = nextLesson(order, finished, lessonId, mode);
+    return (
+      <ConsolidationEnd
+        exercises={data.exercises}
+        attempts={attempts}
+        onBack={goBackOrHome}
+        onRestart={() => start(false)}
+        onRestartWrong={newRun(ids, attempts, true).exerciseIds.length > 0 ? () => start(true) : undefined}
+        next={
+          next
+            ? { label: 'Mergi la lecția următoare', onPress: () => router.replace(`/lesson/${next.id}`) }
+            : { label: 'Înapoi acasă', onPress: () => router.replace('/') }
+        }
+      />
+    );
+  }
+
+  const onChecked = (a: Attempt) => {
+    // The summary reads the latest attempts; keep the local copy current whatever the save does.
+    setLoaded((l) => (l ? { ...l, attempts: new Map(l.attempts).set(a.exerciseId, a) } : l));
+    saveAttempt(a).catch((e) => console.warn('Could not save the consolidation attempt', e));
+  };
+  const onContinue = () => {
+    const cur = runRef.current;
+    if (!cur) return;
+    const last = cur.index + 1 >= cur.exerciseIds.length;
+    const nextRun: Run = last ? { ...cur, finished: true } : { ...cur, index: cur.index + 1 };
+    persistRun(lessonId, nextRun);
+    setTries(0);
+    setRun(last ? null : nextRun);
+  };
+
+  return (
+    <ExerciseScreen
+      key={`${run.index}-${exercise.id}-${tries}`}
+      exercise={exercise}
+      sources={data.sources}
+      templates={data.templates}
+      index={run.index}
+      total={run.exerciseIds.length}
+      onBack={goBackOrHome}
+      onChecked={onChecked}
+      onContinue={onContinue}
+      onRetry={() => setTries((n) => n + 1)}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  message: { gap: space[3] },
+  loader: { paddingTop: space[12], alignItems: 'center' },
+});

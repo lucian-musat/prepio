@@ -51,11 +51,16 @@ export const color = {
 } as const;
 
 // Feedback text tones, AA on the matching subtle background. Deviation: good is #1A7C49, not the plan's #1C814C (only 4.39:1).
-export const feedbackText = { good: palette.green[600], wrong: palette.red[700] } as const;
+// `almost` (consolidation „Aproape”) is the AA yellow text tone, on accentSubtle.
+export const feedbackText = { good: palette.green[600], almost: palette.yellow[700], wrong: palette.red[700] } as const;
 
 // Marker pens (highlighter backgrounds behind source text), from the approved consolidation mockups.
 // A documented exception (docs/design-system.md): fixed highlighter colours, not palette steps.
 export const markerPen = { info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' } as const;
+
+// Consolidation surfaces from the approved mockups (documented exception, like the pens): `paper` behind source
+// texts (card, reader, desktop split), `tint` the lilac of the consolidation zone and its cards.
+export const consolidationColor = { paper: '#FFFDF8', tint: '#EEE8FF' } as const;
 
 // Difficulty badge colours (medium uses a darker yellow for AA on accentSubtle).
 export const difficultyTone: Record<Difficulty, { fg: string; bg: string }> = {
@@ -160,6 +165,8 @@ export const pressScale = { row: 0.98, icon: 0.92 } as const;
 // Layout metrics in px.
 export const layout = {
   maxContentWidth: 720,
+  // Screens that put a source beside the answer (consolidation split, long-sources mockup `.desk`).
+  maxWideContentWidth: 1180,
   gutter: 16,
   gutterWide: 32,
   wideBreakpoint: 768,

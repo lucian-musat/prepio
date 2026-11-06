@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { border, color, elevation, radius, readingMinutes, space, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
+import { border, color, consolidationColor, elevation, radius, readingMinutes, space, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
 import { AppText } from '../../ui';
 import { solidShadow } from '../../ui/elevation';
@@ -55,7 +55,7 @@ export default function SourceCard({ source, label, marking, onPress }: Props) {
         <Text numberOfLines={PREVIEW_LINES} style={styles.previewText}>
           {preview}
         </Text>
-        <LinearGradient colors={[`${color.surface}00`, color.surface]} style={styles.fade} pointerEvents="none" />
+        <LinearGradient colors={[`${consolidationColor.paper}00`, consolidationColor.paper]} style={styles.fade} pointerEvents="none" />
       </View>
       <View style={styles.open}>
         <AppText role="button" color="onPrimary">
@@ -69,7 +69,7 @@ export default function SourceCard({ source, label, marking, onPress }: Props) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   card: {
-    backgroundColor: color.surface,
+    backgroundColor: consolidationColor.paper,
     borderWidth: border.hairline,
     borderColor: color.border,
     borderRadius: radius.md,

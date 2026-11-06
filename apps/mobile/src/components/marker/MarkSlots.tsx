@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, markerPen, radius, space } from '@prepio/shared';
+import { border, color, layout, markerPen, radius, space, VERDICT_LABELS, type Verdict } from '@prepio/shared';
 import { AppText, Icon } from '../../ui';
+import { VERDICT_TONE } from '../consolidation/verdictTone';
 import { PEN_LABEL } from './MarkableText';
 import type { MarkerMark, MarkerState, Pen } from './markerReducer';
 import { useSourcePanel } from './SourcePanel';
@@ -15,17 +16,24 @@ type Props = {
   onOpen: (pen: Pen, markIndex: number | null) => void;
   onRemove: (index: number) => void;
   onSwap?: () => void;
+  /** After checking: no ✕ and no swap (the slots still open the source). */
+  disabled?: boolean;
+  /** The verdict of the mark at this index in `state.marks`, shown on its slot after checking. */
+  verdictOf?: (markIndex: number) => Verdict | null;
 };
 
 // Slot titles and the ✕ labels, per pen; numbered when the exercise asks for several.
 const TITLE: Record<Pen, string> = { info: 'Informația', support: 'Informația-suport', cause: 'Cauza', effect: 'Efectul' };
+const REMOVE = 28;
+// The ✕ is drawn at the mockup's 28 px; its touch area reaches the 48 px minimum.
+const REMOVE_SLOP = (layout.minTouch - REMOVE) / 2;
 
 /**
  * The answer slots under the source (mockups `.slot` / `.mark`): a filled slot shows its mark's text in quotes
  * next to a bar in the pen's colour, with ✕; an empty one invites to mark. Pressing a slot opens the source
  * (inside a SourcePanel: the reader on the phone, the left column on desktop) with that pen.
  */
-export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove, onSwap }: Props) {
+export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove, onSwap, disabled = false, verdictOf }: Props) {
   const panel = useSourcePanel();
   const open = (pen: Pen, index: number | null) => {
     onOpen(pen, index);
@@ -36,7 +44,15 @@ export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove
     const own = indexed.filter((x) => x.m.pen === pen)[k];
     const title = numbered ? `${TITLE[pen]} ${k + 1}` : TITLE[pen];
     return own ? (
-      <Slot key={`${pen}-${k}`} pen={pen} title={title} text={textOf(own.m)} onPress={() => open(pen, own.i)} onRemove={() => onRemove(own.i)} />
+      <Slot
+        key={`${pen}-${k}`}
+        pen={pen}
+        title={title}
+        text={textOf(own.m)}
+        verdict={verdictOf?.(own.i) ?? null}
+        onPress={() => open(pen, own.i)}
+        onRemove={disabled ? undefined : () => onRemove(own.i)}
+      />
     ) : (
       <Slot key={`${pen}-${k}`} pen={pen} title={title} onPress={() => open(pen, null)} />
     );
@@ -51,7 +67,7 @@ export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove
           ↓ a dus la
         </AppText>
         {slot('effect', 0, false)}
-        {both && onSwap ? (
+        {both && onSwap && !disabled ? (
           <Pressable accessibilityRole="button" onPress={onSwap} style={styles.swap}>
             <AppText role="label" color="primary">
               ⇅ Inversează rolurile
@@ -65,7 +81,9 @@ export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove
   return <View style={styles.list}>{Array.from({ length: count }, (_, k) => slot(pen, k, count > 1))}</View>;
 }
 
-function Slot({ pen, title, text, onPress, onRemove }: { pen: Pen; title: string; text?: string; onPress: () => void; onRemove?: () => void }) {
+type SlotProps = { pen: Pen; title: string; text?: string; verdict?: Verdict | null; onPress: () => void; onRemove?: () => void };
+
+function Slot({ pen, title, text, verdict = null, onPress, onRemove }: SlotProps) {
   const filled = text !== undefined;
   // The ✕ is a sibling of the slot's pressable area, not inside it (a button inside a button is invalid on web).
   return (
@@ -95,8 +113,21 @@ function Slot({ pen, title, text, onPress, onRemove }: { pen: Pen; title: string
           </AppText>
         )}
       </Pressable>
+      {verdict ? (
+        <View accessibilityLabel={`Verdict: ${VERDICT_LABELS[verdict]}`} style={[styles.verdict, { backgroundColor: VERDICT_TONE[verdict].bg }]}>
+          <AppText role="badge" style={{ color: VERDICT_TONE[verdict].fg }}>
+            {VERDICT_LABELS[verdict]}
+          </AppText>
+        </View>
+      ) : null}
       {filled && onRemove ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Șterge ${title.toLowerCase()}`} onPress={onRemove} style={styles.remove}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Șterge ${title.toLowerCase()}`}
+          onPress={onRemove}
+          hitSlop={{ top: REMOVE_SLOP, bottom: REMOVE_SLOP, left: REMOVE_SLOP, right: REMOVE_SLOP }}
+          style={styles.remove}
+        >
           <Icon name="close" size={space[4]} tint={color.textMuted} />
         </Pressable>
       ) : null}
@@ -121,9 +152,10 @@ const styles = StyleSheet.create({
   bar: { width: 6, alignSelf: 'stretch', borderRadius: 3 },
   body: { flex: 1 },
   title: { textTransform: 'uppercase', letterSpacing: 0.55, marginBottom: 2 },
+  verdict: { borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: space[2] },
   remove: {
-    width: 28,
-    height: 28,
+    width: REMOVE,
+    height: REMOVE,
     borderRadius: 8,
     backgroundColor: color.surfaceMuted,
     alignItems: 'center',

@@ -1,15 +1,18 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { border, color, radius, space, type Mark, type SourceLabel } from '@prepio/shared';
+import { border, color, consolidationColor, radius, space, type Mark, type SourceLabel } from '@prepio/shared';
+import { useScreenViewport } from '../../ui';
 import type { DragGesture } from './MarkableText';
 import { ReadingText, SourceTabs, useScrollToMark, type PanelMarker, type PanelSource } from './SourceReader';
 
 // ~62 characters of 17 px Literata (mockup `max-width: 62ch`).
 const READING_WIDTH = 640;
-// The source column scrolls on its own; it takes the window height minus the app's top and action bars.
-const CHROME = 180;
+// Outside a ScreenLayout (no measured viewport): the window height minus about the app's top and action bars.
+const CHROME_GUESS = 180;
 const MIN_HEIGHT = 420;
+// Mockup `.split .left` padding: 22 px / 34 px (here 22 / 32).
+const PAD_V = space[5.5];
 
 type Props = {
   sources: PanelSource[];
@@ -25,17 +28,21 @@ type Props = {
 /**
  * Desktop (≥ 900 px) layout, as on the exam sheet (long-sources mockup `.split`): the source on the left in its
  * own scroll, at reading width, with A / B tabs; the requirement, the pens and the answer on the right.
+ * Inside a ScreenLayout the left column is exactly as tall as the screen's scroll viewport.
  */
 export default function SourceSplit({ sources, label, onLabel, marker, scrollTo, children }: Props) {
   const { height } = useWindowDimensions();
+  const viewport = useScreenViewport();
   const current = sources.find((s) => s.label === label) ?? sources[0];
   const [drag, setDrag] = useState<DragGesture | undefined>(undefined);
   const onDragGesture = useCallback((g: DragGesture) => setDrag((prev) => (prev && prev.handlerTag === g.handlerTag ? prev : g)), []);
-  const { scrollRef, wordBoxRef, onTextLayout, onViewportLayout } = useScrollToMark(scrollTo, [label]);
+  // The text's layout y is relative to the reading column, which sits below the scroll content's top padding.
+  const { scrollRef, wordBoxRef, onTextLayout, onViewportLayout } = useScrollToMark(scrollTo, [label], PAD_V);
   if (!current) return null;
+  const columnHeight = Math.max(MIN_HEIGHT, viewport ?? height - CHROME_GUESS);
   return (
     <View testID="source-split" style={styles.split}>
-      <View style={[styles.left, { height: Math.max(MIN_HEIGHT, height - CHROME) }]} onLayout={onViewportLayout}>
+      <View testID="split-left" style={[styles.left, { height: columnHeight }]} onLayout={onViewportLayout}>
         <ScrollView ref={scrollRef as never} testID="split-scroll" contentContainerStyle={styles.leftBody} requireToFail={drag}>
           <View style={styles.reading}>
             <SourceTabs sources={sources} label={current.label} onLabel={onLabel} testPrefix="split" />
@@ -60,13 +67,13 @@ const styles = StyleSheet.create({
   left: {
     flex: 1.15,
     minWidth: 0,
-    backgroundColor: color.surface,
+    backgroundColor: consolidationColor.paper,
     borderWidth: border.hairline,
     borderColor: color.border,
     borderRadius: radius.md,
     overflow: 'hidden',
   },
-  leftBody: { paddingVertical: space[5.5], paddingHorizontal: space[8] },
+  leftBody: { paddingVertical: PAD_V, paddingHorizontal: space[8] },
   reading: { width: '100%', maxWidth: READING_WIDTH },
   right: { flex: 1, minWidth: 0, gap: space[3] },
 });

@@ -5,7 +5,7 @@ import { AppText, Surface } from '../../ui';
 import MarkableText from './MarkableText';
 import type { Pen } from './markerReducer';
 import SourceCard from './SourceCard';
-import SourceReader, { citation, hintFor, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
+import SourceReader, { canMark, citation, hintFor, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
 import SourceSplit from './SourceSplit';
 
 /** From this window width the source sits beside the answer instead of behind a card and a reader. */
@@ -60,7 +60,7 @@ export default function SourcePanel({ sources, prompt, marker, header, children 
   const api: PanelApi = {
     open: (pen, markIndex) => {
       if (!marker) return;
-      marker.dispatch({ type: 'setPen', pen });
+      if (!marker.readOnly) marker.dispatch({ type: 'setPen', pen });
       const marks = marker.state.marks;
       const mark = (markIndex !== null ? marks[markIndex] : undefined) ?? marks.find((m) => m.pen === pen) ?? null;
       const target = (mark && sources.find((s) => s.source.id === mark.sourceId)) || longSources.find((s) => s.label === label) || longSources[0];
@@ -71,7 +71,7 @@ export default function SourcePanel({ sources, prompt, marker, header, children 
     },
   };
 
-  const pens = marker ? (
+  const pens = canMark(marker) ? (
     <View style={styles.pens}>
       <PenBar marker={marker} />
       <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
@@ -105,7 +105,7 @@ export default function SourcePanel({ sources, prompt, marker, header, children 
         {promptText}
         {sources.map((s) =>
           isLong.get(s.label) ? (
-            <SourceCard key={s.label} source={s.source} label={s.label} marking={!!marker} onPress={() => openReader(s.label)} />
+            <SourceCard key={s.label} source={s.source} label={s.label} marking={canMark(marker)} onPress={() => openReader(s.label)} />
           ) : (
             <InlineSource key={s.label} item={s} marker={marker} />
           ),
@@ -142,7 +142,7 @@ function InlineSource({ item, marker }: { item: PanelSource; marker?: PanelMarke
         state={marker?.state ?? NO_MARKS}
         dispatch={marker?.dispatch ?? noop}
         verdicts={marker?.verdicts}
-        readOnly={!marker}
+        readOnly={!canMark(marker)}
       />
       <AppText role="caption" color="textMuted" style={styles.cite}>
         ({citation(item.source)})

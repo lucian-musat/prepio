@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import * as Reanimated from 'react-native-reanimated';
-import { color, space } from '@prepio/shared';
+import { color, layout, space } from '@prepio/shared';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import ScreenLayout from './ScreenLayout';
+import ScreenLayout, { useScreenViewport } from './ScreenLayout';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => false) } }));
 
@@ -135,6 +135,39 @@ describe('bottom safe area', () => {
   it('with actions the action bar handles the inset instead', async () => {
     await renderWithInset(<Text>Verifică</Text>);
     expect(contentPaddingBottom()).toBe(space[6]);
+  });
+});
+
+describe('wide content and the viewport', () => {
+  const RN = require('react-native');
+  let dims: jest.SpyInstance;
+  beforeEach(() => {
+    dims = jest.spyOn(RN, 'useWindowDimensions').mockImplementation(() => ({ width: 1280, height: 800, scale: 1, fontScale: 1 }));
+  });
+  afterEach(() => dims.mockRestore());
+
+  it('`wide` lifts the 720 px cap on desktop', async () => {
+    await renderLayout({ wide: true });
+    expect(flat('screen-content').maxWidth).toBe(layout.maxWideContentWidth - 2 * layout.gutterWide);
+  });
+
+  it('children read the height the content can use without scrolling', async () => {
+    let seen: number | null = -1;
+    function Probe() {
+      seen = useScreenViewport();
+      return null;
+    }
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <ScreenLayout title="x" actions={<Text>Verifică</Text>}>
+          <Probe />
+        </ScreenLayout>
+      </SafeAreaProvider>,
+    );
+    expect(seen).toBeNull();
+    await layoutH(600);
+    // Desktop: 12 px content top + 40 px bottom padding.
+    expect(seen).toBe(600 - space[3] - space[10]);
   });
 });
 

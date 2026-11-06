@@ -24,7 +24,13 @@ type Props = Pick<
   invalid?: boolean;
   /** Centred text with wide letter-spacing, for one-time codes. */
   code?: boolean;
+  /** A checked answer's verdict: green / amber / red border. */
+  status?: FieldStatus;
 };
+
+export type FieldStatus = 'ok' | 'almost' | 'no';
+/** Border of a checked answer field (types mockup `.in.ok / .almost / .no`). */
+export const STATUS_BORDER: Record<FieldStatus, string> = { ok: color.success, almost: color.accent, no: color.danger };
 
 // Same look as TextArea: thick border, 4 px focus ring of primary at 18 % (danger when invalid).
 const RING = space[1];
@@ -39,6 +45,7 @@ export default function TextField({
   placeholder,
   invalid = false,
   code = false,
+  status,
   ...rest
 }: Props) {
   const [focused, setFocused] = useState(false);
@@ -58,6 +65,7 @@ export default function TextField({
         styles.noOutline,
         code && styles.code,
         (focused || invalid) && { borderColor: tint },
+        status && { borderColor: STATUS_BORDER[status] },
         focused && { boxShadow: ring(tint) },
       ]}
     />

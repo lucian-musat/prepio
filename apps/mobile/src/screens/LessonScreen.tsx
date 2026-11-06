@@ -315,13 +315,17 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
       </ScreenLayout>
     );
   }
-  if (mode === 'free') return <LessonDone
+  if (mode === 'free') {
+    return (
+      <LessonDone
         lessonId={lesson.id}
         title={lesson.title}
         correct={outcome.correct}
         total={outcome.total}
         consolidation={consolidation}
-      />;
+      />
+    );
+  }
   if (!outcome.passed) {
     return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
   }
@@ -332,12 +336,14 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
   const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided');
   const next = order.find((l) => after.get(l.id) === 'current');
   const unlocked = next && before.get(next.id) === 'locked' ? next.title : undefined;
-  return <GuidedPassed
+  return (
+    <GuidedPassed
       outcome={outcome}
       unlocked={unlocked}
       nextId={next?.id}
       consolidation={{ lessonId: lesson.id, count: consolidation }}
-    />;
+    />
+  );
 }
 
 /** 🎓 that pops in (prototype `.done-wrap .big`: `pop 600ms` spring). */
