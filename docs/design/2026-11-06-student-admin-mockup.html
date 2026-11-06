@@ -1,0 +1,96 @@
+<style>
+  .adm{font-family:system-ui,sans-serif;color:#0F2E28;background:#F3FAF7;border:1px solid #D8EAE3;border-radius:12px;overflow:hidden;font-size:12px}
+  .nav{background:#0F766E;color:#fff;padding:8px 12px;font-weight:700}
+  .wrap{display:flex}
+  .side{width:110px;padding:10px;border-right:1px solid #D8EAE3;background:#fff}
+  .side div{padding:5px 6px;border-radius:6px;margin-bottom:3px}
+  .side .on{background:#E0F5F1;color:#0F766E;font-weight:700}
+  .main{flex:1;padding:12px}
+  .card{background:#fff;border:1px solid #D8EAE3;border-radius:10px;padding:10px;margin-bottom:10px}
+  .h{display:flex;align-items:center;gap:10px}
+  .av{width:36px;height:36px;border-radius:50%;background:#99F6E4;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700}
+  .ok{background:#E5F7EC;color:#1A7C49}.sus{background:#FDECEC;color:#A54042}.mut{background:#E6F4EF;color:#38534C}.warn{background:#FFF6D9;color:#8A6A00}
+  .meta{color:#4C6A63;font-size:11px}
+  .kpis{display:flex;gap:8px;margin-top:8px}
+  .kpi{flex:1;background:#F3FAF7;border-radius:8px;padding:6px 8px}
+  .kpi b{display:block;font-size:15px}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .b{border:1px solid #D8EAE3;border-radius:7px;padding:5px 8px;background:#fff;font-weight:600}
+  .b.p{background:#0F766E;color:#fff;border-color:#0F766E}.b.d{color:#A54042;border-color:#F5B0B2}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid #D8EAE3;margin-bottom:8px}
+  .tabs div{padding:6px 10px}.tabs .on{border-bottom:2px solid #0F766E;font-weight:700;color:#0F766E}
+  table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:5px 4px;border-bottom:1px solid #EEF5F2}th{font-size:10px;color:#4C6A63;text-transform:uppercase}
+  .tl div{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #EEF5F2}.tl span:first-child{color:#4C6A63;width:84px;flex:none}
+  .phone{width:220px;background:#F3FAF7;border:1px solid #D8EAE3;border-radius:20px;padding:24px 16px;text-align:center;font-family:system-ui,sans-serif;color:#0F2E28;margin:0 auto}
+</style>
+
+<h2>Fișa elevului în admin — cum o așezăm?</h2>
+<p class="subtitle">Același elev în două variante. Alege una (sau spune ce combini). Jos: ce vede elevul suspendat.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="padding:0">
+    <div class="card-image" style="padding:12px;background:#fafafa">
+      <div class="adm">
+        <div class="nav">Prepio Admin</div>
+        <div class="wrap">
+          <div class="side"><div>Conținut</div><div>Șabloane</div><div class="on">Elevi</div><div>Setări</div></div>
+          <div class="main">
+            <div class="card">
+              <div class="h"><div class="av">MA</div><div style="flex:1"><b style="font-size:14px">Madalin Anghel</b> <span class="badge ok">Activ</span><div class="meta">madalin@gmail.com · Google · înregistrat 4 nov 2026 · ultima activitate azi 10:12</div></div></div>
+              <div class="kpis"><div class="kpi">Lecții terminate<b>2 / 5</b></div><div class="kpi">Credite<b>🪙 12</b></div><div class="kpi">Mod<b style="font-size:12px">Traseu ghidat</b></div></div>
+              <div class="btns"><span class="b p">+ Ajustează credite</span><span class="b">Resetează tot parcursul</span><span class="b d">Suspendă</span><span class="b d">Șterge contul</span></div>
+            </div>
+            <div class="card">
+              <div class="tabs"><div class="on">Parcurs</div><div>Cronologie</div><div>Credite</div><div>Comenzi</div></div>
+              <table>
+                <tr><th>Lecție</th><th>Stare</th><th>Unde a rămas</th><th>Ultima activitate</th><th></th></tr>
+                <tr><td>1. Unirea Principatelor</td><td><span class="badge ok">Terminată</span></td><td>Consolidare 10/10</td><td>3 nov</td><td><span class="b">Resetează</span></td></tr>
+                <tr><td>2. Constituția din 1866</td><td><span class="badge ok">Terminată</span></td><td>Consolidare 4/10</td><td>azi</td><td><span class="b">Resetează</span></td></tr>
+                <tr><td>3. Războiul de Independență</td><td><span class="badge warn">În curs</span></td><td>Card 6 din 14</td><td>azi</td><td><span class="b">Resetează</span></td></tr>
+                <tr><td>4. Marea Unire</td><td><span class="badge mut">Neîncepută</span></td><td>—</td><td>—</td><td></td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A. Antet + taburi (recomandarea mea)</h3><p>Sus: cine e, starea, cifrele cheie și toate acțiunile. Dedesubt, taburi: Parcurs (primul, cum ai cerut), Cronologie, Credite, Comenzi. Totul la un click, fără scroll lung.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="padding:0">
+    <div class="card-image" style="padding:12px;background:#fafafa">
+      <div class="adm">
+        <div class="nav">Prepio Admin</div>
+        <div class="wrap">
+          <div class="main">
+            <div class="card"><div class="h"><div class="av">CP</div><div style="flex:1"><b style="font-size:14px">Carolina Putnam</b> <span class="badge sus">Suspendat</span><div class="meta">Motiv: „Cont creat pentru test.” · suspendat de Lucian, 6 nov</div></div><span class="b">Reactivează</span></div></div>
+            <div class="card"><b>Parcurs</b><table><tr><td>1. Unirea Principatelor</td><td><span class="badge warn">În curs</span></td><td>Verificare, întrebarea 3</td></tr><tr><td>2. Constituția din 1866</td><td><span class="badge mut">Neîncepută</span></td><td>—</td></tr></table></div>
+            <div class="card"><b>Cronologie</b>
+              <div class="tl">
+                <div><span>6 nov 18:40</span><span>🛑 Cont suspendat de Lucian · „Cont creat pentru test.”</span></div>
+                <div><span>5 nov 13:55</span><span>📖 A început lecția 1. Unirea Principatelor</span></div>
+                <div><span>5 nov 13:49</span><span>🧭 A ales modul Traseu ghidat</span></div>
+                <div><span>5 nov 13:48</span><span>👋 S-a înregistrat cu Google · +12 credite de bun venit</span></div>
+              </div>
+            </div>
+            <div class="card"><b>Credite</b> · <b>Comenzi</b> · <span class="meta">(secțiuni una sub alta)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B. O singură pagină lungă</h3><p>Secțiuni una sub alta: Parcurs, Cronologie, Credite, Comenzi. Vezi tot dintr-o privire, dar pagina devine lungă la elevii activi. (Aici e și un exemplu de elev suspendat și de cronologie.)</p></div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:18px">
+  <p class="label">Ce vede elevul suspendat (după logare)</p>
+  <div class="phone">
+    <div style="font-size:30px">🔒</div>
+    <div style="font-weight:800;font-size:16px;margin:8px 0">Contul tău a fost suspendat</div>
+    <div style="background:#fff;border:1px solid #D8EAE3;border-radius:10px;padding:10px;font-size:12px;text-align:left"><b>Motiv:</b> Cont creat pentru test.</div>
+    <div style="font-size:11px;color:#4C6A63;margin:10px 0">Dacă crezi că e o greșeală, scrie-ne la contact@prepio.ro.</div>
+    <div style="border:1px solid #D8EAE3;border-radius:10px;padding:8px;font-weight:700;background:#fff;margin-bottom:6px">Ieși din cont</div>
+    <div style="font-size:11px;color:#A54042;font-weight:700">Șterge contul</div>
+  </div>
+</div>
