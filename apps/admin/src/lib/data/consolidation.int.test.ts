@@ -152,6 +152,14 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
     await expect(saveConsolidationExercise(db, lessonId, { ...cases[8][1](), ai: NO_AI })).rejects.toThrow('Contextul pentru AI este obligatoriu.');
   });
 
+  it('stores credit_cost and rejects an out-of-range cost', async () => {
+    const { id } = await saveConsolidationExercise(db, lessonId, { ...cases[0][1](), creditCost: 4 });
+    const { data } = await db.from('consolidation_exercises').select('credit_cost').eq('id', id).single();
+    expect(data?.credit_cost).toBe(4);
+    await deleteItem(db, 'consolidation_exercises', id);
+    await expect(saveConsolidationExercise(db, lessonId, { ...cases[8][1](), creditCost: 7 })).rejects.toThrow('Costul verificării trebuie să fie între 1 și 5 credite.');
+  });
+
   it('rejects a source of another lesson', async () => {
     const bad = { ...cases[2][1](), sources: s(foreignSrc), spans: [spanOf(foreignSrc, 'străin', 'Text străin.')] } as ExerciseInput;
     await expect(saveConsolidationExercise(db, lessonId, bad)).rejects.toBeInstanceOf(UserError);

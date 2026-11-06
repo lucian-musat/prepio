@@ -4,6 +4,7 @@ import { Form } from 'react-bootstrap';
 import type { EssayRequirement } from '@prepio/shared';
 import SortableList from '../cards/SortableList';
 import { AiContextField } from './AiFields';
+import CreditCostField from './CreditCostField';
 import type { FieldsProps } from './exerciseModel';
 
 export const MAX_REQUIREMENTS = 6;
@@ -22,6 +23,8 @@ export default function EssayFields({ idPrefix, draft, onChange, templates }: Fi
     onChange({ ...draft, ai: { ...draft.ai, requirements: { ...draft.ai.requirements, [id]: v } } });
 
   return (
+    <>
+    <CreditCostField idPrefix={idPrefix} value={draft.creditCost} requirements={draft.requirements.length} onChange={(creditCost) => onChange({ ...draft, creditCost })} />
     <fieldset className="mb-3">
       <legend className="form-label fs-6 mb-1">Cerințe ({draft.requirements.length}/{MAX_REQUIREMENTS})</legend>
       <SortableList
@@ -76,5 +79,6 @@ export default function EssayFields({ idPrefix, draft, onChange, templates }: Fi
         }}
       />
     </fieldset>
+    </>
   );
 }

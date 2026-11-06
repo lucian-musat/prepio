@@ -2,6 +2,7 @@
 
 import { Form } from 'react-bootstrap';
 import { CountField } from './MultiAnswerFields';
+import CreditCostField from './CreditCostField';
 import SpansFields from './SpansFields';
 import type { FieldsProps } from './exerciseModel';
 
@@ -28,11 +29,14 @@ type AiType = 'facts' | 'comparison' | 'viewpoint' | 'argument';
 
 function MainContext({ idPrefix, draft, onChange }: Pick<FieldsProps<AiType>, 'idPrefix' | 'draft' | 'onChange'>) {
   return (
-    <AiContextField
-      controlId={`${idPrefix}-ai-main`}
-      value={draft.ai.main}
-      onChange={(main) => onChange({ ...draft, ai: { ...draft.ai, main } })}
-    />
+    <>
+      <CreditCostField idPrefix={idPrefix} value={draft.creditCost} onChange={(creditCost) => onChange({ ...draft, creditCost })} />
+      <AiContextField
+        controlId={`${idPrefix}-ai-main`}
+        value={draft.ai.main}
+        onChange={(main) => onChange({ ...draft, ai: { ...draft.ai, main } })}
+      />
+    </>
   );
 }
 

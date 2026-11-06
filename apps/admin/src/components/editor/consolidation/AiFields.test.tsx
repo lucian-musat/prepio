@@ -130,3 +130,30 @@ describe('essay requirements', () => {
     expect(screen.getByLabelText(/^Șablon de rezolvare, cerința 1/)).toBeTruthy();
   });
 });
+
+describe('credit cost field', () => {
+  it('facts shows „Cost verificare” with the default 1', async () => {
+    await openNew('Prezentare fapte');
+    expect((screen.getByLabelText('Cost verificare') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByText('Credite luate elevului la fiecare verificare.')).toBeTruthy();
+  });
+
+  it('argument defaults to 2 and the chosen cost is saved', async () => {
+    actions.saveConsolidationExercise.mockResolvedValue({ ok: true, data: { id: 'new' } });
+    const user = await openNew('Argumentare');
+    expect((screen.getByLabelText('Cost verificare') as HTMLSelectElement).value).toBe('2');
+    await user.selectOptions(screen.getByLabelText('Cost verificare'), '4');
+    await user.type(screen.getByLabelText('Enunț'), 'Argumentează');
+    await user.type(screen.getByLabelText(/Context pentru AI/), 'ctx');
+    await user.click(screen.getByRole('button', { name: 'Salvează' }));
+    expect((actions.saveConsolidationExercise.mock.calls[0]![1] as ExerciseInput).creditCost).toBe(4);
+  });
+
+  it('essay shows the per-requirement cost and the whole-essay total', async () => {
+    const user = await openNew('Eseu pe cerințe');
+    await user.click(screen.getByRole('button', { name: 'Adaugă cerință' }));
+    await user.click(screen.getByRole('button', { name: 'Adaugă cerință' }));
+    await user.selectOptions(screen.getByLabelText('Cost pe cerință'), '2');
+    expect(screen.getByText('Eseul întreg: 6 credite.')).toBeTruthy();
+  });
+});
