@@ -15,7 +15,7 @@ const sources: SeedSource[] = [
       'La 4 aprilie 1877, cele două state au semnat la București o convenție. Potrivit acesteia, trupele ruse puteau ' +
       'traversa teritoriul României spre Balcani, iar Rusia se obliga să respecte drepturile politice ale statului ' +
       'român și să-i apere integritatea teritorială. La 9 mai 1877, ministrul de externe Mihail Kogălniceanu a ' +
-      'declarat în Adunarea Deputaților: „Suntem independenți; suntem o națiune de sine stătătoare”. Tributul ' +
+      'declarat în Adunarea Deputaților: „Suntem independenți; suntem națiune de sine stătătoare”. Tributul ' +
       'datorat Porții a fost redirecționat către armată.',
   },
   {

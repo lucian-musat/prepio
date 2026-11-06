@@ -17,27 +17,35 @@ export type AddConsolidationResult = {
   problems: number;
 };
 
-type LessonRow = { id: string; consolidation_exercises: { type: string }[] };
+type LessonRow = { id: string; consolidation_exercises: { type: string }[]; sources: { id: string }[] };
 
 /**
  * Brings production up to the seed's consolidation content without touching what is there:
- * - inserts the seed solution templates that are missing (matched by title);
- * - for each published lesson whose title is a seed lesson's title and which has no consolidation exercise other than
- *   an essay (the essays converted by the migration), inserts the seed sources and the seed non-essay exercises
- *   (with source links, templates and AI contexts) after the existing ones.
- * Idempotent: a re-run plans nothing. Without `apply`, only plans.
+ * - for each published lesson whose title is a seed lesson's title, with no consolidation exercise other than an
+ *   essay (the essays converted by the migration) and no source, inserts the seed sources and the seed non-essay
+ *   exercises (with source links, templates and AI contexts) after the existing ones. A lesson with sources but no
+ *   non-essay exercise (a partial run or manual edits) is reported as a problem and left for a check by hand;
+ * - inserts the seed solution templates that are missing (matched by title), only when a lesson is written.
+ * Idempotent: a re-run plans nothing. A failed lesson write is rolled back (see `writeConsolidation`) and aborts the
+ * run. Without `apply`, only plans.
  */
 export async function addConsolidation(client: SupabaseClient, opts: { apply: boolean }): Promise<AddConsolidationResult> {
   const result: AddConsolidationResult = { applied: opts.apply, planned: [], skipped: [], problems: 0 };
 
-  const { ids: templateIds, missing } = await ensureTemplates(client, opts.apply);
-  for (const t of missing) result.planned.push(`template: ${t.title}`);
-  // A dry run has no ids for the missing templates yet; placeholders let it convert (and so check) every exercise.
-  for (const t of missing) if (!templateIds.has(t.key)) templateIds.set(t.key, `(new) ${t.key}`);
+  const found = await ensureTemplates(client, false);
+  // Missing templates have no id yet; placeholders let every exercise be converted (and so checked) up front.
+  const placeholders = new Map(found.ids);
+  for (const t of found.missing) placeholders.set(t.key, `(new) ${t.key}`);
 
+  const toWrite: Array<{ id: string; lesson: (typeof lessons)[number]; items: (typeof lessons)[number]['consolidation'] }> = [];
+  const lessonLines: string[] = [];
   for (const lesson of lessons) {
     const rows = check(
-      await client.from('lessons').select('id, consolidation_exercises(type)').eq('title', lesson.title).eq('status', 'published'),
+      await client
+        .from('lessons')
+        .select('id, consolidation_exercises(type), sources(id)')
+        .eq('title', lesson.title)
+        .eq('status', 'published'),
       `find lesson ${lesson.title}`,
     ) as LessonRow[];
     if (rows.length !== 1) {
@@ -50,17 +58,35 @@ export async function addConsolidation(client: SupabaseClient, opts: { apply: bo
       result.skipped.push(`${lesson.title}: already has consolidation exercises (nothing to add)`);
       continue;
     }
+    if (row.sources.length) {
+      result.skipped.push(
+        `${lesson.title}: PROBLEM: has ${row.sources.length} source(s) but no exercise besides essays ` +
+          '(partial or manual state — check by hand)',
+      );
+      result.problems++;
+      continue;
+    }
 
     const items = lesson.consolidation.filter((c) => c.type !== 'essay');
-    // Convert first: a broken quote or key fails before anything is written.
     const keys = new Map(lesson.sources.map((s) => [s.key, s.key]));
     const bodies = new Map(lesson.sources.map((s) => [s.key, s.body]));
-    for (const c of items) toExercise(c, keys, bodies, templateIds, randomUUID);
+    for (const c of items) toExercise(c, keys, bodies, placeholders, randomUUID);
 
-    for (const s of lesson.sources) result.planned.push(`source: ${lesson.title} — ${s.title ?? s.author}`);
-    for (const c of items) result.planned.push(`exercise: ${lesson.title} — ${CONSOLIDATION_TYPE_LABELS[c.type]}: ${c.prompt}`);
-    if (opts.apply) await writeConsolidation(client, row.id, lesson.sources, items, templateIds, randomUUID);
+    for (const s of lesson.sources) lessonLines.push(`source: ${lesson.title} — ${s.title ?? s.author}`);
+    for (const c of items) lessonLines.push(`exercise: ${lesson.title} — ${CONSOLIDATION_TYPE_LABELS[c.type]}: ${c.prompt}`);
+    toWrite.push({ id: row.id, lesson, items });
   }
+
+  if (!toWrite.length) {
+    if (found.missing.length) result.skipped.push(`${found.missing.length} missing template(s) not added: no lesson to write`);
+    return result;
+  }
+  for (const t of found.missing) result.planned.push(`template: ${t.title}`);
+  result.planned.push(...lessonLines);
+  if (!opts.apply) return result;
+
+  const { ids: templateIds } = await ensureTemplates(client, true);
+  for (const w of toWrite) await writeConsolidation(client, w.id, w.lesson.sources, w.items, templateIds, randomUUID);
   return result;
 }
 

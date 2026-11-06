@@ -179,7 +179,9 @@ export async function ensureTemplates(
 
 /**
  * Inserts sources and exercises (with their source links and AI contexts) into a lesson, after the sources and
- * exercises it already has. Every exercise is converted (and so checked) before anything is written.
+ * exercises it already has. Every exercise is converted (and so checked) before anything is written. The writes are
+ * not one transaction: when one fails, the rows inserted by this call (ids generated up front) are deleted again and
+ * the error is rethrown, saying whether the rollback succeeded.
  */
 export async function writeConsolidation(
   client: SupabaseClient,
@@ -202,6 +204,29 @@ export async function writeConsolidation(
   const bodies = new Map(sources.map((s) => [s.key, s.body]));
   const converted = items.map((c) => toExercise(c, sourceIds, bodies, templateIds, newId));
 
+  try {
+    await insertConsolidation(client, lessonId, sources, sourceIds, converted, lastSource, lastExercise);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Exercises first: their links restrict source deletes; links and contexts go with them by cascade.
+    const exercises = await client.from('consolidation_exercises').delete().in('id', converted.map((c) => c.exercise.id));
+    const srcs = exercises.error ? exercises : await client.from('sources').delete().in('id', [...sourceIds.values()]);
+    const rollback = srcs.error
+      ? `ROLLBACK FAILED (${srcs.error.message}): check the lesson's sources and exercises by hand`
+      : 'the rows inserted for this lesson were removed again';
+    throw new Error(`${message} (lesson ${lessonId}: ${rollback})`);
+  }
+}
+
+async function insertConsolidation(
+  client: SupabaseClient,
+  lessonId: string,
+  sources: SeedSource[],
+  sourceIds: Map<string, string>,
+  converted: { exercise: ConsolidationExercise; ai: AiContext }[],
+  lastSource: { position: number } | undefined,
+  lastExercise: { position: number } | undefined,
+): Promise<void> {
   if (sources.length) {
     const first = (lastSource?.position ?? -1) + 1;
     check(

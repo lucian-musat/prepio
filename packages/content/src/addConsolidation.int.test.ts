@@ -31,10 +31,9 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
     return out;
   };
 
-  beforeAll(async () => {
-    client = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
+  /** Production after the consolidation migration: only the converted essays (from position 0), no sources, no templates. */
+  const toProductionState = async () => {
     await seed(client, { reset: true });
-    // Simulate production after the consolidation migration: only the converted essays, no sources, no templates.
     for (const l of lessons) {
       const id = await lessonId(l.title);
       const del = await client.from('consolidation_exercises').delete().eq('lesson_id', id).neq('type', 'essay');
@@ -51,6 +50,40 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
     }
     const tpl = await client.from('solution_templates').delete().in('title', TEMPLATES.map((t) => t.title));
     if (tpl.error) throw tpl.error;
+  };
+
+  /** The real client, except that inserts into `table` fail. */
+  const failingOn = (table: string): SupabaseClient =>
+    new Proxy(client, {
+      get(target, prop, receiver) {
+        if (prop !== 'from') return Reflect.get(target, prop, receiver);
+        return (t: string) => {
+          const builder = target.from(t);
+          if (t !== table) return builder;
+          return new Proxy(builder, {
+            get(b, p, r) {
+              return p === 'insert' ? async () => ({ data: null, error: { message: `simulated ${table} failure` } }) : Reflect.get(b, p, r);
+            },
+          });
+        };
+      },
+    });
+
+  const lessonState = async (title: string) => {
+    const id = await lessonId(title);
+    const src = await client.from('sources').select('id').eq('lesson_id', id);
+    const ex = await client.from('consolidation_exercises').select('id, type').eq('lesson_id', id);
+    if (src.error) throw src.error;
+    if (ex.error) throw ex.error;
+    const ids = ex.data.map((e) => e.id);
+    const links = await client.from('consolidation_exercise_sources').select('exercise_id').in('exercise_id', ids);
+    const ctx = await client.from('consolidation_ai_context').select('exercise_id').in('exercise_id', ids);
+    return { sources: src.data.length, types: ex.data.map((e) => e.type), links: links.data?.length, contexts: ctx.data?.length };
+  };
+
+  beforeAll(async () => {
+    client = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
+    await toProductionState();
   });
 
   afterAll(async () => {
@@ -115,5 +148,56 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
     } finally {
       await client.from('lessons').update({ status: 'published' }).eq('id', id);
     }
+  });
+
+  it('does not add missing templates when no lesson is written', async () => {
+    const title = TEMPLATES[0]!.title;
+    expect((await client.from('solution_templates').update({ title: `[test] ${title}` }).eq('title', title)).error).toBeNull();
+    try {
+      const before = await snapshot();
+      const result = await addConsolidation(client, { apply: true });
+      expect(result).toMatchObject({ planned: [], problems: 0 });
+      expect(result.skipped.join('\n')).toContain('1 missing template(s) not added');
+      expect(await snapshot()).toEqual(before);
+    } finally {
+      await client.from('solution_templates').update({ title }).eq('title', `[test] ${title}`);
+    }
+  });
+
+  it.each(['consolidation_exercise_sources', 'consolidation_ai_context'])(
+    'a failure while inserting %s removes the rows inserted for that lesson and aborts',
+    async (table) => {
+      await toProductionState();
+      await expect(addConsolidation(failingOn(table), { apply: true })).rejects.toThrow(
+        new RegExp(`simulated ${table} failure.*removed again`),
+      );
+      for (const l of lessons) {
+        const state = await lessonState(l.title);
+        expect(state, l.title).toEqual({ sources: 0, types: ['essay', 'essay'], links: 0, contexts: 2 });
+      }
+      // The next run starts from a clean state and completes.
+      const retry = await addConsolidation(client, { apply: true });
+      expect(retry.problems).toBe(0);
+      expect(retry.planned.filter((p) => p.startsWith('exercise'))).toHaveLength(NON_ESSAY);
+    },
+  );
+
+  it('reports a lesson that has sources but no exercise besides essays and leaves it alone', async () => {
+    await toProductionState();
+    const lesson = lessons[0]!;
+    const id = await lessonId(lesson.title);
+    const s = lesson.sources[0]!;
+    const ins = await client.from('sources').insert({ lesson_id: id, title: s.title, author: s.author, work: s.work, body: s.body });
+    if (ins.error) throw ins.error;
+
+    const result = await addConsolidation(client, { apply: true });
+    expect(result.problems).toBe(1);
+    expect(result.skipped.join('\n')).toMatch(new RegExp(`${lesson.title.replace(/[()]/g, '.')}: PROBLEM.*check by hand`));
+    expect(result.planned.some((p) => p.includes(lesson.title))).toBe(false);
+    expect(await lessonState(lesson.title)).toEqual({ sources: 1, types: ['essay', 'essay'], links: 0, contexts: 2 });
+    // The other lessons are written.
+    expect(result.planned.filter((p) => p.startsWith('exercise'))).toHaveLength(
+      NON_ESSAY - lesson.consolidation.filter((c) => c.type !== 'essay').length,
+    );
   });
 });

@@ -212,15 +212,17 @@ describe('seed lesson consolidation', () => {
         const answers: ExerciseAnswer[] = [];
         if (ex.type === 'short_answer') answers.push(...ex.accepted.map((text) => ({ type: ex.type, text })));
         if (ex.type === 'multi_answer') answers.push({ type: ex.type, texts: ex.groups.slice(0, ex.count).map((g) => g.variants[0]!) });
-        if (ex.type === 'source_info') for (const s of ex.spans) answers.push({ type: ex.type, marks: [mark(s)] });
-        if (ex.type === 'source_info' && ex.count > 1) answers.push({ type: ex.type, marks: ex.spans.slice(0, ex.count).map(mark) });
+        if (ex.type === 'source_info') {
+          // Each span on its own is a full answer when one is asked for; with N > 1, any N spans together.
+          if (ex.count === 1) for (const s of ex.spans) answers.push({ type: ex.type, marks: [mark(s)] });
+          else {
+            answers.push({ type: ex.type, marks: ex.spans.slice(0, ex.count).map(mark) });
+            answers.push({ type: ex.type, marks: ex.spans.slice(-ex.count).map(mark) });
+          }
+        }
         if (ex.type === 'source_letter') answers.push({ type: ex.type, letter: ex.correct });
         if (ex.type === 'cause_effect') for (const p of ex.pairs) answers.push({ type: ex.type, cause: mark(p.cause), effect: mark(p.effect) });
-        for (const a of answers) {
-          const fb = checkExercise(ex, asSources, a);
-          if (ex.type === 'source_info' && ex.count > 1 && a.type === 'source_info' && a.marks.length < ex.count) continue;
-          expect(fb.verdict, `${c.prompt}: ${JSON.stringify(a)}`).toBe('ok');
-        }
+        for (const a of answers) expect(checkExercise(ex, asSources, a).verdict, `${c.prompt}: ${JSON.stringify(a)}`).toBe('ok');
       }
     });
 
