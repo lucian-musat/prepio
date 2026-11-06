@@ -6,7 +6,7 @@ import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 
 export const dynamic = 'force-dynamic';
-/** Vercel's default (10 s on Hobby) would kill the function before the 30 s OpenAI timeout. */
+/** Vercel's default (10 s on Hobby) would kill the function before the 50 s OpenAI timeout. */
 export const maxDuration = 60;
 
 function reply(status: number, json: unknown, request: Request) {

@@ -26,7 +26,7 @@ export class AccountDeleteApiError extends Error {
   }
 }
 
-/** Slightly above the server's own limits (60 s function, 30 s OpenAI timeout). */
+/** Slightly above the server's own limits (60 s function, 50 s OpenAI timeout). */
 export const EVALUATE_TIMEOUT_MS = 65_000;
 
 const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
