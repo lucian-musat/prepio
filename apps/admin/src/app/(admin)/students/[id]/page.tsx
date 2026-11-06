@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CONSOLIDATION_TYPE_LABELS, formatLei, type ConsolidationType } from '@prepio/shared';
-import { getStudent, type AdminLedgerEntry } from '@/lib/data/students';
+import { getStudent, orderStatusLabel, type AdminLedgerEntry } from '@/lib/data/students';
 import { createServerClient } from '@/lib/supabase/server';
 import AdjustCreditsForm from './AdjustCreditsForm';
 
@@ -17,7 +17,6 @@ const KIND_LABELS: Record<string, string> = {
   refund: 'Rambursare',
   admin: 'Ajustare admin',
 };
-const STATUS_LABELS: Record<string, string> = { pending: 'În așteptare', approved: 'Plătită', failed: 'Eșuată' };
 
 function details(e: AdminLedgerEntry): string {
   if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
@@ -88,7 +87,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
                   <td className="text-nowrap">{fmt(o.createdAt)}</td>
                   <td>{o.credits}</td>
                   <td>{formatLei(o.priceBani)}</td>
-                  <td>{STATUS_LABELS[o.status] ?? o.status}</td>
+                  <td>{orderStatusLabel(o)}</td>
                 </tr>
               ))}
             </tbody>

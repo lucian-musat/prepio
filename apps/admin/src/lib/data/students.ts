@@ -20,7 +20,16 @@ export type AdminLedgerEntry = {
   adminEmail: string | null;
 };
 
-export type AdminOrder = { id: string; credits: number; priceBani: number; status: string; createdAt: string };
+/** `provider` is 'none' while purchases are approved without a payment (mock fulfilment). */
+export type AdminOrder = { id: string; credits: number; priceBani: number; status: string; provider: string; createdAt: string };
+
+const ORDER_STATUS_LABELS: Record<string, string> = { pending: 'În așteptare', approved: 'Plătită', failed: 'Eșuată' };
+
+/** The order's state for the owner: an order approved without a payment provider was never paid. */
+export function orderStatusLabel(o: Pick<AdminOrder, 'status' | 'provider'>): string {
+  if (o.status === 'approved' && o.provider === 'none') return 'Aprobată (fără plată)';
+  return ORDER_STATUS_LABELS[o.status] ?? o.status;
+}
 
 type StudentDb = { id: string; display_name: string | null; email: string | null; credit_balance: number; created_at: string; total: number };
 
@@ -55,8 +64,12 @@ export async function getStudent(
     created_at: string; exercise_id: string | null; exercise_type: string | null; exercise_prompt: string | null; admin_email: string | null;
   }[];
   const orderRows = check(
-    await db.from('credit_orders').select('id,credits,price_bani,status,created_at').eq('user_id', id).order('created_at', { ascending: false }),
-  ) as { id: string; credits: number; price_bani: number; status: string; created_at: string }[];
+    await db
+      .from('credit_orders')
+      .select('id,credits,price_bani,status,provider,created_at')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false }),
+  ) as { id: string; credits: number; price_bani: number; status: string; provider: string; created_at: string }[];
   return {
     student: toStudent(found[0]),
     ledger: ledgerRows.map((r) => ({
@@ -72,7 +85,14 @@ export async function getStudent(
       exercisePrompt: r.exercise_prompt,
       adminEmail: r.admin_email,
     })),
-    orders: orderRows.map((o) => ({ id: o.id, credits: o.credits, priceBani: o.price_bani, status: o.status, createdAt: o.created_at })),
+    orders: orderRows.map((o) => ({
+      id: o.id,
+      credits: o.credits,
+      priceBani: o.price_bani,
+      status: o.status,
+      provider: o.provider,
+      createdAt: o.created_at,
+    })),
   };
 }
 

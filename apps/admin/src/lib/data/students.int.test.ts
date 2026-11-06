@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { UserError } from './db';
-import { adjustCredits, getStudent, listStudents } from './students';
+import { adjustCredits, getStudent, listStudents, orderStatusLabel } from './students';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -52,6 +52,17 @@ describe.skipIf(!url || !anon || !serviceKey)('students data functions (local Su
     await expect(adjustCredits(db, userId!, -100, 'x')).rejects.toThrow(new UserError('Soldul nu poate deveni negativ.'));
     await expect(adjustCredits(db, userId!, 0, 'x')).rejects.toThrow(new UserError('Introdu un număr diferit de 0.'));
     expect((await getStudent(db, userId!))!.student.creditBalance).toBe(17);
+  });
+
+  it('a purchase approved without payment lists its provider and is not shown as paid', async () => {
+    const pkg = await service.from('credit_packages').select('id').eq('active', true).limit(1).single();
+    if (pkg.error) throw pkg.error;
+    const bought = await service.rpc('purchase_credit_package', { p_user: userId!, p_package: pkg.data.id });
+    if (bought.error) throw bought.error;
+    const { orders } = (await getStudent(db, userId!))!;
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ status: 'approved', provider: 'none' });
+    expect(orderStatusLabel(orders[0])).toBe('Aprobată (fără plată)');
   });
 
   it('returns null for an unknown student', async () => {
