@@ -122,3 +122,92 @@ it('the whole-essay check is enabled only once every requirement has text, and s
   expect(await screen.findByText('Eseu bine structurat')).toBeTruthy();
   expect(onChecked).toHaveBeenCalledWith(expect.objectContaining({ exerciseId: 'e9', verdict: 'ok' }));
 });
+
+// ---- Fix round 1 ----
+
+const item = (key: string, verdict: 'ok' | 'almost' | 'no', title = key) => ({ key, verdict, title, good: [], improve: [], ai: true });
+const deferred = <T,>() => {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+};
+
+async function renderScreen(onChecked = jest.fn(), onRetry = jest.fn()) {
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ExerciseScreen
+        exercise={essay}
+        sources={new Map()}
+        templates={new Map()}
+        index={0}
+        total={1}
+        onBack={jest.fn()}
+        onChecked={onChecked}
+        onContinue={jest.fn()}
+        onRetry={onRetry}
+      />
+    </SafeAreaProvider>,
+  );
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte.');
+  await fireEvent.press(screen.getByText('Formularea unui punct de vedere și susținerea lui'));
+  await fireEvent.changeText(screen.getByLabelText('Cerința 2'), 'A doua parte.');
+}
+const bar = () => within(screen.getByTestId('action-bar'));
+const whole = () => bar().getByRole('button', { name: 'Verifică eseul întreg' });
+
+it('overlapping checks: the whole check waits for a requirement in flight, and keeps its result', async () => {
+  const part = deferred<{ items: ReturnType<typeof item>[] }>();
+  const all = deferred<{ items: ReturnType<typeof item>[] }>();
+  mockedEvaluate.mockReturnValueOnce(part.promise).mockReturnValueOnce(all.promise);
+  const onChecked = jest.fn();
+  await renderScreen(onChecked);
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  expect(whole()).toBeDisabled();
+  await act(async () => part.resolve({ items: [item('r1', 'almost', 'Cerința 1: aproape')] }));
+  expect(whole()).toBeEnabled();
+  await act(async () => void fireEvent.press(whole()));
+  await act(async () => all.resolve({ items: [item('whole', 'ok', 'Eseu bine structurat')] }));
+  expect(await screen.findByText('Eseu bine structurat')).toBeTruthy();
+  expect(within(screen.getByTestId('requirement-r1')).getByText('Aproape')).toBeTruthy();
+  const saved = onChecked.mock.calls.at(-1)![0];
+  expect(saved.verdict).toBe('ok');
+  expect(saved.feedback.items.map((i: { key: string }) => i.key)).toEqual(['r1', 'whole']);
+});
+
+it('no whole item back: the essay verdict stays null', async () => {
+  mockedEvaluate.mockResolvedValue({ items: [] });
+  const onChecked = jest.fn();
+  await renderScreen(onChecked);
+  await act(async () => void fireEvent.press(whole()));
+  expect(onChecked).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: null }));
+});
+
+it('a checked requirement edited afterwards goes back to „Neverificat”', async () => {
+  mockedEvaluate.mockResolvedValue({ items: [item('r1', 'ok', 'Bine')] });
+  await renderScreen();
+  const card = () => within(screen.getByTestId('requirement-r1'));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  expect(await card().findByText('Corect')).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte, schimbată.');
+  expect(card().getByText('Neverificat')).toBeTruthy();
+  expect(card().queryByText('Corect')).toBeNull();
+});
+
+it('„Încearcă din nou” on an essay keeps the texts and clears only the feedback', async () => {
+  mockedEvaluate
+    .mockResolvedValueOnce({ items: [item('r1', 'ok', 'Bine')] })
+    .mockResolvedValueOnce({ items: [item('whole', 'almost', 'Eseu: mai lucrează la structură')] });
+  const onRetry = jest.fn();
+  const onChecked = jest.fn();
+  await renderScreen(onChecked, onRetry);
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(whole()));
+  expect(await screen.findByText('Eseu: mai lucrează la structură')).toBeTruthy();
+  await act(async () => void fireEvent.press(bar().getByRole('button', { name: 'Încearcă din nou' })));
+  expect(onRetry).not.toHaveBeenCalled();
+  expect(screen.queryByText('Eseu: mai lucrează la structură')).toBeNull();
+  expect(screen.getByLabelText('Cerința 1').props.value).toBe('Prima parte.');
+  expect(screen.getByLabelText('Cerința 2').props.value).toBe('A doua parte.');
+  expect(within(screen.getByTestId('requirement-r1')).getByText('Neverificat')).toBeTruthy();
+  expect(whole()).toBeEnabled();
+});

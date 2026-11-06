@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
+  MAX_ANSWER_CHARS,
   space,
   tokenizeSource,
   type ConsolidationExercise,
@@ -30,7 +31,7 @@ export type InputProps<T extends ConsolidationType> = {
 export type MarkerInputProps<T extends ConsolidationType> = InputProps<T> & { marker: PanelMarker };
 
 /** Longest text a field takes (the evaluation endpoint's limit). */
-export const MAX_CHARS = 3000;
+export const MAX_CHARS = MAX_ANSWER_CHARS;
 
 export const verdictOf = (feedback: ExerciseFeedback | null, key: string): Verdict | undefined =>
   feedback?.items.find((i) => i.key === key)?.verdict;

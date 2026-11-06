@@ -88,7 +88,14 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
   const reducer = useMemo(() => markerReducer(cfg ?? NO_PENS), [cfg]);
   const [markState, dispatch] = useReducer(reducer, undefined, () => initialMarker(cfg ?? NO_PENS));
   const [answer, setAnswer] = useState<ExerciseAnswer>(() => emptyAnswer(exercise));
-  const [feedback, setFeedback] = useState<ExerciseFeedback | null>(null);
+  const [feedback, setFeedbackState] = useState<ExerciseFeedback | null>(null);
+  // The latest feedback, for results that arrive after an await (an essay's checks merge into each other).
+  const feedbackRef = useRef<ExerciseFeedback | null>(null);
+  const setFeedback = (fb: ExerciseFeedback | null) => {
+    feedbackRef.current = fb;
+    setFeedbackState(fb);
+  };
+  const [partBusy, setPartBusy] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState('');
   const [sheet, setSheet] = useState<string | null>(null);
@@ -124,8 +131,9 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
     try {
       const res = await evaluateConsolidation({ exerciseId: exercise.id, target: essay ? 'whole' : 'exercise', answer: a });
       if (essay) {
-        const merged = mergeItems(feedback, res.items);
-        finish({ ...merged, verdict: res.items.find((i) => i.key === 'whole')?.verdict ?? combineVerdict(res.items) }, a);
+        // The essay's verdict is the whole-essay verdict; without one it stays null („n din N” in the summary).
+        const merged = mergeItems(feedbackRef.current, res.items);
+        finish({ ...merged, verdict: res.items.find((i) => i.key === 'whole')?.verdict ?? null }, a);
       } else {
         finish(mergeAiFeedback(exercise, det, res.items), a);
       }
@@ -136,6 +144,15 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
       busy.current = false;
     }
   };
+
+  // „Încearcă din nou”: an essay keeps its texts and drops only the feedback; other types start empty again.
+  const retry = essay
+    ? () => {
+        setFeedback(null);
+        setStatus('idle');
+        setError('');
+      }
+    : onRetry;
 
   const swap = () => {
     dispatch({ type: 'swapRoles' });
@@ -201,6 +218,7 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
             }}
             templateIds={new Set(templates.keys())}
             onOpenTemplate={setSheet}
+            onBusyChange={setPartBusy}
           />
         );
     }
@@ -210,11 +228,12 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
   const actions = checked ? (
     <View style={styles.stack}>
       <Button label="Continuă" onPress={onContinue} />
-      <Button label="Încearcă din nou" variant="secondary" onPress={onRetry} />
+      <Button label="Încearcă din nou" variant="secondary" onPress={retry} />
     </View>
   ) : essay ? (
     <View style={styles.stack}>
-      <Button label="Verifică eseul întreg" disabled={!complete} loading={loading} onPress={check} />
+      {/* Waits for requirement checks in flight, so their results are never overwritten. */}
+      <Button label="Verifică eseul întreg" disabled={!complete || partBusy} loading={loading} onPress={check} />
       {feedback?.items.length ? <Button label="Continuă" variant="secondary" onPress={onContinue} /> : null}
     </View>
   ) : (

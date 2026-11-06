@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { border, color, radius, space, VERDICT_LABELS, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
 import { evaluateConsolidation } from '../../lib/api';
@@ -18,6 +18,8 @@ type Props = InputProps<'essay'> & {
   /** Ids of the requirements' templates that exist; their „💡” opens the sheet. */
   templateIds?: Set<string>;
   onOpenTemplate?: (templateId: string) => void;
+  /** Whether any requirement check is in flight (the whole-essay check waits for them). */
+  onBusyChange?: (busy: boolean) => void;
 };
 
 /**
@@ -25,11 +27,18 @@ type Props = InputProps<'essay'> & {
  * with a character count, the connector chips for an argument and „Verifică cerința”, which asks the AI about that
  * requirement alone. Below, „Eseul întreg”: what the whole-essay check (in the action bar) looks at.
  */
-export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate }: Props) {
+export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate, onBusyChange }: Props) {
   const reqs = exercise.requirements;
   const [open, setOpen] = useState<Set<string>>(() => new Set(reqs[0] ? [reqs[0].id] : []));
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // The text each requirement had when it was checked: once edited, its verdict no longer applies.
+  const [checkedText, setCheckedText] = useState<Record<string, string>>({});
+  const anyBusy = Object.values(busy).some(Boolean);
+  useEffect(() => {
+    onBusyChange?.(anyBusy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anyBusy]);
   // Checks can overlap: each result merges into the latest feedback, not the one it started with.
   const latest = useRef(feedback);
   latest.current = feedback;
@@ -45,10 +54,12 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
   const check = async (r: EssayRequirement) => {
     setBusy((b) => ({ ...b, [r.id]: true }));
     setErrors((e) => ({ ...e, [r.id]: '' }));
+    const sent = value.parts[r.id] ?? '';
     try {
       const res = await evaluateConsolidation({ exerciseId: exercise.id, target: { requirementId: r.id }, answer: value });
       const merged = mergeItems(latest.current, res.items.filter((i) => i.key === r.id));
       latest.current = merged;
+      setCheckedText((c) => ({ ...c, [r.id]: sent }));
       onFeedback(merged);
     } catch (e) {
       setErrors((x) => ({ ...x, [r.id]: e instanceof Error && e.message ? e.message : 'Evaluarea nu a reușit. Încearcă din nou.' }));
@@ -69,9 +80,12 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
       {reqs.map((r, i) => {
         const text = value.parts[r.id] ?? '';
         const item = feedback?.items.find((x) => x.key === r.id);
+        // Edited since its check: the old verdict is stale (the feedback stays as a hint).
+        const stale = !!item && checkedText[r.id] !== undefined && checkedText[r.id] !== text;
+        const current = stale ? undefined : item;
         const isOpen = open.has(r.id);
-        const tone = item ? VERDICT_TONE[item.verdict] : null;
-        const state = item ? VERDICT_LABELS[item.verdict] : filled(text) ? 'Neverificat' : 'Necompletat';
+        const tone = current ? VERDICT_TONE[current.verdict] : null;
+        const state = current ? VERDICT_LABELS[current.verdict] : filled(text) ? 'Neverificat' : 'Necompletat';
         return (
           <View key={r.id} testID={`requirement-${r.id}`} style={styles.card}>
             <Pressable
@@ -105,7 +119,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                   minHeight={PART_HEIGHT}
                   maxLength={MAX_CHARS}
                   editable={!disabled}
-                  status={item?.verdict}
+                  status={current?.verdict}
                 />
                 {r.argument ? <ConnectorChips text={text} /> : null}
                 <View style={styles.row}>
