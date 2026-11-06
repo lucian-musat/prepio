@@ -47,6 +47,22 @@ describe('matchVariants', () => {
     expect(matchVariants('XV', ['XIV']).kind).toBe('none');
     expect(matchVariants('1859', ['1858']).kind).toBe('none');
   });
+  it.each([
+    ['secolul al XIV-lea', 'secolul al XV-lea'],
+    ['al XIV-lea', 'al XV-lea'],
+    ['Carol II', 'Carol I'],
+    ['Napoleon II', 'Napoleon III'],
+    ['Carol I', 'Carol II'],
+    ['Regulamentele Organice 1831', 'Regulamentele Organice 1832'],
+  ])('does not treat %s vs accepted %s as a typo', (answer, accepted) => {
+    expect(matchVariants(answer, [accepted]).kind).toBe('none');
+  });
+  it('allows two edits for answers of 16+ characters, one below', () => {
+    expect(matchVariants('Statutul Dezvoltar', ['Statutul Dezvoltător']).kind).toBe('typo');
+    expect(matchVariants('Statutul Dezvolar', ['Statutul Dezvoltător']).kind).toBe('none');
+    expect(matchVariants('Secularizarr', ['Secularizarea']).kind).toBe('none');
+    expect(matchVariants('Secularizare', ['Secularizarea']).kind).toBe('typo');
+  });
   it('matches centuries in different forms', () => {
     expect(matchVariants('secolul al XIV-lea', ['XIV']).kind).toBe('exact');
   });
@@ -74,6 +90,28 @@ describe('matchGroups', () => {
       { groupId: 'g2', duplicate: false },
       { groupId: 'g2', duplicate: true },
     ]);
+  });
+  it('assigns a typo to its group', () => {
+    expect(matchGroups(['Tara Romaneasa', 'Moldva', 'Mldva'], groups)).toEqual([
+      { groupId: 'g2', duplicate: false },
+      { groupId: 'g1', duplicate: false },
+      { groupId: null, duplicate: false },
+    ]);
+  });
+  it('does not match neighbouring Roman numerals or centuries as typos', () => {
+    const rulers = [
+      { id: 'c1', variants: ['Carol I'] },
+      { id: 'n3', variants: ['Napoleon III'] },
+      { id: 's15', variants: ['secolul al XV-lea'] },
+      { id: 'a15', variants: ['al XV-lea'] },
+    ];
+    expect(matchGroups(['Carol II', 'Napoleon II', 'secolul al XIV-lea', 'al XIV-lea'], rulers)).toEqual([
+      { groupId: null, duplicate: false },
+      { groupId: null, duplicate: false },
+      { groupId: null, duplicate: false },
+      { groupId: null, duplicate: false },
+    ]);
+    expect(matchGroups(['Carol I', 'al XV-lea'], rulers).map((r) => r.groupId)).toEqual(['c1', 's15']);
   });
   it('gives null for empty or unmatched answers', () => {
     expect(matchGroups(['', 'Moldova'], groups)).toEqual([

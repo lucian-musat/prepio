@@ -74,12 +74,20 @@ function sameAnswer(normAnswer: string, answer: string, accepted: string): boole
   return c !== null && c === parseCentury(accepted);
 }
 
-/** Typos are tolerated only for long, digit-free, non-Roman accepted answers. */
-function typoAllowed(normAccepted: string): boolean {
+/** True when the normalised text has a digit, a Roman-numeral token or reads as a century. */
+function hasNumber(norm: string): boolean {
+  if (/\d/.test(norm)) return true;
+  if (norm.split(' ').some((t) => t !== '' && ROMAN_SHAPE.test(t))) return true;
+  return parseCentury(norm) !== null;
+}
+
+/**
+ * Typos are tolerated only for long answers where neither side carries a number:
+ * "Carol II" vs "Carol I" or "al XIV-lea" vs "al XV-lea" are different answers, not typos.
+ */
+function typoAllowed(normAnswer: string, normAccepted: string): boolean {
   if (normAccepted.replace(/ /g, '').length < 5) return false;
-  if (/\d/.test(normAccepted)) return false;
-  if (!normAccepted.includes(' ') && normAccepted !== '' && ROMAN_SHAPE.test(normAccepted)) return false;
-  return true;
+  return !hasNumber(normAccepted) && !hasNumber(normAnswer);
 }
 
 export function matchVariants(
@@ -97,7 +105,7 @@ export function matchVariants(
   }
   for (const a of accepted) {
     const na = normalizeAnswer(a);
-    if (!typoAllowed(na)) continue;
+    if (!typoAllowed(norm, na)) continue;
     if (levenshtein(norm, na) <= Math.max(1, Math.floor(na.length / 8))) return { kind: 'typo', accepted: a };
   }
   return { kind: 'none' };

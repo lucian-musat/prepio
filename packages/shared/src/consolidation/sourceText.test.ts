@@ -66,6 +66,25 @@ describe('sentenceRange', () => {
     const u = tokenizeSource('În sec. XIV a fost cca. 5 ani. Apoi.');
     expect(sentenceRange(u, 0, 0)).toEqual([0, 7]);
   });
+  it.each([
+    ['Dacia a fost cucerită în anul 106 d.Hr. de romani. Apoi.', 9],
+    ['Dacia a fost cucerită în anul 106 î.Hr. de romani. Apoi.', 9],
+    ['Pe atunci (sec. XIV) domnea Basarab. Apoi.', 5],
+    ['Au venit boierii, clericii etc. la adunare. Apoi.', 6],
+    ['Au venit boierii, clericii ș.a. la adunare. Apoi.', 6],
+    ['Au venit boierii, clericii ş.a. la adunare. Apoi.', 6],
+    ['Vezi str. Lipscani nr. 5, vol. II, p. 3, pp. 4-5, cf. Iorga. Apoi.', 12],
+    ['Scrie Gh. Lazăr, Mih. Kogălniceanu și Th. Aman. Apoi.', 7],
+    ['Scrie „Etc. și altele” mereu. Apoi.', 4],
+  ])('does not split on abbreviations in %s', (body, lastOfFirst) => {
+    const u = tokenizeSource(body);
+    expect(sentenceRange(u, 0, 0)).toEqual([0, lastOfFirst]);
+  });
+  it('ends a sentence at a capitalised name', () => {
+    const u = tokenizeSource('Discursul a fost rostit de Ion. A doua zi a plecat Ana. Apoi.');
+    expect(sentenceRange(u, 0, 0)).toEqual([0, 5]);
+    expect(sentenceRange(u, 6, 6)).toEqual([6, 11]);
+  });
 });
 
 describe('spanToWords', () => {

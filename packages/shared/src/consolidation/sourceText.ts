@@ -27,13 +27,22 @@ export function tokenizeSource(body: string): TokenizedSource {
   return { words, paragraphCount: words.length === 0 ? 0 : paragraph + 1 };
 }
 
-const INITIAL = /^[A-ZĂÂÎȘȚ][a-zăâîșț]{0,2}\.$/;
-const ABBREVIATIONS = new Set(['sec.', 'cca.', 'nr.']);
+/** A single capital letter ("I.", "D.") is an initial; capitalised words ("Ion.") end sentences. */
+const INITIAL = /^[A-ZĂÂÎȘȚŞŢ]\.$/;
+/** Compared lower-case with diacritics stripped (so "ș.a." and "ş.a." both match "s.a."). */
+const ABBREVIATIONS = new Set([
+  'al.', 'gh.', 'th.', 'st.', 'em.', 'gr.', 'mih.',
+  'i.hr.', 'd.hr.', 'etc.', 's.a.', 'str.', 'p.', 'pp.', 'vol.', 'cf.', 'nr.', 'cca.', 'sec.',
+]);
+
+function foldCase(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
 
 function endsSentence(text: string): boolean {
-  const core = text.replace(/["”»)]+$/, '');
+  const core = text.replace(/["”“»’)\]]+$/, '').replace(/^[(„"«“‘'[]+/, '');
   if (!/[.!?]$/.test(core)) return false;
-  return !(INITIAL.test(core) || ABBREVIATIONS.has(core));
+  return !(INITIAL.test(core) || ABBREVIATIONS.has(foldCase(core)));
 }
 
 /** Smallest word range covering whole sentences that contain words from..to. */
