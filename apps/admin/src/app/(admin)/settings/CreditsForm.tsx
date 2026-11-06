@@ -66,9 +66,18 @@ export default function CreditsForm({ initial }: { initial: CreditSettingsInput 
       packages.push({ ...(r.id ? { id: r.id } : {}), credits, priceBani: bani, featured: r.featured, active: r.active });
     }
     setFormError(null);
+    // The action returns the stored list so rows added here get their ids; otherwise a second save would insert them again.
+    let stored: CreditSettingsInput | undefined;
     run(
-      () => saveCreditSettingsAction({ welcomeCredits: welcome.trim() === '' ? NaN : welcomeCredits, packages }),
-      () => setSaved(true),
+      async () => {
+        const res = await saveCreditSettingsAction({ welcomeCredits: welcome.trim() === '' ? NaN : welcomeCredits, packages });
+        if (res.ok) stored = res.data;
+        return res;
+      },
+      () => {
+        if (stored) setRows((rs) => rs.map((r, i) => (r.id ? r : { ...r, id: stored!.packages[i]?.id })));
+        setSaved(true);
+      },
     );
   }
 

@@ -52,11 +52,12 @@ describe.skipIf(!url || !anon)('credit settings data functions (local Supabase)'
     expect(s.welcomeCredits).toBe(5);
     expect(s.packages.map((p) => p.id).slice(0, 3)).toEqual([c.id, a.id, b.id]);
     expect(s.packages[0].priceBani).toBe(c.priceBani + 100);
-    const added = s.packages[3];
+    const added = s.packages.find((p) => p.active && p.credits === 7 && p.priceBani === 777)!;
     expect(added).toMatchObject({ credits: 7, priceBani: 777, featured: true, active: true });
     expect(added.id).toBeTruthy();
     expect(s.packages.filter((p) => p.featured)).toHaveLength(1);
-    await saveCreditSettings(db, original);
+    const extras = s.packages.filter((p) => !original.packages.some((o) => o.id === p.id)).map((p) => ({ ...p, active: false, featured: false }));
+    await saveCreditSettings(db, { ...original, packages: [...original.packages, ...extras] });
     expect((await getCreditSettings(db)).packages.slice(0, 3)).toEqual(original.packages.slice(0, 3));
   });
 

@@ -22,12 +22,13 @@ export async function saveSettings(input: SettingsInput): Promise<ActionResult> 
   }
 }
 
-export async function saveCreditSettingsAction(input: CreditSettingsInput): Promise<ActionResult> {
+export async function saveCreditSettingsAction(input: CreditSettingsInput): Promise<ActionResult<CreditSettingsInput>> {
   try {
     const db = await createServerClient();
     await credits.saveCreditSettings(db, input);
+    const data = await credits.getCreditSettings(db);
     revalidatePath('/settings');
-    return { ok: true };
+    return { ok: true, data };
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[credit settings action] unexpected error:', e);

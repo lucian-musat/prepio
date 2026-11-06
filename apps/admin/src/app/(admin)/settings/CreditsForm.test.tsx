@@ -70,4 +70,25 @@ describe('CreditsForm', () => {
     expect(actions.saveCreditSettingsAction).not.toHaveBeenCalled();
     expect(await screen.findByText('Pachetul 3: prețul trebuie să fie mai mare de 0.')).toBeTruthy();
   });
+
+  it('sends the id of an added package on the second save (no duplicate)', async () => {
+    const user = userEvent.setup();
+    actions.saveCreditSettingsAction.mockResolvedValue({
+      ok: true,
+      data: { welcomeCredits: 12, packages: [...INITIAL.packages, { id: 'new', credits: 10, priceBani: 500, featured: false, active: true }] },
+    });
+    render(<CreditsForm initial={INITIAL} />);
+    await user.click(screen.getByRole('button', { name: 'Adaugă pachet' }));
+    await user.type(screen.getByLabelText('Credite pachet 3'), '10');
+    await user.type(screen.getByLabelText('Preț pachet 3 (lei)'), '5');
+    await user.click(screen.getByRole('button', { name: 'Salvează creditele' }));
+    await screen.findByText('Creditele au fost salvate.');
+    await user.type(screen.getByLabelText('Preț pachet 3 (lei)'), '0');
+    await user.click(screen.getByRole('button', { name: 'Salvează creditele' }));
+    await waitFor(() => expect(actions.saveCreditSettingsAction).toHaveBeenCalledTimes(2));
+    const [first, second] = actions.saveCreditSettingsAction.mock.calls.map((c) => c[0] as CreditSettingsInput);
+    expect(first.packages[2].id).toBeUndefined();
+    expect(second.packages).toHaveLength(3);
+    expect(second.packages[2]).toMatchObject({ id: 'new', priceBani: 5000 });
+  });
 });
