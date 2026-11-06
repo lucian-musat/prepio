@@ -32,8 +32,11 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
   const [open, setOpen] = useState<Set<string>>(() => new Set(reqs[0] ? [reqs[0].id] : []));
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // The text each requirement had when it was checked: once edited, its verdict no longer applies.
-  const [checkedText, setCheckedText] = useState<Record<string, string>>({});
+  // The text each requirement had when it was checked: once edited, its verdict no longer applies. A restored
+  // essay (coming back to it) starts from the stored texts of its checked requirements.
+  const [checkedText, setCheckedText] = useState<Record<string, string>>(() =>
+    Object.fromEntries(reqs.filter((r) => feedback?.items.some((i) => i.key === r.id)).map((r) => [r.id, value.parts[r.id] ?? ''])),
+  );
   const anyBusy = Object.values(busy).some(Boolean);
   useEffect(() => {
     onBusyChange?.(anyBusy);

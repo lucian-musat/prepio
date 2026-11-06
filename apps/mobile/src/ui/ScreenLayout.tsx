@@ -25,6 +25,8 @@ type Props = {
   progressLabel?: string;
   onBack?: () => void;
   trailing?: ReactNode;
+  /** A full-width row in the header under the progress: it stays put while the content scrolls. */
+  subheader?: ReactNode;
   actions?: ReactNode;
   feedback?: ReactNode;
   tone?: ActionTone;
@@ -60,6 +62,7 @@ export default function ScreenLayout({
   progressLabel,
   onBack,
   trailing,
+  subheader,
   actions,
   feedback,
   tone,
@@ -112,7 +115,7 @@ export default function ScreenLayout({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} trailing={trailing} raised={topRaised} />
+        <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} trailing={trailing} below={subheader} raised={topRaised} />
         <Animated.ScrollView
           ref={scrollRef}
           testID="screen-scroll"

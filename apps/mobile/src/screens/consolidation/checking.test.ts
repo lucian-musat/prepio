@@ -5,9 +5,11 @@ import {
   emptyAnswer,
   essayProgress,
   isComplete,
+  markerMarks,
   markerConfig,
   mergeAiFeedback,
   mergeItems,
+  restorable,
 } from './checking';
 
 const base = { id: 'e1', position: 1, prompt: 'P', templateId: null, sources: [], modelAnswer: null, explanation: null };
@@ -134,5 +136,36 @@ describe('essay helpers', () => {
   it('essayProgress counts the requirements judged ok', () => {
     expect(essayProgress(essay, { verdict: null, items: [item('r1', 'ok'), item('r2', 'almost')] })).toEqual({ ok: 1, total: 2 });
     expect(essayProgress(essay, null)).toEqual({ ok: 0, total: 2 });
+  });
+});
+
+describe('restorable / markerMarks', () => {
+  it('a stored answer of the same shape can be restored', () => {
+    expect(restorable(short, { type: 'short_answer', text: 'X' })).toBe(true);
+    expect(restorable(multi, { type: 'multi_answer', texts: ['a', 'b'] })).toBe(true);
+    expect(restorable(info, { type: 'source_info', marks: [m(0)] })).toBe(true);
+    expect(restorable(essay, { type: 'essay', parts: { r1: 'a', r2: '' } })).toBe(true);
+  });
+
+  it('an answer that no longer fits the exercise (edited in the admin) is not restored', () => {
+    expect(restorable(short, { type: 'comparison', text: 'X' })).toBe(false);
+    expect(restorable(multi, { type: 'multi_answer', texts: ['a', 'b', 'c'] })).toBe(false);
+    expect(restorable(facts, { type: 'facts', texts: ['a'] })).toBe(false);
+    expect(restorable(info, { type: 'source_info', marks: [m(0), m(4), m(8)] })).toBe(false);
+    expect(restorable(essay, { type: 'essay', parts: { r1: 'a' } })).toBe(false);
+  });
+
+  it('markerMarks gives the marks back to the marker with their pens', () => {
+    expect(markerMarks({ type: 'source_info', marks: [m(0)] })).toEqual([{ ...m(0), pen: 'info' }]);
+    expect(markerMarks({ type: 'viewpoint', text: 't', marks: [m(0), m(4)] })).toEqual([
+      { ...m(0), pen: 'support' },
+      { ...m(4), pen: 'support' },
+    ]);
+    expect(markerMarks({ type: 'cause_effect', cause: m(4), effect: m(0) })).toEqual([
+      { ...m(4), pen: 'cause' },
+      { ...m(0), pen: 'effect' },
+    ]);
+    expect(markerMarks({ type: 'cause_effect', cause: null, effect: m(0) })).toEqual([{ ...m(0), pen: 'effect' }]);
+    expect(markerMarks({ type: 'short_answer', text: 'x' })).toEqual([]);
   });
 });

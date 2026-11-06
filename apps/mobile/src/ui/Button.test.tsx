@@ -61,3 +61,19 @@ it('primary button face brightens 5 % on hover on web (prototype `.btn:hover`)',
     Platform.OS = os;
   }
 });
+
+const padding = () => StyleSheet.flatten(screen.getByTestId('button-face').props.style).paddingHorizontal;
+
+it('an icon-only button is named by its accessibilityLabel and has the compact padding', async () => {
+  await render(<Button icon="back" accessibilityLabel="Exercițiul anterior" variant="secondary" onPress={jest.fn()} />);
+  expect(screen.getByRole('button', { name: 'Exercițiul anterior' })).toBeTruthy();
+  expect(screen.getByTestId('button-icon')).toBeTruthy();
+  expect(padding()).toBe(12);
+});
+
+it('compact narrows the side padding of a labelled button', async () => {
+  await render(<Button label="Sari peste" onPress={jest.fn()} />);
+  expect(padding()).toBe(18);
+  await render(<Button label="Sari peste" compact onPress={jest.fn()} />);
+  expect(padding()).toBe(12);
+});

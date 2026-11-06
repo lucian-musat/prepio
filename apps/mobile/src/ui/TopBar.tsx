@@ -24,6 +24,8 @@ type Props = {
   onBack?: () => void;
   /** Right-aligned control (e.g. the profile button). */
   trailing?: ReactNode;
+  /** A full-width row under the progress (e.g. the consolidation exercise map). */
+  below?: ReactNode;
   raised: boolean;
 };
 
@@ -50,7 +52,7 @@ function Logo() {
 }
 
 /** Fixed screen header: back button, title or logo, and (optionally) the lesson progress. */
-export default function TopBar({ title, logo = false, progress, progressLabel, onBack, trailing, raised }: Props) {
+export default function TopBar({ title, logo = false, progress, progressLabel, onBack, trailing, below, raised }: Props) {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   return (
     <View testID="top-bar" style={[styles.bar, wide && styles.wide, raised && styles.raised]}>
@@ -71,6 +73,7 @@ export default function TopBar({ title, logo = false, progress, progressLabel, o
           </View>
         </View>
       ) : null}
+      {below ? <View style={styles.below}>{below}</View> : null}
     </View>
   );
 }
@@ -97,6 +100,7 @@ const styles = StyleSheet.create({
   trailing: { marginLeft: 'auto' },
   progressRow: { flexBasis: '100%', width: '100%', marginTop: space[1.5] },
   progress: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center' }, // centred at 720 px on desktop, like the prototype
+  below: { flexBasis: '100%', width: '100%' },
   logo: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   mark: { width: LOGO_MARK, height: LOGO_MARK, borderRadius: radius.xs, alignItems: 'center', justifyContent: 'center' },
 });

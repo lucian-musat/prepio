@@ -107,6 +107,7 @@ it('the whole-essay check is enabled only once every requirement has text, and s
         onChecked={onChecked}
         onContinue={jest.fn()}
         onRetry={jest.fn()}
+        onSkip={jest.fn()}
       />
     </SafeAreaProvider>,
   );
@@ -145,6 +146,7 @@ async function renderScreen(onChecked = jest.fn(), onRetry = jest.fn()) {
         onChecked={onChecked}
         onContinue={jest.fn()}
         onRetry={onRetry}
+        onSkip={jest.fn()}
       />
     </SafeAreaProvider>,
   );
@@ -210,4 +212,45 @@ it('„Încearcă din nou” on an essay keeps the texts and clears only the fee
   expect(screen.getByLabelText('Cerința 2').props.value).toBe('A doua parte.');
   expect(within(screen.getByTestId('requirement-r1')).getByText('Neverificat')).toBeTruthy();
   expect(whole()).toBeEnabled();
+});
+
+it('coming back to an essay in progress restores its texts and requirement verdicts; editing one makes it stale', async () => {
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ExerciseScreen
+        exercise={essay}
+        sources={new Map()}
+        templates={new Map()}
+        index={1}
+        total={2}
+        onBack={jest.fn()}
+        onChecked={jest.fn()}
+        onContinue={jest.fn()}
+        onRetry={jest.fn()}
+        onSkip={jest.fn()}
+        onPrev={jest.fn()}
+        initial={{ answer: { type: 'essay', parts: { r1: 'Prima parte.', r2: '' } }, feedback: { verdict: null, items: [item('r1', 'ok', 'Bine')] } }}
+      />
+    </SafeAreaProvider>,
+  );
+  const card = () => within(screen.getByTestId('requirement-r1'));
+  expect(card().getByText('Corect')).toBeTruthy();
+  expect(screen.getByLabelText('Cerința 1').props.value).toBe('Prima parte.');
+  // Some requirement feedback: the forward button says „Continuă”, as before the navigation.
+  expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
+  expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeEnabled();
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte, schimbată.');
+  expect(card().getByText('Neverificat')).toBeTruthy();
+});
+
+it('previous / skip are disabled while a requirement check runs', async () => {
+  const part = deferred<{ items: ReturnType<typeof item>[] }>();
+  mockedEvaluate.mockReturnValueOnce(part.promise);
+  await renderScreen();
+  expect(bar().getByRole('button', { name: 'Sari peste, exercițiul următor' })).toBeEnabled();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  expect(bar().getByRole('button', { name: 'Sari peste, exercițiul următor' })).toBeDisabled();
+  expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeDisabled();
+  await act(async () => part.resolve({ items: [item('r1', 'ok')] }));
+  expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
 });

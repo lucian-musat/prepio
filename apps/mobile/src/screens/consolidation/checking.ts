@@ -1,5 +1,5 @@
 import type { ConsolidationExercise, ExerciseAnswer, ExerciseFeedback, FeedbackItem, Verdict } from '@prepio/shared';
-import type { MarkerConfig } from '../../components/marker/markerReducer';
+import type { MarkerConfig, MarkerMark } from '../../components/marker/markerReducer';
 
 const filled = (s: string | undefined) => !!s && s.trim() !== '';
 
@@ -125,4 +125,41 @@ export function mergeAiFeedback(ex: ConsolidationExercise, det: ExerciseFeedback
 export function essayProgress(ex: Extract<ConsolidationExercise, { type: 'essay' }>, feedback: ExerciseFeedback | null) {
   const ok = ex.requirements.filter((r) => feedback?.items.some((i) => i.key === r.id && i.verdict === 'ok')).length;
   return { ok, total: ex.requirements.length };
+}
+
+/**
+ * Whether a stored answer still fits the exercise, so it can be shown again (coming back to an exercise): the same
+ * type, as many fields as asked for, no more marks than the marker holds, a text for every essay requirement.
+ */
+export function restorable(ex: ConsolidationExercise, a: ExerciseAnswer): boolean {
+  if (a.type !== ex.type) return false;
+  switch (ex.type) {
+    case 'multi_answer':
+    case 'facts':
+      return 'texts' in a && Array.isArray(a.texts) && a.texts.length === ex.count;
+    case 'source_info':
+    case 'viewpoint':
+      return 'marks' in a && Array.isArray(a.marks) && a.marks.length <= ex.count;
+    case 'essay':
+      return 'parts' in a && !!a.parts && ex.requirements.every((r) => typeof a.parts[r.id] === 'string');
+    default:
+      return true;
+  }
+}
+
+/** A stored answer's marks as the marker holds them (each with its pen), so the source shows them again. */
+export function markerMarks(a: ExerciseAnswer): MarkerMark[] {
+  switch (a.type) {
+    case 'source_info':
+      return a.marks.map((m) => ({ ...m, pen: 'info' as const }));
+    case 'viewpoint':
+      return a.marks.map((m) => ({ ...m, pen: 'support' as const }));
+    case 'cause_effect':
+      return [
+        ...(a.cause ? [{ ...a.cause, pen: 'cause' as const }] : []),
+        ...(a.effect ? [{ ...a.effect, pen: 'effect' as const }] : []),
+      ];
+    default:
+      return [];
+  }
 }

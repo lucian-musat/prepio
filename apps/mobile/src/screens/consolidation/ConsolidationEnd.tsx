@@ -1,9 +1,8 @@
-import { StyleSheet, View } from 'react-native';
-import { border, color, CONSOLIDATION_TYPE_LABELS, radius, space, VERDICT_LABELS, type ConsolidationExercise } from '@prepio/shared';
-import { VERDICT_TONE } from '../../components/consolidation/verdictTone';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { border, color, CONSOLIDATION_TYPE_LABELS, radius, space, type ConsolidationExercise } from '@prepio/shared';
 import type { Attempt } from '../../lib/consolidation';
-import { AppText, Button, Enter, ScreenLayout, Surface } from '../../ui';
-import { essayProgress } from './checking';
+import { AppText, Button, Enter, Icon, ScreenLayout, Surface } from '../../ui';
+import { exerciseStatus } from './status';
 
 type Props = {
   exercises: ConsolidationExercise[];
@@ -12,24 +11,21 @@ type Props = {
   onRestart: () => void;
   /** Absent when every exercise is already correct. */
   onRestartWrong?: () => void;
+  /** A row was tapped: open that exercise. */
+  onOpen: (exerciseId: string) => void;
   next: { label: string; onPress: () => void };
 };
 
-const MUTED = { fg: color.textMuted, bg: color.surfaceMuted, edge: color.border };
-
-/** One summary row's label and chip: the latest verdict; an essay without a whole verdict shows „n din N”. */
-function rowOf(ex: ConsolidationExercise, attempt: Attempt | undefined) {
-  const label = ex.type === 'essay' ? `Eseu (${ex.requirements.length} ${ex.requirements.length === 1 ? 'cerință' : 'cerințe'})` : CONSOLIDATION_TYPE_LABELS[ex.type];
-  if (attempt?.verdict) return { label, chip: VERDICT_LABELS[attempt.verdict], tone: VERDICT_TONE[attempt.verdict] };
-  if (ex.type === 'essay' && attempt) {
-    const { ok, total } = essayProgress(ex, attempt.feedback);
-    return { label, chip: `${ok} din ${total}`, tone: ok === total ? VERDICT_TONE.ok : ok > 0 ? VERDICT_TONE.almost : MUTED };
-  }
-  return { label, chip: 'Nerezolvat', tone: MUTED };
+/** One summary row's label: the type; an essay also says how many requirements it has. */
+function labelOf(ex: ConsolidationExercise) {
+  return ex.type === 'essay' ? `Eseu (${ex.requirements.length} ${ex.requirements.length === 1 ? 'cerință' : 'cerințe'})` : CONSOLIDATION_TYPE_LABELS[ex.type];
 }
 
-/** „Consolidare parcursă” (types mockup flow screen 3): every exercise with its latest verdict, no grade. */
-export default function ConsolidationEnd({ exercises, attempts, onBack, onRestart, onRestartWrong, next }: Props) {
+/**
+ * „Consolidare parcursă” (types mockup flow screen 3): every exercise with its latest verdict, no grade. A row opens
+ * its exercise (with the answer and feedback, if it was checked).
+ */
+export default function ConsolidationEnd({ exercises, attempts, onBack, onRestart, onRestartWrong, onOpen, next }: Props) {
   return (
     <ScreenLayout
       title="Consolidare"
@@ -55,19 +51,29 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
       <Enter index={1}>
         <Surface padding={2} radius="lg">
           {exercises.map((ex, i) => {
-            const r = rowOf(ex, attempts.get(ex.id));
+            const label = labelOf(ex);
+            const { chip, tone } = exerciseStatus(ex, attempts.get(ex.id));
             return (
-              <View key={ex.id} testID={`summary-${ex.id}`} style={[styles.row, i > 0 && styles.divider]}>
-                <View style={[styles.dot, { backgroundColor: r.tone.edge }]} />
+              <Pressable
+                key={ex.id}
+                testID={`summary-${ex.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Exercițiul ${i + 1}, ${label}, ${chip}`}
+                accessibilityHint="Deschide exercițiul"
+                onPress={() => onOpen(ex.id)}
+                style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && styles.pressed]}
+              >
+                <View style={[styles.dot, { backgroundColor: tone.edge }]} />
                 <AppText role="note" style={styles.fill}>
-                  {r.label}
+                  {label}
                 </AppText>
-                <View style={[styles.chip, { backgroundColor: r.tone.bg }]}>
-                  <AppText role="badge" style={{ color: r.tone.fg }}>
-                    {r.chip}
+                <View style={[styles.chip, { backgroundColor: tone.bg }]}>
+                  <AppText role="badge" style={{ color: tone.fg }}>
+                    {chip}
                   </AppText>
                 </View>
-              </View>
+                <Icon name="chevron-right" size={16} tint={color.textMuted} />
+              </Pressable>
             );
           })}
         </Surface>
@@ -81,7 +87,16 @@ const styles = StyleSheet.create({
   head: { gap: space[1], marginTop: space[3], marginBottom: space[4] },
   centre: { textAlign: 'center' },
   fill: { flex: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[2.5], paddingVertical: space[2.5], paddingHorizontal: space[1] },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2.5],
+    minHeight: 48,
+    paddingVertical: space[2.5],
+    paddingHorizontal: space[1],
+    borderRadius: radius.sm,
+  },
+  pressed: { backgroundColor: color.surfaceMuted },
   divider: { borderTopWidth: border.hairline, borderTopColor: color.border },
   dot: { width: 12, height: 12, borderRadius: radius.pill },
   chip: { borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: space[2] },

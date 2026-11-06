@@ -167,3 +167,17 @@ export function resolveRun(valid: string[], run: Run | null, attempts: Map<strin
   const index = Math.min(keptBefore, exerciseIds.length - 1);
   return { kind: 'resume', run: { exerciseIds, index, finished: false } };
 }
+
+/**
+ * The run moved to exercise `index` (previous / next / skip / a tap on the exercise map). Past the last exercise
+ * the run is finished: the end screen. It never goes before the first.
+ */
+export function moveRun(run: Run, index: number): Run {
+  if (index >= run.exerciseIds.length) return { ...run, finished: true };
+  return { ...run, index: Math.max(0, index), finished: false };
+}
+
+/** A full run over the valid exercises positioned at `exerciseId` (a row tapped on the end screen). */
+export function runAt(valid: string[], exerciseId: string): Run {
+  return { exerciseIds: [...valid], index: Math.max(0, valid.indexOf(exerciseId)), finished: false };
+}

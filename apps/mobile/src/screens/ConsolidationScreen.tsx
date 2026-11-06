@@ -7,8 +7,10 @@ import {
   fetchAttempts,
   fetchConsolidation,
   fetchRun,
+  moveRun,
   newRun,
   resolveRun,
+  runAt,
   saveAttempt,
   saveRun,
   type Attempt,
@@ -20,8 +22,11 @@ import { modeOf, type LearningMode } from '../lib/learningMode';
 import { lessonAccess, orderedLessons } from '../lib/lessonFlow';
 import { fetchProgress } from '../lib/progress';
 import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import ExerciseMap from '../components/consolidation/ExerciseMap';
+import { emptyAnswer } from './consolidation/checking';
 import ConsolidationEnd from './consolidation/ConsolidationEnd';
-import ExerciseScreen from './consolidation/ExerciseScreen';
+import ExerciseScreen, { type Draft } from './consolidation/ExerciseScreen';
+import { exerciseStatus } from './consolidation/status';
 
 type Loaded = {
   data: ConsolidationData;
@@ -62,6 +67,8 @@ const persistRun = (lessonId: string, run: Run) => saveRun(lessonId, run).catch(
 /**
  * `/lesson/[id]/consolidare`: the lesson's consolidation run (spec "Consolidation run"). Only for a finished lesson.
  * Opening resumes an unfinished run, shows the summary after a finished one, or starts a new full run.
+ * The student moves freely through the run (previous, skip, the exercise map); leaving the last one finishes it.
+ * An exercise opens as the student last left it in this session, otherwise on its latest attempt (checked).
  */
 export default function ConsolidationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -73,6 +80,8 @@ export default function ConsolidationScreen() {
   const [tries, setTries] = useState(0);
   const runRef = useRef<Run | null>(null);
   runRef.current = run;
+  // Per exercise, how the student left it in this session (answer + feedback): kept in memory only.
+  const drafts = useRef(new Map<string, Draft>());
 
   useEffect(() => {
     let cancelled = false;
@@ -131,11 +140,16 @@ export default function ConsolidationScreen() {
   }
 
   const ids = data.exercises.map((e) => e.id);
-  const start = (onlyNotCorrect: boolean) => {
-    const r = newRun(ids, attempts, onlyNotCorrect);
+  const begin = (r: Run) => {
     setTries(0);
     setRun(r);
     persistRun(lessonId, r);
+  };
+  // „Reia…” starts over: the run's exercises open empty (their attempts stay, as the map shows).
+  const start = (onlyNotCorrect: boolean) => {
+    drafts.current.clear();
+    for (const ex of data.exercises) drafts.current.set(ex.id, { answer: emptyAnswer(ex), feedback: null });
+    begin(newRun(ids, attempts, onlyNotCorrect));
   };
 
   const exercise = run ? data.exercises.find((e) => e.id === run.exerciseIds[run.index]) : undefined;
@@ -148,6 +162,15 @@ export default function ConsolidationScreen() {
         onBack={goBackOrHome}
         onRestart={() => start(false)}
         onRestartWrong={newRun(ids, attempts, true).exerciseIds.length > 0 ? () => start(true) : undefined}
+        onOpen={(exerciseId) => {
+          // A row shows what was done: blank drafts (a „Reia…” placeholder, a retry left empty) give way to the
+          // stored attempts; work typed in this session stays.
+          for (const ex of data.exercises) {
+            const d = drafts.current.get(ex.id);
+            if (d && !d.feedback && JSON.stringify(d.answer) === JSON.stringify(emptyAnswer(ex))) drafts.current.delete(ex.id);
+          }
+          begin(runAt(ids, exerciseId));
+        }}
         next={
           next
             ? { label: 'Mergi la lecția următoare', onPress: () => router.replace(`/lesson/${next.id}`) }
@@ -162,15 +185,27 @@ export default function ConsolidationScreen() {
     setLoaded((l) => (l ? { ...l, attempts: new Map(l.attempts).set(a.exerciseId, a) } : l));
     saveAttempt(a).catch((e) => console.warn('Could not save the consolidation attempt', e));
   };
-  const onContinue = () => {
+  // Previous / next / skip / the map: past the last exercise the run is finished and the end screen shows.
+  const go = (index: number) => {
     const cur = runRef.current;
-    if (!cur) return;
-    const last = cur.index + 1 >= cur.exerciseIds.length;
-    const nextRun: Run = last ? { ...cur, finished: true } : { ...cur, index: cur.index + 1 };
+    if (!cur || index === cur.index) return;
+    const nextRun = moveRun(cur, index);
     persistRun(lessonId, nextRun);
     setTries(0);
-    setRun(last ? null : nextRun);
+    setRun(nextRun.finished ? null : nextRun);
   };
+  const next = () => go(run.index + 1);
+  const retry = () => {
+    drafts.current.set(exercise.id, { answer: emptyAnswer(exercise), feedback: null });
+    setTries((n) => n + 1);
+  };
+  const attempt = attempts.get(exercise.id);
+  const initial = drafts.current.get(exercise.id) ?? (attempt ? { answer: attempt.answer, feedback: attempt.feedback } : null);
+  const byId = new Map(data.exercises.map((e) => [e.id, e] as const));
+  const mapItems = run.exerciseIds.flatMap((id) => {
+    const ex = byId.get(id);
+    return ex ? [{ id, ...exerciseStatus(ex, attempts.get(id)) }] : [];
+  });
 
   return (
     <ExerciseScreen
@@ -182,8 +217,13 @@ export default function ConsolidationScreen() {
       total={run.exerciseIds.length}
       onBack={goBackOrHome}
       onChecked={onChecked}
-      onContinue={onContinue}
-      onRetry={() => setTries((n) => n + 1)}
+      onContinue={next}
+      onSkip={next}
+      onPrev={run.index > 0 ? () => go(run.index - 1) : undefined}
+      onRetry={retry}
+      initial={initial}
+      onDraft={(d) => drafts.current.set(exercise.id, d)}
+      map={(busy) => <ExerciseMap items={mapItems} current={run.index} onJump={go} disabled={busy} />}
     />
   );
 }

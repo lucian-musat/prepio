@@ -14,6 +14,9 @@ import MultiAnswerInput from './MultiAnswerInput';
 import ShortAnswerInput from './ShortAnswerInput';
 import SourceInfoInput from './SourceInfoInput';
 import ViewpointInput from './ViewpointInput';
+import ExerciseScreen from '../../screens/consolidation/ExerciseScreen';
+
+jest.mock('../../lib/api', () => ({ evaluateConsolidation: jest.fn() }));
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const wrap = (ui: React.ReactElement) => render(<SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>);
@@ -194,5 +197,34 @@ describe('ArgumentInput and ConnectorChips', () => {
     expect(screen.getByText('✓ Conector de cauzalitate')).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText('Argumentul tău'), 'Așadar');
     expect(onChange).toHaveBeenCalledWith({ type: 'argument', text: 'Așadar' });
+  });
+});
+
+describe('ExerciseScreen restore', () => {
+  it('a marking exercise comes back with its marks in the slots, their verdicts and the feedback', async () => {
+    const e = ex({ type: 'source_info', count: 1, spans: [] });
+    const mark = { sourceId: 's1', from: 0, to: 1 };
+    await wrap(
+      <ExerciseScreen
+        exercise={e}
+        sources={new Map([['s1', src]])}
+        templates={new Map()}
+        index={0}
+        total={1}
+        onBack={jest.fn()}
+        onChecked={jest.fn()}
+        onContinue={jest.fn()}
+        onRetry={jest.fn()}
+        onSkip={jest.fn()}
+        initial={{
+          answer: { type: 'source_info', marks: [mark] },
+          feedback: { verdict: 'ok', items: [{ ...item('info-0', 'ok'), title: 'Informație corectă' }], marks: [{ ...mark, verdict: 'ok' }] },
+        }}
+      />,
+    );
+    expect(screen.getByText('„Domnul urma”')).toBeTruthy();
+    expect(screen.getByLabelText('Verdict: Corect')).toBeTruthy();
+    expect(screen.getByText('Informație corectă')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Încearcă din nou' })).toBeTruthy();
   });
 });

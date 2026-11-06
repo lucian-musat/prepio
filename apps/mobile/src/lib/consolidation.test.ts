@@ -4,8 +4,10 @@ import {
   fetchAttempts,
   fetchConsolidation,
   fetchRun,
+  moveRun,
   newRun,
   resolveRun,
+  runAt,
   saveAttempt,
   saveRun,
   type Attempt,
@@ -73,6 +75,29 @@ describe('newRun', () => {
   it('with onlyNotCorrect keeps exercises whose latest verdict is not ok (including unattempted)', () => {
     const attempts = attemptsOf(attempt('a', 'ok'), attempt('b', 'almost'));
     expect(newRun(valid, attempts, true)).toEqual({ exerciseIds: ['b', 'c'], index: 0, finished: false });
+  });
+});
+
+describe('moveRun', () => {
+  const run = { exerciseIds: ['a', 'b', 'c'], index: 1, finished: false };
+  it('goes to any exercise of the run, forwards or back', () => {
+    expect(moveRun(run, 2)).toEqual({ ...run, index: 2 });
+    expect(moveRun(run, 0)).toEqual({ ...run, index: 0 });
+  });
+  it('past the last exercise the run is finished (the end screen), keeping its index', () => {
+    expect(moveRun({ ...run, index: 2 }, 3)).toEqual({ ...run, index: 2, finished: true });
+  });
+  it('never goes before the first exercise', () => {
+    expect(moveRun({ ...run, index: 0 }, -1)).toEqual({ ...run, index: 0 });
+  });
+});
+
+describe('runAt', () => {
+  it('is a full run positioned at the exercise', () => {
+    expect(runAt(['a', 'b', 'c'], 'c')).toEqual({ exerciseIds: ['a', 'b', 'c'], index: 2, finished: false });
+  });
+  it('an unknown exercise starts at the first', () => {
+    expect(runAt(['a', 'b'], 'x')).toEqual({ exerciseIds: ['a', 'b'], index: 0, finished: false });
   });
 });
 

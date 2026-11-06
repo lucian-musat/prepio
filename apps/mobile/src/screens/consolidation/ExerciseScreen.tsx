@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type Animated from 'react-native-reanimated';
 import {
@@ -35,7 +35,7 @@ import { NO_MARKS, noop, type PanelMarker, type PanelSource } from '../../compon
 import { evaluateConsolidation } from '../../lib/api';
 import type { Attempt } from '../../lib/consolidation';
 import { AppText, Button, ScreenLayout } from '../../ui';
-import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, mergeAiFeedback, mergeItems } from './checking';
+import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, markerMarks, mergeAiFeedback, mergeItems, restorable } from './checking';
 import FeedbackView, { Analyzing, CheckError } from './FeedbackView';
 import TemplateSheet from './TemplateSheet';
 
@@ -52,7 +52,19 @@ type Props = {
   onContinue: () => void;
   /** „Încearcă din nou”: the run screen remounts this exercise with empty inputs. */
   onRetry: () => void;
+  /** Leaves without checking: the next exercise, or the end screen after the last. */
+  onSkip: () => void;
+  /** The previous exercise; absent on the first. */
+  onPrev?: () => void;
+  /** What the exercise opens with (coming back to it): a stored answer, checked when it has feedback. */
+  initial?: Draft | null;
+  /** The answer and feedback as they change, so coming back within the session shows them again. */
+  onDraft?: (draft: Draft) => void;
+  /** The exercise map under the header; `busy` while a check runs (nothing can be left then). */
+  map?: (busy: boolean) => ReactNode;
 };
+
+export type Draft = { answer: ExerciseAnswer; feedback: ExerciseFeedback | null };
 
 const NO_PENS: MarkerConfig = { pens: [], limits: {} };
 const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
@@ -76,8 +88,25 @@ function evidenceVerdicts(ex: ConsolidationExercise, sources: Map<string, Source
  * One consolidation exercise (types mockup): progress, the type chip and „💡 Cum rezolv”, the prompt and the
  * sources (SourcePanel), the type's input, then „Verifică” → the inline feedback with „Continuă” / „Încearcă din nou”.
  * AI types ask `/api/consolidation/evaluate` unless the instant check already found an empty / short / repeated field.
+ * The action bar's last row always moves through the run: „‹” (previous) and „Sari peste” / „Continuă”.
+ * With `initial` it opens on a stored answer (its marks back in the source), checked when that has feedback.
  */
-export default function ExerciseScreen({ exercise, sources, templates, index, total, onBack, onChecked, onContinue, onRetry }: Props) {
+export default function ExerciseScreen({
+  exercise,
+  sources,
+  templates,
+  index,
+  total,
+  onBack,
+  onChecked,
+  onContinue,
+  onRetry,
+  onSkip,
+  onPrev,
+  initial,
+  onDraft,
+  map,
+}: Props) {
   const { width } = useWindowDimensions();
   const sourceList = useMemo(() => [...sources.values()], [sources]);
   const panelSources: PanelSource[] = useMemo(
@@ -86,11 +115,15 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
   );
   const cfg = useMemo(() => markerConfig(exercise), [exercise]);
   const reducer = useMemo(() => markerReducer(cfg ?? NO_PENS), [cfg]);
-  const [markState, dispatch] = useReducer(reducer, undefined, () => initialMarker(cfg ?? NO_PENS));
-  const [answer, setAnswer] = useState<ExerciseAnswer>(() => emptyAnswer(exercise));
-  const [feedback, setFeedbackState] = useState<ExerciseFeedback | null>(null);
+  // A stored answer that no longer fits the exercise (edited in the admin since) opens empty.
+  const [restored] = useState(() => (initial && restorable(exercise, initial.answer) ? initial : null));
+  const [markState, dispatch] = useReducer(reducer, undefined, () =>
+    initialMarker(cfg ?? NO_PENS, restored ? markerMarks(restored.answer) : []),
+  );
+  const [answer, setAnswer] = useState<ExerciseAnswer>(() => restored?.answer ?? emptyAnswer(exercise));
+  const [feedback, setFeedbackState] = useState<ExerciseFeedback | null>(restored?.feedback ?? null);
   // The latest feedback, for results that arrive after an await (an essay's checks merge into each other).
-  const feedbackRef = useRef<ExerciseFeedback | null>(null);
+  const feedbackRef = useRef<ExerciseFeedback | null>(restored?.feedback ?? null);
   const setFeedback = (fb: ExerciseFeedback | null) => {
     feedbackRef.current = fb;
     setFeedbackState(fb);
@@ -109,9 +142,18 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
   const disabled = loading || checked;
 
   // Bring the new feedback (or the loading / error row) into view: it sits at the end of the content.
+  // A restored check opens at the top, on the prompt.
+  const opened = useRef(false);
   useEffect(() => {
-    if (checked || status !== 'idle') scrollRef.current?.scrollToEnd?.({ animated: true });
+    if (opened.current && (checked || status !== 'idle')) scrollRef.current?.scrollToEnd?.({ animated: true });
+    opened.current = true;
   }, [checked, status]);
+
+  useEffect(() => {
+    onDraft?.({ answer, feedback });
+    // Only the answer and the feedback matter; the callback is the run screen's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answer, feedback]);
 
   const finish = (fb: ExerciseFeedback, a: ExerciseAnswer) => {
     setFeedback(fb);
@@ -225,19 +267,37 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
   })();
 
   const complete = isComplete(exercise, answer);
+  // Nothing is left while a check runs: its result belongs to this exercise.
+  const moving = loading || partBusy;
+  const prev = (
+    <Button icon="back" accessibilityLabel="Exercițiul anterior" variant="secondary" disabled={!onPrev || moving} onPress={() => onPrev?.()} />
+  );
+  const skip = (flex: boolean) => (
+    <Button flex={flex} compact={!flex} label="Sari peste" accessibilityLabel="Sari peste, exercițiul următor" variant="secondary" disabled={moving} onPress={onSkip} />
+  );
   const actions = checked ? (
     <View style={styles.stack}>
-      <Button label="Continuă" onPress={onContinue} />
       <Button label="Încearcă din nou" variant="secondary" onPress={retry} />
+      <View style={styles.row}>
+        {prev}
+        <Button flex label="Continuă" onPress={onContinue} />
+      </View>
     </View>
   ) : essay ? (
     <View style={styles.stack}>
       {/* Waits for requirement checks in flight, so their results are never overwritten. */}
       <Button label="Verifică eseul întreg" disabled={!complete || partBusy} loading={loading} onPress={check} />
-      {feedback?.items.length ? <Button label="Continuă" variant="secondary" onPress={onContinue} /> : null}
+      <View style={styles.row}>
+        {prev}
+        {feedback?.items.length ? <Button flex label="Continuă" variant="secondary" disabled={moving} onPress={onContinue} /> : skip(true)}
+      </View>
     </View>
   ) : (
-    <Button flex label="Verifică" disabled={!complete} loading={loading} onPress={check} />
+    <View style={[styles.row, styles.fill]}>
+      {prev}
+      <Button flex label="Verifică" disabled={!complete} loading={loading} onPress={check} />
+      {skip(false)}
+    </View>
   );
 
   const wide = width >= SPLIT_MIN_WIDTH && panelSources.some((s) => !isShortSource(s.source.body));
@@ -253,6 +313,7 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
             {index + 1}/{total}
           </AppText>
         }
+        subheader={map?.(moving)}
         onBack={onBack}
         actions={actions}
         scrollRef={scrollRef}
@@ -279,6 +340,7 @@ export default function ExerciseScreen({ exercise, sources, templates, index, to
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   stack: { flex: 1, gap: space[2.5] },
+  row: { flexDirection: 'row', gap: space[2.5] },
   answer: { gap: space[3] },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
   chip: { flexShrink: 1, backgroundColor: color.primarySubtle, borderRadius: radius.pill, paddingVertical: space[1], paddingHorizontal: space[2.5] },

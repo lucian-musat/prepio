@@ -266,3 +266,113 @@ it('the template button opens the sheet, and it is absent without a template', a
   expect(await screen.findByText('Prezentați două fapte istorice din perioada 1866-1886.')).toBeTruthy();
   expect(screen.queryByRole('button', { name: '💡 Cum rezolv' })).toBeNull();
 });
+
+describe('navigation', () => {
+  const okAttempt: Attempt = {
+    exerciseId: 'e1',
+    verdict: 'ok',
+    answer: { type: 'short_answer', text: 'Statutul Dezvoltător' },
+    feedback: { verdict: 'ok', items: [{ key: 'answer', verdict: 'ok', title: 'Corect!', good: [], improve: [], ai: false }] },
+  };
+  const prompt1 = 'Numiți noua constituție precizată în sursa B.';
+  const prompt2 = 'Prezentați două fapte istorice din perioada 1866-1886.';
+  const tap = async (name: string) => act(async () => void fireEvent.press(screen.getByRole('button', { name })));
+
+  it('„Sari peste” goes on without checking; from the last exercise it opens the end screen with all „Nerezolvat”', async () => {
+    await open();
+    expect(await screen.findByText(prompt1)).toBeTruthy();
+    expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeDisabled();
+    await press('Sari peste, exercițiul următor');
+    expect(await screen.findByText(prompt2)).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
+    await press('Sari peste, exercițiul următor');
+    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: true });
+    expect(within(screen.getByTestId('summary-e1')).getByText('Nerezolvat')).toBeTruthy();
+    expect(within(screen.getByTestId('summary-e2')).getByText('Nerezolvat')).toBeTruthy();
+    expect(mocked.saveAttempt).not.toHaveBeenCalled();
+  });
+
+  it('„Exercițiul anterior” goes back one exercise and saves the position', async () => {
+    mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: false });
+    await open();
+    expect(await screen.findByText(prompt2)).toBeTruthy();
+    await press('Exercițiul anterior');
+    expect(await screen.findByText(prompt1)).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
+    expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 0, finished: false });
+  });
+
+  it('the exercise map shows each state and jumps to the tapped exercise', async () => {
+    mocked.attempts.mockResolvedValue(attemptsOf(okAttempt));
+    mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 0, finished: false });
+    await open();
+    expect(await screen.findByRole('button', { name: 'Exercițiul 1, Corect' })).toBeSelected();
+    await tap('Exercițiul 2, Nerezolvat');
+    expect(await screen.findByText(prompt2)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Exercițiul 2, Nerezolvat' })).toBeSelected();
+    expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
+  });
+
+  it('an exercise with an attempt opens checked: the stored answer, its feedback and „Încearcă din nou”', async () => {
+    mocked.attempts.mockResolvedValue(attemptsOf(okAttempt));
+    mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 0, finished: false });
+    await open();
+    expect(await screen.findByText('Corect!')).toBeTruthy();
+    expect(screen.getByLabelText('Răspunsul tău').props.value).toBe('Statutul Dezvoltător');
+    expect(bar().getByRole('button', { name: 'Continuă' })).toBeTruthy();
+    await press('Încearcă din nou');
+    expect(screen.queryByText('Corect!')).toBeNull();
+    expect(screen.getByLabelText('Răspunsul tău').props.value).toBe('');
+  });
+
+  it('coming back to an exercise checked in this session shows its result; unchecked text is kept for the session', async () => {
+    await open();
+    await fireEvent.changeText(await screen.findByLabelText('Răspunsul tău'), 'statutul dezvoltator');
+    await press('Verifică');
+    expect(await screen.findByText('Corect!')).toBeTruthy();
+    await press('Continuă');
+    await fireEvent.changeText(await screen.findByLabelText('Faptul istoric 1'), FACT_1);
+    await press('Exercițiul anterior');
+    expect(await screen.findByText('Corect!')).toBeTruthy();
+    expect(screen.getByLabelText('Răspunsul tău').props.value).toBe('statutul dezvoltator');
+    expect(screen.getByRole('button', { name: 'Exercițiul 1, Corect' })).toBeTruthy();
+    await press('Continuă');
+    expect((await screen.findByLabelText('Faptul istoric 1')).props.value).toBe(FACT_1);
+    expect(screen.queryByTestId('feedback')).toBeNull();
+  });
+
+  it('a row of the end screen opens a full run at that exercise', async () => {
+    mocked.run.mockResolvedValue({ exerciseIds: ['e2'], index: 0, finished: true });
+    mocked.attempts.mockResolvedValue(attemptsOf(okAttempt));
+    await open();
+    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    await tap('Exercițiul 2, Prezentare fapte, Nerezolvat');
+    expect(await screen.findByText(prompt2)).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
+    await press('Exercițiul anterior');
+    expect(await screen.findByText('Corect!')).toBeTruthy();
+  });
+
+  it('„Reia consolidarea” opens the exercises empty again', async () => {
+    mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: true });
+    mocked.attempts.mockResolvedValue(attemptsOf(okAttempt));
+    await open();
+    await press('Reia consolidarea');
+    expect(await screen.findByText(prompt1)).toBeTruthy();
+    expect(screen.queryByText('Corect!')).toBeNull();
+    expect(screen.getByLabelText('Răspunsul tău').props.value).toBe('');
+    expect(screen.getByRole('button', { name: 'Exercițiul 1, Corect' })).toBeTruthy();
+    // Skipped through to the end, a row opens its stored attempt again; work typed in this session stays.
+    await press('Sari peste, exercițiul următor');
+    await fireEvent.changeText(await screen.findByLabelText('Faptul istoric 1'), FACT_1);
+    await press('Sari peste, exercițiul următor');
+    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    await tap('Exercițiul 1, Răspuns scurt, Corect');
+    expect(await screen.findByText('Corect!')).toBeTruthy();
+    await press('Continuă');
+    expect((await screen.findByLabelText('Faptul istoric 1')).props.value).toBe(FACT_1);
+  });
+});
