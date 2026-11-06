@@ -73,6 +73,39 @@ it('refresh failure keeps the balance', async () => {
   expect(ctx.balance).toBe(12);
 });
 
+it('drops a refresh result that arrives after unmount', async () => {
+  const view = await mount();
+  let resolve: (n: number) => void = () => {};
+  mockFetch.mockReturnValue(new Promise<number>((r) => (resolve = r)));
+  const pending = ctx.refresh();
+  const last = ctx;
+  await view.unmount();
+  await act(async () => {
+    resolve(3);
+    await pending;
+  });
+  expect(last.balance).toBe(12);
+  expect(last.change).toBeNull();
+});
+
+it('drops a refresh result for a previous user', async () => {
+  const view = await mount();
+  let resolve: (n: number) => void = () => {};
+  mockFetch.mockReturnValue(new Promise<number>((r) => (resolve = r)));
+  const pending = ctx.refresh();
+  mockProfile = { id: 'u2', creditBalance: 40 };
+  await view.rerender(
+    <CreditsProvider>
+      <Probe />
+    </CreditsProvider>,
+  );
+  await act(async () => {
+    resolve(3);
+    await pending;
+  });
+  expect(ctx.balance).toBe(40);
+});
+
 it('refreshes when the app becomes active and unsubscribes on unmount', async () => {
   const view = await mount();
   await act(async () => onChange('background'));

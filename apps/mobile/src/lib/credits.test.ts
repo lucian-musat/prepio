@@ -70,6 +70,10 @@ describe('ledgerLabel', () => {
   });
   it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare'));
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));
+  it('admin without a reason', () => {
+    expect(ledgerLabel(entry({ kind: 'admin', reason: null }))).toBe('Ajustare');
+    expect(ledgerLabel(entry({ kind: 'admin', reason: '  ' }))).toBe('Ajustare');
+  });
   it('admin', () => expect(ledgerLabel(entry({ kind: 'admin', reason: 'Bonus' }))).toBe('Ajustare · Bonus'));
 });
 
@@ -128,6 +132,14 @@ describe('purchaseCredits', () => {
     expect(err).toBeInstanceOf(CreditsApiError);
     expect(err.code).toBe('server_error');
     expect(err.message).toContain('prea mult');
+  });
+
+  it('rejects a 200 with a non-JSON body instead of returning null', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => Promise.reject(new Error('html')) });
+    await expect(purchaseCredits('p1')).rejects.toMatchObject({
+      code: 'server_error',
+      message: 'Achiziția nu a reușit. Încearcă din nou.',
+    });
   });
 
   it('uses a generic message for a non-JSON error', async () => {

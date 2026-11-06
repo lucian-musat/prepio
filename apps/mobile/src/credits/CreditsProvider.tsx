@@ -25,6 +25,15 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
   const [change, setChange] = useState<CreditsChange | null>(null);
   const balanceRef = useRef(balance);
   const changeId = useRef(0);
+  const mounted = useRef(true);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const apply = useCallback((next: number) => {
     const old = balanceRef.current;
@@ -43,6 +52,8 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     try {
       const fresh = await fetchCreditBalance(userId);
+      // Drop a result that arrives after unmount or after another student signed in.
+      if (!mounted.current || userIdRef.current !== userId) return;
       if (fresh !== null) apply(fresh);
     } catch (e) {
       console.warn('[credits] balance could not be refreshed:', e);

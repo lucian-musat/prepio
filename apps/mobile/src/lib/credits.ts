@@ -102,7 +102,7 @@ export function ledgerLabel(e: StudentLedgerEntry): string {
     case 'refund':
       return 'Verificare nereușită · returnat';
     case 'admin':
-      return `Ajustare · ${e.reason ?? ''}`.trimEnd();
+      return e.reason?.trim() ? `Ajustare · ${e.reason.trim()}` : 'Ajustare';
     case 'check': {
       if (!e.exercise) return 'Verificare';
       const base = e.exercise.type === 'essay' ? 'Eseu' : CONSOLIDATION_TYPE_LABELS[e.exercise.type];
@@ -152,7 +152,11 @@ export async function purchaseCredits(packageId: string): Promise<CreditsPurchas
       const e = body as Partial<CreditsPurchaseError> | null;
       throw new CreditsApiError(e?.error ?? 'server_error', e?.message || PURCHASE_FAILED);
     }
-    return body as CreditsPurchaseResponse;
+    const ok = body as Partial<CreditsPurchaseResponse> | null;
+    if (!ok || typeof ok.balance !== 'number') {
+      throw new CreditsApiError('server_error', controller.signal.aborted ? PURCHASE_TIMEOUT : PURCHASE_FAILED);
+    }
+    return ok as CreditsPurchaseResponse;
   } finally {
     clearTimeout(timer);
   }
