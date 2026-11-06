@@ -316,9 +316,12 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
     );
   }
   if (mode === 'free') {
+    // Free mode: the next lesson is simply the next one in order (none after the last).
+    const at = order.findIndex((l) => l.id === lesson.id);
     return (
       <LessonDone
         lessonId={lesson.id}
+        nextId={at >= 0 ? order[at + 1]?.id : undefined}
         title={lesson.title}
         correct={outcome.correct}
         total={outcome.total}
@@ -358,12 +361,14 @@ function Cap() {
 /** Lesson done (prototype `finish()`): centred cap, heading, lesson title, score; confetti on enter. */
 function LessonDone({
   lessonId,
+  nextId,
   title,
   correct,
   total,
   consolidation,
 }: {
   lessonId: string;
+  nextId: string | undefined;
   title: string;
   correct: number;
   total: number;
@@ -384,7 +389,12 @@ function LessonDone({
           consolidation > 0 ? (
             <View style={styles.stack}>
               <Button label="Începe consolidarea" onPress={() => startConsolidation(lessonId)} />
-              <Button label="Înapoi la lecții" variant="secondary" onPress={() => router.replace('/')} />
+              {/* Same secondary action as the guided pass: the next lesson, or home after the last one. */}
+              {nextId ? (
+                <Button label="Mergi la lecția următoare" variant="secondary" onPress={() => router.replace(`/lesson/${nextId}`)} />
+              ) : (
+                <Button label="Înapoi acasă" variant="secondary" onPress={() => router.replace('/')} />
+              )}
             </View>
           ) : (
             <Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />

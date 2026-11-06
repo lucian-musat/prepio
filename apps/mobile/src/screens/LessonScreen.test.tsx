@@ -738,7 +738,21 @@ describe('zones and consolidation', () => {
     expect(screen.getByText('Consolidare deblocată')).toBeTruthy();
     await press('Începe consolidarea');
     expect(mockPush).toHaveBeenCalledWith('/lesson/l1/consolidare');
-    expect(actionBar().getByRole('button', { name: 'Înapoi la lecții' })).toBeTruthy();
+    expect(actionBar().queryByRole('button', { name: 'Înapoi la lecții' })).toBeNull();
+    await press('Mergi la lecția următoare');
+    expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('the free done screen of the last lesson with exercises offers Înapoi acasă', async () => {
+    mockedCount.mockResolvedValue(2);
+    mockId = 'l2';
+    await openLesson(lesson({ id: 'l2', title: 'Lecția doi', cards: [] }), SKIP);
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
+    expect(actionBar().getByRole('button', { name: 'Începe consolidarea' })).toBeTruthy();
+    expect(actionBar().queryByRole('button', { name: 'Mergi la lecția următoare' })).toBeNull();
+    await press('Înapoi acasă');
+    expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
   it('a saved exercises position is ignored: the lesson starts at the start screen', async () => {
