@@ -185,7 +185,8 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'INSERT' then
+  -- The app restarts a finished run in place: the same (user_id, lesson_id) row gets finished_at back to null.
+  if tg_op = 'INSERT' or (old.finished_at is not null and new.finished_at is null) then
     perform public.log_student_event(new.user_id, 'consolidation_started', new.lesson_id, null, null, '{}'::jsonb);
   end if;
   if new.finished_at is not null and (tg_op = 'INSERT' or old.finished_at is null) then
@@ -254,7 +255,8 @@ $$;
 revoke execute on function public.log_app_open() from public, anon, authenticated, service_role;
 grant execute on function public.log_app_open() to authenticated;
 
--- A failed lesson test, on a published lesson. Nothing about the answers is stored.
+-- A failed lesson test, on a published lesson the student has started (has a lesson_progress row), so junk calls
+-- can't flood the timeline. Nothing about the answers is stored.
 create function public.log_test_failed(p_lesson uuid)
 returns void
 language plpgsql
@@ -267,7 +269,8 @@ begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
-  if not exists (select 1 from public.lessons l where l.id = p_lesson and l.status = 'published') then
+  if not exists (select 1 from public.lessons l where l.id = p_lesson and l.status = 'published')
+     or not exists (select 1 from public.lesson_progress lp where lp.user_id = v_uid and lp.lesson_id = p_lesson) then
     raise exception 'bad_lesson' using errcode = 'P0001';
   end if;
   perform public.log_student_event(v_uid, 'test_failed', p_lesson, null, null, '{}'::jsonb);

@@ -1,5 +1,5 @@
 begin;
-select plan(41);
+select plan(44);
 
 -- Fixtures (as postgres). Assertions are scoped to these ids so the suite also passes on a seeded DB.
 -- b1 is a student, b2 an admin. The auth trigger creates their profiles (and the welcome grant).
@@ -14,7 +14,8 @@ insert into nodes (id, parent_id, title) values ('00000000-0000-0000-0000-000000
 insert into lessons (id, node_id, title, status) values
   ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000c1', 'Published', 'published'),
   ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000c1', 'Draft', 'draft'),
-  ('00000000-0000-0000-0000-0000000000e3', '00000000-0000-0000-0000-0000000000c1', 'Published 2', 'published');
+  ('00000000-0000-0000-0000-0000000000e3', '00000000-0000-0000-0000-0000000000c1', 'Published 2', 'published'),
+  ('00000000-0000-0000-0000-0000000000e4', '00000000-0000-0000-0000-0000000000c1', 'Not started', 'published');
 insert into consolidation_exercises (id, lesson_id, type, prompt) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000e1', 'facts', 'x');
 
@@ -93,6 +94,13 @@ update consolidation_runs set finished_at = now()
  where user_id = '00000000-0000-0000-0000-0000000000b1' and lesson_id = '00000000-0000-0000-0000-0000000000e1';
 select results_eq($$ select lesson_id from pg_temp.ev('consolidation_finished') $$,
   $$ values ('00000000-0000-0000-0000-0000000000e1'::uuid) $$, 'finishing the run logs consolidation_finished');
+-- The app restarts a finished run in place (same row, finished_at back to null).
+update consolidation_runs set index = 0, finished_at = null
+ where user_id = '00000000-0000-0000-0000-0000000000b1' and lesson_id = '00000000-0000-0000-0000-0000000000e1';
+select is(pg_temp.n('consolidation_started'), 2, 'restarting a finished run logs consolidation_started');
+update consolidation_runs set finished_at = now()
+ where user_id = '00000000-0000-0000-0000-0000000000b1' and lesson_id = '00000000-0000-0000-0000-0000000000e1';
+select is(pg_temp.n('consolidation_finished'), 2, 'finishing the restarted run logs a second consolidation_finished');
 
 -- ---------------------------------------------------------------- credits
 create temp table spent on commit drop as
@@ -123,6 +131,8 @@ select throws_ok($$ select public.log_test_failed('00000000-0000-0000-0000-00000
   'P0001', 'bad_lesson', 'a draft lesson is rejected');
 select throws_ok($$ select public.log_test_failed(gen_random_uuid()) $$,
   'P0001', 'bad_lesson', 'an unknown lesson is rejected');
+select throws_ok($$ select public.log_test_failed('00000000-0000-0000-0000-0000000000e4') $$,
+  'P0001', 'bad_lesson', 'a published lesson the student has not started is rejected');
 select is((select count(*)::int from public.student_events), 0, 'student reads no events, not even their own');
 select throws_ok(
   $$ insert into public.student_events (user_id, kind) values ('00000000-0000-0000-0000-0000000000b1', 'app_opened') $$,
@@ -148,14 +158,14 @@ select results_eq($$ select admin_id, details from pg_temp.ev('credits_adjusted'
 select is(pg_temp.n('app_opened'), 1, 'two app opens on the same day make one row');
 select results_eq($$ select lesson_id, details from pg_temp.ev('test_failed') $$,
   $$ values ('00000000-0000-0000-0000-0000000000e1'::uuid, '{}'::jsonb) $$, 'log_test_failed wrote one row');
-select is((select count(*)::int from public.student_events where user_id = '00000000-0000-0000-0000-0000000000b1'), 17,
+select is((select count(*)::int from public.student_events where user_id = '00000000-0000-0000-0000-0000000000b1'), 19,
   'admin reads every event of the student');
 select throws_ok($$ delete from public.student_events where user_id = '00000000-0000-0000-0000-0000000000b1' $$,
   '42501', null, 'admin cannot delete events directly');
 
 -- ---------------------------------------------------------------- service role
 set local role service_role;
-select is((select count(*)::int from public.student_events where user_id = '00000000-0000-0000-0000-0000000000b1'), 17,
+select is((select count(*)::int from public.student_events where user_id = '00000000-0000-0000-0000-0000000000b1'), 19,
   'service role reads events');
 select throws_ok(
   $$ insert into public.student_events (user_id, kind) values ('00000000-0000-0000-0000-0000000000b1', 'app_opened') $$,
