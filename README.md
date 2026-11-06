@@ -5,7 +5,7 @@ Proof of concept for exam-prep lessons: a student app (Expo, Android + web), an 
 ## Layout
 
 - `apps/mobile` - student app (Expo / React Native, expo-router; also exported as a web app)
-- `apps/admin` - admin panel (Next.js) and the `/api/evaluate` endpoint (OpenAI writing evaluation)
+- `apps/admin` - admin panel (Next.js) and the `/api/consolidation/evaluate` endpoint (OpenAI feedback on the AI-checked consolidation exercises)
 - `packages/shared` - shared types and validation (`@prepio/shared`)
 - `packages/content` - seed content and the `pnpm seed` script
 - `supabase` - migrations, RLS tests, local config
@@ -15,6 +15,12 @@ Proof of concept for exam-prep lessons: a student app (Expo, Android + web), an 
 Lessons are made of cards of six types: text (formatted text: a small Markdown subset with bold, italic, lists, `### ` headings and `:::retine` / `:::atentie` / `:::exemplu` callouts, never rendered as HTML), images (single or gallery, zoom viewer), YouTube video (muted autoplay, optional start/end), timeline, cause-effect schema and link preview (metadata fetched by an admin server action). Shapes and validation live in `packages/shared/src/cards.ts`, renderers in `apps/mobile/src/components/cards/`.
 
 The student web has a `/preview` route that renders one card from data posted by the admin card editor, which embeds it in an iframe as a live preview (Telefon / Desktop). It needs `NEXT_PUBLIC_STUDENT_WEB_URL` in the admin (default `http://localhost:8081`) and `EXPO_PUBLIC_ADMIN_ORIGIN` in the student web (default `http://localhost:3000`); see the `.env.example` files and [docs/deploy.md](docs/deploy.md). Admin Playwright runs start the student web server themselves.
+
+## Lesson zones and consolidation
+
+A lesson has three zones: Învățare (the cards), Verificare (the questions; passing it finishes the lesson) and Consolidare (BAC-style exercises, open once the lesson is finished, never graded). The ten exercise types, their validation and the deterministic checks (short answers, groups, source spans, cause-effect pairs, connectors) live in `packages/shared/src/consolidation/`; the student screens and the source marker / reader in `apps/mobile/src/screens/consolidation/`, `apps/mobile/src/components/consolidation/` and `apps/mobile/src/components/marker/`; the admin forms (lesson editor → Consolidare tab) and the solution-template library (`/templates`) in `apps/admin`. AI-checked types (facts, comparison, viewpoint, argument, essay) are judged by `POST /api/consolidation/evaluate` against an admin-written context that students can't read (`consolidation_ai_context`); it needs `OPENAI_API_KEY` in `apps/admin/.env.local` (without it the student sees the "evaluation failed" message).
+
+Content scripts (`packages/content`): `pnpm seed` (local seed, incl. templates, sources and consolidation exercises), `pnpm content:demo [--apply]` (the local demo lesson), and for production `pnpm content:cloud:add-cards`, `pnpm content:cloud:add-consolidation`, `pnpm content:cloud:demo` and `pnpm content:cloud:remove-test-lessons` (all dry runs unless `--apply`; see [docs/deploy.md](docs/deploy.md)).
 
 ## Local development
 

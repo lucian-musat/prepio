@@ -5,7 +5,7 @@
 | Service | Where | URL / id |
 | --- | --- | --- |
 | Database + Auth + Storage | Supabase (eu-west-2, London) | `https://pienbjvwjgnzmnjzmrbh.supabase.co` |
-| Admin + `/api/evaluate` | Vercel project `prepio-admin`, root `apps/admin` | `https://prepio-admin.vercel.app` |
+| Admin + `/api/consolidation/evaluate` | Vercel project `prepio-admin`, root `apps/admin` | `https://prepio-admin.vercel.app` |
 | Student web | Vercel project `prepio-web`, root `apps/mobile` | `https://prepio-web.vercel.app` |
 | Android APK | Expo EAS, owner `lucianm91s-team`, slug `prepio` | projectId `706d0198-4bc6-4079-90f5-6a1ffbde3ef3`, package `dev.musat.prepio` |
 
@@ -19,7 +19,7 @@ Admin (Vercel project `prepio-admin`):
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable key (`sb_publishable_...`, public)
 - `SUPABASE_SERVICE_ROLE_KEY` - secret, server only
 - `OPENAI_API_KEY` - secret, server only (set a monthly spend limit in the OpenAI dashboard)
-- `STUDENT_WEB_ORIGINS` = `https://prepio-web.vercel.app` (comma-separated CORS allow-list for `/api/evaluate`)
+- `STUDENT_WEB_ORIGINS` = `https://prepio-web.vercel.app` (comma-separated CORS allow-list for the student APIs: `/api/consolidation/evaluate`, `/api/account/delete`)
 - `NEXT_PUBLIC_STUDENT_WEB_URL` = `https://prepio-web.vercel.app` (the student web that the card editor embeds as its live preview, `/preview`). Inlined at build time.
 
 Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, profiles `preview` and `production`):
@@ -68,6 +68,25 @@ The learning-modes change (spec `docs/superpowers/specs/2026-11-04-learning-mode
 3. `git push`: Vercel deploys `prepio-web` (and `prepio-admin`, no code change there) from `main`. Don't push before step 2: the new web selects `profiles.learning_mode` and would fail to load the profile.
 4. Production walk in Chrome: an existing account sees „Cum vrei să înveți?” once, then Home with the mode chip; guided Home locks all but the first lesson; open a lesson (start screen), go a few cards in, reload, „Continuă de unde ai rămas” resumes; switch the mode in the profile; console clean. Progress rows created during the walk are the walking account's own progress; never edit `lesson_progress` by hand.
 5. New EAS `preview` APK (no new native modules). Old APKs keep working without progress. Then the owner's phone-test list in `docs/STATUS.md`.
+
+## Consolidation rollout
+
+The consolidation change (spec `docs/superpowers/specs/2026-11-05-consolidation-exercises-design.md`) is **not** additive: migration `20261105133808_consolidation` converts the writing exercises into consolidation essays and drops `writing_exercises`, and the new admin no longer has `/api/evaluate`. The live student web and every installed APK embed `writing_exercises` in their lesson query, so **from step 1 on they can no longer open lessons** until the new web is deployed (step 2) and a new APK is installed (step 6). Do the steps in this exact order, with no pause between steps 1 and 2:
+
+1. `pnpm db:cloud:push:dry` (must list only `20261105133808_consolidation`) → `pnpm db:cloud:push`.
+2. Immediately `git push` `main`: Vercel deploys `prepio-web` and `prepio-admin`. Wait until both deployments are **Ready**: until then the live web can't load lessons, and the live admin's lesson editor still reads `writing_exercises`. (The `ai_settings.grade_*` columns stay, so the old Settings page keeps working.)
+3. Content: `pnpm content:cloud:add-consolidation` (dry run: 10 templates, and for each seed lesson its sources and non-essay exercises; no problems listed), then `pnpm content:cloud:add-consolidation --apply`, then the dry run again: it must plan 0. See "Consolidation content" below.
+4. Admin → Setări: replace the welcome message and the AI rules with the grade-free texts (suggested text in `docs/STATUS.md`, Owner actions; source `packages/content/src/defaults.ts`). The migration doesn't touch `ai_settings`, so production still has the old wording.
+5. Production checks:
+   - anon REST on every new table returns `[]` or 401/42501, never rows: `sources`, `solution_templates`, `consolidation_exercises`, `consolidation_exercise_sources`, `consolidation_ai_context`, `consolidation_attempts`, `consolidation_runs` (e.g. `curl -s "$SUPABASE_URL/rest/v1/consolidation_exercises?select=id" -H "apikey: $ANON"`);
+   - a signed-in student can read the published exercises but **not** `consolidation_ai_context` (`[]`);
+   - `POST /api/consolidation/evaluate` returns 401 without a token and 403 with a foreign `Origin`:
+     `curl -si -X POST https://prepio-admin.vercel.app/api/consolidation/evaluate -H "Content-Type: application/json" -H "Origin: https://prepio-web.vercel.app" -d '{}'` → 401;
+     the same with `-H "Origin: https://evil.example"` → 403;
+   - `https://prepio-admin.vercel.app/api/evaluate` returns 404;
+   - **one real AI evaluation** from the student web (e.g. an essay requirement or the argument exercise of a seed lesson): 200 with Romanian feedback and no grade (it was never run against OpenAI before the release: no local key);
+   - student web `/`, a lesson's start screen with the three zones and `/lesson/<id>/consolidare`, admin `/login` and `/templates` (logged out → redirect to `/login`) load with a clean console.
+6. New EAS `preview` APK, **mandatory**: the installed APK can't open lessons after step 1. New font asset (Literata), no new native module. Then the owner's phone-test list in `docs/STATUS.md`.
 
 ## Schema and content
 
@@ -145,6 +164,6 @@ Share the internal-distribution install link from the build page; the phone must
    `curl -s "$SUPABASE_URL/rest/v1/ai_settings?select=*" -H "apikey: $ANON"`
 3. Anonymous sees no lessons since the `student_accounts` migration (expect `[]`): `curl -s "$SUPABASE_URL/rest/v1/lessons?select=id" -H "apikey: $ANON"`.
 4. Evaluate CORS preflight from the student origin returns `Access-Control-Allow-Origin` and allows `Authorization`:
-   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
-5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and a writing exercise returns an evaluation.
+   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/consolidation/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
+5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and an AI consolidation exercise (an essay requirement, a viewpoint, an argument…) returns an evaluation.
 6. The card preview may only be framed by the admin: `curl -sI https://prepio-web.vercel.app/preview` and `curl -sI https://prepio-web.vercel.app/preview/` both return `Content-Security-Policy: frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000`; the admin card editor shows the live preview (not "previzualizarea nu este disponibilă").

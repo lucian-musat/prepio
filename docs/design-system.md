@@ -209,6 +209,8 @@ Lesson cards are rendered by `CardView` (eyebrow + title + `CardContentView`, on
 
 **Reading typeface.** Source texts in the reader use Literata (family keys `reading` = 400, `readingMedium` = 500 in `fonts.ts`; covers ș ț ă â î and „ ”), 17 px, line height 24 plus a 3.5 px gap per line (~1.8 pitch). It is not a type role: only `MarkableText` (with `reading`) and the reader use it.
 
+**Source layouts** (`SourcePanel`, long-sources mockup). A short source (< ~70 words) sits inline in a `Surface` card: „SURSA A” eyebrow, the text in the body face, the citation as an italic `caption`. A long source is a `paper` preview card (letter icon, „Sursa B”, author · paragraphs · reading time, faded first lines, „📖 Citește și marchează”) that opens the full-screen reader (top bar with ✕ and the citation, the requirement pinned on one line, `reading` text, a bottom tray with the pens, the next-step hint and „Gata”, a thin minimap). From 900 px the long sources sit in the left column of a split (`ScreenLayout wide`, `paper`, ~62 characters per line, own scroll) with A / B tabs when there are two, or a „Sursa B” eyebrow when there is one; short sources stay inline in the right column with the prompt and the answer.
+
 **Accessibility on web.** react-native-web 0.21 ignores `accessibilityState`; expanded / selected / checked states are set with `aria-expanded` / `aria-selected` / `aria-checked`, which react-native 0.88 also maps on native. `accessibilityRole="imagebutton"` has no web role, so tappable images use `button`.
 
 ## How to add things
