@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AI_TYPES,
+  DEFAULT_CREDIT_COST,
   exerciseToRow,
   type AiContext,
   type AnswerSpan,
@@ -86,6 +87,8 @@ export function toExercise(
     sources: c.sources.map((key, i): SourceRef => ({ sourceId: sourceId(key), label: LABELS[i]! })),
     modelAnswer: c.modelAnswer ?? null,
     explanation: c.explanation ?? null,
+    // Seed content never sets a cost: it gets the type default, the same as the credits migration gave existing rows.
+    creditCost: DEFAULT_CREDIT_COST[c.type],
   };
 
   let exercise: ConsolidationExercise;

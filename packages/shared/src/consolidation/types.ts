@@ -49,6 +49,8 @@ export type ConsolidationExercise = {
   sources: SourceRef[];
   modelAnswer: string | null;
   explanation: string | null;
+  /** Credits one digital-teacher check costs (AI types only; per requirement for the whole essay). */
+  creditCost: number;
 } & ConsolidationContent;
 export type AiContext = { main: string; requirements: Record<string, string> };
 export type SolutionTemplate = {
@@ -95,6 +97,8 @@ export type ConsolidationRow = {
   prompt: string;
   content: Record<string, unknown>;
   template_id: string | null;
+  /** Missing (older selects) = the type default. */
+  credit_cost?: number;
 };
 
 /** `POST /api/consolidation/evaluate`: asks the AI to judge one item of an AI-checked exercise. */
@@ -103,17 +107,29 @@ export type ConsolidationEvaluateRequest = {
   target: 'exercise' | 'whole' | { requirementId: string };
   answer: ExerciseAnswer;
 };
+/** What a check cost and the balance after it. */
+export type CreditsChange = { spent: number; balance: number };
 /** `ai: true` on every item. */
-export type ConsolidationEvaluateResponse = { items: FeedbackItem[] };
+export type ConsolidationEvaluateResponse = { items: FeedbackItem[]; credits: CreditsChange };
 export type ConsolidationEvaluateErrorCode =
   | 'empty'
   | 'too_long'
   | 'not_found'
   | 'rate_limited'
+  | 'insufficient_credits'
   | 'ai_failed'
   | 'bad_request'
   | 'unauthorized';
-/** `message` is in Romanian. */
-export type ConsolidationEvaluateError = { error: ConsolidationEvaluateErrorCode; message: string };
+/**
+ * `message` is in Romanian. `insufficient_credits` carries `required` and `balance`; an `ai_failed` after a successful
+ * refund carries `credits` (`spent: 0`).
+ */
+export type ConsolidationEvaluateError = {
+  error: ConsolidationEvaluateErrorCode;
+  message: string;
+  required?: number;
+  balance?: number;
+  credits?: CreditsChange;
+};
 /** Per text field; the essay "whole" check sends up to 6 fields. */
 export const MAX_ANSWER_CHARS = 3000;

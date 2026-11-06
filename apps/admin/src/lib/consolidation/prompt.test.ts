@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AiContext, ConsolidationExercise, ExerciseAnswer, Source } from '@prepio/shared';
 import { buildConsolidationPrompt, expectedKeys } from './prompt';
 
-const base = { id: 'e1', position: 0, prompt: 'Enunțul exercițiului.', templateId: null, sources: [], modelAnswer: 'Model secret.', explanation: null };
+const base = { id: 'e1', position: 0, prompt: 'Enunțul exercițiului.', templateId: null, sources: [], modelAnswer: 'Model secret.', explanation: null, creditCost: 1 };
 const source: Source = { id: 's1', position: 0, title: null, author: 'Autor', work: 'Opera', body: 'Domnitorul a făcut reforma agrară în 1864.' };
 const NONE = {};
 

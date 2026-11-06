@@ -1,5 +1,5 @@
 import {
-  emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel,
+  DEFAULT_CREDIT_COST, emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel,
 } from '@prepio/shared';
 import type { ExerciseInput } from '@/lib/data/consolidation';
 import { plural } from './plural';
@@ -18,11 +18,12 @@ export function draftFor(type: ConsolidationType, newId: () => string): Exercise
     modelAnswer: null,
     explanation: null,
     ai: EMPTY_AI(),
+    creditCost: DEFAULT_CREDIT_COST[type],
     ...emptyExerciseContent(type, newId),
   } as ExerciseDraft;
 }
 
-/** Keeps the id, prompt, sources, template, model answer, explanation and AI main context; resets the type fields. */
+/** Keeps the id, prompt, sources, template, model answer, explanation and AI main context; resets the type fields and the credit cost (to the new type's default). */
 export function changeType(draft: ExerciseDraft, type: ConsolidationType, newId: () => string): ExerciseDraft {
   return {
     ...(draft.id ? { id: draft.id } : {}),
@@ -32,6 +33,7 @@ export function changeType(draft: ExerciseDraft, type: ConsolidationType, newId:
     modelAnswer: draft.modelAnswer,
     explanation: draft.explanation,
     ai: { main: draft.ai.main, requirements: {} },
+    creditCost: DEFAULT_CREDIT_COST[type],
     ...emptyExerciseContent(type, newId),
   } as ExerciseDraft;
 }
@@ -42,7 +44,7 @@ export function toDraft(ex: ConsolidationExercise, ai: AiContext): ExerciseDraft
   return { ...copy, ai } as ExerciseDraft;
 }
 
-const COMMON = new Set(['id', 'prompt', 'templateId', 'sources', 'modelAnswer', 'explanation', 'ai']);
+const COMMON = new Set(['id', 'prompt', 'templateId', 'sources', 'modelAnswer', 'explanation', 'ai', 'creditCost']);
 
 // Key-sorted, id-free form of a value, so drafts compare with fresh empty content.
 const normalize = (v: unknown): unknown =>

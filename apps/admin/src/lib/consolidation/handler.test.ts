@@ -15,8 +15,9 @@ const BLANKCTX = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const DETACHED = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 const BODY = 'Domnitorul a făcut reforma. Apoi a plecat în exil.';
-const row = (id: string, type: string, content: Record<string, unknown>, status = 'published') => ({
-  id, position: 0, type, prompt: 'Enunț', content, template_id: null, lessons: { status },
+const COMP = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const row = (id: string, type: string, content: Record<string, unknown>, status = 'published', creditCost = 1) => ({
+  id, position: 0, type, prompt: 'Enunț', content, template_id: null, credit_cost: creditCost, lessons: { status },
 });
 const viewContent = (text: string) => ({
   count: 2,
@@ -32,7 +33,8 @@ const exercises: Record<string, unknown> = {
   [DETACHED]: row(DETACHED, 'viewpoint', viewContent('Domnitorul a făcut alt lucru')),
   [DRAFT]: row(DRAFT, 'facts', { count: 2 }, 'draft'),
   [SHORT]: row(SHORT, 'short_answer', { accepted: ['x'], mistakes: [] }),
-  [ARG]: row(ARG, 'argument', {}),
+  [ARG]: row(ARG, 'argument', {}, 'published', 2),
+  [COMP]: row(COMP, 'comparison', { variant: 'similarity' }, 'published', 2),
   [VIEW]: row(VIEW, 'viewpoint', viewContent('Domnitorul a făcut reforma.')),
   [ESSAY]: row(ESSAY, 'essay', {
     requirements: [
@@ -47,6 +49,7 @@ const contexts: Record<string, unknown> = {
   [DETACHED]: { main: 'Ctx', requirements: {} },
   [VIEW]: { main: 'Ctx view', requirements: {} },
   [ARG]: { main: 'Ctx arg', requirements: {} },
+  [COMP]: { main: 'Ctx comp', requirements: {} },
   [ESSAY]: { main: '', requirements: { r1: 'Ctx r1', r2: 'Ctx r2' } },
 };
 const settings = { rules: 'reguli', model: 'gpt-5-mini' };
@@ -81,11 +84,36 @@ const okItems = (...keys: string[]) => ({
   items: keys.map((key) => ({ key, verdict: 'ok', title: 'T', good: ['g'], improve: [] })),
 });
 
+/** In-memory wallet: `spend` debits when the balance covers it, `refund` puts an entry's amount back once. */
+function fakeCredits(balance = 10, log: string[] = []) {
+  const entries = new Map<number, number>();
+  let next = 1;
+  return {
+    get balance() {
+      return balance;
+    },
+    spend: vi.fn(async (_userId: string, amount: number, _exerciseId: string, target: string) => {
+      log.push(`spend:${amount}:${target}`);
+      if (balance < amount) return { entryId: null, balance };
+      balance -= amount;
+      entries.set(next, amount);
+      return { entryId: next++, balance };
+    }),
+    refund: vi.fn(async (entryId: number) => {
+      log.push(`refund:${entryId}`);
+      balance += entries.get(entryId) ?? 0;
+      entries.delete(entryId);
+      return balance;
+    }),
+  };
+}
+
 function deps(over: Partial<Deps> = {}): Deps {
   return {
     db: fakeDb(),
     evaluate: vi.fn(async () => okItems('fact-0', 'fact-1')),
     rateLimit: vi.fn(async () => true),
+    credits: fakeCredits(),
     ...over,
   };
 }
@@ -105,6 +133,7 @@ describe('handleConsolidationEvaluate', () => {
         { key: 'fact-0', verdict: 'ok', title: 'T', good: ['g'], improve: [], ai: true },
         { key: 'fact-1', verdict: 'ok', title: 'T', good: ['g'], improve: [], ai: true },
       ],
+      credits: { spent: 1, balance: 9 },
     });
     expect(d.rateLimit).toHaveBeenCalledWith('evaluate:user:u1', 30, 3600);
     expect(d.rateLimit).toHaveBeenCalledWith('evaluate:global', 300, 86400);
@@ -240,9 +269,16 @@ describe('handleConsolidationEvaluate', () => {
       async () => ({ items: [{ key: 'fact-0', verdict: 'great', title: 'T', good: [], improve: [] }] }),
     ];
     for (const evaluate of bad) {
-      const r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate }));
+      const credits = fakeCredits(5);
+      const r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate, credits }));
       expect(r.status).toBe(502);
-      expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
+      expect(r.json).toEqual({
+        error: 'ai_failed',
+        message: 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.',
+        credits: { spent: 0, balance: 5 },
+      });
+      expect(credits.refund).toHaveBeenCalledTimes(1);
+      expect(credits.refund).toHaveBeenCalledWith(1);
     }
   });
 
@@ -317,5 +353,121 @@ describe('handleConsolidationEvaluate', () => {
     r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, 'u1', d);
     expect(r.status).toBe(200);
     expect((r.json as { items: { key: string }[] }).items.map((i) => i.key)).toEqual(['whole']);
+  });
+});
+
+describe('handleConsolidationEvaluate: credits', () => {
+  const compReq = { exerciseId: COMP, target: 'exercise', answer: { type: 'comparison', text: 'Ambele au avut reforme.' } };
+  const compOk = () => vi.fn(async () => okItems('answer'));
+
+  it('spends checkCost with the target key after both rate limits, before the evaluator', async () => {
+    const log: string[] = [];
+    const credits = fakeCredits(7, log);
+    const d = deps({
+      credits,
+      rateLimit: vi.fn(async (k: string) => (log.push(`rate:${k}`), true)),
+      evaluate: vi.fn(async () => (log.push('ai'), okItems('answer'))),
+    });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', d);
+    expect(r.status).toBe(200);
+    expect(log).toEqual(['rate:evaluate:user:u1', 'rate:evaluate:global', 'spend:2:exercise', 'ai']);
+    expect(credits.spend).toHaveBeenCalledWith('u1', 2, COMP, 'exercise');
+  });
+
+  it('success returns what was spent and the new balance', async () => {
+    const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ credits: fakeCredits(7), evaluate: compOk() }));
+    expect(r.status).toBe(200);
+    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 2, balance: 5 });
+  });
+
+  it('insufficient credits → 402 with required and balance; the evaluator is not called', async () => {
+    const credits = fakeCredits(1);
+    const d = deps({ credits, evaluate: compOk() });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', d);
+    expect(r.status).toBe(402);
+    expect(r.json).toEqual({
+      error: 'insufficient_credits', message: 'Nu ai destule credite pentru această verificare.', required: 2, balance: 1,
+    });
+    expect(d.evaluate).not.toHaveBeenCalled();
+    expect(credits.refund).not.toHaveBeenCalled();
+  });
+
+  it('the whole essay costs credit_cost per requirement; one requirement costs credit_cost', async () => {
+    const credits = fakeCredits(10);
+    let d = deps({ credits, evaluate: vi.fn(async () => okItems('whole')) });
+    let r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, 'u1', d);
+    expect(r.status).toBe(200);
+    expect(credits.spend).toHaveBeenLastCalledWith('u1', 2, ESSAY, 'whole');
+    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 2, balance: 8 });
+    d = deps({ credits, evaluate: vi.fn(async () => okItems('r1')) });
+    r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, 'u1', d);
+    expect(credits.spend).toHaveBeenLastCalledWith('u1', 1, ESSAY, 'req:r1');
+    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 1, balance: 7 });
+  });
+
+  it('refunds when the evaluator throws or the model output is invalid', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failures = [
+      async () => { throw new Error('boom'); },
+      async () => ({ nope: true }),
+      async () => okItems('other'),
+    ];
+    for (const evaluate of failures) {
+      const credits = fakeCredits(7);
+      const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ credits, evaluate }));
+      expect(r.status).toBe(502);
+      expect(r.json).toMatchObject({ error: 'ai_failed', credits: { spent: 0, balance: 7 } });
+      expect(credits.refund).toHaveBeenCalledTimes(1);
+      expect(credits.refund).toHaveBeenCalledWith(1);
+    }
+  });
+
+  it('never spends on validation errors, not_found or rate limits', async () => {
+    const bodies = [
+      null,
+      factsReq({ exerciseId: UNKNOWN }),
+      factsReq({ exerciseId: DRAFT }),
+      factsReq({ exerciseId: NOCTX }),
+      factsReq({ answer: { type: 'facts', texts: ['a', ''] } }),
+      factsReq({ answer: { type: 'facts', texts: ['a'.repeat(3001), 'b'] } }),
+      factsReq({ target: 'whole' }),
+    ];
+    for (const body of bodies) {
+      const credits = fakeCredits();
+      await handleConsolidationEvaluate(body, 'u1', deps({ credits }));
+      expect(credits.spend, JSON.stringify(body)).not.toHaveBeenCalled();
+    }
+    for (const rateLimit of [async () => false, async (k: string) => k !== 'evaluate:global']) {
+      const credits = fakeCredits();
+      const r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ credits, rateLimit }));
+      expect(r.status).toBe(429);
+      expect(credits.spend).not.toHaveBeenCalled();
+    }
+  });
+
+  it('a failing refund still returns 502 with the old message, logged, without crashing', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const credits = fakeCredits(7);
+    credits.refund.mockImplementation(async () => {
+      throw new Error('refund down');
+    });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ credits, evaluate: async () => { throw new Error('boom'); } }));
+    expect(r.status).toBe(502);
+    expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
+    expect(error.mock.calls.some((c) => String(c.join(' ')).includes('refund'))).toBe(true);
+  });
+
+  it('a failing spend is an ai_failed without calling the evaluator', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const credits = fakeCredits(7);
+    credits.spend.mockImplementation(async () => {
+      throw new Error('rpc down');
+    });
+    const d = deps({ credits, evaluate: compOk() });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', d);
+    expect(r.status).toBe(502);
+    expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
+    expect(d.evaluate).not.toHaveBeenCalled();
+    expect(credits.refund).not.toHaveBeenCalled();
   });
 });

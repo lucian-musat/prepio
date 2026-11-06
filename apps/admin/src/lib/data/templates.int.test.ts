@@ -60,7 +60,7 @@ describe.skipIf(!url || !anon)('template data functions (local Supabase)', () =>
 
   it('counts usage by exercises and essay requirements; deleting a used template fails with the count', async () => {
     const id = await mk('[test] used');
-    const base = { prompt: 'P', modelAnswer: null, explanation: null, sources: [] };
+    const base = { prompt: 'P', modelAnswer: null, explanation: null, sources: [], creditCost: 1 };
     const a = await saveConsolidationExercise(db, lessonId, { ...base, type: 'argument', templateId: id, ai: { main: 'c', requirements: {} } });
     const b = await saveConsolidationExercise(db, lessonId, {
       ...base, type: 'essay', templateId: null,

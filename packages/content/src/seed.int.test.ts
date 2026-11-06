@@ -246,6 +246,12 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       );
       expect(exercise.requirements.map((r) => r.templateId && templateKey.get(r.templateId))).toEqual(seedEssay.requirements.map((r) => r.template));
       expect(ai).toEqual({ main: '', requirements: seedEssay.ai!.requirements });
+
+      // Seed exercises get the type default cost: comparison and argument 2, every other type 1.
+      const { data: costs, error: costErr } = await client.from('consolidation_exercises').select('type,credit_cost').eq('lesson_id', id);
+      if (costErr) throw costErr;
+      expect(costs.length).toBe(l.consolidation.length);
+      for (const c of costs) expect(c.credit_cost, c.type as string).toBe(c.type === 'comparison' || c.type === 'argument' ? 2 : 1);
     }
   });
 

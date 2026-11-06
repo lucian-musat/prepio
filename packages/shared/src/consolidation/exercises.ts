@@ -49,6 +49,22 @@ export const AI_TYPES: ReadonlySet<ConsolidationType> = new Set<ConsolidationTyp
   'essay',
 ]);
 
+export const MIN_CREDIT_COST = 1;
+export const MAX_CREDIT_COST = 5;
+/** Credits per check when the admin hasn't set one; the essay's is per requirement. Non-AI types are never charged. */
+export const DEFAULT_CREDIT_COST: Record<ConsolidationType, number> = {
+  short_answer: 1,
+  multi_answer: 1,
+  source_info: 1,
+  source_letter: 1,
+  cause_effect: 1,
+  facts: 1,
+  comparison: 2,
+  viewpoint: 1,
+  argument: 2,
+  essay: 1,
+};
+
 export const VERDICT_LABELS: Record<Verdict, string> = { ok: 'Corect', almost: 'Aproape', no: 'Mai lucrează' };
 
 export function emptyExerciseContent(type: ConsolidationType, newId: () => string): ConsolidationContent {
@@ -142,6 +158,7 @@ export function exerciseFromRow(row: ConsolidationRow, sources: SourceRef[]): Co
     sources: sources.map((s) => ({ sourceId: s.sourceId, label: s.label })),
     modelAnswer: strOrNull(c.modelAnswer),
     explanation: strOrNull(c.explanation),
+    creditCost: num(row.credit_cost, DEFAULT_CREDIT_COST[row.type]),
   };
   switch (row.type) {
     case 'short_answer':
@@ -219,9 +236,10 @@ export function exerciseToRow(ex: DistributiveOmit<ConsolidationExercise, 'id' |
   prompt: string;
   content: Record<string, unknown>;
   template_id: string | null;
+  credit_cost: number;
 } {
-  const { type, prompt, templateId, ...content } = ex;
-  return { type, prompt, content, template_id: templateId };
+  const { type, prompt, templateId, creditCost, ...content } = ex;
+  return { type, prompt, content, template_id: templateId, credit_cost: creditCost };
 }
 
 export function sourceFromRow(row: Record<string, unknown>): Source {
@@ -333,6 +351,13 @@ export function validateExercise(ex: ConsolidationExercise, sources: Source[], a
         if (blank(r.text)) errors.push(`Cerința ${i + 1}: textul nu poate fi gol.`);
       });
       break;
+  }
+
+  if (AI_TYPES.has(ex.type)) {
+    const c = ex.creditCost;
+    if (!Number.isInteger(c) || c < MIN_CREDIT_COST || c > MAX_CREDIT_COST) {
+      errors.push(`Costul verificării trebuie să fie între ${MIN_CREDIT_COST} și ${MAX_CREDIT_COST} credite.`);
+    }
   }
 
   const ids = new Set(ex.sources.map((s) => s.sourceId));

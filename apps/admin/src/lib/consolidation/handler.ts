@@ -1,12 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  AI_TYPES, MAX_ANSWER_CHARS, checkExercise, detectConnectors, exerciseFromRow, sourceFromRow, tokenizeSource, validateExercise,
+  AI_TYPES, MAX_ANSWER_CHARS, checkCost, checkExercise, detectConnectors, exerciseFromRow, sourceFromRow, targetKey, tokenizeSource,
+  validateExercise,
   type AiContext, type ConsolidationEvaluateError, type ConsolidationEvaluateErrorCode, type ConsolidationEvaluateRequest,
   type ConsolidationEvaluateResponse, type ConsolidationExercise, type ConsolidationRow, type ExerciseAnswer, type FeedbackItem,
   type Mark, type Source, type SourceRef,
 } from '@prepio/shared';
 import { aiFromJson } from '@/lib/data/consolidation';
 import { isUuid } from '@/lib/data/db';
+import type { Credits } from '@/lib/credits/credits';
 import type { Evaluator } from '@/lib/evaluate/openai';
 import {
   GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS, type RateLimit,
@@ -14,7 +16,7 @@ import {
 import { buildConsolidationPrompt, expectedKeys, type Deterministic } from './prompt';
 import { aiOutputSchema, normalizeAiOutput } from './schema';
 
-export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit };
+export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit; credits: Credits };
 export type HandlerResult = { status: number; json: ConsolidationEvaluateResponse | ConsolidationEvaluateError };
 
 const GLOBAL_LIMIT_MESSAGE = 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.';
@@ -25,8 +27,11 @@ const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: 
   too_long: { status: 400, message: `Textul depășește ${MAX_ANSWER_CHARS} de caractere.` },
   not_found: { status: 404, message: 'Exercițiul nu a fost găsit.' },
   rate_limited: { status: 429, message: 'Ai atins limita de evaluări pentru moment. Încearcă din nou peste o oră.' },
+  insufficient_credits: { status: 402, message: 'Nu ai destule credite pentru această verificare.' },
   ai_failed: { status: 502, message: 'Evaluarea nu a reușit. Încearcă din nou.' },
 };
+/** `ai_failed` once the spent credits were given back. */
+const REFUNDED_MESSAGE = 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
 
 export function errorResult(code: ConsolidationEvaluateErrorCode): HandlerResult {
   const { status, message } = ERRORS[code];
@@ -88,7 +93,7 @@ function ok<T>(res: { data: T; error: { message: string } | null }, what: string
 /** Null = not found or the lesson isn't published. Service-role reads: the context never leaves the server. */
 async function load(db: SupabaseClient, id: string): Promise<Loaded | null> {
   const row = ok(
-    await db.from('consolidation_exercises').select('id,position,type,prompt,content,template_id,lessons(status)').eq('id', id).maybeSingle(),
+    await db.from('consolidation_exercises').select('id,position,type,prompt,content,template_id,credit_cost,lessons(status)').eq('id', id).maybeSingle(),
     'exercise lookup',
   ) as unknown as LoadedRow | null;
   const lesson = Array.isArray(row?.lessons) ? row.lessons[0] : row?.lessons;
@@ -201,6 +206,8 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
   if (!req) return errorResult('bad_request');
   if (!isUuid(req.exerciseId)) return errorResult('not_found');
 
+  // Set once the check is paid for; any failure after that gives the credits back.
+  let entryId: number | null = null;
   try {
     const loaded = await load(deps.db, req.exerciseId);
     if (!loaded) return errorResult('not_found');
@@ -214,6 +221,14 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     if (!(await deps.rateLimit(GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS))) {
       return { status: 429, json: { error: 'rate_limited', message: GLOBAL_LIMIT_MESSAGE } };
     }
+
+    const cost = checkCost(exercise, req.target);
+    const spend = await deps.credits.spend(userId, cost, exercise.id, targetKey(req.target));
+    if (spend.entryId === null) {
+      const { status, message } = ERRORS.insufficient_credits;
+      return { status, json: { error: 'insufficient_credits', message, required: cost, balance: spend.balance } };
+    }
+    entryId = spend.entryId;
 
     const deterministic = deterministicFacts(exercise, req.target, req.answer, sources);
     const { instructions, input } = buildConsolidationPrompt({
@@ -231,9 +246,16 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
       if (!found) throw new Error(`model output is missing item "${key}"`);
       items.push({ key, verdict: found.verdict, title: found.title, good: found.good, improve: found.improve, ai: true });
     }
-    return { status: 200, json: { items } };
+    return { status: 200, json: { items, credits: { spent: cost, balance: spend.balance } } };
   } catch (e) {
     console.error('[consolidation/evaluate] failed:', e);
-    return errorResult('ai_failed');
+    if (entryId === null) return errorResult('ai_failed');
+    try {
+      const balance = await deps.credits.refund(entryId);
+      return { status: 502, json: { error: 'ai_failed', message: REFUNDED_MESSAGE, credits: { spent: 0, balance } } };
+    } catch (refundError) {
+      console.error(`[consolidation/evaluate] refund of ledger entry ${entryId} failed:`, refundError);
+      return errorResult('ai_failed');
+    }
   }
 }

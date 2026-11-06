@@ -70,7 +70,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   it('a source edit that shifts a span re-anchors it', async () => {
     const { id } = await saveConsolidationExercise(db, lessonId, {
       type: 'source_info', prompt: 'Ce a creat?', templateId: null, sources: [{ sourceId: srcA, label: 'A' }],
-      modelAnswer: null, explanation: null, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
+      modelAnswer: null, explanation: null, creditCost: 1, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
     });
     const body2 = `Prefață nouă. ${BODY}`;
     await saveSource(db, lessonId, source(srcA, body2));
@@ -86,7 +86,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   it('a source edit that removes the span text leaves a detached error; sourceImpact lists it', async () => {
     const { id } = await saveConsolidationExercise(db, lessonId, {
       type: 'source_info', prompt: 'Ce a creat?', templateId: null, sources: [{ sourceId: srcA, label: 'A' }],
-      modelAnswer: null, explanation: null, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
+      modelAnswer: null, explanation: null, creditCost: 1, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
     });
     const newBody = 'Bismarck a creat altceva în 1871.';
     expect(await sourceImpact(db, srcA, BODY)).toEqual([]);
@@ -101,7 +101,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   it('deleting a used source is a UserError; an unused one is deleted and positions close up', async () => {
     const { id } = await saveConsolidationExercise(db, lessonId, {
       type: 'source_info', prompt: 'P', templateId: null, sources: [{ sourceId: srcA, label: 'A' }],
-      modelAnswer: null, explanation: null, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
+      modelAnswer: null, explanation: null, creditCost: 1, count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI,
     });
     await expect(deleteSource(db, srcA)).rejects.toThrow('Sursa este folosită de un exercițiu.');
     await deleteItem(db, 'consolidation_exercises', id);
@@ -111,7 +111,8 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   });
 
   const s = (...ids: string[]) => ids.map((sourceId, i) => ({ sourceId, label: (i ? 'B' : 'A') as 'A' | 'B' }));
-  const common = { templateId: null, modelAnswer: null, explanation: null } as const;
+  // A non-default cost proves credit_cost is written and read back.
+  const common = { templateId: null, modelAnswer: null, explanation: null, creditCost: 3 } as const;
   const cases: Array<[string, () => ExerciseInput]> = [
     ['short_answer', () => ({ ...common, type: 'short_answer', prompt: 'P', sources: [], accepted: ['x'], mistakes: [{ answer: 'y', message: 'm' }], ai: NO_AI })],
     ['multi_answer', () => ({ ...common, type: 'multi_answer', prompt: 'P', sources: s(srcA), count: 1, groups: [{ id: 'g1', variants: ['a', 'b'] }], ai: NO_AI })],

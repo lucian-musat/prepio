@@ -12,3 +12,5 @@ export * from './consolidation/marks';
 export * from './consolidation/connectors';
 export * from './consolidation/exercises';
 export * from './consolidation/check';
+export * from './plural';
+export * from './credits';

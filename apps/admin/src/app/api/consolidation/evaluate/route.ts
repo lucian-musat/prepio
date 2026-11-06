@@ -4,6 +4,7 @@ import { allowedOrigins, corsHeaders } from '@/lib/evaluate/cors';
 import { errorResult, handleConsolidationEvaluate, type Deps } from '@/lib/consolidation/handler';
 import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
+import { createCredits } from '@/lib/credits/credits';
 
 export const dynamic = 'force-dynamic';
 /** Vercel's default (10 s on Hobby) would kill the function before the 50 s OpenAI timeout. */
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
     const deps: Deps = {
       db,
       rateLimit: createRateLimit(db),
+      credits: createCredits(db),
       evaluate: apiKey
         ? createOpenAIEvaluator(apiKey)
         : async () => {

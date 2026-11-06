@@ -20,7 +20,7 @@ const EMPTY_AI: AiContext = { main: '', requirements: {} };
 const blank = (s: string | null | undefined) => !s || s.trim() === '';
 const orNull = (s: unknown) => (typeof s === 'string' && s.trim() !== '' ? s.trim() : null);
 const SOURCE_COLUMNS = 'id,position,title,author,work,body';
-const EXERCISE_COLUMNS = 'id,position,type,prompt,content,template_id';
+const EXERCISE_COLUMNS = 'id,position,type,prompt,content,template_id,credit_cost';
 
 type JoinRow = { exercise_id: string; source_id: string; label: string };
 
@@ -176,6 +176,7 @@ function normalizeExercise(input: ExerciseInput): ConsolidationExercise {
     {
       id: input.id ?? 'new', position: 0, type: input.type, prompt: typeof input.prompt === 'string' ? input.prompt : '',
       content: input as unknown as Record<string, unknown>, template_id: typeof input.templateId === 'string' ? input.templateId : null,
+      credit_cost: input.creditCost, // a non-number falls back to the type default; validateExercise checks the range
     },
     sources,
   );

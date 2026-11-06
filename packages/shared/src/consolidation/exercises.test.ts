@@ -35,7 +35,7 @@ const spanOf = (id: string, text: string, sourceId = 'sa', body = BODY_A): Answe
 const S1 = spanOf('s1', 'Domnul era ales pe viață');
 const S2 = spanOf('s2', 'Adunarea electivă hotăra');
 
-const base = { id: 'e1', position: 0, prompt: 'Enunț', templateId: null, modelAnswer: null, explanation: null };
+const base = { id: 'e1', position: 0, prompt: 'Enunț', templateId: null, modelAnswer: null, explanation: null, creditCost: 1 };
 const make = (c: object, sources: SourceRef[] = []) =>
   ({ ...base, sources, ...c }) as unknown as ConsolidationExercise;
 const row = (type: ConsolidationType, content: Record<string, unknown>): ConsolidationRow => ({
@@ -113,7 +113,7 @@ describe('exerciseFromRow', () => {
       make({ type: 'source_letter', correct: 'B', evidence: S1 }, [REF_A, REF_B]),
       make({ type: 'cause_effect', pairs: [{ id: 'p', cause: S1, effect: S2, explanation: 'x' }] }, [REF_A]),
       make({ type: 'facts', count: 3 }),
-      make({ type: 'comparison', variant: 'difference' }),
+      make({ type: 'comparison', variant: 'difference', creditCost: 4 }),
       make({ type: 'viewpoint', count: 1, spans: [S1] }, [REF_A]),
       make({ type: 'argument', templateId: 't1' }),
       make({
@@ -126,8 +126,23 @@ describe('exerciseFromRow', () => {
       const r = exerciseToRow(rest);
       expect(r.type).toBe(ex.type);
       expect(r.content).not.toHaveProperty('type');
+      expect(r.content).not.toHaveProperty('creditCost');
+      expect(r.credit_cost).toBe(ex.creditCost);
       expect(exerciseFromRow({ id, position, ...r }, sources)).toEqual(ex);
     }
+  });
+});
+
+describe('credit cost', () => {
+  it('a missing credit_cost falls back to the type default', () => {
+    expect(exerciseFromRow(row('comparison', {}), []).creditCost).toBe(2);
+    expect(exerciseFromRow(row('argument', {}), []).creditCost).toBe(2);
+    expect(exerciseFromRow(row('facts', { count: 2 }), []).creditCost).toBe(1);
+    expect(exerciseFromRow(row('viewpoint', {}), []).creditCost).toBe(1);
+    expect(exerciseFromRow(row('essay', {}), []).creditCost).toBe(1);
+    expect(exerciseFromRow(row('short_answer', {}), []).creditCost).toBe(1);
+    expect(exerciseFromRow({ ...row('facts', {}), credit_cost: 3 }, []).creditCost).toBe(3);
+    expect(exerciseFromRow({ ...row('argument', {}), credit_cost: 'x' as never }, []).creditCost).toBe(2);
   });
 });
 
@@ -231,6 +246,15 @@ describe('validateExercise', () => {
     expect(v({ type: 'facts', count: 4 }, [], ctx)).toEqual([]);
     expect(v({ type: 'facts', count: 5 }, [], ctx)).toHaveLength(1);
     expect(v({ type: 'facts', count: 0 }, [], ctx)).toHaveLength(1);
+  });
+  it('AI types need an integer credit cost of 1..5; other types ignore it', () => {
+    const msg = 'Costul verificării trebuie să fie între 1 și 5 credite.';
+    expect(v({ type: 'facts', count: 2, creditCost: 5 }, [], ctx)).toEqual([]);
+    expect(v({ type: 'facts', count: 2, creditCost: 0 }, [], ctx)).toEqual([msg]);
+    expect(v({ type: 'facts', count: 2, creditCost: 6 }, [], ctx)).toEqual([msg]);
+    expect(v({ type: 'facts', count: 2, creditCost: 1.5 }, [], ctx)).toEqual([msg]);
+    expect(v({ type: 'short_answer', accepted: ['a'], mistakes: [], creditCost: 0 }, [])).toEqual([]);
+    expect(v({ type: 'short_answer', accepted: ['a'], mistakes: [], creditCost: 6 }, [])).toEqual([]);
   });
   it('essay: 1-6 requirements, none blank', () => {
     const r = (id: string, text = 'T') => ({ id, text, modelAnswer: null, templateId: null, argument: false });

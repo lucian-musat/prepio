@@ -18,8 +18,16 @@ describe('draftFor', () => {
       modelAnswer: null,
       explanation: null,
       ai: { main: '', requirements: {} },
+      creditCost: 1,
       ...emptyExerciseContent(type, ids()),
     });
+  });
+  it('starts with the type default credit cost', () => {
+    expect(draftFor('comparison', ids()).creditCost).toBe(2);
+    expect(draftFor('argument', ids()).creditCost).toBe(2);
+    expect(draftFor('facts', ids()).creditCost).toBe(1);
+    expect(draftFor('essay', ids()).creditCost).toBe(1);
+    expect(hasTypeContent(draftFor('comparison', ids()))).toBe(false);
   });
 });
 
@@ -44,10 +52,12 @@ describe('changeType', () => {
       modelAnswer: 'Cuza',
       explanation: 'Vezi sursa A.',
       ai: { main: '', requirements: {} },
+      creditCost: 1,
       type: 'source_info',
       count: 1,
       spans: [],
     });
+    expect(changeType(d, 'argument', ids()).creditCost).toBe(2);
   });
 });
 
