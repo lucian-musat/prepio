@@ -76,7 +76,7 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
   });
 
   const deps = (evaluate: Deps['evaluate'], c: Credits = credits): Deps => ({ db, rateLimit, evaluate, credits: c });
-  /** For the non-uuid rate-limit user: never runs out. */
+  /** For the profile-less rate-limit user: never runs out. */
   const unlimited: Credits = { spend: async () => ({ entryId: 1, balance: 99 }), refund: async () => 99 };
   const balance = async () => {
     const { data, error } = await db.from('profiles').select('credit_balance').eq('id', userId).single();
@@ -158,6 +158,27 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     expect(evaluate).not.toHaveBeenCalled();
     expect(await balance()).toBe(9);
     expect(await ledger()).toHaveLength(before);
+    const ev = await db.from('student_events').select('kind,exercise_id,details').eq('user_id', userId).eq('kind', 'check_blocked');
+    expect(ev.error).toBeNull();
+    expect(ev.data).toEqual([{ kind: 'check_blocked', exercise_id: pricey, details: { required: 10, balance: 9 } }]);
+  });
+
+  it('refuses a suspended student with 403 before anything is spent', async () => {
+    const evaluate = vi.fn();
+    const before = await balance();
+    const upd = await db.from('profiles').update({ suspended_at: new Date().toISOString(), suspended_reason: '[test] Spam' }).eq('id', userId);
+    if (upd.error) throw upd.error;
+    try {
+      const r = await handleConsolidationEvaluate(
+        { exerciseId, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, userId, deps(evaluate),
+      );
+      expect(r).toEqual({ status: 403, json: { error: 'suspended', message: 'Contul tău este suspendat.' } });
+      expect(evaluate).not.toHaveBeenCalled();
+      expect(await balance()).toBe(before);
+    } finally {
+      const back = await db.from('profiles').update({ suspended_at: null, suspended_reason: null }).eq('id', userId);
+      if (back.error) throw back.error;
+    }
   });
 
   it('does not serve an exercise of an unpublished lesson', async () => {
@@ -173,7 +194,7 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
 
   it('has no per-user hourly limit and consumes only the prefixed global key', async () => {
     const answer = { type: 'essay', parts: { r1: 'a', r2: 'b' } };
-    const busy = 'busy-user';
+    const busy = randomUUID(); // no profile, so not suspended; `unlimited` never touches the ledger
     const evaluate = vi.fn(async () => ({ items: [item('whole')] }));
     for (let i = 0; i < 31; i++) {
       const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, busy, deps(evaluate, unlimited));

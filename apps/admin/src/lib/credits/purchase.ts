@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CreditsPurchaseError, CreditsPurchaseErrorCode, CreditsPurchaseResponse } from '@prepio/shared';
+import { isSuspended } from '@/lib/account/suspended';
 import { isUuid } from '@/lib/data/db';
 
 export type PurchaseResult = { status: number; json: CreditsPurchaseResponse | CreditsPurchaseError };
@@ -8,6 +9,7 @@ const ERRORS: Record<CreditsPurchaseErrorCode, { status: number; message: string
   bad_request: { status: 400, message: 'Cererea nu este validă.' },
   unauthorized: { status: 401, message: 'Trebuie să fii autentificat.' },
   package_unavailable: { status: 409, message: 'Pachetul nu mai este disponibil. Alege altul.' },
+  suspended: { status: 403, message: 'Contul tău este suspendat.' },
   server_error: { status: 500, message: 'Cumpărarea nu a reușit. Încearcă din nou.' },
 };
 
@@ -20,6 +22,13 @@ export function purchaseError(code: CreditsPurchaseErrorCode): PurchaseResult {
 export async function handleCreditsPurchase(body: unknown, userId: string, db: SupabaseClient): Promise<PurchaseResult> {
   const packageId = typeof body === 'object' && body !== null ? (body as Record<string, unknown>).packageId : undefined;
   if (typeof packageId !== 'string' || !isUuid(packageId)) return purchaseError('bad_request');
+
+  try {
+    if (await isSuspended(db, userId)) return purchaseError('suspended');
+  } catch (e) {
+    console.error('[credits/purchase] suspension lookup failed:', e);
+    return purchaseError('server_error');
+  }
 
   const { data, error } = await db.rpc('purchase_credit_package', { p_user: userId, p_package: packageId });
   if (error) {

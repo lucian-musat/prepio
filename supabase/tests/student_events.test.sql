@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(51);
 
 -- Fixtures (as postgres). Assertions are scoped to these ids so the suite also passes on a seeded DB.
 -- b1 is a student, b2 an admin. The auth trigger creates their profiles (and the welcome grant).
@@ -170,6 +170,31 @@ select is((select count(*)::int from public.student_events where user_id = '0000
 select throws_ok(
   $$ insert into public.student_events (user_id, kind) values ('00000000-0000-0000-0000-0000000000b1', 'app_opened') $$,
   '42501', null, 'service role cannot insert events');
+
+-- log_student_event_service: the server's writer, limited to check_blocked.
+select lives_ok(
+  $$ select public.log_student_event_service('00000000-0000-0000-0000-0000000000b1', 'check_blocked',
+       '00000000-0000-0000-0000-0000000000a1', '{"required":2,"balance":1}') $$,
+  'service role logs check_blocked');
+select results_eq(
+  $$ select exercise_id, admin_id, lesson_id, details from public.student_events
+      where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'check_blocked' $$,
+  $$ values ('00000000-0000-0000-0000-0000000000a1'::uuid, null::uuid, null::uuid, '{"required":2,"balance":1}'::jsonb) $$,
+  'check_blocked is stored with the exercise and the details');
+select throws_ok(
+  $$ select public.log_student_event_service('00000000-0000-0000-0000-0000000000b1', 'purchase', null, '{}') $$,
+  'P0001', 'bad_kind', 'service role cannot log any other kind');
+select lives_ok(
+  $$ select public.log_student_event_service('00000000-0000-0000-0000-0000000000b1', 'check_blocked', null, null) $$,
+  'null details are stored as {}');
+select is((select details from public.student_events
+            where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'check_blocked' order by id desc limit 1),
+  '{}'::jsonb, 'null details became {}');
+reset role;
+select ok(not has_function_privilege('authenticated', 'public.log_student_event_service(uuid, text, uuid, jsonb)', 'execute'),
+  'students cannot call log_student_event_service');
+select ok(not has_function_privilege('anon', 'public.log_student_event_service(uuid, text, uuid, jsonb)', 'execute'),
+  'anon cannot call log_student_event_service');
 
 -- ---------------------------------------------------------------- cascade
 reset role;

@@ -119,7 +119,8 @@ export type ConsolidationEvaluateErrorCode =
   | 'insufficient_credits'
   | 'ai_failed'
   | 'bad_request'
-  | 'unauthorized';
+  | 'unauthorized'
+  | 'suspended';
 /**
  * `message` is in Romanian. `insufficient_credits` carries `required` and `balance`; an `ai_failed` after a successful
  * refund carries `credits` (`spent: 0`).

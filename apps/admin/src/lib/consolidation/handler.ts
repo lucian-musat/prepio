@@ -6,6 +6,7 @@ import {
   type ConsolidationEvaluateResponse, type ConsolidationExercise, type ConsolidationRow, type ExerciseAnswer, type FeedbackItem,
   type Mark, type Source, type SourceRef,
 } from '@prepio/shared';
+import { isSuspended } from '@/lib/account/suspended';
 import { aiFromJson } from '@/lib/data/consolidation';
 import { isUuid } from '@/lib/data/db';
 import type { Credits } from '@/lib/credits/credits';
@@ -28,6 +29,7 @@ const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: 
   rate_limited: { status: 429, message: 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.' },
   insufficient_credits: { status: 402, message: 'Nu ai destule credite pentru această verificare.' },
   ai_failed: { status: 502, message: 'Evaluarea nu a reușit. Încearcă din nou.' },
+  suspended: { status: 403, message: 'Contul tău este suspendat.' },
 };
 /** `ai_failed` once the spent credits were given back. */
 const REFUNDED_MESSAGE = 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
@@ -199,6 +201,18 @@ function deterministicFacts(ex: ConsolidationExercise, target: Target, answer: E
   return {};
 }
 
+/** Puts the refused check on the student's timeline; a failure is only logged. */
+async function logCheckBlocked(db: SupabaseClient, userId: string, exerciseId: string, required: number, balance: number) {
+  try {
+    const { error } = await db.rpc('log_student_event_service', {
+      p_user: userId, p_kind: 'check_blocked', p_exercise: exerciseId, p_details: { required, balance },
+    });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.error('[consolidation/evaluate] logging check_blocked failed:', e);
+  }
+}
+
 /** `userId` is the authenticated caller (verified by the route); quotas are per user. */
 export async function handleConsolidationEvaluate(body: unknown, userId: string, deps: Deps): Promise<HandlerResult> {
   const req = parseRequest(body);
@@ -208,6 +222,7 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
   // Set once the check is paid for; any failure after that gives the credits back.
   let entryId: number | null = null;
   try {
+    if (await isSuspended(deps.db, userId)) return errorResult('suspended');
     const loaded = await load(deps.db, req.exerciseId);
     if (!loaded) return errorResult('not_found');
     const { exercise, sources, context, rules, model } = loaded;
@@ -221,6 +236,7 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const cost = checkCost(exercise, req.target);
     const spend = await deps.credits.spend(userId, cost, exercise.id, targetKey(req.target));
     if (spend.entryId === null) {
+      await logCheckBlocked(deps.db, userId, exercise.id, cost, spend.balance);
       const { status, message } = ERRORS.insufficient_credits;
       return { status, json: { error: 'insufficient_credits', message, required: cost, balance: spend.balance } };
     }

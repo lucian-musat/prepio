@@ -1,5 +1,5 @@
 begin;
-select plan(52);
+select plan(55);
 
 -- Fixtures (as postgres). Assertions are scoped to these ids so the suite also passes on a seeded DB.
 -- f1, f2, f4, f5 are students (f2 gets suspended), f3 an admin. The auth trigger creates their profiles.
@@ -127,6 +127,15 @@ select is((select count(*)::int from public.admin_students('f1@test', 10, 0, nul
   'a student with an event today is active today');
 select is((select count(*)::int from public.admin_students('f4@test', 10, 0, null, 'active_today')), 0,
   'a student whose only event is two days old is not active today');
+-- Only the student's own events count: an admin action on f4 today changes neither the filter nor last_activity_at.
+select lives_ok($$ select public.admin_adjust_credits('00000000-0000-0000-0000-0000000000f4', 1, '[test] gift') $$,
+  'admin adjusts f4 credits today');
+select is((select count(*)::int from public.admin_students('f4@test', 10, 0, null, 'active_today')), 0,
+  'an admin action today does not make the student active today');
+select ok(
+  (select last_activity_at < now() - interval '1 day'
+     from public.admin_students('', 1, 0, '00000000-0000-0000-0000-0000000000f4')),
+  'an admin action does not count as the student''s last activity');
 select is((select count(*)::int from public.admin_students(null, 200, 0, null, 'active_today')),
   (select max(total)::int from public.admin_students(null, 200, 0, null, 'active_today')),
   'total equals the filtered row count');

@@ -54,8 +54,11 @@ const contexts: Record<string, unknown> = {
 };
 const settings = { rules: 'reguli', model: 'gpt-5-mini' };
 
-function fakeDb(): SupabaseClient {
+type DbOpts = { suspended?: boolean; rpc?: (fn: string, args: unknown) => Promise<{ data: unknown; error: { message: string } | null }> };
+
+function fakeDb(opts: DbOpts = {}): SupabaseClient {
   return {
+    rpc: opts.rpc ?? (async () => ({ data: null, error: null })),
     from(table: string) {
       let id: unknown;
       const rows = (): unknown => {
@@ -69,7 +72,7 @@ function fakeDb(): SupabaseClient {
         in: () => b,
         order: () => b,
         maybeSingle: async () => ({
-          data: table === 'consolidation_exercises' ? exercises[id as string] ?? null : table === 'consolidation_ai_context' ? (contexts[id as string] ? { context: contexts[id as string] } : null) : null,
+          data: table === 'profiles' ? { suspended_at: opts.suspended ? '2026-11-06T10:00:00Z' : null } : table === 'consolidation_exercises' ? exercises[id as string] ?? null : table === 'consolidation_ai_context' ? (contexts[id as string] ? { context: contexts[id as string] } : null) : null,
           error: null,
         }),
         single: async () => ({ data: table === 'ai_settings' ? settings : null, error: null }),
@@ -388,6 +391,35 @@ describe('handleConsolidationEvaluate: credits', () => {
     expect(credits.refund).not.toHaveBeenCalled();
   });
 
+  it('insufficient credits logs check_blocked with required and balance', async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ rpc }), credits: fakeCredits(1), evaluate: compOk() }));
+    expect(r.status).toBe(402);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('log_student_event_service', {
+      p_user: 'u1', p_kind: 'check_blocked', p_exercise: COMP, p_details: { required: 2, balance: 1 },
+    });
+  });
+
+  it('a failing check_blocked log is logged and the answer is still 402', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    for (const rpc of [
+      vi.fn(async () => ({ data: null, error: { message: 'rpc down' } })),
+      vi.fn(async () => { throw new Error('network down'); }),
+    ]) {
+      const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ rpc }), credits: fakeCredits(1), evaluate: compOk() }));
+      expect(r.status).toBe(402);
+      expect(r.json).toMatchObject({ error: 'insufficient_credits', required: 2, balance: 1 });
+    }
+    expect(error).toHaveBeenCalledTimes(2);
+  });
+
+  it('a successful check does not log check_blocked', async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ rpc }), credits: fakeCredits(7), evaluate: compOk() }));
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('the whole essay costs credit_cost per requirement; one requirement costs credit_cost', async () => {
     const credits = fakeCredits(10);
     let d = deps({ credits, evaluate: vi.fn(async () => okItems('whole')) });
@@ -465,5 +497,24 @@ describe('handleConsolidationEvaluate: credits', () => {
     expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
     expect(d.evaluate).not.toHaveBeenCalled();
     expect(credits.refund).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleConsolidationEvaluate: suspended students', () => {
+  it('a suspended student gets 403 suspended; no rate limit, spend or evaluation', async () => {
+    const credits = fakeCredits();
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const d = deps({ db: fakeDb({ suspended: true, rpc }), credits });
+    const r = await handleConsolidationEvaluate(factsReq(), 'u1', d);
+    expect(r).toEqual({ status: 403, json: { error: 'suspended', message: 'Contul tău este suspendat.' } });
+    expect(d.rateLimit).not.toHaveBeenCalled();
+    expect(credits.spend).not.toHaveBeenCalled();
+    expect(d.evaluate).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('a malformed request is still a 400 for a suspended student (parse comes first)', async () => {
+    const r = await handleConsolidationEvaluate(null, 'u1', deps({ db: fakeDb({ suspended: true }) }));
+    expect(r.status).toBe(400);
   });
 });

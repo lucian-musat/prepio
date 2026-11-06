@@ -5,9 +5,15 @@ import { handleCreditsPurchase } from './purchase';
 const PKG = '11111111-1111-4111-8111-111111111111';
 const USER = '22222222-2222-4222-8222-222222222222';
 
-function fakeDb(result: { data?: unknown; error?: { message: string; code?: string } | null }) {
+function fakeDb(result: { data?: unknown; error?: { message: string; code?: string } | null }, suspended = false) {
   const rpc = vi.fn().mockResolvedValue({ data: result.data ?? null, error: result.error ?? null });
-  return { db: { rpc } as unknown as SupabaseClient, rpc };
+  const query = {
+    select: () => query,
+    eq: () => query,
+    maybeSingle: async () => ({ data: { suspended_at: suspended ? '2026-11-06T10:00:00Z' : null }, error: null }),
+  };
+  const from = vi.fn(() => query);
+  return { db: { rpc, from } as unknown as SupabaseClient, rpc, from };
 }
 
 describe('handleCreditsPurchase', () => {
@@ -43,5 +49,13 @@ describe('handleCreditsPurchase', () => {
     const r = await handleCreditsPurchase({ packageId: PKG }, USER, db);
     expect(r).toEqual({ status: 200, json: { orderId: 'o1', credits: 50, balance: 62 } });
     expect(rpc).toHaveBeenCalledWith('purchase_credit_package', { p_user: USER, p_package: PKG });
+  });
+
+  it('refuses a suspended student with 403 and no purchase RPC', async () => {
+    const { db, rpc, from } = fakeDb({ data: [{ order_id: 'o1', credits: 50, balance: 62 }] }, true);
+    const r = await handleCreditsPurchase({ packageId: PKG }, USER, db);
+    expect(r).toEqual({ status: 403, json: { error: 'suspended', message: 'Contul tău este suspendat.' } });
+    expect(from).toHaveBeenCalledWith('profiles');
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

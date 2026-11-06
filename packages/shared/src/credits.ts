@@ -8,7 +8,7 @@ export type CreditLedgerKind = 'welcome' | 'purchase' | 'check' | 'refund' | 'ad
 /** `POST /api/credits/purchase`. */
 export type CreditsPurchaseRequest = { packageId: string };
 export type CreditsPurchaseResponse = { orderId: string; credits: number; balance: number };
-export type CreditsPurchaseErrorCode = 'unauthorized' | 'bad_request' | 'package_unavailable' | 'server_error';
+export type CreditsPurchaseErrorCode = 'unauthorized' | 'bad_request' | 'package_unavailable' | 'suspended' | 'server_error';
 /** `message` is in Romanian. */
 export type CreditsPurchaseError = { error: CreditsPurchaseErrorCode; message: string };
 
