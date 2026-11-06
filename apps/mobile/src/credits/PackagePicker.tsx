@@ -71,6 +71,7 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
       setBalance(res.balance);
       if (!mounted.current) return;
       onBought(res.balance, res.credits);
+      setPhase('choose');
     } catch (e) {
       if (!mounted.current) return;
       setError(e instanceof Error && e.message ? e.message : PURCHASE_FAILED);

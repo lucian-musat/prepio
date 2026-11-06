@@ -31,7 +31,7 @@ function HistoryRow({ entry }: { entry: StudentLedgerEntry }) {
         accessibilityLabel={`${gain ? 'plus' : 'minus'} ${creditsLabel(Math.abs(entry.delta))}`}
         style={{ color: gain ? feedbackText.good : feedbackText.wrong }}
       >
-        {gain ? `+${entry.delta}` : `−${-entry.delta}`}
+        {entry.delta > 0 ? `+${entry.delta}` : entry.delta < 0 ? `−${-entry.delta}` : '0'}
       </AppText>
     </View>
   );
@@ -45,6 +45,7 @@ export default function CreditsScreen() {
   const [more, setMore] = useState(false);
   const [error, setError] = useState('');
   const busy = useRef(false);
+  const gen = useRef(0);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -57,23 +58,32 @@ export default function CreditsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const load = useCallback(async (before?: number) => {
-    if (busy.current) return;
+  // A reload from the top (after a purchase) supersedes any page load in flight: its result is dropped.
+  const load = useCallback(async (before?: number, reset = false) => {
+    if (busy.current && !reset) return;
+    if (reset) {
+      gen.current += 1;
+      setEntries([]);
+      setMore(false);
+    }
+    const id = gen.current;
     busy.current = true;
     setLoading(true);
     setError('');
     try {
       const rows = await (before === undefined ? fetchLedger() : fetchLedger({ before }));
-      if (!mounted.current) return;
+      if (!mounted.current || id !== gen.current) return;
       setEntries((cur) => [...cur, ...rows.filter((r) => !cur.some((c) => c.id === r.id))]);
       setMore(rows.length >= PAGE);
     } catch (e) {
-      if (!mounted.current) return;
+      if (!mounted.current || id !== gen.current) return;
       console.warn('[credits] history could not be loaded:', e);
       setError(LOAD_FAILED);
     } finally {
-      busy.current = false;
-      if (mounted.current) setLoading(false);
+      if (id === gen.current) {
+        busy.current = false;
+        if (mounted.current) setLoading(false);
+      }
     }
   }, []);
 
@@ -81,6 +91,7 @@ export default function CreditsScreen() {
     void load();
   }, [load]);
 
+  const known = balance !== null;
   const have = balance ?? 0;
   const last = entries[entries.length - 1];
 
@@ -99,19 +110,21 @@ export default function CreditsScreen() {
           <View style={styles.balance}>
             <Coin size={28} />
             <AppText role="display" color="onPrimary" style={styles.big}>
-              {String(have)}
+              {known ? String(have) : '—'}
             </AppText>
           </View>
-          <AppText role="note" color="onPrimary">
-            {`≈ ${Math.floor(have / 2)}–${have} verificări`}
-          </AppText>
+          {known ? (
+            <AppText role="note" color="onPrimary">
+              {`≈ ${Math.floor(have / 2)}–${have} verificări`}
+            </AppText>
+          ) : null}
         </LinearGradient>
 
         <View style={styles.section}>
           <AppText role="section" accessibilityRole="header">
             Cumpără credite
           </AppText>
-          <PackagePicker onBought={() => {}} />
+          <PackagePicker onBought={() => void load(undefined, true)} />
           <AppText role="caption" color="textMuted" style={styles.center}>
             {PAYMENT_FOOTNOTE}
           </AppText>

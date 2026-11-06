@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { fetchCreditPackages, fetchLedger, type StudentLedgerEntry } from '../lib/credits';
+import { fetchCreditPackages, fetchLedger, purchaseCredits, type StudentLedgerEntry } from '../lib/credits';
 import CreditsScreen from './CreditsScreen';
 
 jest.mock('../credits/CreditsProvider');
@@ -80,4 +80,24 @@ it('a full page offers „Încarcă mai multe”, which asks for rows before the
   expect(mockedLedger).toHaveBeenLastCalledWith({ before: 71 });
   expect(await screen.findAllByText('−2')).toHaveLength(31);
   expect(screen.queryByText('Încarcă mai multe')).toBeNull();
+});
+
+it('after a purchase the buy button is usable again and the history reloads from the top', async () => {
+  (purchaseCredits as jest.Mock).mockResolvedValue({ orderId: 'o1', credits: 50, balance: 99 });
+  mockedLedger.mockResolvedValueOnce([]).mockResolvedValueOnce([entry(9, { kind: 'purchase', delta: 50, exercise: null })]);
+  await mount();
+  await act(async () => void fireEvent.press(await screen.findByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' })));
+  expect(purchaseCredits).toHaveBeenCalledWith('p50');
+  expect(screen.getByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' })).toBeEnabled();
+  expect(mockedLedger).toHaveBeenCalledTimes(2);
+  expect(mockedLedger).toHaveBeenLastCalledWith();
+  expect(await screen.findByText('+50')).toBeTruthy();
+  expect(screen.getByText('99')).toBeTruthy();
+});
+
+it('shows a placeholder while the balance is unknown', async () => {
+  mockResetCredits(null);
+  await mount();
+  expect(screen.getByText('—')).toBeTruthy();
+  expect(screen.queryByText(/≈/)).toBeNull();
 });
