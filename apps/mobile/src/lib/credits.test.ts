@@ -65,8 +65,8 @@ describe('ledgerLabel', () => {
   });
   it('essay requirement N and whole essay', () => {
     const exercise = { type: 'essay' as const, prompt: 'p', requirements: ['r1', 'r2', 'r3'] };
-    expect(ledgerLabel(entry({ target: 'req:r2', exercise }))).toBe('Eseu pe cerințe · cerința 2');
-    expect(ledgerLabel(entry({ target: 'whole', exercise }))).toBe('Eseu pe cerințe · eseul întreg');
+    expect(ledgerLabel(entry({ target: 'req:r2', exercise }))).toBe('Eseu · cerința 2');
+    expect(ledgerLabel(entry({ target: 'whole', exercise }))).toBe('Eseu · eseul întreg');
   });
   it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare'));
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));

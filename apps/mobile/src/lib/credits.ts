@@ -105,7 +105,7 @@ export function ledgerLabel(e: StudentLedgerEntry): string {
       return `Ajustare · ${e.reason ?? ''}`.trimEnd();
     case 'check': {
       if (!e.exercise) return 'Verificare';
-      const base = CONSOLIDATION_TYPE_LABELS[e.exercise.type];
+      const base = e.exercise.type === 'essay' ? 'Eseu' : CONSOLIDATION_TYPE_LABELS[e.exercise.type];
       if (e.exercise.type !== 'essay') return base;
       if (e.target === 'whole') return `${base} · eseul întreg`;
       if (e.target?.startsWith('req:')) {
