@@ -3,16 +3,17 @@
 # cards (src/extraCards.ts), `add-consolidation` adds the seed solution templates, sources and consolidation
 # exercises to the seed lessons that have none yet (src/addConsolidation.ts), `remove-test-lessons` deletes the
 # leftover „test” / „test 2” lessons, `demo` creates or refreshes the demo lesson (src/demoLesson.ts; add --remove
-# to delete it).
+# to delete it), `update-ai-settings` replaces the welcome message and the AI rules with the grade-free defaults
+# (src/updateAiSettings.ts).
 # Dry run by default; pass --apply to write. Reads SUPABASE_ACCESS_TOKEN from the credentials file
 # (see scripts/lib/cloud-credentials.sh), fetches the project's service key with the Supabase CLI and hands
 # it to the content script through the environment only. Never prints a secret; never passes one as an argument.
-# Usage: bash scripts/content-cloud.sh [add-cards|add-consolidation|remove-test-lessons|demo] [--apply] [--remove]
+# Usage: bash scripts/content-cloud.sh [add-cards|add-consolidation|remove-test-lessons|demo|update-ai-settings] [--apply] [--remove]
 set -euo pipefail
 
 command="add-cards"
 case "${1:-}" in
-  add-cards | add-consolidation | remove-test-lessons | demo) command="$1"; shift ;;
+  add-cards | add-consolidation | remove-test-lessons | demo | update-ai-settings) command="$1"; shift ;;
   "" | --*) ;;
   *) echo "Unknown content command: $1" >&2; exit 1 ;;
 esac

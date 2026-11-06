@@ -13,6 +13,7 @@
     "add-consolidation": "tsx src/addConsolidation.ts",
     "remove-test-lessons": "tsx src/removeTestLessons.ts",
     "demo": "tsx src/demoLesson.ts",
+    "update-ai-settings": "tsx src/updateAiSettings.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
