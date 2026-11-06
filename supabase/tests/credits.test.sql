@@ -15,8 +15,8 @@ insert into lessons (id, node_id, title, status) values
 
 -- ---------------------------------------------------------------- schema and seeded rows
 select has_column('public', 'profiles', 'credit_balance', 'profiles.credit_balance exists');
-select is((select credit_balance from profiles where id = '00000000-0000-0000-0000-0000000000f1'), 0,
-  'a new profile starts with a balance of 0');
+select is((select credit_balance from profiles where id = '00000000-0000-0000-0000-0000000000f1'), 12,
+  'a new profile starts with the welcome credits');
 select is((select welcome_credits from credit_settings where id = 1), 12, 'credit_settings row 1 starts at 12 welcome credits');
 select throws_ok($$ insert into credit_settings (id) values (2) $$, '23514', null, 'credit_settings is a singleton');
 select results_eq(
