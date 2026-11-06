@@ -45,28 +45,10 @@ const EXPECTED_TREE: Array<[string, string[]]> = [
   ],
 ];
 
-const EXPECTED_LESSONS: Array<{ leaf: string; exercises: string[] }> = [
-  {
-    leaf: 'Formarea statului român modern și realizarea României Mari',
-    exercises: [
-      'Scrie introducerea unui eseu despre constituirea statului român modern în perioada 1857–1866.',
-      'Prezintă o acțiune desfășurată de români în perioada 1857–1859, precizând două informații referitoare la aceasta și utilizând relația cauză-efect.',
-    ],
-  },
-  {
-    leaf: 'Constituțiile din România',
-    exercises: [
-      'Precizează o măsură adoptată în statul român în perioada 1861–1866 și menționează două aspecte cu privire la această măsură.',
-      'Formulează un punct de vedere referitor la Constituția din 1866 și susține-l printr-un argument istoric.',
-    ],
-  },
-  {
-    leaf: 'România și marile alianțe europene',
-    exercises: [
-      'Menționează două fapte istorice la care participă România în cadrul relațiilor internaționale din perioada 1875–1885.',
-      'Formulează un punct de vedere referitor la politica externă a României în perioada 1916–1918 și susține-l printr-un argument istoric.',
-    ],
-  },
+const EXPECTED_LESSONS: Array<{ leaf: string }> = [
+  { leaf: 'Formarea statului român modern și realizarea României Mari' },
+  { leaf: 'Constituțiile din România' },
+  { leaf: 'România și marile alianțe europene' },
 ];
 
 function leaves(nodes: SeedNode[]): SeedNode[] {
@@ -187,16 +169,6 @@ describe('lessons', () => {
         for (const o of q.options) expect(o.label).toMatch(/^\d{4}$/);
         const years = q.options.map((o) => Number(o.label));
         expect([...years].sort((a, b) => a - b)).toEqual(years);
-      }
-    });
-
-    it('keeps the 2 former writing exercises as one-requirement essays with their criteria as context', () => {
-      const idx = lessons.indexOf(lesson);
-      const essays = lesson.consolidation.flatMap((c) => (c.type === 'essay' ? [c] : []));
-      expect(essays.map((e) => e.requirements.map((r) => r.text))).toEqual(EXPECTED_LESSONS[idx]!.exercises.map((p) => [p]));
-      for (const e of essays) {
-        expect(e.requirements[0]!.id).toBe('r1');
-        expect(e.ai?.requirements.r1?.trim().length).toBeGreaterThan(0);
       }
     });
 

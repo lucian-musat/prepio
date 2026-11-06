@@ -1,5 +1,4 @@
 import { EXTRA_CARDS } from '../extraCards';
-import { essayFromWriting } from '../consolidation';
 import type { SeedConsolidation, SeedLesson, SeedSource } from '../types';
 
 const sources: SeedSource[] = [
@@ -128,6 +127,50 @@ const exercises: SeedConsolidation[] = [
     ],
   },
   {
+    type: 'facts',
+    prompt: 'Prezentați două acțiuni desfășurate de români pentru realizarea Unirii Principatelor, în perioada 1857–1859.',
+    template: 'facts',
+    sources: [],
+    count: 2,
+    modelAnswer:
+      '1. În toamna anului 1857, s-au întrunit Adunările ad-hoc de la Iași și București, care au cerut, prin ' +
+      'rezoluțiile adoptate în octombrie, unirea Moldovei și a Țării Românești într-un stat cu numele România, condus ' +
+      'de un prinț străin dintr-o familie domnitoare a Europei, autonomia și neutralitatea Principatelor.\n' +
+      '2. În ianuarie 1859, unioniștii au folosit faptul că Convenția de la Paris nu interzicea alegerea aceleiași ' +
+      'persoane în ambele Principate: Alexandru Ioan Cuza a fost ales domn al Moldovei la 5 ianuarie și al Țării ' +
+      'Românești la 24 ianuarie, astfel că marile puteri au fost puse în fața faptului împlinit.',
+    ai: {
+      main: [
+        'Perioada: 1857–1859 (Unirea Principatelor). Faptele trebuie să fie acțiuni ale românilor (nu ale marilor puteri) și să fie prezentate (ce s-a întâmplat, când, cine a participat, o consecință sau un detaliu), nu doar menționate.',
+        'Acțiuni acceptate (exemple): alegerile pentru Adunările ad-hoc (1857; în Moldova, primele alegeri, falsificate de caimacamul Nicolae Vogoride, au fost anulate și reluate); întrunirea Adunărilor ad-hoc de la Iași și București în toamna lui 1857 și rezoluțiile din octombrie 1857 (autonomia și neutralitatea Principatelor, unirea într-un stat cu numele România, prinț străin dintr-o familie domnitoare a Europei, adunare reprezentativă, garanția colectivă a marilor puteri); propunerea unionistă prezentată de Mihail Kogălniceanu în Adunarea ad-hoc a Moldovei; alegerea lui Alexandru Ioan Cuza ca domn al Moldovei (5 ianuarie 1859) și al Țării Românești (24 ianuarie 1859, sub presiunea mulțimii din București), folosind lacuna Convenției de la Paris (dubla alegere).',
+        'Cele două acțiuni trebuie să fie diferite, nu două detalii ale aceleiași acțiuni.',
+        'Greșeli frecvente: fapte din afara perioadei (Congresul de pace de la Paris, 1856, este o decizie a marilor puteri; recunoașterea unirii depline, 1861; formarea guvernului unic, 1862; reformele lui Cuza, 1863–1864); atribuirea Convenției de la Paris (1858) românilor (a fost hotărâtă de marile puteri); simpla menționare („dubla alegere”) fără detalii; date greșite (de exemplu, dubla alegere în 1858 sau 1862).',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'comparison',
+    prompt: 'Menționați o deosebire între rezoluțiile Adunărilor ad-hoc (1857) și prevederile Convenției de la Paris (1858).',
+    template: 'comparison',
+    sources: [],
+    variant: 'difference',
+    modelAnswer:
+      'Spre deosebire de rezoluțiile Adunărilor ad-hoc, care cereau unirea Principatelor într-un singur stat condus ' +
+      'de un prinț străin, Convenția de la Paris a menținut câte un domn, un guvern și o adunare în fiecare principat.',
+    ai: {
+      main: [
+        'Tema: rezoluțiile Adunărilor ad-hoc (octombrie 1857), care exprimau dorințele românilor, și Convenția de la Paris (august 1858), prin care marile puteri au stabilit organizarea Principatelor.',
+        'Rezoluțiile Adunărilor ad-hoc: adoptate de adunări alese de români, la Iași și București; cereau autonomia și neutralitatea Principatelor, unirea lor într-un singur stat cu numele România, un prinț străin dintr-o familie domnitoare a Europei, o adunare reprezentativă și garanția colectivă a marilor puteri.',
+        'Convenția de la Paris: hotărâtă de marile puteri garante (act impus din afară); statul se numea „Principatele Unite ale Moldovei și Valahiei”; fiecare principat păstra propriul domn (pământean, ales de Adunarea electivă), propriul guvern și propria adunare; instituții comune: Comisia Centrală de la Focșani și Înalta Curte de Justiție și Casație; menținea suzeranitatea otomană și garanția colectivă.',
+        'Deosebiri acceptate (exemple): cine le-a elaborat (românii, prin Adunările ad-hoc / marile puteri); unire deplină într-un singur stat / unire limitată, cu instituții separate; numele „România” / „Principatele Unite ale Moldovei și Valahiei”; prinț străin / domn pământean, câte unul în fiecare principat.',
+        'Răspunsul trebuie să numească ambele acte și să spună explicit prin ce diferă („spre deosebire de…”, „în timp ce…”). Nu se acceptă o asemănare (de exemplu, garanția colectivă a marilor puteri apare în ambele) sau descrierea separată a celor două acte.',
+        'Greșeli frecvente: afirmația că Adunările ad-hoc au cerut independența (au cerut autonomia); afirmația că Convenția prevedea un prinț străin sau un singur domn; confuzia Convenției de la Paris (1858) cu Tratatul de pace de la Paris (1856).',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
     type: 'viewpoint',
     prompt:
       'Formulați, pe baza sursei date, un punct de vedere referitor la reformele adoptate în timpul domniei lui ' +
@@ -153,6 +196,99 @@ const exercises: SeedConsolidation[] = [
         'Greșeli frecvente: confundarea legii rurale (1864) cu secularizarea (1863); afirmația că reformele au fost adoptate după abdicarea lui Cuza (1866); informații-suport care nu susțin punctul de vedere formulat (de exemplu, dubla alegere pentru un punct de vedere despre reforme).',
       ].join('\n'),
       requirements: {},
+    },
+  },
+  {
+    type: 'argument',
+    prompt:
+      'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia marile puteri au avut un rol important ' +
+      'în realizarea Unirii Principatelor.',
+    template: 'argument',
+    sources: [],
+    modelAnswer:
+      'Marile puteri au avut un rol important în realizarea Unirii Principatelor, deoarece Congresul de pace de la ' +
+      'Paris (1856) a pus Moldova și Țara Românească sub garanția colectivă a celor șapte mari puteri și a hotărât ' +
+      'convocarea Adunărilor ad-hoc, prin care românii și-au putut exprima dorința de unire. Așadar, afirmația este adevărată.',
+    ai: {
+      main: [
+        'Perioada și tema: rolul marilor puteri în realizarea Unirii Principatelor (1856–1861).',
+        'Fapte relevante acceptate: Congresul de pace de la Paris (1856), după Războiul Crimeii: Principatele sub garanția colectivă a celor șapte mari puteri, încetarea protectoratului rusesc, hotărârea de a consulta populația prin Adunări ad-hoc; anularea alegerilor falsificate din Moldova (1857), la presiunea Franței; Convenția de la Paris (august 1858), care a creat Principatele Unite ale Moldovei și Valahiei, cu instituții comune (Comisia Centrală de la Focșani, Înalta Curte de Justiție și Casație); recunoașterea dublei alegeri a lui Cuza de către Conferința de la Paris (1859); acceptarea de către Imperiul Otoman a unirii depline, pe durata domniei lui Cuza (decembrie 1861).',
+        'Faptul trebuie prezentat (ce au hotărât marile puteri și cum a ajutat aceasta Unirea), nu doar numit. Un fapt care arată doar acțiunea românilor (de exemplu, dubla alegere fără recunoașterea ei de către puteri) nu susține afirmația.',
+        'Greșeli frecvente: afirmația că toate marile puteri au susținut Unirea (Imperiul Otoman și Austria i s-au opus, iar Convenția a acceptat doar o unire limitată); confuzia Congresului de la Paris (1856) cu Convenția de la Paris (1858); date greșite; fapte din afara temei (reformele lui Cuza, independența din 1877).',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'essay',
+    prompt:
+      'Elaborați un eseu despre constituirea statului român modern în perioada 1857–1866, respectând următoarele cerințe:',
+    template: 'essay',
+    sources: [],
+    requirements: [
+      {
+        id: 'r1',
+        text: 'Menționați două acțiuni desfășurate de români pentru realizarea Unirii Principatelor, în perioada 1857–1859.',
+        modelAnswer: 'Întrunirea Adunărilor ad-hoc de la Iași și București (1857); dubla alegere a lui Alexandru Ioan Cuza (ianuarie 1859).',
+        template: 'facts',
+        argument: false,
+      },
+      {
+        id: 'r2',
+        text: 'Prezentați o reformă adoptată în timpul domniei lui Alexandru Ioan Cuza.',
+        modelAnswer:
+          'În august 1864, după lovitura de stat din 2 mai, a fost adoptată legea rurală, promovată de Mihail Kogălniceanu: ' +
+          'claca și dijma au fost desființate, iar clăcașii au fost împroprietăriți, după numărul vitelor de muncă, în ' +
+          'schimbul unei despăgubiri plătite în 15 ani.',
+        template: 'facts',
+        argument: false,
+      },
+      {
+        id: 'r3',
+        text: 'Precizați o cauză a abdicării lui Alexandru Ioan Cuza, în 1866.',
+        modelAnswer:
+          'Conservatorii, nemulțumiți de legea rurală, și liberalii radicali, care criticau regimul autoritar, s-au aliat ' +
+          'în „monstruoasa coaliție” și l-au obligat pe Cuza să abdice.',
+        template: 'cause_effect',
+        argument: false,
+      },
+      {
+        id: 'r4',
+        text:
+          'Formulați un punct de vedere referitor la importanța domniei lui Alexandru Ioan Cuza pentru statul român ' +
+          'modern și susțineți-l printr-un argument istoric.',
+        modelAnswer:
+          'Consider că domnia lui Alexandru Ioan Cuza a pus bazele statului român modern, deoarece în 1862 s-au format ' +
+          'un guvern unic și o adunare unică, iar capitala a devenit București. Așadar, unirea deplină a fost realizată ' +
+          'în timpul domniei sale.',
+        template: 'argument',
+        argument: true,
+      },
+    ],
+    ai: {
+      main: '',
+      requirements: {
+        r1: [
+          'Perioada: 1857–1859. Se cer două acțiuni ale românilor, doar menționate (numite corect, eventual cu data), nu prezentate pe larg.',
+          'Acțiuni acceptate: alegerile pentru Adunările ad-hoc (1857); întrunirea Adunărilor ad-hoc de la Iași și București (toamna lui 1857); adoptarea rezoluțiilor Adunărilor ad-hoc (octombrie 1857); propunerea unionistă prezentată de Mihail Kogălniceanu; alegerea lui Alexandru Ioan Cuza ca domn al Moldovei (5 ianuarie 1859); alegerea lui Cuza ca domn al Țării Românești (24 ianuarie 1859); dubla alegere ca întreg.',
+          'Greșeli frecvente: acțiuni ale marilor puteri (Congresul de la Paris, 1856; Convenția de la Paris, 1858); fapte de după 1859 (guvernul unic din 1862, reformele); aceeași acțiune numită de două ori.',
+        ].join('\n'),
+        r2: [
+          'Perioada: domnia lui Alexandru Ioan Cuza (1859–1866). Reforma trebuie prezentată: ce prevedea, când a fost adoptată, cine a promovat-o, o consecință; simpla menționare nu ajunge.',
+          'Reforme acceptate: unificarea instituțiilor (guvern și adunare unică, capitala la București, 1862); secularizarea averilor mănăstirești (decembrie 1863, guvernul Kogălniceanu; aproximativ un sfert din terenul agricol a trecut la stat); Statutul Dezvoltător al Convenției de la Paris (1864, aprobat prin plebiscit: inițiativa legislativă a domnului, Senatul, Parlament bicameral); legea rurală (august 1864: desființarea clăcii și a dijmei, împroprietărirea clăcașilor după numărul vitelor de muncă, despăgubire plătită în 15 ani); legea instrucțiunii publice (1864: învățământ pe trei niveluri, primar obligatoriu și gratuit).',
+          'Greșeli frecvente: Constituția din 1866 (adoptată după abdicarea lui Cuza, sub Carol I); votul universal; date greșite (legea rurală în 1863, secularizarea în 1864).',
+        ].join('\n'),
+        r3: [
+          'Tema: abdicarea lui Alexandru Ioan Cuza (noaptea de 10/11 februarie 1866). Se cere o cauză, precizată clar.',
+          'Cauze acceptate: formarea „monstruoasei coaliții” (conservatori și liberali radicali) împotriva domnului; nemulțumirea marilor proprietari conservatori față de legea rurală; nemulțumirea liberalilor radicali față de regimul autoritar (guvernarea personală) instaurat după lovitura de stat din 2 mai 1864; izolarea politică a domnului; dorința oamenilor politici de a aduce un prinț străin, așa cum ceruseră Adunările ad-hoc.',
+          'Greșeli frecvente: afirmația că marile puteri l-au înlăturat pe Cuza; afirmația că țăranii s-au revoltat împotriva lui; legarea abdicării de independență (1877) sau de Constituția din 1866 (adoptată după abdicare).',
+        ].join('\n'),
+        r4: [
+          'Punctul de vedere este o apreciere despre importanța domniei lui Alexandru Ioan Cuza (1859–1866) pentru statul român modern (de exemplu: a desăvârșit unirea, a consolidat statul, a modernizat societatea). O simplă informație nu este punct de vedere.',
+          'Argumentul: un fapt istoric relevant din domnia lui Cuza, prezentat (nu doar numit) și legat de punctul de vedere prin conectori de cauzalitate (deoarece, pentru că, întrucât) și de concluzie (așadar, prin urmare, în concluzie). Fapte potrivite: unificarea instituțiilor și capitala la București (1862); secularizarea (1863); legea rurală (1864); legea instrucțiunii publice (1864); Statutul Dezvoltător (1864); recunoașterea unirii depline (1861).',
+          'Greșeli frecvente: fapte din afara domniei lui Cuza (Constituția din 1866, independența, 1877); argument care nu susține punctul de vedere formulat; lipsa conectorilor.',
+        ].join('\n'),
+      },
     },
   },
 ];
@@ -454,29 +590,5 @@ export const unireaPrincipatelor: SeedLesson = {
     },
   ],
   sources,
-  consolidation: [
-    ...exercises,
-    essayFromWriting(
-      'Scrie introducerea unui eseu despre constituirea statului român modern în perioada 1857–1866.',
-      [
-        'Contextualizarea temei: precizarea, pe scurt, a contextului în care se constituie statul român modern (de exemplu: înfrângerea Rusiei în Războiul Crimeii, Congresul de la Paris din 1856, garanția colectivă a marilor puteri, dorința de unire a românilor).',
-        'Enunțarea clară a temei eseului: constituirea statului român modern în perioada 1857–1866 (Unirea Principatelor și consolidarea statului prin reformele lui Alexandru Ioan Cuza).',
-        'Anunțarea, la nivel general, a ideilor care vor fi dezvoltate în cuprins (de exemplu: acțiunile românilor din 1857–1859, unificarea instituțiilor, reformele), fără a le dezvolta.',
-        'Introducerea are 3–6 propoziții și nu conține detalii specifice cuprinsului (enumerări de date, prevederi ale legilor etc.).',
-        'Utilizarea limbajului istoric adecvat (de exemplu: unire, stat modern, autonomie, garanție colectivă, reforme).',
-        'Ideile sunt înlănțuite logic, iar exprimarea este clară și corectă.',
-      ].join('\n'),
-    ),
-    essayFromWriting(
-      'Prezintă o acțiune desfășurată de români în perioada 1857–1859, precizând două informații referitoare la aceasta și utilizând relația cauză-efect.',
-      [
-        'Menționarea unei acțiuni desfășurate de români în perioada 1857–1859 (de exemplu: rezoluțiile Adunărilor ad-hoc din 1857, organizarea adunărilor elective, dubla alegere a lui Alexandru Ioan Cuza din 5 și 24 ianuarie 1859).',
-        'Precizarea a două informații corecte referitoare la acțiunea menționată (de exemplu: data, locul, participanții, conținutul hotărârilor, urmările).',
-        'Utilizarea explicită a relației cauză-efect (de exemplu: „Deoarece Convenția de la Paris nu interzicea alegerea aceleiași persoane în ambele Principate, unioniștii l-au ales pe Cuza domn și la București.”).',
-        'Folosirea conectorilor care exprimă cauzalitatea (deoarece, pentru că) și concluzia (așadar, astfel).',
-        'Acțiunea se încadrează corect în perioada 1857–1859 (reformele lui Cuza sau evenimentele de după 1859 nu se punctează).',
-        'Utilizarea limbajului istoric adecvat și prezentarea ideilor în succesiune cronologică/logică.',
-      ].join('\n'),
-    ),
-  ],
+  consolidation: exercises,
 };

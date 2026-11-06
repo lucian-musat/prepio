@@ -350,7 +350,7 @@ export const EXTRA_CARDS: Record<string, SeedCard[]> = {
           id: 'point-2',
           date: '9 mai 1877',
           title: 'Proclamarea independenței',
-          details: 'Mihail Kogălniceanu: „Suntem independenți; suntem o națiune de sine stătătoare”.',
+          details: 'Mihail Kogălniceanu: „Suntem independenți; suntem națiune de sine stătătoare”.',
           key: true,
           imagePath: null,
         },

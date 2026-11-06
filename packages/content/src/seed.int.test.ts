@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
-import { essayTitle } from './consolidation';
 import { loadConsolidation } from './consolidation.testutil';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
 import { seed } from './seed';
@@ -236,17 +235,17 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
         if (seedEx.ai) expect(ai).toEqual(seedEx.ai);
       });
 
-      // The former writing exercises, stored like the SQL migration stores them.
+      // The essay keeps its requirements (templates resolved) and one AI context per requirement.
       const essays = stored.exercises.filter((e) => e.exercise.type === 'essay');
-      expect(essays).toHaveLength(2);
-      for (const { exercise, ai } of essays) {
-        if (exercise.type !== 'essay') continue;
-        expect(exercise.requirements).toEqual([{ id: 'r1', text: exercise.requirements[0]!.text, modelAnswer: null, templateId: null, argument: false }]);
-        expect(exercise.prompt).toBe(essayTitle(exercise.requirements[0]!.text));
-        expect(exercise.templateId).toBeNull();
-        expect(ai?.main).toBe('');
-        expect(ai?.requirements.r1?.length).toBeGreaterThan(0);
-      }
+      expect(essays).toHaveLength(1);
+      const [{ exercise, ai }] = essays as [(typeof essays)[number]];
+      const seedEssay = l.consolidation.find((c) => c.type === 'essay')!;
+      if (exercise.type !== 'essay' || seedEssay.type !== 'essay') throw new Error('not an essay');
+      expect(exercise.requirements.map((r) => [r.id, r.text, r.modelAnswer, r.argument])).toEqual(
+        seedEssay.requirements.map((r) => [r.id, r.text, r.modelAnswer, r.argument]),
+      );
+      expect(exercise.requirements.map((r) => r.templateId && templateKey.get(r.templateId))).toEqual(seedEssay.requirements.map((r) => r.template));
+      expect(ai).toEqual({ main: '', requirements: seedEssay.ai!.requirements });
     }
   });
 

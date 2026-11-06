@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validateExercise } from '@prepio/shared';
 import { addConsolidation } from './addConsolidation';
-import { loadConsolidation } from './consolidation.testutil';
+import { loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
 import { lessons } from './index';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
@@ -32,25 +32,7 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
   };
 
   /** Production after the consolidation migration: only the converted essays (from position 0), no sources, no templates. */
-  const toProductionState = async () => {
-    await seed(client, { reset: true });
-    for (const l of lessons) {
-      const id = await lessonId(l.title);
-      const del = await client.from('consolidation_exercises').delete().eq('lesson_id', id).neq('type', 'essay');
-      if (del.error) throw del.error;
-      const src = await client.from('sources').delete().eq('lesson_id', id);
-      if (src.error) throw src.error;
-      // The migration numbered the converted essays from 0.
-      const essays = await client.from('consolidation_exercises').select('id').eq('lesson_id', id).order('position');
-      if (essays.error) throw essays.error;
-      for (const [position, e] of essays.data.entries()) {
-        const upd = await client.from('consolidation_exercises').update({ position }).eq('id', e.id);
-        if (upd.error) throw upd.error;
-      }
-    }
-    const tpl = await client.from('solution_templates').delete().in('title', TEMPLATES.map((t) => t.title));
-    if (tpl.error) throw tpl.error;
-  };
+  const toProductionState = () => toMigratedState(client, lessons);
 
   /** The real client, except that inserts into `table` fail. */
   const failingOn = (table: string): SupabaseClient =>
@@ -114,7 +96,7 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
       const stored = await loadConsolidation(client, await lessonId(l.title));
       expect(stored.sources.map((s) => s.body)).toEqual(l.sources.map((s) => s.body));
       const seedNonEssay = l.consolidation.filter((c) => c.type !== 'essay');
-      const seedEssays = l.consolidation.filter((c) => c.type === 'essay');
+      const seedEssays = MIGRATED_ESSAYS[l.key]!;
       // Existing essays keep their place; the new exercises follow, in seed order.
       expect(stored.exercises.map((e) => e.exercise.prompt)).toEqual([...seedEssays, ...seedNonEssay].map((c) => c.prompt));
       expect(stored.exercises.map((e) => e.exercise.position)).toEqual(stored.exercises.map((_, i) => i));

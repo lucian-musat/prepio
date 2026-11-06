@@ -1,5 +1,4 @@
 import { EXTRA_CARDS } from '../extraCards';
-import { essayFromWriting } from '../consolidation';
 import type { SeedConsolidation, SeedLesson, SeedSource } from '../types';
 
 const sources: SeedSource[] = [
@@ -112,23 +111,24 @@ const exercises: SeedConsolidation[] = [
     ],
   },
   {
-    type: 'argument',
-    prompt:
-      'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia Constituția din 1866 a contribuit la ' +
-      'modernizarea statului român.',
-    template: 'argument',
+    type: 'facts',
+    prompt: 'Prezentați două fapte istorice referitoare la statul român în perioada 1866–1881.',
+    template: 'facts',
     sources: [],
+    count: 2,
     modelAnswer:
-      'Constituția din 1866 a contribuit la modernizarea statului român, deoarece a consacrat separarea puterilor în ' +
-      'stat: puterea legislativă era exercitată de domn și de Parlamentul bicameral, iar cea executivă de domn, prin ' +
-      'miniștri, care răspundeau pentru actele guvernării. În plus, ea garanta drepturi și libertăți precum libertatea ' +
-      'presei și a întrunirilor. Așadar, afirmația este adevărată.',
+      '1. În aprilie 1866, alegerea lui Carol de Hohenzollern-Sigmaringen ca domn a fost aprobată printr-un plebiscit, ' +
+      'iar la 10 mai 1866 acesta a depus jurământul la București. Astfel, s-a împlinit cererea Adunărilor ad-hoc ' +
+      'privind aducerea unui prinț străin.\n' +
+      '2. La 1 iulie 1866 a fost promulgată Constituția, elaborată după modelul Constituției Belgiei din 1831. Ea ' +
+      'stabilea numele de România, monarhia constituțională ereditară și separarea puterilor în stat și garanta ' +
+      'drepturi și libertăți precum libertatea presei și a întrunirilor.',
     ai: {
       main: [
-        'Perioada și tema: Constituția din 1866 (promulgată la 1 iulie 1866, la începutul domniei lui Carol I) și contribuția ei la modernizarea statului român.',
-        'Fapte relevante acceptate: consacrarea separării puterilor în stat (legislativă: domnul și Parlamentul bicameral, adică Adunarea Deputaților și Senatul; executivă: domnul, prin miniștri; judecătorească: curțile și tribunalele); garantarea drepturilor și libertăților cetățenești (egalitatea în fața legii, libertatea presei, a conștiinței, a întrunirilor și a asocierii); suveranitatea națională și responsabilitatea ministerială; monarhia constituțională ereditară, care punea capăt luptelor pentru tron; modelul Constituției Belgiei din 1831, una dintre cele mai liberale ale epocii; adoptarea fără consultarea Imperiului Otoman și a puterilor garante (afirmarea autonomiei); consacrarea numelui de România.',
-        'Faptul trebuie prezentat (ce prevedea Constituția și de ce înseamnă aceasta modernizare), nu doar numit.',
-        'Greșeli frecvente: atribuirea Constituției lui Alexandru Ioan Cuza; o dată greșită (1859, 1877); afirmația că instituia votul universal (votul era cenzitar; votul universal a fost introdus abia prin modificarea din 1917); confuzia cu Convenția de la Paris (1858) sau cu Statutul Dezvoltător (1864). Votul cenzitar este o limită a Constituției și nu susține afirmația.',
+        'Perioada: 1866–1881 (de la aducerea prințului străin până la proclamarea Regatului). Faptele trebuie să privească statul român și să fie prezentate (ce s-a întâmplat, când, cine a participat, o consecință sau un detaliu), nu doar menționate.',
+        'Fapte acceptate (exemple): abdicarea lui Alexandru Ioan Cuza (februarie 1866) și Locotenența domnească; refuzul lui Filip de Flandra; aprobarea alegerii lui Carol de Hohenzollern-Sigmaringen prin plebiscit (aprilie 1866) și depunerea jurământului (10 mai 1866); promulgarea Constituției (1 iulie 1866), după modelul belgian din 1831 (numele de România, monarhie constituțională ereditară, separarea puterilor, Parlament bicameral, drepturi și libertăți, vot cenzitar); Convenția cu Rusia (4 aprilie 1877); proclamarea independenței (9 mai 1877) și Războiul de Independență (1877–1878); recunoașterea independenței la Congresul de la Berlin (1878), cu revizuirea articolului 7 al Constituției (1879); proclamarea Regatului (martie 1881) și încoronarea lui Carol I ca rege (mai 1881).',
+        'Cele două fapte trebuie să fie diferite, nu două detalii ale aceluiași fapt (de exemplu, două prevederi ale Constituției sunt un singur fapt).',
+        'Greșeli frecvente: fapte din afara perioadei (reformele lui Cuza, 1863–1864; votul universal, 1917); atribuirea Constituției lui Cuza; afirmația că, în 1866, Carol a devenit rege (a fost domn până în 1881); date greșite; simpla menționare („Constituția din 1866”) fără detalii.',
       ].join('\n'),
       requirements: {},
     },
@@ -152,6 +152,133 @@ const exercises: SeedConsolidation[] = [
         'Greșeli frecvente: atribuirea numelui „România” Convenției; confuzia Convenției cu Statutul Dezvoltător (1864); afirmația că, potrivit Convenției, domnul era un prinț străin.',
       ].join('\n'),
       requirements: {},
+    },
+  },
+  {
+    type: 'viewpoint',
+    prompt:
+      'Formulați, pe baza sursei date, un punct de vedere referitor la caracterul Constituției din 1866, ' +
+      'susținându-l cu două informații selectate din sursă.',
+    template: 'viewpoint',
+    sources: ['b'],
+    count: 2,
+    spans: [
+      b('după modelul Constituției Belgiei din 1831'),
+      b('Constituția consacra separarea puterilor în stat'),
+      b('Erau garantate libertatea presei, libertatea conștiinței și libertatea întrunirilor'),
+      b('proprietatea era declarată „sacră și inviolabilă”'),
+      b('votul era cenzitar'),
+    ],
+    modelAnswer:
+      'Consider că Constituția din 1866 a avut un caracter liberal și modern pentru epoca sa. Informații-suport: ' +
+      '„Constituția consacra separarea puterilor în stat”; „Erau garantate libertatea presei, libertatea conștiinței ' +
+      'și libertatea întrunirilor”.',
+    ai: {
+      main: [
+        'Tema: caracterul Constituției din 1866 (promulgată la 1 iulie 1866, sub Carol I), pe baza sursei date.',
+        'Puncte de vedere acceptate (exemple): Constituția a avut un caracter liberal / modern / democratic pentru epoca sa; a contribuit la modernizarea statului român; a consacrat principiile statului de drept. Este acceptat și un punct de vedere nuanțat sau critic, dacă este susținut de sursă (de exemplu: Constituția avea limite, deoarece votul era cenzitar).',
+        'Informații-suport potrivite din sursă: modelul Constituției Belgiei din 1831; separarea puterilor în stat; garantarea libertății presei, a conștiinței și a întrunirilor; proprietatea „sacră și inviolabilă”; votul cenzitar (doar pentru un punct de vedere despre limitele Constituției). Fiecare informație trebuie să susțină punctul de vedere formulat: votul cenzitar nu susține caracterul democratic, iar libertățile nu susțin limitele.',
+        'Nu este punct de vedere: o simplă informație („Constituția a fost promulgată în 1866”), o apreciere despre altă temă (de exemplu, despre aducerea prințului străin) sau o apreciere vagă („Constituția a fost importantă”), fără precizarea caracterului ei.',
+        'Greșeli frecvente: afirmația că Constituția introducea votul universal; atribuirea ei lui Alexandru Ioan Cuza; confuzia cu Convenția de la Paris (1858).',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'argument',
+    prompt:
+      'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia Constituția din 1866 a contribuit la ' +
+      'modernizarea statului român.',
+    template: 'argument',
+    sources: [],
+    modelAnswer:
+      'Constituția din 1866 a contribuit la modernizarea statului român, deoarece a consacrat separarea puterilor în ' +
+      'stat: puterea legislativă era exercitată de domn și de Parlamentul bicameral, iar cea executivă de domn, prin ' +
+      'miniștri, care răspundeau pentru actele guvernării. În plus, ea garanta drepturi și libertăți precum libertatea ' +
+      'presei și a întrunirilor. Așadar, afirmația este adevărată.',
+    ai: {
+      main: [
+        'Perioada și tema: Constituția din 1866 (promulgată la 1 iulie 1866, la începutul domniei lui Carol I) și contribuția ei la modernizarea statului român.',
+        'Fapte relevante acceptate: consacrarea separării puterilor în stat (legislativă: domnul și Parlamentul bicameral, adică Adunarea Deputaților și Senatul; executivă: domnul, prin miniștri; judecătorească: curțile și tribunalele); garantarea drepturilor și libertăților cetățenești (egalitatea în fața legii, libertatea presei, a conștiinței, a întrunirilor și a asocierii); suveranitatea națională și responsabilitatea ministerială; monarhia constituțională ereditară, care punea capăt luptelor pentru tron; modelul Constituției Belgiei din 1831, una dintre cele mai liberale ale epocii; adoptarea fără consultarea Imperiului Otoman și a puterilor garante (afirmarea autonomiei); consacrarea numelui de România.',
+        'Faptul trebuie prezentat (ce prevedea Constituția și de ce înseamnă aceasta modernizare), nu doar numit.',
+        'Greșeli frecvente: atribuirea Constituției lui Alexandru Ioan Cuza; o dată greșită (1859, 1877); afirmația că instituia votul universal (votul era cenzitar; votul universal a fost introdus abia prin modificarea din 1917); confuzia cu Convenția de la Paris (1858) sau cu Statutul Dezvoltător (1864). Votul cenzitar este o limită a Constituției și nu susține afirmația.',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'essay',
+    prompt:
+      'Elaborați un eseu despre instaurarea monarhiei constituționale în România, în perioada 1866–1881, respectând ' +
+      'următoarele cerințe:',
+    template: 'essay',
+    sources: [],
+    requirements: [
+      {
+        id: 'r1',
+        text: 'Menționați două fapte istorice referitoare la aducerea prințului străin pe tronul României, în anul 1866.',
+        modelAnswer:
+          'Aprobarea alegerii lui Carol de Hohenzollern-Sigmaringen printr-un plebiscit (aprilie 1866); depunerea ' +
+          'jurământului de către Carol la București (10 mai 1866).',
+        template: 'facts',
+        argument: false,
+      },
+      {
+        id: 'r2',
+        text: 'Prezentați un fapt istoric referitor la organizarea puterilor în stat, potrivit Constituției din 1866.',
+        modelAnswer:
+          'Constituția din 1866 consacra separarea puterilor în stat: puterea legislativă era exercitată de domn împreună ' +
+          'cu Reprezentanța națională, formată din Adunarea Deputaților și Senat; puterea executivă era încredințată ' +
+          'domnului, care o exercita prin miniștri; puterea judecătorească aparținea curților și tribunalelor.',
+        template: 'facts',
+        argument: false,
+      },
+      {
+        id: 'r3',
+        text: 'Precizați o cauză a aducerii unui prinț străin pe tronul României, în anul 1866.',
+        modelAnswer:
+          'Un prinț dintr-o familie domnitoare a Europei putea pune capăt rivalităților dintre marile familii boierești ' +
+          'pentru tron.',
+        template: 'cause_effect',
+        argument: false,
+      },
+      {
+        id: 'r4',
+        text:
+          'Formulați un punct de vedere referitor la rolul Constituției din 1866 în modernizarea statului român și ' +
+          'susțineți-l printr-un argument istoric.',
+        modelAnswer:
+          'Consider că Constituția din 1866 a contribuit la modernizarea statului român, deoarece a garantat drepturi și ' +
+          'libertăți cetățenești, precum libertatea presei, a conștiinței și a întrunirilor, după modelul Constituției ' +
+          'Belgiei din 1831. Așadar, statul român a adoptat principiile liberale ale epocii.',
+        template: 'argument',
+        argument: true,
+      },
+    ],
+    ai: {
+      main: '',
+      requirements: {
+        r1: [
+          'Tema: aducerea prințului străin în 1866. Se cer două fapte, doar menționate (numite corect, eventual cu data), nu prezentate pe larg.',
+          'Fapte acceptate: abdicarea lui Alexandru Ioan Cuza (februarie 1866) și preluarea puterii de către Locotenența domnească; oferirea tronului lui Filip de Flandra și refuzul acestuia; negocierile purtate de Ion C. Brătianu cu Carol de Hohenzollern-Sigmaringen; sprijinul lui Napoleon al III-lea; aprobarea alegerii lui Carol prin plebiscit (aprilie 1866); depunerea jurământului de către Carol la București (10 mai 1866).',
+          'Greșeli frecvente: fapte din alt an (independența, 1877; proclamarea Regatului, 1881); afirmația că Filip de Flandra a domnit; afirmația că, în 1866, Carol a devenit rege; același fapt numit de două ori.',
+        ].join('\n'),
+        r2: [
+          'Tema: organizarea puterilor în stat potrivit Constituției din 1866 (promulgată la 1 iulie 1866). Faptul trebuie prezentat (ce prevedea Constituția, cu detalii), nu doar numit.',
+          'Elemente acceptate: separarea puterilor în stat; puterea legislativă, exercitată de domn împreună cu Reprezentanța națională (Parlament bicameral: Adunarea Deputaților și Senatul); puterea executivă, încredințată domnului, care o exercita prin miniștri (responsabilitatea ministerială: actele domnului erau contrasemnate de un ministru); puterea judecătorească, a curților și tribunalelor; monarhia constituțională ereditară; votul cenzitar, pe colegii.',
+          'Greșeli frecvente: afirmația că domnul avea puterea judecătorească sau că putea guverna fără miniștri; Parlament unicameral; votul universal (introdus abia prin modificarea din 1917); confuzia cu Statutul Dezvoltător (1864) sau cu Convenția de la Paris (1858).',
+        ].join('\n'),
+        r3: [
+          'Tema: cauzele aducerii unui prinț străin pe tronul României (1866). Se cere o cauză, precizată clar.',
+          'Cauze acceptate: punerea capătului rivalităților dintre marile familii boierești pentru tron; creșterea prestigiului extern al statului; sprijinul marilor puteri pentru menținerea Unirii (un prinț dintr-o familie domnitoare a Europei); îndeplinirea cererii Adunărilor ad-hoc din 1857; abdicarea lui Cuza și dorința de a asigura stabilitatea statului prin monarhia ereditară.',
+          'Greșeli frecvente: afirmația că prințul străin a fost impus de Imperiul Otoman; legarea aducerii lui Carol de independență (1877); confuzia cu dubla alegere a lui Cuza (1859).',
+        ].join('\n'),
+        r4: [
+          'Punctul de vedere este o apreciere despre rolul Constituției din 1866 în modernizarea statului român (de exemplu: a contribuit la modernizare, a avut un caracter liberal pentru epoca sa). O simplă informație nu este punct de vedere.',
+          'Argumentul: un fapt istoric relevant, prezentat (nu doar numit) și legat de punctul de vedere prin conectori de cauzalitate (deoarece, pentru că, întrucât) și de concluzie (așadar, prin urmare, în concluzie). Fapte potrivite: separarea puterilor în stat; garantarea drepturilor și libertăților (libertatea presei, a conștiinței, a întrunirilor, egalitatea în fața legii); responsabilitatea ministerială; modelul belgian din 1831; adoptarea fără consultarea Imperiului Otoman și a puterilor garante; numele de România; monarhia constituțională ereditară.',
+          'Greșeli frecvente: votul universal (votul era cenzitar); atribuirea Constituției lui Cuza; date greșite; argument care nu susține punctul de vedere; lipsa conectorilor.',
+        ].join('\n'),
+      },
     },
   },
 ];
@@ -407,27 +534,5 @@ export const constitutia1866: SeedLesson = {
     },
   ],
   sources,
-  consolidation: [
-    ...exercises,
-    essayFromWriting(
-      'Precizează o măsură adoptată în statul român în perioada 1861–1866 și menționează două aspecte cu privire la această măsură.',
-      [
-        'Precizarea unei măsuri adoptate în statul român în perioada 1861–1866 (de exemplu: formarea guvernului unic în 1862, secularizarea averilor mănăstirești în 1863, Legea rurală din 1864, Legea instrucțiunii publice din 1864, Statutul Dezvoltător al Convenției de la Paris, Constituția din 1866).',
-        'Menționarea a două aspecte corecte cu privire la măsura precizată (de exemplu, pentru Legea rurală: prevede emanciparea țăranilor, desființarea clăcii, împroprietărirea în funcție de numărul vitelor de muncă; pentru Constituția din 1866: statul se numește România, reflectă principiul separării puterilor, forma de guvernământ este monarhia constituțională).',
-        'Cele două aspecte se referă la măsura precizată și sunt distincte între ele.',
-        'Măsura se încadrează corect în perioada 1861–1866 (de exemplu, Convenția de la Paris din 1858 nu se punctează).',
-        'Utilizarea limbajului istoric adecvat (de exemplu: reformă, împroprietărire, separarea puterilor, monarhie constituțională).',
-      ].join('\n'),
-    ),
-    essayFromWriting(
-      'Formulează un punct de vedere referitor la Constituția din 1866 și susține-l printr-un argument istoric.',
-      [
-        'Formularea unui punct de vedere referitor la Constituția din 1866 (de exemplu: „Constituția din 1866 a contribuit la modernizarea statului român.”, „Constituția din 1866 a avut un caracter liberal pentru epoca sa.”).',
-        'Susținerea punctului de vedere printr-un argument istoric: prezentarea unui fapt istoric relevant, prin precizarea a două informații referitoare la acest fapt (de exemplu: consacrarea separării puterilor în stat; garantarea drepturilor și libertăților cetățenești; adoptarea fără consultarea puterii suzerane și a puterilor garante).',
-        'Utilizarea conectorilor care exprimă cauzalitatea (deoarece, pentru că etc.) și concluzia (așadar, astfel etc.).',
-        'Argumentul este corect istoric și susține punctul de vedere formulat.',
-        'Utilizarea limbajului istoric adecvat și prezentarea ideilor într-o succesiune logică.',
-      ].join('\n'),
-    ),
-  ],
+  consolidation: exercises,
 };

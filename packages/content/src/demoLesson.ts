@@ -11,8 +11,8 @@ import type { SeedCard, SeedConsolidation, SeedQuestion, SeedSource } from './ty
 
 /**
  * Demo lesson for testing the app by hand (pre-launch only): one card of every type, a few single-choice
- * questions whose first option is always the right one and a small consolidation set (with the solution templates
- * it uses, added when missing). When a feature is added to lessons, add it here too.
+ * questions whose first option is always the right one and one consolidation exercise of every type, in the BAC order
+ * (with the solution templates they use, added when missing). When a feature is added to lessons, add it here too.
  * It lives in its own root node, placed before every other node, so it is the first lesson (open in guided mode).
  */
 export const DEMO_NODE_TITLE = 'Demo';
@@ -118,11 +118,23 @@ export const DEMO_SOURCES: SeedSource[] = [
       'Deoarece Convenția de la Paris nu interzicea alegerea aceleiași persoane în ambele Principate, Alexandru Ioan ' +
       'Cuza a fost ales domn la Iași și la București, în ianuarie 1859.',
   },
+  {
+    key: 'reforme',
+    title: 'Reformele lui Cuza',
+    author: 'Sinteză de istorie a românilor',
+    work: 'epoca modernă',
+    body:
+      'În timpul domniei lui Alexandru Ioan Cuza au fost adoptate reforme importante. Prin secularizarea din 1863, ' +
+      'averile mănăstirești au trecut în proprietatea statului. Legea rurală din 1864 a desființat claca, iar ' +
+      'țăranii au fost împroprietăriți. Legea instrucțiunii publice din 1864 a făcut învățământul primar obligatoriu ' +
+      'și gratuit.',
+  },
 ];
 
 const demo = (quote: string) => ({ source: 'demo', quote });
+const reforme = (quote: string) => ({ source: 'reforme', quote });
 
-/** A small consolidation set: two marker exercises, a short answer and two AI types (one a two-requirement essay). */
+/** One exercise of every type, in the BAC order: five checked without AI, five AI types (one a two-requirement essay). */
 export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
   {
     type: 'short_answer',
@@ -134,6 +146,15 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
     explanation: 'Răspunsul este în ultima propoziție a sursei.',
   },
   {
+    type: 'multi_answer',
+    prompt: 'Menționați cele două orașe în care a fost ales domn Alexandru Ioan Cuza, precizate în sursa dată.',
+    template: 'multi_answer',
+    sources: ['demo'],
+    count: 2,
+    groups: [['Iași'], ['București']],
+    explanation: 'Sursa spune că Cuza a fost ales domn „la Iași și la București”.',
+  },
+  {
     type: 'source_info',
     prompt: 'Precizați, din sursa dată, o informație referitoare la Adunările ad-hoc.',
     template: 'source_info',
@@ -141,6 +162,15 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
     count: 1,
     spans: [demo('Adunările ad-hoc s-au întrunit în 1857'), demo('au cerut unirea Principatelor într-un stat numit România')],
     explanation: 'Primele două propoziții ale sursei sunt despre Adunările ad-hoc.',
+  },
+  {
+    type: 'source_letter',
+    prompt: 'Scrieți litera corespunzătoare sursei care susține că învățământul primar a devenit obligatoriu.',
+    template: 'source_letter',
+    sources: ['demo', 'reforme'],
+    correct: 'B',
+    evidence: reforme('a făcut învățământul primar obligatoriu și gratuit'),
+    explanation: 'Sursa A vorbește despre Unire; legea instrucțiunii publice apare în sursa B.',
   },
   {
     type: 'cause_effect',
@@ -154,6 +184,72 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
         explanation: 'Conectorul „Deoarece” introduce cauza.',
       },
     ],
+  },
+  {
+    type: 'facts',
+    prompt: 'Prezentați două fapte istorice referitoare la domnia lui Alexandru Ioan Cuza (1859–1866).',
+    template: 'facts',
+    sources: [],
+    count: 2,
+    modelAnswer:
+      '1. În ianuarie 1862 s-au format un guvern unic și o adunare unică, iar capitala a devenit București. Astfel, ' +
+      'unirea Principatelor a devenit deplină.\n' +
+      '2. Legea rurală din august 1864, promovată de Mihail Kogălniceanu, a desființat claca și dijma și i-a ' +
+      'împroprietărit pe clăcași, în schimbul unei despăgubiri.',
+    ai: {
+      main:
+        'Perioada: domnia lui Alexandru Ioan Cuza (1859–1866). Fapte acceptate: dubla alegere (ianuarie 1859), ' +
+        'unificarea instituțiilor (guvern și adunare unică, capitala la București, 1862), secularizarea averilor ' +
+        'mănăstirești (1863), lovitura de stat și Statutul Dezvoltător (1864), legea rurală (1864), legea ' +
+        'instrucțiunii publice (1864), abdicarea (februarie 1866). Faptele trebuie prezentate, nu doar menționate, și ' +
+        'să fie diferite. Greșeli frecvente: Constituția din 1866 (după abdicare), independența (1877).',
+      requirements: {},
+    },
+  },
+  {
+    type: 'comparison',
+    prompt: 'Menționați o asemănare între secularizarea averilor mănăstirești (1863) și legea rurală (1864).',
+    template: 'comparison',
+    sources: [],
+    variant: 'similarity',
+    modelAnswer:
+      'Atât secularizarea averilor mănăstirești, cât și legea rurală au fost adoptate în timpul domniei lui Alexandru ' +
+      'Ioan Cuza, de guvernul condus de Mihail Kogălniceanu.',
+    ai: {
+      main:
+        'Tema: două reforme din domnia lui Alexandru Ioan Cuza. Secularizarea (decembrie 1863): averile mănăstirești ' +
+        'au trecut la stat (aproximativ un sfert din terenul agricol). Legea rurală (august 1864): desființarea ' +
+        'clăcii și a dijmei, împroprietărirea clăcașilor. Asemănări acceptate: ambele adoptate sub Cuza, de guvernul ' +
+        'Mihail Kogălniceanu; ambele privesc proprietatea asupra pământului; ambele au modernizat societatea. Răspunsul ' +
+        'trebuie să numească ambele reforme și să spună explicit ce au în comun; o deosebire nu se acceptă.',
+      requirements: {},
+    },
+  },
+  {
+    type: 'viewpoint',
+    prompt:
+      'Formulați, pe baza sursei date, un punct de vedere referitor la reformele lui Alexandru Ioan Cuza, ' +
+      'susținându-l cu două informații selectate din sursă.',
+    template: 'viewpoint',
+    sources: ['reforme'],
+    count: 2,
+    spans: [
+      reforme('averile mănăstirești au trecut în proprietatea statului'),
+      reforme('Legea rurală din 1864 a desființat claca'),
+      reforme('țăranii au fost împroprietăriți'),
+      reforme('a făcut învățământul primar obligatoriu și gratuit'),
+    ],
+    modelAnswer:
+      'Consider că reformele lui Alexandru Ioan Cuza au modernizat societatea românească. Informații-suport: ' +
+      '„Legea rurală din 1864 a desființat claca”; „țăranii au fost împroprietăriți”.',
+    ai: {
+      main:
+        'Tema: reformele lui Alexandru Ioan Cuza (1863–1864), pe baza sursei: secularizarea, legea rurală, legea ' +
+        'instrucțiunii publice. Puncte de vedere acceptate: reformele au modernizat societatea / statul; au îmbunătățit ' +
+        'situația țăranilor. Informațiile-suport trebuie să susțină punctul de vedere. Nu este punct de vedere o simplă ' +
+        'informație („Cuza a dat legea rurală”).',
+      requirements: {},
+    },
   },
   {
     type: 'argument',
