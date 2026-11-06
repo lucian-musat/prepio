@@ -185,7 +185,7 @@ The spend is one statement: `update … set credit_balance = credit_balance - co
 
 - Welcome credits start at 12. Changing the value affects only accounts created afterwards. Admin accounts get the column and the grant too, which is harmless.
 - A failed check after the spend is refunded automatically. Rejections before the spend (validation, rate limit) never charge.
-- The existing rate limit (30 per hour per student, 300 per day globally) stays in front of the spend.
+- The existing rate limit (30 per hour per student, 300 per day globally) stays in front of the spend. **Amended by the owner, 2026-11-06:** the per-student hourly limit is removed (credits pace the students); only the global 300/day cap stays.
 - Packages are never deleted, only deactivated. At most one package is featured.
 - The starting packages, seeded and changeable in admin: **20 credits for 9,99 lei, 50 for 19,99 lei (featured), 120 for 39,99 lei**.
 - Purchases go through an admin-app API route, not a client-callable RPC, so the payment step slots in later.

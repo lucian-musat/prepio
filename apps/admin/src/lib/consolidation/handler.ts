@@ -11,7 +11,7 @@ import { isUuid } from '@/lib/data/db';
 import type { Credits } from '@/lib/credits/credits';
 import type { Evaluator } from '@/lib/evaluate/openai';
 import {
-  GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS, type RateLimit,
+  GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, type RateLimit,
 } from '@/lib/evaluate/rateLimit';
 import { buildConsolidationPrompt, expectedKeys, type Deterministic } from './prompt';
 import { aiOutputSchema, normalizeAiOutput } from './schema';
@@ -19,14 +19,13 @@ import { aiOutputSchema, normalizeAiOutput } from './schema';
 export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit; credits: Credits };
 export type HandlerResult = { status: number; json: ConsolidationEvaluateResponse | ConsolidationEvaluateError };
 
-const GLOBAL_LIMIT_MESSAGE = 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.';
 const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: string }> = {
   bad_request: { status: 400, message: 'Cererea nu este validă.' },
   unauthorized: { status: 401, message: 'Trebuie să fii autentificat.' },
   empty: { status: 400, message: 'Scrie un text înainte de a-l trimite.' },
   too_long: { status: 400, message: `Textul depășește ${MAX_ANSWER_CHARS} de caractere.` },
   not_found: { status: 404, message: 'Exercițiul nu a fost găsit.' },
-  rate_limited: { status: 429, message: 'Ai atins limita de evaluări pentru moment. Încearcă din nou peste o oră.' },
+  rate_limited: { status: 429, message: 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.' },
   insufficient_credits: { status: 402, message: 'Nu ai destule credite pentru această verificare.' },
   ai_failed: { status: 502, message: 'Evaluarea nu a reușit. Încearcă din nou.' },
 };
@@ -217,10 +216,7 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const invalid = validate(exercise, req.target, req.answer);
     if (invalid) return errorResult(invalid);
 
-    if (!(await deps.rateLimit(`evaluate:user:${userId}`, USER_RATE_LIMIT, USER_RATE_WINDOW_SECONDS))) return errorResult('rate_limited');
-    if (!(await deps.rateLimit(GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS))) {
-      return { status: 429, json: { error: 'rate_limited', message: GLOBAL_LIMIT_MESSAGE } };
-    }
+    if (!(await deps.rateLimit(GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS))) return errorResult('rate_limited');
 
     const cost = checkCost(exercise, req.target);
     const spend = await deps.credits.spend(userId, cost, exercise.id, targetKey(req.target));

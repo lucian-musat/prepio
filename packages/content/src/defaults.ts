@@ -4,7 +4,7 @@ export const welcomeMessage =
   'Bine ai venit în Prepio! Aici te pregătești pentru proba de istorie de la Bacalaureat. ' +
   'Alege o lecție din programă: citește cartonașele cu informațiile esențiale, verifică-ți ' +
   'cunoștințele prin întrebări, apoi consolidează-le cu exerciții după modelul subiectelor de BAC. ' +
-  'La exercițiile de redactare primești pe loc sugestii concrete de la AI. Spor la învățat!';
+  'La exercițiile de redactare primești pe loc sugestii concrete de la profesorul digital. Spor la învățat!';
 
 const rules = `Ești profesor de istorie și verifici răspunsurile elevilor care se pregătesc pentru examenul de Bacalaureat din România (proba E.c), clasa a XII-a. Primești cerința, indicațiile profesorului și răspunsul scris de elev.
 

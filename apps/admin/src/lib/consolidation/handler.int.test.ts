@@ -171,21 +171,17 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     expect(evaluate).not.toHaveBeenCalled();
   });
 
-  it('trips the per-user limit (30/hour) and consumed only prefixed keys', async () => {
+  it('has no per-user hourly limit and consumes only the prefixed global key', async () => {
     const answer = { type: 'essay', parts: { r1: 'a', r2: 'b' } };
-    const limited = 'limited-user';
+    const busy = 'busy-user';
     const evaluate = vi.fn(async () => ({ items: [item('whole')] }));
-    for (let i = 0; i < 30; i++) {
-      const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, limited, deps(evaluate, unlimited));
+    for (let i = 0; i < 31; i++) {
+      const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, busy, deps(evaluate, unlimited));
       expect(r.status).toBe(200);
     }
-    const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, limited, deps(evaluate, unlimited));
-    expect(r.status).toBe(429);
-    expect(evaluate).toHaveBeenCalledTimes(30);
+    expect(evaluate).toHaveBeenCalledTimes(31);
 
     const { data } = await db.from('rate_limits').select('key').like('key', `${prefix}%`);
-    expect(data!.map((x) => x.key).sort()).toEqual(
-      [testKey(GLOBAL_RATE_KEY), testKey(`evaluate:user:${limited}`), testKey(`evaluate:user:${userId}`)].sort(),
-    );
+    expect(data!.map((x) => x.key)).toEqual([testKey(GLOBAL_RATE_KEY)]);
   });
 });

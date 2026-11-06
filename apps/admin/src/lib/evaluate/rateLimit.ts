@@ -1,10 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-/** Per-user limit: 30 evaluations per rolling hour. */
-export const USER_RATE_LIMIT = 30;
-export const USER_RATE_WINDOW_SECONDS = 3600;
-
-/** Global spend guard: at most 300 evaluations per day across all callers. */
+/**
+ * Global spend guard: at most 300 evaluations per day across all callers. There is no per-student limit: every
+ * check costs credits, which pace the student (owner decision, 2026-11-06).
+ */
 export const GLOBAL_RATE_KEY = 'evaluate:global';
 export const GLOBAL_RATE_LIMIT = 300;
 export const GLOBAL_RATE_WINDOW_SECONDS = 86400;

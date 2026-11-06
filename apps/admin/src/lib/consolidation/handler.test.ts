@@ -135,7 +135,8 @@ describe('handleConsolidationEvaluate', () => {
       ],
       credits: { spent: 1, balance: 9 },
     });
-    expect(d.rateLimit).toHaveBeenCalledWith('evaluate:user:u1', 30, 3600);
+    // No per-student limit: credits pace the student; only the global daily cap remains.
+    expect(d.rateLimit).toHaveBeenCalledTimes(1);
     expect(d.rateLimit).toHaveBeenCalledWith('evaluate:global', 300, 86400);
     expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5-mini' }));
   });
@@ -248,17 +249,12 @@ describe('handleConsolidationEvaluate', () => {
     expect(d.rateLimit).not.toHaveBeenCalled();
   });
 
-  it('returns 429 without calling the evaluator when rate limited, and busy-day message for the global cap', async () => {
-    let d = deps({ rateLimit: async () => false });
-    let r = await handleConsolidationEvaluate(factsReq(), 'u1', d);
-    expect(r.status).toBe(429);
-    expect(r.json).toMatchObject({ error: 'rate_limited', message: 'Ai atins limita de evaluări pentru moment. Încearcă din nou peste o oră.' });
-    expect(d.evaluate).not.toHaveBeenCalled();
-
-    d = deps({ rateLimit: vi.fn(async (k: string) => k !== 'evaluate:global') });
-    r = await handleConsolidationEvaluate(factsReq(), 'u1', d);
+  it('returns 429 with the busy-day message without calling the evaluator when the global cap is reached', async () => {
+    const d = deps({ rateLimit: vi.fn(async (k: string) => k !== 'evaluate:global') });
+    const r = await handleConsolidationEvaluate(factsReq(), 'u1', d);
     expect(r.status).toBe(429);
     expect(r.json).toEqual({ error: 'rate_limited', message: 'Serviciul de evaluare este foarte solicitat azi. Încearcă din nou mâine.' });
+    expect(d.evaluate).not.toHaveBeenCalled();
   });
 
   it('returns ai_failed when the evaluator throws or the output is invalid', async () => {
@@ -370,7 +366,7 @@ describe('handleConsolidationEvaluate: credits', () => {
     });
     const r = await handleConsolidationEvaluate(compReq, 'u1', d);
     expect(r.status).toBe(200);
-    expect(log).toEqual(['rate:evaluate:user:u1', 'rate:evaluate:global', 'spend:2:exercise', 'ai']);
+    expect(log).toEqual(['rate:evaluate:global', 'spend:2:exercise', 'ai']);
     expect(credits.spend).toHaveBeenCalledWith('u1', 2, COMP, 'exercise');
   });
 
