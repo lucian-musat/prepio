@@ -11,6 +11,7 @@
     "seed": "tsx src/seed.ts",
     "add-cards": "tsx src/addCards.ts",
     "add-consolidation": "tsx src/addConsolidation.ts",
+    "sync-consolidation": "tsx src/syncConsolidation.ts",
     "remove-test-lessons": "tsx src/removeTestLessons.ts",
     "demo": "tsx src/demoLesson.ts",
     "update-ai-settings": "tsx src/updateAiSettings.ts",

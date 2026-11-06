@@ -22,6 +22,7 @@
     "db:cloud:push": "bash scripts/supabase-cloud.sh db push --linked",
     "content:cloud:add-cards": "bash scripts/content-cloud.sh add-cards",
     "content:cloud:add-consolidation": "bash scripts/content-cloud.sh add-consolidation",
+    "content:cloud:sync-consolidation": "bash scripts/content-cloud.sh sync-consolidation",
     "content:cloud:remove-test-lessons": "bash scripts/content-cloud.sh remove-test-lessons",
     "content:demo": "pnpm --filter @prepio/content demo",
     "content:cloud:demo": "bash scripts/content-cloud.sh demo",
