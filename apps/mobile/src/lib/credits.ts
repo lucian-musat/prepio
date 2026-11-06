@@ -22,7 +22,7 @@ export class CreditsApiError extends Error {
 }
 
 export const PURCHASE_TIMEOUT_MS = 15_000;
-const PURCHASE_FAILED = 'Achiziția nu a reușit. Încearcă din nou.';
+export const PURCHASE_FAILED = 'Achiziția nu a reușit. Încearcă din nou.';
 const PURCHASE_TIMEOUT = 'Achiziția durează prea mult. Încearcă din nou.';
 const PURCHASE_NOT_CONFIGURED = 'Achiziția nu este disponibilă momentan. Încearcă din nou mai târziu.';
 
@@ -34,7 +34,8 @@ export type StudentLedgerEntry = {
   target: string | null;
   reason: string | null;
   createdAt: string;
-  exercise: { type: ConsolidationType; prompt: string; requirements?: string[] } | null;
+  /** `lesson`: the title of the exercise's lesson, when the student can read it (published). */
+  exercise: { type: ConsolidationType; prompt: string; requirements?: string[]; lesson?: string } | null;
 };
 
 const DEFAULT_LEDGER_LIMIT = 30;
@@ -43,6 +44,7 @@ type JoinedExercise = {
   type: ConsolidationType;
   prompt: string;
   content?: { requirements?: Array<{ id: string }> } | null;
+  lessons?: { title: string | null } | Array<{ title: string | null }> | null;
 };
 
 /** Active packages, in the admin's order. */
@@ -63,7 +65,7 @@ export async function fetchLedger(
 ): Promise<StudentLedgerEntry[]> {
   let q = client
     .from('credit_ledger')
-    .select('id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content)')
+    .select('id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content,lessons(title))')
     .order('id', { ascending: false })
     .limit(opts.limit ?? DEFAULT_LEDGER_LIMIT);
   if (opts.before !== undefined) q = q.lt('id', opts.before);
@@ -73,6 +75,8 @@ export async function fetchLedger(
     const joined = r.consolidation_exercises as JoinedExercise | JoinedExercise[] | null;
     const ex = Array.isArray(joined) ? (joined[0] ?? null) : joined;
     const reqs = ex?.type === 'essay' ? ex.content?.requirements?.map((x) => x.id) : undefined;
+    const lessonRow = Array.isArray(ex?.lessons) ? (ex.lessons[0] ?? null) : (ex?.lessons ?? null);
+    const lesson = lessonRow?.title?.trim() || undefined;
     return {
       id: r.id,
       delta: r.delta,
@@ -81,7 +85,9 @@ export async function fetchLedger(
       target: r.target,
       reason: r.reason,
       createdAt: r.created_at,
-      exercise: ex ? { type: ex.type, prompt: ex.prompt, ...(reqs ? { requirements: reqs } : {}) } : null,
+      exercise: ex
+        ? { type: ex.type, prompt: ex.prompt, ...(reqs ? { requirements: reqs } : {}), ...(lesson ? { lesson } : {}) }
+        : null,
     };
   });
 }
@@ -93,7 +99,13 @@ export async function fetchCreditBalance(userId: string, client: SupabaseClient 
   return data ? data.credit_balance : null;
 }
 
+/** A check or refund row names its exercise (type, essay part) and its lesson: „Punct de vedere · Cuza”. */
 export function ledgerLabel(e: StudentLedgerEntry): string {
+  const lesson = (e.kind === 'check' || e.kind === 'refund') && e.exercise?.lesson ? ` · ${e.exercise.lesson}` : '';
+  return base(e) + lesson;
+}
+
+function base(e: StudentLedgerEntry): string {
   switch (e.kind) {
     case 'welcome':
       return 'Credite de bun venit';

@@ -22,7 +22,7 @@ jest.mock('../lib/profile', () => ({
   updateLearningMode: jest.fn(),
 }));
 jest.mock('../credits/CreditsProvider');
-jest.mock('../lib/api', () => ({ deleteAccount: jest.fn() }));
+jest.mock('../lib/api', () => ({ ...jest.requireActual('../lib/api'), deleteAccount: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true } }));
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };

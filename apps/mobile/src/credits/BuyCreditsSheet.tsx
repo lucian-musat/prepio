@@ -20,6 +20,8 @@ type Props = {
   /** Backdrop, Android back, „Înapoi la exercițiu”: back to the exercise, its answer untouched. */
   onClose: () => void;
   onSkip: () => void;
+  /** A check of this exercise is still in flight: skipping now would lose its (paid) result. */
+  skipDisabled?: boolean;
   /** After a purchase: run the check that was blocked. */
   onCheckNow: () => void;
 };
@@ -29,7 +31,7 @@ type Props = {
  * balance. Choose a package and buy it (approved at once, no payment yet), or skip the exercise; after the purchase
  * „Verifică acum” runs the blocked check. A bottom sheet on the phone, a centred dialog from 900 px.
  */
-export default function BuyCreditsSheet({ visible, required, cost, onClose, onSkip, onCheckNow }: Props) {
+export default function BuyCreditsSheet({ visible, required, cost, onClose, onSkip, skipDisabled = false, onCheckNow }: Props) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const dialog = width >= SPLIT_MIN_WIDTH;
@@ -49,10 +51,13 @@ export default function BuyCreditsSheet({ visible, required, cost, onClose, onSk
     if (!buying) onClose();
   };
   const have = balance ?? 0;
-  const skip = <Button label="Sari peste exercițiu" variant="secondary" disabled={buying} onPress={onSkip} />;
+  const skip = <Button label="Sari peste exercițiu" variant="secondary" disabled={buying || skipDisabled} onPress={onSkip} />;
+  // A package that still leaves the balance short: back to the packages (the title says what is still missing), so
+  // „Verifică acum” never runs a check the balance cannot pay for.
+  const enough = have >= cost;
 
   const body =
-    added !== null ? (
+    added !== null && enough ? (
       <>
         <View style={styles.done}>
           <AppText role="display" style={styles.big}>

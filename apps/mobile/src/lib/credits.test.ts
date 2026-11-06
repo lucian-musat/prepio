@@ -70,6 +70,16 @@ describe('ledgerLabel', () => {
   });
   it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare'));
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));
+  it('check and refund rows name the lesson of their exercise', () => {
+    const viewpoint = { type: 'viewpoint' as const, prompt: 'p', lesson: 'Cuza' };
+    expect(ledgerLabel(entry({ delta: -1, target: 'exercise', exercise: viewpoint }))).toBe('Punct de vedere · Cuza');
+    const essay = { type: 'essay' as const, prompt: 'p', requirements: ['r1', 'r2'], lesson: 'Cuza' };
+    expect(ledgerLabel(entry({ target: 'req:r2', exercise: essay }))).toBe('Eseu · cerința 2 · Cuza');
+    expect(ledgerLabel(entry({ target: 'whole', exercise: essay }))).toBe('Eseu · eseul întreg · Cuza');
+    expect(ledgerLabel(entry({ kind: 'refund', delta: 1, exercise: viewpoint }))).toBe('Verificare nereușită · returnat · Cuza');
+    // Only check / refund rows carry the lesson.
+    expect(ledgerLabel(entry({ kind: 'admin', reason: 'Bonus', exercise: viewpoint }))).toBe('Ajustare · Bonus');
+  });
   it('admin without a reason', () => {
     expect(ledgerLabel(entry({ kind: 'admin', reason: null }))).toBe('Ajustare');
     expect(ledgerLabel(entry({ kind: 'admin', reason: '  ' }))).toBe('Ajustare');
@@ -188,7 +198,19 @@ describe('queries', () => {
             type: 'essay',
             prompt: 'P',
             content: { requirements: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }] },
+            lessons: { title: 'Cuza' },
           },
+        },
+        {
+          id: 7,
+          delta: -1,
+          balance_after: 0,
+          kind: 'check',
+          target: 'exercise',
+          reason: null,
+          created_at: 't',
+          // An unpublished lesson the student cannot read: no title.
+          consolidation_exercises: { type: 'viewpoint', prompt: 'Q', content: {}, lessons: null },
         },
         {
           id: 8,
@@ -204,9 +226,14 @@ describe('queries', () => {
       error: null,
     });
     const rows = await fetchLedger({ before: 10 }, client);
-    expect(rows[0].exercise).toEqual({ type: 'essay', prompt: 'P', requirements: ['a', 'b'] });
+    expect(rows[0].exercise).toEqual({ type: 'essay', prompt: 'P', requirements: ['a', 'b'], lesson: 'Cuza' });
     expect(rows[0].balanceAfter).toBe(4);
-    expect(rows[1].exercise).toBeNull();
+    expect(rows[1].exercise).toEqual({ type: 'viewpoint', prompt: 'Q' });
+    expect(rows[2].exercise).toBeNull();
+    expect(calls).toContainEqual([
+      'select',
+      ['id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content,lessons(title))'],
+    ]);
     expect(calls).toContainEqual(['limit', [30]]);
     expect(calls).toContainEqual(['lt', ['id', 10]]);
     expect(calls).toContainEqual(['order', ['id', { ascending: false }]]);

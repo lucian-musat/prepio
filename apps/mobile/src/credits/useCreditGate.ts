@@ -22,12 +22,21 @@ type Blocked = { required: number; run: () => void };
  * The credit gate of a check and its BuyCreditsSheet (render `sheet` next to the screen). The sheet opens over
  * the exercise, so whatever the student typed stays where it is; „Verifică acum” re-runs the blocked check.
  */
-export function useCreditGate(opts: { onSkip?: () => void } = {}): CreditGate & { sheet: ReactElement } {
+export function useCreditGate(
+  opts: { onSkip?: () => void; skipDisabled?: boolean } = {},
+): CreditGate & { sheet: ReactElement } {
   const { balance, setBalance } = useCredits();
   // The latest balance: a kept `run` re-enters `allow` after a purchase, from a render that predates it.
   const balanceRef = useRef(balance);
   balanceRef.current = balance;
-  const [blocked, setBlocked] = useState<Blocked | null>(null);
+  const [blocked, setBlockedState] = useState<Blocked | null>(null);
+  // The blocked check, outside the render closure: „Verifică acum” takes and clears it, so a second tap before the
+  // re-render cannot run (and pay for) the check again.
+  const runRef = useRef<(() => void) | null>(null);
+  const setBlocked = useCallback((b: Blocked | null) => {
+    runRef.current = b?.run ?? null;
+    setBlockedState(b);
+  }, []);
   const onSkipRef = useRef(opts.onSkip);
   onSkipRef.current = opts.onSkip;
 
@@ -36,7 +45,7 @@ export function useCreditGate(opts: { onSkip?: () => void } = {}): CreditGate & 
     if (b === null || b >= cost) return true;
     setBlocked({ required: cost, run });
     return false;
-  }, []);
+  }, [setBlocked]);
 
   const settle = useCallback(
     (n: number) => {
@@ -54,21 +63,24 @@ export function useCreditGate(opts: { onSkip?: () => void } = {}): CreditGate & 
       setBlocked({ required: e.required ?? (balanceRef.current ?? 0) + 1, run });
       return true;
     },
-    [settle],
+    [settle, setBlocked],
   );
 
-  const close = useCallback(() => setBlocked(null), []);
+  const close = useCallback(() => setBlocked(null), [setBlocked]);
   const sheet = createElement(BuyCreditsSheet, {
     visible: blocked !== null,
     required: blocked?.required ?? 0,
     cost: blocked?.required ?? 0,
     onClose: close,
+    // Skipping while a check is in flight would leave the exercise before its (paid) result arrives.
+    skipDisabled: !!opts.skipDisabled,
     onSkip: () => {
+      if (opts.skipDisabled) return;
       setBlocked(null);
       onSkipRef.current?.();
     },
     onCheckNow: () => {
-      const run = blocked?.run;
+      const run = runRef.current;
       setBlocked(null);
       run?.();
     },

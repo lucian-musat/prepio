@@ -4,14 +4,13 @@ import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Surface, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { deleteAccount } from '../lib/api';
+import { deleteAccount, OFFLINE } from '../lib/api';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validateDisplayName } from '../lib/profile';
 import { modeOf, type LearningMode } from '../lib/learningMode';
 import LearningModePicker from '../components/LearningModePicker';
 import { ownMessage } from '../lib/errorMessage';
 import { useCredits } from '../credits/CreditsProvider';
 
-const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';

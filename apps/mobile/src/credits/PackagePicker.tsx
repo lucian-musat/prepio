@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { color, creditsLabel, feedbackText, formatLei, palette, pricePerCredit, radius, space, type CreditPackage } from '@prepio/shared';
-import { CreditsApiError, fetchCreditPackages, purchaseCredits } from '../lib/credits';
+import { CreditsApiError, fetchCreditPackages, PURCHASE_FAILED, purchaseCredits } from '../lib/credits';
 import { AppText, Button, Spinner } from '../ui';
 import Coin from './Coin';
 import { useCredits } from './CreditsProvider';
 
-const PURCHASE_FAILED = 'Achiziția nu a reușit. Încearcă din nou.';
 export const PAYMENT_FOOTNOTE = 'Plata nu e încă activă — cererea a fost aprobată automat.';
 
 type Phase = 'loading' | 'loadFailed' | 'choose' | 'buying';

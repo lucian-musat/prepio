@@ -318,3 +318,73 @@ it('a requirement check without enough credits opens the sheet and sends nothing
   expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
   expect(mockedEvaluate).not.toHaveBeenCalled();
 });
+
+// ---- Final review fixes ----
+
+/** The press handler of a button, to tap it twice before React re-renders (fireEvent wraps each tap in act). */
+type Fiber = { memoizedProps?: { onPress?: unknown }; return: Fiber | null };
+const pressHandler = (el: object) => {
+  let f = (el as { unstable_fiber: Fiber | null }).unstable_fiber;
+  while (f && typeof f.memoizedProps?.onPress !== 'function') f = f.return;
+  return f!.memoizedProps!.onPress as () => void;
+};
+
+it('a fast double tap on „Verifică cerința” sends (and pays for) one check', async () => {
+  const part = deferred<{ items: ReturnType<typeof item>[] }>();
+  mockedEvaluate.mockReturnValue(part.promise);
+  await render(<Harness onFeedback={jest.fn()} />);
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Text');
+  const btn = screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' });
+  // Both taps land before the busy state re-renders the button.
+  await act(async () => {
+    const press = pressHandler(btn);
+    press();
+    press();
+  });
+  expect(mockedEvaluate).toHaveBeenCalledTimes(1);
+  await act(async () => part.resolve({ items: [item('r1', 'ok')] }));
+  // Done: the requirement can be checked again.
+  mockedEvaluate.mockResolvedValue({ items: [item('r1', 'ok')] });
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
+  expect(mockedEvaluate).toHaveBeenCalledTimes(2);
+});
+
+it('the sheet cannot skip the exercise while a requirement check is in flight', async () => {
+  mockResetCredits(1);
+  const cheap = { ...essay, creditCost: 1 } as typeof essay;
+  const first = deferred<{ items: ReturnType<typeof item>[]; credits: { spent: number; balance: number } }>();
+  mockedEvaluate
+    .mockReturnValueOnce(first.promise)
+    .mockRejectedValueOnce(new EvaluateApiError('insufficient_credits', 'Nu ai destule credite.', { required: 1, balance: 0 }));
+  const onSkip = jest.fn();
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ExerciseScreen
+        exercise={cheap}
+        sources={new Map()}
+        templates={new Map()}
+        index={0}
+        total={1}
+        onBack={jest.fn()}
+        onChecked={jest.fn()}
+        onContinue={jest.fn()}
+        onRetry={jest.fn()}
+        onSkip={onSkip}
+      />
+    </SafeAreaProvider>,
+  );
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte.');
+  await fireEvent.press(screen.getByText('Formularea unui punct de vedere și susținerea lui'));
+  await fireEvent.changeText(screen.getByLabelText('Cerința 2'), 'A doua parte.');
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 1 credit' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 2, costă 1 credit' })));
+  expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
+  const skip = () => screen.getByRole('button', { name: 'Sari peste exercițiu' });
+  expect(skip()).toBeDisabled();
+  await fireEvent.press(skip());
+  expect(onSkip).not.toHaveBeenCalled();
+  await act(async () => first.resolve({ items: [item('r1', 'ok', 'Bine')], credits: { spent: 1, balance: 0 } }));
+  expect(skip()).toBeEnabled();
+  await fireEvent.press(skip());
+  expect(onSkip).toHaveBeenCalledTimes(1);
+});

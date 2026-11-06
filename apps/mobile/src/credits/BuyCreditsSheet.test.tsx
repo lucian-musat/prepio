@@ -75,6 +75,43 @@ it('a second press while the purchase is in flight is ignored', async () => {
   await act(async () => resolve({ orderId: 'o1', credits: 50, balance: 51 }));
 });
 
+it('a package that still leaves the balance short: no „Verifică acum”, the packages again with what is still missing', async () => {
+  mockResetCredits(1);
+  mockedPurchase.mockResolvedValue({ orderId: 'o1', credits: 20, balance: 21 });
+  const h = handlers();
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <BuyCreditsSheet visible required={30} cost={30} {...h} />
+    </SafeAreaProvider>,
+  );
+  expect(screen.getByText('Îți mai trebuie 29 de credite')).toBeTruthy();
+  await fireEvent.press(await screen.findByRole('radio', { name: /^20 de credite/ }));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Cumpără 20 de credite · 9,99 lei' })));
+  expect(mockBalance()).toBe(21);
+  expect(screen.queryByText('Credite adăugate!')).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Verifică acum/ })).toBeNull();
+  expect(screen.getByText('Îți mai trebuie 9 credite')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Cumpără/ })).toBeEnabled();
+  mockedPurchase.mockResolvedValue({ orderId: 'o2', credits: 50, balance: 71 });
+  await fireEvent.press(screen.getByRole('radio', { name: /^50 de credite/ }));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' })));
+  expect(screen.getByText('Credite adăugate!')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Verifică acum, costă 30 de credite' }));
+  expect(h.onCheckNow).toHaveBeenCalledTimes(1);
+});
+
+it('skipDisabled: „Sari peste exercițiu” is disabled and does not skip', async () => {
+  const h = handlers();
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <BuyCreditsSheet visible required={2} cost={2} skipDisabled {...h} />
+    </SafeAreaProvider>,
+  );
+  expect(screen.getByRole('button', { name: 'Sari peste exercițiu' })).toBeDisabled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Sari peste exercițiu' }));
+  expect(h.onSkip).not.toHaveBeenCalled();
+});
+
 it('„Sari peste exercițiu” skips', async () => {
   const h = await mount();
   await fireEvent.press(screen.getByRole('button', { name: 'Sari peste exercițiu' }));

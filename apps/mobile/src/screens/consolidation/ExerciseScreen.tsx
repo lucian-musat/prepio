@@ -138,7 +138,7 @@ export default function ExerciseScreen({
   const [sheet, setSheet] = useState<string | null>(null);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const busy = useRef(false);
-  const gate = useCreditGate({ onSkip });
+  const gate = useCreditGate({ onSkip, skipDisabled: status === 'loading' || partBusy });
 
   const essay = exercise.type === 'essay';
   const wholeChecked = essay && !!feedback?.items.some((i) => i.key === 'whole');

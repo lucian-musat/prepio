@@ -58,9 +58,18 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
       return next;
     });
 
+  // Requirements with a check in flight, synchronously: `busy` is state, so a fast double tap would send (and pay
+  // for) the same check twice.
+  const inFlight = useRef<Set<string>>(new Set());
+
   const check = async (r: EssayRequirement) => {
+    if (inFlight.current.has(r.id)) return;
+    inFlight.current.add(r.id);
     const run = () => void check(r);
-    if (!gate.allow(exercise.creditCost, run)) return;
+    if (!gate.allow(exercise.creditCost, run)) {
+      inFlight.current.delete(r.id);
+      return;
+    }
     setBusy((b) => ({ ...b, [r.id]: true }));
     setErrors((e) => ({ ...e, [r.id]: '' }));
     const sent = value.parts[r.id] ?? '';
@@ -75,6 +84,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
       if (gate.onError(e, run)) return;
       setErrors((x) => ({ ...x, [r.id]: e instanceof Error && e.message ? e.message : 'Evaluarea nu a reușit. Încearcă din nou.' }));
     } finally {
+      inFlight.current.delete(r.id);
       setBusy((b) => ({ ...b, [r.id]: false }));
     }
   };
