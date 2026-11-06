@@ -125,9 +125,18 @@ pnpm content:cloud:add-consolidation --apply   # inserts them
 
 It uses the same credentials path as `add-cards` (`packages/content/src/addConsolidation.ts`). Templates are matched by title and only the missing ones are inserted. A seed lesson is matched by its exact title among the published lessons (not found or duplicated: reported, exit code 1). It gets its sources and its non-essay seed exercises (with source links, templates and AI contexts), after the existing essays, only while it has no consolidation exercise other than an essay; so re-running plans nothing, and a lesson the owner has already started in the admin is left alone. Nothing existing is edited or deleted. Locally: `pnpm --filter @prepio/content add-consolidation [--apply]`.
 
+Because `add-consolidation` never touches a lesson that already has exercises, later changes to the seed consolidation sets (for example every lesson getting all ten types and a four-requirement essay instead of the two converted one-requirement essays, 2026-11-06) are brought to production with (prerequisite: admin/web deployed with any code the new content needs; dry run first):
+
+```bash
+pnpm content:cloud:sync-consolidation           # dry run: per lesson, the current and the new sources / exercises by type, and the student attempts and runs it would remove
+pnpm content:cloud:sync-consolidation --apply   # replaces them
+```
+
+`packages/content/src/syncConsolidation.ts` matches each seed lesson to exactly one published lesson by title (otherwise: reported, skipped, exit code 1). A lesson whose exercises (type and prompt, in order) and sources (title and body) already equal the seed's is reported as in sync; every other one gets its whole consolidation set **replaced** by the seed's: the seed set is inserted first (a failed insert is rolled back, leaving the old set as it was), then the lesson's consolidation runs, the old exercises (with every student's attempts on them, their AI contexts and source links) and the old sources are deleted, and the new rows are renumbered. So anything edited in the admin's Consolidare tab of a seed lesson is overwritten: check the dry run. Every seed exercise is validated before anything is written. Missing seed templates are inserted; existing templates are never changed (those that differ from the seed are listed, to edit in the admin if wanted). The demo lesson is not included: refresh it with `pnpm content:cloud:demo --apply`. A re-run after `--apply` plans 0. Locally: `pnpm --filter @prepio/content sync-consolidation [--apply]`.
+
 ## Demo lesson (testing, pre-launch only)
 
-`packages/content/src/demoLesson.ts` defines „[demo] Toate funcționalitățile” in its own root node „Demo”: one card of every type (both image layouts, every rich-text block), three single-choice questions whose first option is always correct, and a short source with five consolidation exercises (short answer, two marker exercises, an argument and a two-requirement essay; the seed templates they use are added if missing). The node is placed before every other root node, so the demo is the first lesson (open in guided mode). When a new lesson feature is added, add it to the demo lesson and re-run the script.
+`packages/content/src/demoLesson.ts` defines „[demo] Toate funcționalitățile” in its own root node „Demo”: one card of every type (both image layouts, every rich-text block), three single-choice questions whose first option is always correct, and two short sources with one consolidation exercise of every type, in the BAC order (the essay has two requirements; the seed templates they use are added if missing). The node is placed before every other root node, so the demo is the first lesson (open in guided mode). When a new lesson feature is added, add it to the demo lesson and re-run the script.
 
 ```bash
 pnpm content:cloud:demo                    # dry run: create or refresh?
