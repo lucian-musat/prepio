@@ -1,6 +1,6 @@
 import { useReducer } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { consolidationColor, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
 import { initialMarker, markerReducer, type MarkerAction, type MarkerConfig, type MarkerMark, type MarkerState } from './markerReducer';
@@ -187,6 +187,15 @@ it('at 1000 px wide it renders the split, with no card and no reader', async () 
   await press(screen.getByText('Efect: marchează în text'));
   expect(screen.queryByTestId('source-reader')).toBeNull();
   expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
+});
+
+it('the split names a single long source („Sursa B”) and shows tabs only for two', async () => {
+  width = 1000;
+  await render(<Harness sources={[{ source: short, label: 'A' }, { source: long('b'), label: 'B' }]} />);
+  expect(within(screen.getByTestId('split-left')).getByText('Sursa B')).toBeTruthy();
+  expect(screen.queryByTestId('split-tab-B')).toBeNull();
+  // The short source stays inline in the right column, with its own label.
+  expect(within(screen.getByTestId('source-inline-A')).getByText('Sursa A')).toBeTruthy();
 });
 
 it('a read-only marker (after checking) keeps the marks but offers no pens and only reading', async () => {

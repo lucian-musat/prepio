@@ -2,7 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { border, color, consolidationColor, radius, space, type Mark, type SourceLabel } from '@prepio/shared';
-import { useScreenViewport } from '../../ui';
+import { AppText, useScreenViewport } from '../../ui';
 import type { DragGesture } from './MarkableText';
 import { ReadingText, SourceTabs, useScrollToMark, type PanelMarker, type PanelSource } from './SourceReader';
 
@@ -45,7 +45,14 @@ export default function SourceSplit({ sources, label, onLabel, marker, scrollTo,
       <View testID="split-left" style={[styles.left, { height: columnHeight }]} onLayout={onViewportLayout}>
         <ScrollView ref={scrollRef as never} testID="split-scroll" contentContainerStyle={styles.leftBody} requireToFail={drag}>
           <View style={styles.reading}>
-            <SourceTabs sources={sources} label={current.label} onLabel={onLabel} testPrefix="split" />
+            {sources.length > 1 ? (
+              <SourceTabs sources={sources} label={current.label} onLabel={onLabel} testPrefix="split" />
+            ) : (
+              // One long source: name it, since the requirement refers to it by its letter.
+              <AppText role="eyebrow" color="textMuted" style={styles.label}>
+                Sursa {current.label}
+              </AppText>
+            )}
             <ReadingText
               key={current.source.id}
               source={current.source}
@@ -75,5 +82,6 @@ const styles = StyleSheet.create({
   },
   leftBody: { paddingVertical: PAD_V, paddingHorizontal: space[8] },
   reading: { width: '100%', maxWidth: READING_WIDTH },
+  label: { marginBottom: space[2] },
   right: { flex: 1, minWidth: 0, gap: space[3] },
 });
