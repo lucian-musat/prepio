@@ -76,7 +76,7 @@ export function Disclosure({ label, lines, note }: { label: string; lines: strin
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.disclosure}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((x) => !x)} style={styles.toggle}>
+      <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: open }} onPress={() => setOpen((x) => !x)} style={styles.toggle}>
         <AppText role="label" color="primary">
           {label}
         </AppText>
