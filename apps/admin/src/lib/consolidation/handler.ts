@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  AI_TYPES, MAX_ANSWER_CHARS, checkExercise, detectConnectors, exerciseFromRow, sourceFromRow, tokenizeSource,
+  AI_TYPES, MAX_ANSWER_CHARS, checkExercise, detectConnectors, exerciseFromRow, sourceFromRow, tokenizeSource, validateExercise,
   type AiContext, type ConsolidationEvaluateError, type ConsolidationEvaluateErrorCode, type ConsolidationEvaluateRequest,
   type ConsolidationEvaluateResponse, type ConsolidationExercise, type ConsolidationRow, type ExerciseAnswer, type FeedbackItem,
   type Mark, type Source, type SourceRef,
@@ -120,7 +120,7 @@ async function load(db: SupabaseClient, id: string): Promise<Loaded | null> {
 const blank = (s: string | undefined) => !s || s.trim() === '';
 const tooLong = (s: string) => [...s].length > MAX_ANSWER_CHARS;
 
-/** Empty/too-long check of the text fields this target needs; also the target and type rules. */
+/** Empty/too-long check of the text fields this target needs; also the target and type rules and the answer bounds. */
 function validate(ex: ConsolidationExercise, target: Target, answer: ExerciseAnswer): ConsolidationEvaluateErrorCode | null {
   const isEssay = ex.type === 'essay';
   if (isEssay ? target === 'exercise' : target !== 'exercise') return 'not_found';
@@ -135,13 +135,18 @@ function validate(ex: ConsolidationExercise, target: Target, answer: ExerciseAns
       texts = a.texts;
       break;
     }
+    case 'viewpoint':
+      if ((answer as Extract<ExerciseAnswer, { type: 'viewpoint' }>).marks.length > ex.count) return 'bad_request';
+      texts = [(answer as { text: string }).text];
+      break;
     case 'comparison':
     case 'argument':
-    case 'viewpoint':
       texts = [(answer as { text: string }).text];
       break;
     case 'essay': {
       const parts = (answer as Extract<ExerciseAnswer, { type: 'essay' }>).parts;
+      const known = new Set(ex.requirements.map((r) => r.id));
+      if (!Object.keys(parts).every((k) => known.has(k))) return 'bad_request';
       const ids = target === 'whole' ? ex.requirements.map((r) => r.id) : [(target as { requirementId: string }).requirementId];
       texts = ids.map((id) => parts[id] ?? '');
       break;
@@ -200,6 +205,8 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const loaded = await load(deps.db, req.exerciseId);
     if (!loaded) return errorResult('not_found');
     const { exercise, sources, context, rules, model } = loaded;
+    // A stored exercise that no longer validates (no AI context, detached span, ...) cannot be evaluated fairly.
+    if (validateExercise(exercise, sources, context).length > 0) return errorResult('not_found');
     const invalid = validate(exercise, req.target, req.answer);
     if (invalid) return errorResult(invalid);
 
@@ -216,9 +223,10 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const parsed = aiOutputSchema.safeParse(raw);
     if (!parsed.success) throw new Error('model output failed validation');
 
-    const normalized = normalizeAiOutput(parsed.data);
+    const keys = expectedKeys(exercise, req.target, deterministic);
+    const normalized = normalizeAiOutput(parsed.data, keys);
     const items: FeedbackItem[] = [];
-    for (const key of expectedKeys(exercise, req.target, deterministic)) {
+    for (const key of keys) {
       const found = normalized.items.find((i) => i.key === key);
       if (!found) throw new Error(`model output is missing item "${key}"`);
       items.push({ key, verdict: found.verdict, title: found.title, good: found.good, improve: found.improve, ai: true });

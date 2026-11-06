@@ -29,10 +29,17 @@ const truncate = (s: string, max: number) => {
   return chars.length <= max ? s : chars.slice(0, max).join('');
 };
 
-/** Truncates over-long strings and lists instead of rejecting them. */
-export function normalizeAiOutput(out: AiOutput): AiOutput {
+/**
+ * Keeps the first item for each expected key (in expectedKeys order, so junk items can never push
+ * a required one past the cap), then truncates over-long strings and lists instead of rejecting them.
+ */
+export function normalizeAiOutput(out: AiOutput, expectedKeys: string[]): AiOutput {
+  const picked = expectedKeys.flatMap((k) => {
+    const found = out.items.find((i) => i.key === k);
+    return found ? [found] : [];
+  });
   return {
-    items: out.items.slice(0, MAX_ITEMS).map((i) => ({
+    items: picked.slice(0, MAX_ITEMS).map((i) => ({
       key: i.key,
       verdict: i.verdict,
       title: truncate(i.title, MAX_TITLE_CHARS),

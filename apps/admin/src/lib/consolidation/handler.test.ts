@@ -10,23 +10,30 @@ const ESSAY = '55555555-5555-4555-8555-555555555555';
 const ARG = '66666666-6666-4666-8666-666666666666';
 const UNKNOWN = '77777777-7777-4777-8777-777777777777';
 const SRC = '88888888-8888-4888-8888-888888888888';
+const NOCTX = '99999999-9999-4999-8999-999999999999';
+const BLANKCTX = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const DETACHED = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 const BODY = 'Domnitorul a făcut reforma. Apoi a plecat în exil.';
 const row = (id: string, type: string, content: Record<string, unknown>, status = 'published') => ({
   id, position: 0, type, prompt: 'Enunț', content, template_id: null, lessons: { status },
 });
+const viewContent = (text: string) => ({
+  count: 2,
+  spans: [
+    { id: 'a', sourceId: SRC, start: 0, end: 27, text, limitStart: null, limitEnd: null },
+    { id: 'b', sourceId: SRC, start: 28, end: 50, text: 'Apoi a plecat în exil.', limitStart: null, limitEnd: null },
+  ],
+});
 const exercises: Record<string, unknown> = {
   [FACTS]: row(FACTS, 'facts', { count: 2 }),
+  [NOCTX]: row(NOCTX, 'facts', { count: 2 }),
+  [BLANKCTX]: row(BLANKCTX, 'facts', { count: 2 }),
+  [DETACHED]: row(DETACHED, 'viewpoint', viewContent('Domnitorul a făcut alt lucru')),
   [DRAFT]: row(DRAFT, 'facts', { count: 2 }, 'draft'),
   [SHORT]: row(SHORT, 'short_answer', { accepted: ['x'], mistakes: [] }),
   [ARG]: row(ARG, 'argument', {}),
-  [VIEW]: row(VIEW, 'viewpoint', {
-    count: 2,
-    spans: [
-      { id: 'a', sourceId: SRC, start: 0, end: 27, text: 'Domnitorul a făcut reforma.', limitStart: null, limitEnd: null },
-      { id: 'b', sourceId: SRC, start: 28, end: 50, text: 'Apoi a plecat în exil.', limitStart: null, limitEnd: null },
-    ],
-  }),
+  [VIEW]: row(VIEW, 'viewpoint', viewContent('Domnitorul a făcut reforma.')),
   [ESSAY]: row(ESSAY, 'essay', {
     requirements: [
       { id: 'r1', text: 'Cerința 1', argument: true },
@@ -36,6 +43,10 @@ const exercises: Record<string, unknown> = {
 };
 const contexts: Record<string, unknown> = {
   [FACTS]: { main: 'CONTEXT-DIN-DB', requirements: {} },
+  [BLANKCTX]: { main: '  ', requirements: {} },
+  [DETACHED]: { main: 'Ctx', requirements: {} },
+  [VIEW]: { main: 'Ctx view', requirements: {} },
+  [ARG]: { main: 'Ctx arg', requirements: {} },
   [ESSAY]: { main: '', requirements: { r1: 'Ctx r1', r2: 'Ctx r2' } },
 };
 const settings = { rules: 'reguli', model: 'gpt-5-mini' };
@@ -45,7 +56,7 @@ function fakeDb(): SupabaseClient {
     from(table: string) {
       let id: unknown;
       const rows = (): unknown => {
-        if (table === 'consolidation_exercise_sources') return id === VIEW ? [{ source_id: SRC, label: 'A' }] : [];
+        if (table === 'consolidation_exercise_sources') return id === VIEW || id === DETACHED ? [{ source_id: SRC, label: 'A' }] : [];
         if (table === 'sources') return [{ id: SRC, position: 0, title: null, author: 'A', work: 'W', body: BODY }];
         return [];
       };
@@ -135,6 +146,44 @@ describe('handleConsolidationEvaluate', () => {
     }
   });
 
+  it('returns not_found for an exercise that no longer validates, without consuming quota', async () => {
+    const view = { type: 'viewpoint', text: 'Punctul meu de vedere.', marks: [] };
+    const bodies = [
+      factsReq({ exerciseId: NOCTX }), // no consolidation_ai_context row
+      factsReq({ exerciseId: BLANKCTX }), // blank context
+      { exerciseId: DETACHED, target: 'exercise', answer: view }, // detached span
+    ];
+    for (const body of bodies) {
+      const d = deps();
+      const r = await handleConsolidationEvaluate(body, 'u1', d);
+      expect(code(r), JSON.stringify(body)).toBe('not_found');
+      expect(d.rateLimit).not.toHaveBeenCalled();
+      expect(d.evaluate).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects answers beyond the exercise bounds without consuming quota', async () => {
+    const mark = { sourceId: SRC, from: 0, to: 3 };
+    const bodies = [
+      factsReq({ answer: { type: 'facts', texts: ['a', 'b', 'c'] } }),
+      { exerciseId: VIEW, target: 'exercise', answer: { type: 'viewpoint', text: 'Da.', marks: [mark, mark, mark] } },
+      { exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b', r3: 'c' } } },
+      { exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', junk: 'x' } } },
+    ];
+    for (const body of bodies) {
+      const d = deps();
+      const r = await handleConsolidationEvaluate(body, 'u1', d);
+      expect(r.status, JSON.stringify(body)).toBe(400);
+      expect(code(r)).toBe('bad_request');
+      expect(d.rateLimit).not.toHaveBeenCalled();
+    }
+    const d = deps({ evaluate: vi.fn(async () => okItems('viewpoint', 'support-0', 'support-1')) });
+    const ok = await handleConsolidationEvaluate(
+      { exerciseId: VIEW, target: 'exercise', answer: { type: 'viewpoint', text: 'Da.', marks: [mark, { sourceId: SRC, from: 4, to: 8 }] } }, 'u1', d,
+    );
+    expect(ok.status).toBe(200);
+  });
+
   it('applies the target rules', async () => {
     const essay = { type: 'essay', parts: { r1: 'a', r2: 'b' } };
     const cases = [
@@ -209,6 +258,10 @@ describe('handleConsolidationEvaluate', () => {
 
   it('drops unexpected keys and fails on a missing key', async () => {
     let r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate: async () => okItems('fact-0', 'fact-1', 'extra') }));
+    expect((r.json as { items: { key: string }[] }).items.map((i) => i.key)).toEqual(['fact-0', 'fact-1']);
+    const junk = Array.from({ length: 10 }, (_, i) => `junk-${i}`);
+    r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate: async () => okItems(...junk, 'fact-0', 'fact-1') }));
+    expect(r.status).toBe(200);
     expect((r.json as { items: { key: string }[] }).items.map((i) => i.key)).toEqual(['fact-0', 'fact-1']);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     r = await handleConsolidationEvaluate(factsReq(), 'u1', deps({ evaluate: async () => okItems('fact-0', 'extra') }));

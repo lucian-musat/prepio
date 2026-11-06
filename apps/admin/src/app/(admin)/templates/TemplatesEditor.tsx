@@ -5,6 +5,7 @@ import { Badge, Button, ButtonGroup, Card, Form } from 'react-bootstrap';
 import { CONSOLIDATION_TYPES, CONSOLIDATION_TYPE_LABELS, type ConsolidationType } from '@prepio/shared';
 import RichTextInput from '@/components/editor/cards/RichTextInput';
 import { EmptyNote, useRunner } from '@/components/editor/common';
+import { plural } from '@/components/editor/consolidation/plural';
 import type { TemplateWithUsage } from '@/lib/data/templates';
 import { deleteTemplateAction, saveTemplateAction } from './actions';
 
@@ -74,7 +75,7 @@ function Row({ t, disabled, onEdit, onDelete }: {
       <div className="flex-grow-1" style={{ minWidth: 200 }}>
         <div className="fw-semibold mb-1">{t.title}</div>
         <Badge bg="secondary" className="me-2">{t.exerciseType ? CONSOLIDATION_TYPE_LABELS[t.exerciseType] : 'Orice tip'}</Badge>
-        <span className="text-secondary">Folosit în {t.usage} exerciții</span>
+        <span className="text-secondary">Folosit în {plural(t.usage, 'exercițiu', 'exerciții')}</span>
       </div>
       {confirming ? (
         <ButtonGroup size="sm">

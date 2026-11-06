@@ -15,6 +15,7 @@ import TemplatesEditor from './TemplatesEditor';
 const templates: TemplateWithUsage[] = [
   { id: 't1', title: 'Rezolvare eseu', exerciseType: 'essay', points: '30p', body: 'Corp', usage: 2 },
   { id: 't2', title: 'Model general', exerciseType: null, points: '', body: 'Alt corp', usage: 0 },
+  { id: 't3', title: 'Model unic', exerciseType: null, points: '', body: 'Corp unic', usage: 1 },
 ];
 
 beforeEach(() => {
@@ -27,11 +28,13 @@ describe('TemplatesEditor', () => {
   it('renders rows with type label and usage counts', () => {
     render(<TemplatesEditor templates={templates} />);
     const rows = screen.getAllByTestId('template-item');
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0].textContent).toContain('Rezolvare eseu');
     expect(rows[0].textContent).toContain('Folosit în 2 exerciții');
     expect(rows[1].textContent).toContain('Orice tip');
     expect(rows[1].textContent).toContain('Folosit în 0 exerciții');
+    expect(rows[2].textContent).toContain('Folosit în 1 exercițiu');
+    expect(rows[2].textContent).not.toContain('exerciții');
   });
 
   it('adds a template with trimmed fields', async () => {

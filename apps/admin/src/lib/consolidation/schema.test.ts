@@ -17,7 +17,7 @@ describe('aiOutputSchema', () => {
 
 describe('normalizeAiOutput', () => {
   it('truncates title to 120 and entries to 400 characters (code points)', () => {
-    const out = normalizeAiOutput({ items: [item({ title: 'x'.repeat(200), good: ['😀'.repeat(401)], improve: ['y'.repeat(401), 'ok'] })] });
+    const out = normalizeAiOutput({ items: [item({ title: 'x'.repeat(200), good: ['😀'.repeat(401)], improve: ['y'.repeat(401), 'ok'] })] }, ['k']);
     expect([...out.items[0]!.title]).toHaveLength(120);
     expect([...out.items[0]!.good[0]!]).toHaveLength(400);
     expect([...out.items[0]!.improve[0]!]).toHaveLength(400);
@@ -26,7 +26,8 @@ describe('normalizeAiOutput', () => {
 
   it('keeps at most 5 entries per list and 8 items', () => {
     const many = Array.from({ length: 9 }, (_, i) => `e${i}`);
-    const out = normalizeAiOutput({ items: Array.from({ length: 10 }, (_, i) => item({ key: `k${i}`, good: many, improve: many })) });
+    const keys = Array.from({ length: 10 }, (_, i) => `k${i}`);
+    const out = normalizeAiOutput({ items: keys.map((key) => item({ key, good: many, improve: many })) }, keys);
     expect(out.items).toHaveLength(8);
     expect(out.items[0]!.good).toEqual(['e0', 'e1', 'e2', 'e3', 'e4']);
     expect(out.items[0]!.improve).toHaveLength(5);
@@ -34,6 +35,16 @@ describe('normalizeAiOutput', () => {
 
   it('leaves short values untouched', () => {
     const i = item();
-    expect(normalizeAiOutput({ items: [i] })).toEqual({ items: [i] });
+    expect(normalizeAiOutput({ items: [i] }, ['k'])).toEqual({ items: [i] });
+  });
+
+  it('selects the expected keys before capping, so junk never pushes out a required key', () => {
+    const junk = Array.from({ length: 12 }, (_, i) => item({ key: `junk-${i}` }));
+    const out = normalizeAiOutput({ items: [...junk, item({ key: 'fact-1' }), item({ key: 'fact-0' }), item({ key: 'fact-0', title: 'dup' })] }, [
+      'fact-0',
+      'fact-1',
+    ]);
+    expect(out.items.map((i) => i.key)).toEqual(['fact-0', 'fact-1']);
+    expect(out.items[0]!.title).toBe('T');
   });
 });
