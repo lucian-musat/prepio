@@ -58,3 +58,11 @@ it('never says anything is public', async () => {
   await renderScreen();
   expect(JSON.stringify(screen.toJSON())).not.toMatch(/public/i);
 });
+
+it('explains the credits data and the email fingerprint', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText('Păstrăm doar o amprentă ireversibilă a adresei de email, ca să știm că ai primit deja creditele de bun venit.', { exact: false }),
+  ).toBeTruthy();
+  expect(screen.getByText('Creditele: soldul, cumpărările de pachete și istoricul verificărilor.')).toBeTruthy();
+});

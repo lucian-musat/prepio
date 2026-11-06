@@ -162,7 +162,7 @@ describe('AI types', () => {
     await fireEvent.changeText(screen.getByLabelText('Faptul istoric 2'), FACT_2);
   };
 
-  it('calls evaluateConsolidation and shows the feedback with the AI note', async () => {
+  it('calls evaluateConsolidation and shows the feedback with the digital-teacher note', async () => {
     mocked.evaluate.mockResolvedValue({
       items: [
         { key: 'fact-0', verdict: 'almost', title: 'Aproape: e doar menționat', good: ['Faptul e în perioadă.'], improve: ['Prezintă-l.'], ai: true },
@@ -176,7 +176,7 @@ describe('AI types', () => {
     expect(mocked.evaluate).toHaveBeenCalledWith({ exerciseId: 'e2', target: 'exercise', answer: { type: 'facts', texts: [FACT_1, FACT_2] } });
     expect(await screen.findByText('Aproape: e doar menționat')).toBeTruthy();
     expect(screen.getByText('FAPTUL 1')).toBeTruthy();
-    expect(screen.getByText('Feedback generat cu AI pe baza indicațiilor profesorului. Poate greși.')).toBeTruthy();
+    expect(screen.getByText('Feedback de la profesorul digital, pe baza indicațiilor profesorului. Poate greși.')).toBeTruthy();
     expect(screen.getByText('Vezi un răspuns model')).toBeTruthy();
     expect(mocked.saveAttempt).toHaveBeenCalledWith(expect.objectContaining({ exerciseId: 'e2', verdict: 'almost' }));
   });

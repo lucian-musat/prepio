@@ -9,6 +9,7 @@ import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validate
 import { modeOf, type LearningMode } from '../lib/learningMode';
 import LearningModePicker from '../components/LearningModePicker';
 import { ownMessage } from '../lib/errorMessage';
+import { useCredits } from '../credits/CreditsProvider';
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
@@ -24,6 +25,7 @@ const messageOf = (e: unknown, fallback: string) => (e instanceof Error && e.mes
 /** The signed-in student's profile: rename, sign out, delete the account (in-app confirm, required by Google Play). */
 export default function ProfileScreen() {
   const { session, profile, refreshProfile, signOut } = useAuth();
+  const { balance } = useCredits();
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -152,6 +154,13 @@ export default function ProfileScreen() {
           ) : null}
           {modeSaved ? <AppText role="small" color="success">{modeSaved}</AppText> : null}
         </View>
+
+        <Button
+          label={`Creditele mele · ${balance ?? 0}`}
+          variant="secondary"
+          onPress={() => router.push('/credits')}
+          disabled={busy}
+        />
 
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 

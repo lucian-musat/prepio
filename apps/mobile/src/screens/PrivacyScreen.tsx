@@ -45,6 +45,7 @@ export default function PrivacyScreen() {
           <Item>Numele tău, așa cum îl introduci în aplicație sau cum apare în contul Google.</Item>
           <Item>Adresa ta de email, folosită pentru autentificare (cu cod trimis pe email sau cu contul Google).</Item>
           <Item>Numele din profilul Google, dacă intri cu Google.</Item>
+          <Item>Creditele: soldul, cumpărările de pachete și istoricul verificărilor.</Item>
         </Section>
 
         <Section title="De ce le folosim">
@@ -67,6 +68,9 @@ export default function PrivacyScreen() {
         <Section title="Cât timp păstrăm datele">
           <AppText role="body">
             Păstrăm datele contului până când îl ștergi. La ștergere, datele contului sunt șterse.
+          </AppText>
+          <AppText role="body">
+            Păstrăm doar o amprentă ireversibilă a adresei de email, ca să știm că ai primit deja creditele de bun venit.
           </AppText>
         </Section>
 

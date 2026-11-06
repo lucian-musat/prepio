@@ -21,6 +21,7 @@ jest.mock('../lib/profile', () => ({
   updateDisplayName: jest.fn(),
   updateLearningMode: jest.fn(),
 }));
+jest.mock('../credits/CreditsProvider');
 jest.mock('../lib/api', () => ({ deleteAccount: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true } }));
 
@@ -161,4 +162,13 @@ it('shows the offline message when deleting without a session', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Da, șterge contul' }));
   expect(await screen.findByText(OFFLINE)).toBeTruthy();
   expect(deleteAccount).not.toHaveBeenCalled();
+});
+
+it('has a „Creditele mele” row with the balance that opens the credits page', async () => {
+  const { router } = jest.requireMock('expo-router');
+  const { mockResetCredits } = jest.requireMock('../credits/CreditsProvider');
+  mockResetCredits(49);
+  await renderScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Creditele mele · 49' }));
+  expect(router.push).toHaveBeenCalledWith('/credits');
 });
