@@ -9,6 +9,7 @@ import { lessonAccess, orderedLessons, type LessonState } from '../lib/lessonFlo
 import { MODE_INFO, modeOf } from '../lib/learningMode';
 import { fetchProgress, type Progress } from '../lib/progress';
 import { useAuth } from '../auth/AuthProvider';
+import CreditChip from '../credits/CreditChip';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
 const LAST_STAGGER = 5;
@@ -61,6 +62,16 @@ function ProfileButton() {
   );
 }
 
+/** Top-bar trailing slot: the credit balance chip, then the profile avatar. */
+function HomeTrailing() {
+  return (
+    <View style={styles.trailing}>
+      <CreditChip />
+      <ProfileButton />
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const [data, setData] = useState<HomeData | null>(null);
@@ -109,7 +120,7 @@ export default function HomeScreen() {
 
   if (failed) {
     return (
-      <ScreenLayout logo trailing={<ProfileButton />}>
+      <ScreenLayout logo trailing={<HomeTrailing />}>
         <Surface style={styles.error}>
           <AppText role="section">Nu am putut încărca lecțiile</AppText>
           <AppText role="small" color="textMuted">
@@ -123,7 +134,7 @@ export default function HomeScreen() {
 
   if (!data || !progress) {
     return (
-      <ScreenLayout logo trailing={<ProfileButton />}>
+      <ScreenLayout logo trailing={<HomeTrailing />}>
         <View style={styles.loader}>
           <Spinner />
         </View>
@@ -137,7 +148,7 @@ export default function HomeScreen() {
   const done = [...access.values()].filter((st) => st === 'finished').length;
 
   return (
-    <ScreenLayout logo trailing={<ProfileButton />}>
+    <ScreenLayout logo trailing={<HomeTrailing />}>
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} />
       </Enter>
@@ -170,6 +181,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   error: { gap: space[3] },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   avatar: {
     width: space[10],
     height: space[10],

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, radius, space, VERDICT_LABELS, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
+import { border, color, creditsLabel, radius, space, VERDICT_LABELS, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
 import { evaluateConsolidation } from '../../lib/api';
 import { mergeItems, essayProgress } from '../../screens/consolidation/checking';
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
 import { AppText, TextArea } from '../../ui';
+import Coin from '../../credits/Coin';
 import ConnectorChips from './ConnectorChips';
 import { MAX_CHARS, type InputProps } from './inputKit';
 import { VERDICT_TONE } from './verdictTone';
@@ -138,14 +139,18 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Verifică cerința ${i + 1}`}
+                    accessibilityLabel={`Verifică cerința ${i + 1}, costă ${creditsLabel(exercise.creditCost)}`}
                     accessibilityState={{ disabled: disabled || !!busy[r.id] || !filled(text) }}
                     disabled={disabled || !!busy[r.id] || !filled(text)}
                     onPress={() => check(r)}
-                    style={[styles.small, (disabled || busy[r.id] || !filled(text)) && styles.off]}
+                    style={[styles.small, styles.smallRow, (disabled || busy[r.id] || !filled(text)) && styles.off]}
                   >
                     <AppText role="label" color="primary">
                       Verifică cerința
+                    </AppText>
+                    <Coin size={12} />
+                    <AppText role="label" color="primary">
+                      {exercise.creditCost}
                     </AppText>
                   </Pressable>
                 </View>
@@ -198,6 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   off: { opacity: 0.45 },
+  smallRow: { flexDirection: 'row', alignItems: 'center', gap: space[1.5] },
   whole: {
     gap: space[1],
     backgroundColor: color.surface,

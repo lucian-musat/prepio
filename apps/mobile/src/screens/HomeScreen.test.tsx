@@ -6,6 +6,7 @@ import HomeScreen from './HomeScreen';
 import { fetchHome } from '../lib/content';
 import { fetchProgress } from '../lib/progress';
 
+jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 const mockFocusListeners = new Set<() => void>();
 const mockRefocus = () => act(async () => mockFocusListeners.forEach((l) => l()));

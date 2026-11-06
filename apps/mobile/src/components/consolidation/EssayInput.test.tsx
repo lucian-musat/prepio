@@ -6,6 +6,7 @@ import { evaluateConsolidation, EvaluateApiError } from '../../lib/api';
 import ExerciseScreen from '../../screens/consolidation/ExerciseScreen';
 import EssayInput from './EssayInput';
 
+jest.mock('../../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../../lib/api', () => {
   const actual = jest.requireActual('../../lib/api');
   return { ...actual, evaluateConsolidation: jest.fn() };
@@ -22,6 +23,7 @@ const essay = {
   modelAnswer: null,
   explanation: null,
   type: 'essay',
+  creditCost: 2,
   requirements: [
     { id: 'r1', text: 'Prezentarea constituției din 1952', modelAnswer: null, templateId: null, argument: false },
     { id: 'r2', text: 'Formularea unui punct de vedere și susținerea lui', modelAnswer: null, templateId: null, argument: true },
@@ -59,11 +61,11 @@ it('checks one requirement with its id and updates its state chip', async () => 
   await render(<Harness onFeedback={onFeedback} />);
   const card = within(screen.getByTestId('requirement-r1'));
   expect(card.getByText('Necompletat')).toBeTruthy();
-  expect(card.getByRole('button', { name: 'Verifică cerința 1' })).toBeDisabled();
+  expect(card.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })).toBeDisabled();
   await fireEvent.changeText(card.getByLabelText('Cerința 1'), 'În 1952 a fost adoptată o nouă constituție.');
   expect(card.getByText('43 caractere')).toBeTruthy();
   expect(card.getByText('Neverificat')).toBeTruthy();
-  await act(async () => void fireEvent.press(card.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(card.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(mockedEvaluate).toHaveBeenCalledWith({
     exerciseId: 'e9',
     target: { requirementId: 'r1' },
@@ -80,7 +82,7 @@ it('a failed requirement check shows the API message with „Reîncearcă”', a
   await render(<Harness onFeedback={onFeedback} />);
   const card = within(screen.getByTestId('requirement-r1'));
   await fireEvent.changeText(card.getByLabelText('Cerința 1'), 'Text');
-  await act(async () => void fireEvent.press(card.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(card.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(await card.findByText('Ai atins limita de evaluări.')).toBeTruthy();
   expect(card.getByRole('button', { name: 'Reîncearcă' })).toBeTruthy();
   expect(onFeedback).not.toHaveBeenCalled();
@@ -112,13 +114,13 @@ it('the whole-essay check is enabled only once every requirement has text, and s
     </SafeAreaProvider>,
   );
   const bar = () => within(screen.getByTestId('action-bar'));
-  expect(bar().getByRole('button', { name: 'Verifică eseul întreg' })).toBeDisabled();
+  expect(bar().getByRole('button', { name: 'Verifică eseul întreg, costă 4 credite' })).toBeDisabled();
   await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte.');
-  expect(bar().getByRole('button', { name: 'Verifică eseul întreg' })).toBeDisabled();
+  expect(bar().getByRole('button', { name: 'Verifică eseul întreg, costă 4 credite' })).toBeDisabled();
   await fireEvent.press(screen.getByText('Formularea unui punct de vedere și susținerea lui'));
   await fireEvent.changeText(screen.getByLabelText('Cerința 2'), 'A doua parte.');
-  expect(bar().getByRole('button', { name: 'Verifică eseul întreg' })).toBeEnabled();
-  await act(async () => void fireEvent.press(bar().getByRole('button', { name: 'Verifică eseul întreg' })));
+  expect(bar().getByRole('button', { name: 'Verifică eseul întreg, costă 4 credite' })).toBeEnabled();
+  await act(async () => void fireEvent.press(bar().getByRole('button', { name: 'Verifică eseul întreg, costă 4 credite' })));
   expect(mockedEvaluate).toHaveBeenCalledWith(expect.objectContaining({ exerciseId: 'e9', target: 'whole' }));
   expect(await screen.findByText('Eseu bine structurat')).toBeTruthy();
   expect(onChecked).toHaveBeenCalledWith(expect.objectContaining({ exerciseId: 'e9', verdict: 'ok' }));
@@ -155,7 +157,7 @@ async function renderScreen(onChecked = jest.fn(), onRetry = jest.fn()) {
   await fireEvent.changeText(screen.getByLabelText('Cerința 2'), 'A doua parte.');
 }
 const bar = () => within(screen.getByTestId('action-bar'));
-const whole = () => bar().getByRole('button', { name: 'Verifică eseul întreg' });
+const whole = () => bar().getByRole('button', { name: 'Verifică eseul întreg, costă 4 credite' });
 
 it('overlapping checks: the whole check waits for a requirement in flight, and keeps its result', async () => {
   const part = deferred<{ items: ReturnType<typeof item>[] }>();
@@ -163,7 +165,7 @@ it('overlapping checks: the whole check waits for a requirement in flight, and k
   mockedEvaluate.mockReturnValueOnce(part.promise).mockReturnValueOnce(all.promise);
   const onChecked = jest.fn();
   await renderScreen(onChecked);
-  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(whole()).toBeDisabled();
   await act(async () => part.resolve({ items: [item('r1', 'almost', 'Cerința 1: aproape')] }));
   expect(whole()).toBeEnabled();
@@ -188,7 +190,7 @@ it('a checked requirement edited afterwards goes back to „Neverificat”', asy
   mockedEvaluate.mockResolvedValue({ items: [item('r1', 'ok', 'Bine')] });
   await renderScreen();
   const card = () => within(screen.getByTestId('requirement-r1'));
-  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(await card().findByText('Corect')).toBeTruthy();
   await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte, schimbată.');
   expect(card().getByText('Neverificat')).toBeTruthy();
@@ -202,7 +204,7 @@ it('„Încearcă din nou” on an essay keeps the texts and clears only the fee
   const onRetry = jest.fn();
   const onChecked = jest.fn();
   await renderScreen(onChecked, onRetry);
-  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   await act(async () => void fireEvent.press(whole()));
   expect(await screen.findByText('Eseu: mai lucrează la structură')).toBeTruthy();
   await act(async () => void fireEvent.press(bar().getByRole('button', { name: 'Încearcă din nou' })));
@@ -248,7 +250,7 @@ it('previous / skip are disabled while a requirement check runs', async () => {
   mockedEvaluate.mockReturnValueOnce(part.promise);
   await renderScreen();
   expect(bar().getByRole('button', { name: 'Sari peste, exercițiul următor' })).toBeEnabled();
-  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(bar().getByRole('button', { name: 'Sari peste, exercițiul următor' })).toBeDisabled();
   expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeDisabled();
   await act(async () => part.resolve({ items: [item('r1', 'ok')] }));

@@ -4,6 +4,7 @@ import type Animated from 'react-native-reanimated';
 import {
   AI_TYPES,
   CONSOLIDATION_TYPE_LABELS,
+  checkCost,
   checkExercise,
   color,
   feedbackText,
@@ -19,6 +20,8 @@ import {
   type SolutionTemplate,
   type Source,
 } from '@prepio/shared';
+import CostTag from '../../credits/CostTag';
+import CreditChip from '../../credits/CreditChip';
 import ArgumentInput from '../../components/consolidation/ArgumentInput';
 import CauseEffectInput from '../../components/consolidation/CauseEffectInput';
 import ComparisonInput from '../../components/consolidation/ComparisonInput';
@@ -207,8 +210,12 @@ export default function ExerciseScreen({
       ? { cfg: NO_PENS, state: NO_MARKS, dispatch: noop, verdicts: evidenceVerdicts(exercise, sources), readOnly: true }
       : undefined;
 
+  const ai = AI_TYPES.has(exercise.type);
+  const exerciseCost = checkCost(exercise, 'exercise');
   const template = exercise.templateId ? templates.get(exercise.templateId) ?? null : null;
+  const tag = ai ? <CostTag cost={essay ? exercise.creditCost : exerciseCost} perRequirement={essay} /> : null;
   const header = (
+    <View style={styles.headerBlock}>
     <View style={styles.header}>
       <View style={styles.chip}>
         <AppText role="eyebrow" color="primary" numberOfLines={1}>
@@ -222,6 +229,8 @@ export default function ExerciseScreen({
           </AppText>
         </Pressable>
       ) : null}
+    </View>
+    {tag}
     </View>
   );
 
@@ -286,7 +295,7 @@ export default function ExerciseScreen({
   ) : essay ? (
     <View style={styles.stack}>
       {/* Waits for requirement checks in flight, so their results are never overwritten. */}
-      <Button label="Verifică eseul întreg" disabled={!complete || partBusy} loading={loading} onPress={check} />
+      <Button label="Verifică eseul întreg" cost={checkCost(exercise, 'whole') || undefined} disabled={!complete || partBusy} loading={loading} onPress={check} />
       <View style={styles.row}>
         {prev}
         {feedback?.items.length ? <Button flex label="Continuă" variant="secondary" disabled={moving} onPress={onContinue} /> : skip(true)}
@@ -295,7 +304,7 @@ export default function ExerciseScreen({
   ) : (
     <View style={[styles.row, styles.fill]}>
       {prev}
-      <Button flex label="Verifică" disabled={!complete} loading={loading} onPress={check} />
+      <Button flex label="Verifică" cost={exerciseCost || undefined} disabled={!complete} loading={loading} onPress={check} />
       {skip(false)}
     </View>
   );
@@ -309,9 +318,12 @@ export default function ExerciseScreen({
         progress={(index + 1) / total}
         progressLabel="Progres consolidare"
         trailing={
-          <AppText role="label" color="textMuted">
-            {index + 1}/{total}
-          </AppText>
+          <View style={styles.trailing}>
+            <CreditChip need={ai ? exercise.creditCost : undefined} />
+            <AppText role="label" color="textMuted">
+              {index + 1}/{total}
+            </AppText>
+          </View>
         }
         subheader={map?.(moving)}
         onBack={onBack}
@@ -342,6 +354,8 @@ const styles = StyleSheet.create({
   stack: { flex: 1, gap: space[2.5] },
   row: { flexDirection: 'row', gap: space[2.5] },
   answer: { gap: space[3] },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  headerBlock: { gap: space[2] },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
   chip: { flexShrink: 1, backgroundColor: color.primarySubtle, borderRadius: radius.pill, paddingVertical: space[1], paddingHorizontal: space[2.5] },
   hint: {

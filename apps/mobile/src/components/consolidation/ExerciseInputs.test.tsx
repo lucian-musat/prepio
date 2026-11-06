@@ -16,6 +16,7 @@ import SourceInfoInput from './SourceInfoInput';
 import ViewpointInput from './ViewpointInput';
 import ExerciseScreen from '../../screens/consolidation/ExerciseScreen';
 
+jest.mock('../../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../../lib/api', () => ({ evaluateConsolidation: jest.fn() }));
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };

@@ -7,6 +7,7 @@ import { evaluateConsolidation, EvaluateApiError } from '../lib/api';
 import { fetchProgress } from '../lib/progress';
 import { fetchHome } from '../lib/content';
 
+jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../lib/consolidation', () => {
   const actual = jest.requireActual('../lib/consolidation');
   return {

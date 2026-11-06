@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { border, color, elevation, feedbackText, motion, opacity, radius, space } from '@prepio/shared';
+import { border, color, creditsLabel, elevation, feedbackText, motion, opacity, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import { Icon, type IconName } from './IconButton';
 import Spinner from './Spinner';
 import { type } from './typography';
 import { easing, timing, webTransition } from './motion';
+import Coin from '../credits/Coin';
 
 type Props = {
   /** The visible text; an icon-only button leaves it out and needs an accessibilityLabel. */
@@ -23,6 +24,8 @@ type Props = {
   loading?: boolean;
   tone?: 'primary' | 'success' | 'danger';
   flex?: boolean;
+  /** Credits the action costs: a coin pill after the label (hidden while loading). */
+  cost?: number;
 };
 
 // Face colour and the darker shade drawn under it. The success/danger shades are the prototype's
@@ -57,6 +60,7 @@ export default function Button({
   loading = false,
   tone = 'primary',
   flex = false,
+  cost,
 }: Props) {
   const ghost = variant === 'secondary';
   const depth = ghost ? GHOST_DEPTH : PRIMARY_DEPTH;
@@ -74,6 +78,9 @@ export default function Button({
     </View>
   );
 
+  const base = accessibilityLabel ?? label;
+  const name = cost !== undefined && base ? `${base}, costă ${creditsLabel(cost)}` : base;
+
   const y = useSharedValue(0);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const press = (to: number) => () => {
@@ -83,7 +90,7 @@ export default function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityLabel={name}
       accessibilityState={{ disabled: blocked, busy: loading }}
       disabled={blocked}
       onPress={() => {
@@ -104,6 +111,14 @@ export default function Button({
           <AppText role="button" style={[styles.label, { color: labelColor }]} numberOfLines={1}>
             {label}
           </AppText>
+        ) : null}
+        {cost !== undefined && !loading ? (
+          <View testID="button-cost" style={styles.cost}>
+            <Coin size={12} />
+            <AppText role="label" style={[styles.costText, { color: labelColor }]}>
+              {cost}
+            </AppText>
+          </View>
         ) : null}
       </Animated.View>
     </Pressable>
@@ -130,4 +145,7 @@ const styles = StyleSheet.create({
   label: { textAlign: 'center', flexShrink: 1 },
   compact: { paddingHorizontal: space[3] },
   glyph: { height: type('button').lineHeight, justifyContent: 'center' },
+  // Mockup `.pill`: translucent white over the face.
+  cost: { flexDirection: 'row', alignItems: 'center', gap: space[1], backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.pill, paddingVertical: 2, paddingHorizontal: space[2] },
+  costText: { fontWeight: '700' },
 });

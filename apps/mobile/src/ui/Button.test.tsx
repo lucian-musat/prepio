@@ -77,3 +77,20 @@ it('compact narrows the side padding of a labelled button', async () => {
   await render(<Button label="Sari peste" compact onPress={jest.fn()} />);
   expect(padding()).toBe(12);
 });
+
+it('shows the cost pill after the label and names the cost in the accessible label', async () => {
+  await render(<Button label="Verifică" cost={2} onPress={jest.fn()} />);
+  expect(screen.getByRole('button', { name: 'Verifică, costă 2 credite' })).toBeTruthy();
+  expect(screen.getByTestId('button-cost')).toBeTruthy();
+  expect(screen.getByText('2')).toBeTruthy();
+});
+
+it('hides the cost pill while loading', async () => {
+  await render(<Button label="Verifică" cost={2} loading onPress={jest.fn()} />);
+  expect(screen.queryByTestId('button-cost')).toBeNull();
+});
+
+it('shows no pill without a cost', async () => {
+  await render(<Button label="Verifică" onPress={jest.fn()} />);
+  expect(screen.queryByTestId('button-cost')).toBeNull();
+});
