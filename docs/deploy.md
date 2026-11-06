@@ -88,6 +88,21 @@ The consolidation change (spec `docs/superpowers/specs/2026-11-05-consolidation-
    - student web `/`, a lesson's start screen with the three zones and `/lesson/<id>/consolidare`, admin `/login` and `/templates` (logged out → redirect to `/login`) load with a clean console.
 6. New EAS `preview` APK, **mandatory**: the installed APK can't open lessons after step 1. New font asset (Literata), no new native module. Then the owner's phone-test list in `docs/STATUS.md`.
 
+## Credits rollout
+
+The credits change (spec `docs/superpowers/specs/2026-11-06-credits-design.md`) adds migrations `20261106132444_credits` and `20261106133031_welcome_credits` (the welcome-grant pepper is generated inside the migration; no env var or secret to set). The new admin charges credits on `/api/consolidation/evaluate` and adds `POST /api/credits/purchase`; the new student web and APK show the balance and can buy. Purchases are approved instantly with no payment (owner decision, test environment only; gate or pay before a public launch). Order:
+
+1. `pnpm db:cloud:push:dry` (must list only the two credits migrations) → `pnpm db:cloud:push`. Every existing account, admins too, gets the welcome credits (12) once.
+2. Push `main` and wait for **prepio-admin** Ready (the charging evaluate route and the purchase route need the new tables from step 1).
+3. **prepio-web** Ready (same push): the web shows the chip, the costs and the purchase sheet.
+4. New EAS `preview` APK (no new native module). Until it is installed, an old APK gets a 402 on every AI check and has no way to buy credits.
+5. Production checks:
+   - `select count(*) from auth.users u where (select count(*) from credit_ledger l where l.user_id = u.id and kind = 'welcome') <> 1` returns 0 (Supabase SQL editor, read-only);
+   - anon REST on `credit_packages`, `credit_orders`, `credit_ledger`, `credit_settings`, `welcome_grants` returns `[]` or 401/42501;
+   - `POST /api/credits/purchase` returns 401 without a token and 403 with a foreign `Origin`;
+   - signed in on the student web: the chip shows the balance, a purchase works (balance and „Creditele mele” history), and one real AI check takes the exercise's cost; admin Elevi lists the student with the same balance.
+6. After any later `pnpm content:cloud:sync-consolidation`, re-set admin-made `credit_cost` changes: the sync replaces the exercises with the seed defaults.
+
 ## Schema and content
 
 - Schema: migrations in `supabase/migrations/`, applied with `pnpm db:cloud:push` — full workflow, credentials setup and the one-time history repair in [database-migrations.md](database-migrations.md).
