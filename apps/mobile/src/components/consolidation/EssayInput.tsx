@@ -6,6 +6,7 @@ import { mergeItems, essayProgress } from '../../screens/consolidation/checking'
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
 import { AppText, TextArea } from '../../ui';
 import Coin from '../../credits/Coin';
+import type { CreditGate } from '../../credits/useCreditGate';
 import ConnectorChips from './ConnectorChips';
 import { MAX_CHARS, type InputProps } from './inputKit';
 import { VERDICT_TONE } from './verdictTone';
@@ -21,6 +22,8 @@ type Props = InputProps<'essay'> & {
   onOpenTemplate?: (templateId: string) => void;
   /** Whether any requirement check is in flight (the whole-essay check waits for them). */
   onBusyChange?: (busy: boolean) => void;
+  /** The screen's credit gate: a check without enough credits opens the buy sheet instead. */
+  gate: CreditGate;
 };
 
 /**
@@ -28,7 +31,7 @@ type Props = InputProps<'essay'> & {
  * with a character count, the connector chips for an argument and „Verifică cerința”, which asks the AI about that
  * requirement alone. Below, „Eseul întreg”: what the whole-essay check (in the action bar) looks at.
  */
-export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate, onBusyChange }: Props) {
+export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate, onBusyChange, gate }: Props) {
   const reqs = exercise.requirements;
   const [open, setOpen] = useState<Set<string>>(() => new Set(reqs[0] ? [reqs[0].id] : []));
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -56,16 +59,20 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
     });
 
   const check = async (r: EssayRequirement) => {
+    const run = () => void check(r);
+    if (!gate.allow(exercise.creditCost, run)) return;
     setBusy((b) => ({ ...b, [r.id]: true }));
     setErrors((e) => ({ ...e, [r.id]: '' }));
     const sent = value.parts[r.id] ?? '';
     try {
       const res = await evaluateConsolidation({ exerciseId: exercise.id, target: { requirementId: r.id }, answer: value });
+      if (res.credits) gate.settle(res.credits.balance);
       const merged = mergeItems(latest.current, res.items.filter((i) => i.key === r.id));
       latest.current = merged;
       setCheckedText((c) => ({ ...c, [r.id]: sent }));
       onFeedback(merged);
     } catch (e) {
+      if (gate.onError(e, run)) return;
       setErrors((x) => ({ ...x, [r.id]: e instanceof Error && e.message ? e.message : 'Evaluarea nu a reușit. Încearcă din nou.' }));
     } finally {
       setBusy((b) => ({ ...b, [r.id]: false }));

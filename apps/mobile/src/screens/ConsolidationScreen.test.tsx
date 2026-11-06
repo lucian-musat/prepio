@@ -61,6 +61,7 @@ const factsEx = {
   modelAnswer: 'În 1866 se adoptă prima constituție internă.',
   type: 'facts',
   count: 2,
+  creditCost: 1,
 } as unknown as ConsolidationExercise;
 const template: SolutionTemplate = {
   id: 't1',
@@ -171,7 +172,7 @@ describe('AI types', () => {
     await open();
     expect(await screen.findByText('2/2')).toBeTruthy();
     await fill();
-    await press('Verifică');
+    await press('Verifică, costă 1 credit');
     expect(mocked.evaluate).toHaveBeenCalledWith({ exerciseId: 'e2', target: 'exercise', answer: { type: 'facts', texts: [FACT_1, FACT_2] } });
     expect(await screen.findByText('Aproape: e doar menționat')).toBeTruthy();
     expect(screen.getByText('FAPTUL 1')).toBeTruthy();
@@ -184,7 +185,7 @@ describe('AI types', () => {
     await open();
     await fireEvent.changeText(await screen.findByLabelText('Faptul istoric 1'), 'Unirea');
     await fireEvent.changeText(screen.getByLabelText('Faptul istoric 2'), FACT_2);
-    await press('Verifică');
+    await press('Verifică, costă 1 credit');
     expect(await screen.findByText('Faptul 1: prea scurt')).toBeTruthy();
     expect(mocked.evaluate).not.toHaveBeenCalled();
   });
@@ -193,7 +194,7 @@ describe('AI types', () => {
     mocked.evaluate.mockRejectedValue(new EvaluateApiError('ai_failed', 'Evaluarea nu a reușit. Încearcă din nou.'));
     await open();
     await fill();
-    await press('Verifică');
+    await press('Verifică, costă 1 credit');
     expect(await screen.findByText('Evaluarea nu a reușit. Încearcă din nou.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reîncearcă' })).toBeTruthy();
     expect(mocked.saveAttempt).not.toHaveBeenCalled();

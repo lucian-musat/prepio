@@ -22,6 +22,7 @@ import {
 } from '@prepio/shared';
 import CostTag from '../../credits/CostTag';
 import CreditChip from '../../credits/CreditChip';
+import { useCreditGate } from '../../credits/useCreditGate';
 import ArgumentInput from '../../components/consolidation/ArgumentInput';
 import CauseEffectInput from '../../components/consolidation/CauseEffectInput';
 import ComparisonInput from '../../components/consolidation/ComparisonInput';
@@ -137,6 +138,7 @@ export default function ExerciseScreen({
   const [sheet, setSheet] = useState<string | null>(null);
   const scrollRef = useRef<Animated.ScrollView>(null);
   const busy = useRef(false);
+  const gate = useCreditGate({ onSkip });
 
   const essay = exercise.type === 'essay';
   const wholeChecked = essay && !!feedback?.items.some((i) => i.key === 'whole');
@@ -170,11 +172,13 @@ export default function ExerciseScreen({
     const det = checkExercise(exercise, sourceList, a);
     if (!AI_TYPES.has(exercise.type)) return finish(det, a);
     if (aiBlocked(exercise, det, a)) return finish({ ...det, verdict: det.verdict ?? combineVerdict(det.items) }, a);
+    if (!gate.allow(checkCost(exercise, essay ? 'whole' : 'exercise'), check)) return;
     busy.current = true;
     setStatus('loading');
     setError('');
     try {
       const res = await evaluateConsolidation({ exerciseId: exercise.id, target: essay ? 'whole' : 'exercise', answer: a });
+      if (res.credits) gate.settle(res.credits.balance);
       if (essay) {
         // The essay's verdict is the whole-essay verdict; without one it stays null („n din N” in the summary).
         const merged = mergeItems(feedbackRef.current, res.items);
@@ -183,6 +187,11 @@ export default function ExerciseScreen({
         finish(mergeAiFeedback(exercise, det, res.items), a);
       }
     } catch (e) {
+      // Not enough credits: the buy sheet opens instead of an error row.
+      if (gate.onError(e, check)) {
+        setStatus('idle');
+        return;
+      }
       setStatus('error');
       setError(e instanceof Error && e.message ? e.message : AI_FAILED);
     } finally {
@@ -270,6 +279,7 @@ export default function ExerciseScreen({
             templateIds={new Set(templates.keys())}
             onOpenTemplate={setSheet}
             onBusyChange={setPartBusy}
+            gate={gate}
           />
         );
     }
@@ -345,6 +355,7 @@ export default function ExerciseScreen({
         typeLabel={CONSOLIDATION_TYPE_LABELS[sheetTemplate?.exerciseType ?? exercise.type]}
         onClose={() => setSheet(null)}
       />
+      {gate.sheet}
     </View>
   );
 }

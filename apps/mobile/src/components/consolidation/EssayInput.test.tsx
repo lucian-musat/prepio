@@ -4,9 +4,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { ConsolidationExercise, ExerciseAnswer, ExerciseFeedback } from '@prepio/shared';
 import { evaluateConsolidation, EvaluateApiError } from '../../lib/api';
 import ExerciseScreen from '../../screens/consolidation/ExerciseScreen';
+import { fetchCreditPackages } from '../../lib/credits';
+import { useCreditGate } from '../../credits/useCreditGate';
 import EssayInput from './EssayInput';
 
-jest.mock('../../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
+jest.mock('../../credits/CreditsProvider');
+const { mockResetCredits } = jest.requireMock<typeof import('../../credits/__mocks__/CreditsProvider')>('../../credits/CreditsProvider');
+jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../lib/api', () => {
   const actual = jest.requireActual('../../lib/api');
   return { ...actual, evaluateConsolidation: jest.fn() };
@@ -33,9 +38,12 @@ const essay = {
 function Harness({ onFeedback }: { onFeedback: jest.Mock }) {
   const [value, setValue] = useState<ExerciseAnswer>({ type: 'essay', parts: { r1: '', r2: '' } });
   const [feedback, setFeedback] = useState<ExerciseFeedback | null>(null);
+  const gate = useCreditGate();
   return (
     <SafeAreaProvider initialMetrics={metrics}>
+      {gate.sheet}
       <EssayInput
+        gate={gate}
         exercise={essay}
         sources={[]}
         value={value as Extract<ExerciseAnswer, { type: 'essay' }>}
@@ -51,7 +59,11 @@ function Harness({ onFeedback }: { onFeedback: jest.Mock }) {
   );
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockResetCredits(5);
+  (fetchCreditPackages as jest.Mock).mockResolvedValue([{ id: 'p50', credits: 50, priceBani: 1999, featured: true }]);
+});
 
 it('checks one requirement with its id and updates its state chip', async () => {
   mockedEvaluate.mockResolvedValue({
@@ -255,4 +267,54 @@ it('previous / skip are disabled while a requirement check runs', async () => {
   expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeDisabled();
   await act(async () => part.resolve({ items: [item('r1', 'ok')] }));
   expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
+});
+
+// ---- Credits gate ----
+
+it('two requirements checked together with 1 credit: the second gets 402, the sheet opens, both texts stay', async () => {
+  mockResetCredits(1);
+  const cheap = { ...essay, creditCost: 1 } as typeof essay;
+  const first = deferred<{ items: ReturnType<typeof item>[]; credits: { spent: number; balance: number } }>();
+  let rejectSecond!: (e: unknown) => void;
+  const secondPromise = new Promise((_, reject) => (rejectSecond = reject));
+  mockedEvaluate.mockReturnValueOnce(first.promise).mockReturnValueOnce(secondPromise);
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ExerciseScreen
+        exercise={cheap}
+        sources={new Map()}
+        templates={new Map()}
+        index={0}
+        total={1}
+        onBack={jest.fn()}
+        onChecked={jest.fn()}
+        onContinue={jest.fn()}
+        onRetry={jest.fn()}
+        onSkip={jest.fn()}
+      />
+    </SafeAreaProvider>,
+  );
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Prima parte.');
+  await fireEvent.press(screen.getByText('Formularea unui punct de vedere și susținerea lui'));
+  await fireEvent.changeText(screen.getByLabelText('Cerința 2'), 'A doua parte.');
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 1 credit' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 2, costă 1 credit' })));
+  expect(mockedEvaluate).toHaveBeenCalledTimes(2);
+  await act(async () => first.resolve({ items: [item('r1', 'ok', 'Bine')], credits: { spent: 1, balance: 0 } }));
+  await act(async () => rejectSecond(new EvaluateApiError('insufficient_credits', 'Nu ai destule credite.', { required: 1, balance: 0 })));
+  expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
+  expect(screen.getByLabelText('Ai 0 credite. Deschide creditele mele.')).toBeTruthy();
+  expect(within(screen.getByTestId('requirement-r2')).queryByText('Nu ai destule credite.')).toBeNull();
+  expect(screen.getByLabelText('Cerința 1').props.value).toBe('Prima parte.');
+  expect(screen.getByLabelText('Cerința 2').props.value).toBe('A doua parte.');
+});
+
+it('a requirement check without enough credits opens the sheet and sends nothing', async () => {
+  mockResetCredits(1);
+  const onFeedback = jest.fn();
+  await render(<Harness onFeedback={onFeedback} />);
+  await fireEvent.changeText(screen.getByLabelText('Cerința 1'), 'Text');
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
+  expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
+  expect(mockedEvaluate).not.toHaveBeenCalled();
 });
