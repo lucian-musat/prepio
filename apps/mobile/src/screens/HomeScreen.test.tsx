@@ -33,10 +33,11 @@ jest.mock('expo-router', () => {
     },
   };
 });
-let mockProfile: { id: string; displayName: string | null; learningMode: 'guided' | 'free' | null } | null = {
+let mockProfile: { id: string; displayName: string | null; learningMode: 'guided' | 'free' | null; creditBalance: number } | null = {
   id: 'u1',
   displayName: 'ana',
   learningMode: 'guided',
+  creditBalance: 5,
 };
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockProfile }) }));
 
@@ -60,7 +61,7 @@ const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', 
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided' };
+  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided', creditBalance: 5 };
   mockedProgress.mockResolvedValue(progressOf());
 });
 
@@ -73,7 +74,7 @@ it('shows a profile button with the initial and opens the profile', async () => 
 });
 
 it('falls back to a question mark when the student has no name', async () => {
-  mockProfile = { id: 'u1', displayName: null, learningMode: null };
+  mockProfile = { id: 'u1', displayName: null, learningMode: null, creditBalance: 5 };
   mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
   await renderHome();
   expect(screen.getByText('?')).toBeTruthy();
@@ -149,7 +150,7 @@ it('shows the total lesson count chip', async () => {
 });
 
 it('opens a lesson on press', async () => {
-  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free' };
+  mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free', creditBalance: 5 };
   mockedFetch.mockResolvedValue({
     welcomeMessage: 'x',
     sections: [{ path: ['A'], lessons: [lesson('first', 'Prima'), lesson('second', 'A doua', 2)] }],
@@ -219,7 +220,7 @@ describe('lesson states', () => {
   });
 
   it('free: shows the free chip and opens every unfinished lesson', async () => {
-    mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free' };
+    mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free', creditBalance: 5 };
     threeLessons();
     mockedProgress.mockResolvedValue(progressOf('l1'));
     await renderHome();

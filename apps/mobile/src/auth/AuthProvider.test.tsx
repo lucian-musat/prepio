@@ -48,7 +48,7 @@ beforeEach(() => {
   mockLibSignOut.mockImplementation(async () => {
     for (const l of [...listeners]) l('SIGNED_OUT', null);
   });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
 });
 
 let latest: ReturnType<typeof useAuth>;
@@ -92,7 +92,7 @@ it('is loading until the stored session is resolved', async () => {
 
 it('a session whose profile has no name → needsName', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
   await renderAuth();
   await waitForState('needsName|-|access-1');
   expect(mockFetchProfile).toHaveBeenCalledWith(USER);
@@ -138,7 +138,7 @@ it('a stale start-up rejection does not sign out a student who signed in meanwhi
   auth.getUser.mockReturnValue(new Promise((r) => (rejectUser = r)));
   await renderAuth();
   await waitFor(() => expect(auth.getUser).toHaveBeenCalled());
-  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: 'Ion', learningMode: 'guided' });
+  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: 'Ion', learningMode: 'guided', creditBalance: 5 });
   await emit('SIGNED_IN', session(OTHER, 'access-9'));
   await waitForState('ready|Ion|access-9');
   await act(async () =>
@@ -178,7 +178,7 @@ it('SIGNED_OUT event → signedOut and the profile is dropped', async () => {
 it('SIGNED_IN event from signedOut loads the profile', async () => {
   await renderAuth();
   await waitForState('signedOut|-|-');
-  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: null, learningMode: null });
+  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: null, learningMode: null, creditBalance: 5 });
   await emit('SIGNED_IN', session(OTHER, 'access-9'));
   await waitForState('needsName|-|access-9');
   expect(mockFetchProfile).toHaveBeenCalledWith(OTHER);
@@ -196,20 +196,20 @@ it('TOKEN_REFRESHED only swaps the session, without reloading the profile or lea
 
 it('refreshProfile moves needsName → ready once the name is saved', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
   await renderAuth();
   await waitForState('needsName|-|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
   await act(() => latest.refreshProfile());
   expect(state()).toBe('ready|Ana|access-1');
 });
 
 it('refreshProfile moves needsMode → ready once the mode is saved', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5 });
   await renderAuth();
   await waitForState('needsMode|Ana|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
   await act(() => latest.refreshProfile());
   expect(state()).toBe('ready|Ana|access-1');
 });
@@ -218,12 +218,12 @@ it('refreshProfile resolves with the profile it settled on', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   await renderAuth();
   await waitForState('ready|Ana|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'free' });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 });
   let fresh: unknown;
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'free' });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 });
 });
 
 it('refreshProfile resolves with the kept profile when the reload fails', async () => {
@@ -236,7 +236,7 @@ it('refreshProfile resolves with the kept profile when the reload fails', async 
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided' });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
   warn.mockRestore();
 });
 
@@ -383,7 +383,7 @@ describe('network outages are not a logout', () => {
     });
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-    mockFetchProfile.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: USER, displayName: null, learningMode: null });
+    mockFetchProfile.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
     await renderAuth();
     await waitForState('ready|-|access-1');
     await act(async () => onChange('active'));
@@ -430,10 +430,10 @@ it('useAuth outside the provider throws', async () => {
 
 describe('statusFor', () => {
   it('asks for the name first, then the mode, then lets the student in', () => {
-    expect(statusFor({ id: USER, displayName: null, learningMode: null }, false)).toBe('needsName');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null }, false)).toBe('needsMode');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided' }, false)).toBe('ready');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free' }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5 }, false)).toBe('needsName');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5 }, false)).toBe('needsMode');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 }, false)).toBe('ready');
   });
 
   it('lets the student in when the profile could not be loaded', () => {

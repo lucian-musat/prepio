@@ -10,10 +10,15 @@ import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
 
 export class EvaluateApiError extends Error {
   code: ConsolidationEvaluateErrorCode;
-  constructor(code: ConsolidationEvaluateErrorCode, message: string) {
+  /** Only on `insufficient_credits`: what the check costs and what the student has. */
+  required?: number;
+  balance?: number;
+  constructor(code: ConsolidationEvaluateErrorCode, message: string, extra?: { required?: number; balance?: number }) {
     super(message);
     this.name = 'EvaluateApiError';
     this.code = code;
+    this.required = extra?.required;
+    this.balance = extra?.balance;
   }
 }
 
@@ -30,14 +35,14 @@ export class AccountDeleteApiError extends Error {
 export const EVALUATE_TIMEOUT_MS = 65_000;
 
 const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
-const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
+export const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const TIMEOUT = 'Evaluarea durează prea mult. Încearcă din nou.';
 const NOT_CONFIGURED = 'Evaluarea nu este disponibilă momentan. Încearcă din nou mai târziu.';
-const SESSION_EXPIRED = 'Sesiunea a expirat. Intră din nou în cont.';
+export const SESSION_EXPIRED = 'Sesiunea a expirat. Intră din nou în cont.';
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
 const DELETE_NOT_CONFIGURED = 'Ștergerea contului nu este disponibilă momentan. Încearcă din nou mai târziu.';
 
-function missingApiUrl(caller: string) {
+export function missingApiUrl(caller: string) {
   console.error(
     `[${caller}] EXPO_PUBLIC_API_URL is not set; the admin API is unreachable. ` +
       'Set it in apps/mobile/.env for local dev, or in the EAS/Vercel build environment.',
@@ -48,7 +53,7 @@ function missingApiUrl(caller: string) {
  * The session is really gone (no token, or the API said 401): sign out so the route guard shows the welcome
  * screen. A 5xx is an outage, not a logout — callers keep the session and show the error.
  */
-async function sessionExpired<E extends Error>(error: E): Promise<never> {
+export async function sessionExpired<E extends Error>(error: E): Promise<never> {
   await signOut();
   throw error;
 }
@@ -57,7 +62,7 @@ async function sessionExpired<E extends Error>(error: E): Promise<never> {
  * The bearer token, or null when there is no session. An auth outage (expired token that cannot be refreshed
  * offline, stalled Supabase) becomes `outage()` — a connection error that keeps the stored session.
  */
-async function bearerToken(outage: () => Error): Promise<string | null> {
+export async function bearerToken(outage: () => Error): Promise<string | null> {
   try {
     return await getAccessToken();
   } catch (e) {
@@ -98,7 +103,10 @@ export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): 
     }
     if (!res.ok) {
       const e = body as Partial<ConsolidationEvaluateError> | null;
-      throw new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED);
+      throw new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED, {
+        required: e?.required,
+        balance: e?.balance ?? e?.credits?.balance,
+      });
     }
     return body as ConsolidationEvaluateResponse;
   } finally {

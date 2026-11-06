@@ -235,3 +235,20 @@ it('clears the timeout once the response arrives', async () => {
   await evaluateConsolidation(req);
   expect(jest.getTimerCount()).toBe(0);
 });
+
+it('maps the 402 body to EvaluateApiError with required and balance', async () => {
+  fetchMock.mockResolvedValue(
+    json(402, { error: 'insufficient_credits', message: 'Nu ai destule credite.', required: 2, balance: 1 }),
+  );
+  const err = await evaluateConsolidation(req).catch((e) => e);
+  expect(err).toBeInstanceOf(EvaluateApiError);
+  expect(err.code).toBe('insufficient_credits');
+  expect(err.required).toBe(2);
+  expect(err.balance).toBe(1);
+});
+
+it('returns the credits field of a successful evaluation', async () => {
+  const ok = { items: [], credits: { spent: 1, balance: 4 } };
+  fetchMock.mockResolvedValue(json(200, ok));
+  await expect(evaluateConsolidation(req)).resolves.toEqual(ok);
+});

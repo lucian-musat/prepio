@@ -45,22 +45,23 @@ describe('validateDisplayName', () => {
 
 describe('fetchProfile', () => {
   it('reads the own profile row and maps display_name', async () => {
-    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana', learning_mode: 'free' }, error: null });
+    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana', learning_mode: 'free', credit_balance: 7 }, error: null });
     await expect(fetchProfile(USER, client)).resolves.toEqual({
       id: USER,
       displayName: 'Ana',
       learningMode: 'free',
+      creditBalance: 7,
     });
     expect(from).toHaveBeenCalledWith('profiles');
-    expect(calls).toContainEqual(['select', ['id,display_name,learning_mode']]);
+    expect(calls).toContainEqual(['select', ['id,display_name,learning_mode,credit_balance']]);
     expect(calls).toContainEqual(['eq', ['id', USER]]);
   });
 
   it('returns null when there is no row and keeps a null name', async () => {
     await expect(fetchProfile(USER, fakeClient({ data: null, error: null }).client)).resolves.toBeNull();
     await expect(
-      fetchProfile(USER, fakeClient({ data: { id: USER, display_name: null, learning_mode: null }, error: null }).client),
-    ).resolves.toEqual({ id: USER, displayName: null, learningMode: null });
+      fetchProfile(USER, fakeClient({ data: { id: USER, display_name: null, learning_mode: null, credit_balance: 0 }, error: null }).client),
+    ).resolves.toEqual({ id: USER, displayName: null, learningMode: null, creditBalance: 0 });
   });
 
   it('throws on a query error', async () => {
