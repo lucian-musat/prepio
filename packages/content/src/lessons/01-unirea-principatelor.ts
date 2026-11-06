@@ -1,5 +1,161 @@
 import { EXTRA_CARDS } from '../extraCards';
-import type { SeedLesson } from '../types';
+import { essayFromWriting } from '../consolidation';
+import type { SeedConsolidation, SeedLesson, SeedSource } from '../types';
+
+const sources: SeedSource[] = [
+  {
+    key: 'a',
+    title: 'Adunările ad-hoc și Convenția de la Paris',
+    author: 'Manual de istorie',
+    work: 'clasa a XII-a',
+    body:
+      'Congresul de pace de la Paris, din 1856, a hotărât ca românii să-și exprime dorințele privind organizarea ' +
+      'Principatelor prin Adunări ad-hoc. Întrunite în toamna anului 1857, adunările de la Iași și București au cerut ' +
+      'unirea Moldovei și a Țării Românești într-un singur stat, cu numele România, condus de un prinț străin dintr-o ' +
+      'familie domnitoare a Europei.\n\n' +
+      'Marile puteri nu au acceptat însă unirea deplină. De aceea, Convenția de la Paris, semnată în august 1858, a ' +
+      'creat Principatele Unite ale Moldovei și Valahiei, dar fiecare principat păstra propriul domn, guvern și ' +
+      'adunare. Instituțiile comune erau doar Comisia Centrală de la Focșani și Înalta Curte de Justiție și Casație. ' +
+      'Astfel, unirea acceptată de puteri era una limitată, un compromis între dorința românilor și interesele ' +
+      'marilor puteri.',
+  },
+  {
+    key: 'b',
+    title: 'Domnia lui Alexandru Ioan Cuza',
+    author: 'Sinteză de istorie a românilor',
+    work: 'epoca modernă',
+    body:
+      'Convenția de la Paris nu interzicea alegerea aceleiași persoane ca domn în ambele Principate. Profitând de ' +
+      'această lacună, Adunarea electivă a Moldovei l-a ales pe Alexandru Ioan Cuza la 5 ianuarie 1859, iar ' +
+      'Adunarea electivă a Țării Românești, sub presiunea mulțimii din București, l-a ales și ea la 24 ianuarie ' +
+      '1859. [...]\n\n' +
+      'Prin legea secularizării din decembrie 1863, averile mănăstirești au trecut în proprietatea statului, astfel ' +
+      'că aproximativ un sfert din terenul agricol al țării a devenit proprietate de stat. Pentru a ocoli opoziția ' +
+      'Adunării, dominată de marii proprietari, Cuza a dat lovitura de stat din 2 mai 1864 și a supus unui plebiscit ' +
+      'Statutul Dezvoltător al Convenției de la Paris. Ca urmare, legea rurală a putut fi adoptată în august 1864: ' +
+      'claca și dijma au fost desființate, iar clăcașii au fost împroprietăriți, în schimbul unei despăgubiri.',
+  },
+];
+
+const b = (quote: string) => ({ source: 'b', quote });
+
+const exercises: SeedConsolidation[] = [
+  {
+    type: 'short_answer',
+    prompt: 'Numiți actul cu caracter constituțional supus plebiscitului în 1864, precizat în sursa B.',
+    template: 'short_answer',
+    sources: ['a', 'b'],
+    accepted: ['Statutul Dezvoltător', 'Statutul Dezvoltător al Convenției de la Paris', 'Statutul Dezvoltător al Convenției'],
+    mistakes: [
+      {
+        answer: 'Convenția de la Paris',
+        message: 'Convenția de la Paris (1858) este actul pe care l-a dezvoltat. Caută în sursa B actul supus plebiscitului în 1864.',
+      },
+    ],
+    explanation: 'Actul apare în sursa B, în fraza despre lovitura de stat din 2 mai 1864.',
+  },
+  {
+    type: 'multi_answer',
+    prompt: 'Menționați cele două principate precizate atât în sursa A, cât și în sursa B.',
+    template: 'multi_answer',
+    sources: ['a', 'b'],
+    count: 2,
+    groups: [
+      ['Moldova', 'Moldovei'],
+      ['Țara Românească', 'Țării Românești', 'Muntenia', 'Valahia', 'Valahiei'],
+    ],
+    explanation: 'Ambele surse vorbesc despre Moldova și Țara Românească (numită în Convenția de la Paris „Valahia”).',
+  },
+  {
+    type: 'source_info',
+    prompt: 'Precizați, din sursa A, o informație referitoare la Convenția de la Paris.',
+    template: 'source_info',
+    sources: ['a'],
+    count: 1,
+    spans: [
+      { source: 'a', quote: 'semnată în august 1858' },
+      { source: 'a', quote: 'a creat Principatele Unite ale Moldovei și Valahiei' },
+      { source: 'a', quote: 'fiecare principat păstra propriul domn, guvern și adunare' },
+      { source: 'a', quote: 'Instituțiile comune erau doar Comisia Centrală de la Focșani și Înalta Curte de Justiție și Casație' },
+    ],
+    explanation: 'Informațiile despre Convenția de la Paris se află în al doilea paragraf al sursei A.',
+  },
+  {
+    type: 'source_letter',
+    prompt: 'Scrieți litera corespunzătoare sursei care susține că marile puteri au acceptat doar o unire limitată a Principatelor.',
+    template: 'source_letter',
+    sources: ['a', 'b'],
+    correct: 'A',
+    evidence: { source: 'a', quote: 'unirea acceptată de puteri era una limitată' },
+    explanation: 'Sursa A spune că „unirea acceptată de puteri era una limitată”; sursa B vorbește despre dubla alegere și despre reformele lui Cuza.',
+  },
+  {
+    type: 'cause_effect',
+    prompt: 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa dată, precizând rolul fiecăreia.',
+    template: 'cause_effect',
+    sources: ['b'],
+    pairs: [
+      {
+        cause: b('Convenția de la Paris nu interzicea alegerea aceleiași persoane ca domn în ambele Principate'),
+        effect: b('l-a ales pe Alexandru Ioan Cuza'),
+        explanation: 'Unioniștii au folosit lacuna Convenției: același domn a fost ales în ambele Principate.',
+      },
+      {
+        cause: b('averile mănăstirești au trecut în proprietatea statului'),
+        effect: b('aproximativ un sfert din terenul agricol al țării a devenit proprietate de stat'),
+        explanation: 'Conectorul „astfel că” introduce efectul secularizării.',
+      },
+      {
+        cause: b('Pentru a ocoli opoziția Adunării, dominată de marii proprietari'),
+        effect: b('Cuza a dat lovitura de stat din 2 mai 1864'),
+        explanation: '„Pentru a” arată scopul, adică motivul loviturii de stat.',
+      },
+      {
+        cause: b('Cuza a dat lovitura de stat din 2 mai 1864 și a supus unui plebiscit Statutul Dezvoltător al Convenției de la Paris'),
+        effect: b('legea rurală a putut fi adoptată în august 1864'),
+        explanation: 'Conectorul „Ca urmare” introduce efectul loviturii de stat și al Statutului Dezvoltător.',
+      },
+      {
+        cause: b('legea rurală a putut fi adoptată în august 1864'),
+        effect: b('claca și dijma au fost desființate'),
+        explanation: 'Desființarea clăcii și a dijmei este o urmare a legii rurale.',
+      },
+      {
+        cause: b('legea rurală a putut fi adoptată în august 1864'),
+        effect: b('clăcașii au fost împroprietăriți'),
+        explanation: 'Împroprietărirea clăcașilor este o urmare a legii rurale.',
+      },
+    ],
+  },
+  {
+    type: 'viewpoint',
+    prompt:
+      'Formulați, pe baza sursei date, un punct de vedere referitor la reformele adoptate în timpul domniei lui ' +
+      'Alexandru Ioan Cuza, susținându-l cu două informații selectate din sursă.',
+    template: 'viewpoint',
+    sources: ['b'],
+    count: 2,
+    spans: [
+      b('averile mănăstirești au trecut în proprietatea statului'),
+      b('aproximativ un sfert din terenul agricol al țării a devenit proprietate de stat'),
+      b('claca și dijma au fost desființate'),
+      b('clăcașii au fost împroprietăriți'),
+    ],
+    modelAnswer:
+      'Consider că reformele adoptate în timpul domniei lui Alexandru Ioan Cuza au modernizat societatea românească. ' +
+      'Informații-suport: „claca și dijma au fost desființate”; „clăcașii au fost împroprietăriți”.',
+    ai: {
+      main: [
+        'Tema: reformele din timpul domniei lui Alexandru Ioan Cuza (1859–1866), pe baza sursei date: secularizarea averilor mănăstirești (decembrie 1863), lovitura de stat și Statutul Dezvoltător (mai 1864), legea rurală (august 1864).',
+        'Puncte de vedere acceptate (exemple): reformele au modernizat societatea românească; reformele au consolidat statul român modern; legea rurală a îmbunătățit situația țăranilor; secularizarea a întărit statul din punct de vedere economic.',
+        'Informații-suport potrivite din sursă: trecerea averilor mănăstirești în proprietatea statului; aproximativ un sfert din terenul agricol a devenit proprietate de stat; desființarea clăcii și a dijmei; împroprietărirea clăcașilor.',
+        'Nu este punct de vedere: o simplă informație („Cuza a dat legea rurală”), o apreciere despre altă temă (de exemplu, despre dubla alegere din 1859) sau o apreciere vagă, fără legătură cu reformele.',
+        'Greșeli frecvente: confundarea legii rurale (1864) cu secularizarea (1863); afirmația că reformele au fost adoptate după abdicarea lui Cuza (1866); informații-suport care nu susțin punctul de vedere formulat (de exemplu, dubla alegere pentru un punct de vedere despre reforme).',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+];
 
 export const unireaPrincipatelor: SeedLesson = {
   key: 'unirea-principatelor-cuza',
@@ -297,11 +453,12 @@ export const unireaPrincipatelor: SeedLesson = {
         'nu fusese încă proclamată (1877).',
     },
   ],
-  exercises: [
-    {
-      prompt:
-        'Scrie introducerea unui eseu despre constituirea statului român modern în perioada 1857–1866.',
-      criteria: [
+  sources,
+  consolidation: [
+    ...exercises,
+    essayFromWriting(
+      'Scrie introducerea unui eseu despre constituirea statului român modern în perioada 1857–1866.',
+      [
         'Contextualizarea temei: precizarea, pe scurt, a contextului în care se constituie statul român modern (de exemplu: înfrângerea Rusiei în Războiul Crimeii, Congresul de la Paris din 1856, garanția colectivă a marilor puteri, dorința de unire a românilor).',
         'Enunțarea clară a temei eseului: constituirea statului român modern în perioada 1857–1866 (Unirea Principatelor și consolidarea statului prin reformele lui Alexandru Ioan Cuza).',
         'Anunțarea, la nivel general, a ideilor care vor fi dezvoltate în cuprins (de exemplu: acțiunile românilor din 1857–1859, unificarea instituțiilor, reformele), fără a le dezvolta.',
@@ -309,11 +466,10 @@ export const unireaPrincipatelor: SeedLesson = {
         'Utilizarea limbajului istoric adecvat (de exemplu: unire, stat modern, autonomie, garanție colectivă, reforme).',
         'Ideile sunt înlănțuite logic, iar exprimarea este clară și corectă.',
       ].join('\n'),
-    },
-    {
-      prompt:
-        'Prezintă o acțiune desfășurată de români în perioada 1857–1859, precizând două informații referitoare la aceasta și utilizând relația cauză-efect.',
-      criteria: [
+    ),
+    essayFromWriting(
+      'Prezintă o acțiune desfășurată de români în perioada 1857–1859, precizând două informații referitoare la aceasta și utilizând relația cauză-efect.',
+      [
         'Menționarea unei acțiuni desfășurate de români în perioada 1857–1859 (de exemplu: rezoluțiile Adunărilor ad-hoc din 1857, organizarea adunărilor elective, dubla alegere a lui Alexandru Ioan Cuza din 5 și 24 ianuarie 1859).',
         'Precizarea a două informații corecte referitoare la acțiunea menționată (de exemplu: data, locul, participanții, conținutul hotărârilor, urmările).',
         'Utilizarea explicită a relației cauză-efect (de exemplu: „Deoarece Convenția de la Paris nu interzicea alegerea aceleiași persoane în ambele Principate, unioniștii l-au ales pe Cuza domn și la București.”).',
@@ -321,6 +477,6 @@ export const unireaPrincipatelor: SeedLesson = {
         'Acțiunea se încadrează corect în perioada 1857–1859 (reformele lui Cuza sau evenimentele de după 1859 nu se punctează).',
         'Utilizarea limbajului istoric adecvat și prezentarea ideilor în succesiune cronologică/logică.',
       ].join('\n'),
-    },
+    ),
   ],
 };

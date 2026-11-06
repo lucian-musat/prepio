@@ -86,7 +86,6 @@ function toLesson(l: SeedLesson): Lesson {
     status: l.status,
     cards: l.cards.map((c, i) => ({ ...c, id: `c${i}`, position: i }) as Card),
     questions: l.questions.map((q, i) => ({ ...q, id: `q${i}`, position: i }) as Question),
-    exercises: l.exercises.map((x, i) => ({ ...x, id: `x${i}`, position: i })),
   };
 }
 
@@ -191,10 +190,14 @@ describe('lessons', () => {
       }
     });
 
-    it('has exactly the 2 required writing exercises with criteria', () => {
+    it('keeps the 2 former writing exercises as one-requirement essays with their criteria as context', () => {
       const idx = lessons.indexOf(lesson);
-      expect(lesson.exercises.map((x) => x.prompt)).toEqual(EXPECTED_LESSONS[idx]!.exercises);
-      for (const x of lesson.exercises) expect(x.criteria.trim().length).toBeGreaterThan(0);
+      const essays = lesson.consolidation.flatMap((c) => (c.type === 'essay' ? [c] : []));
+      expect(essays.map((e) => e.requirements.map((r) => r.text))).toEqual(EXPECTED_LESSONS[idx]!.exercises.map((p) => [p]));
+      for (const e of essays) {
+        expect(e.requirements[0]!.id).toBe('r1');
+        expect(e.ai?.requirements.r1?.trim().length).toBeGreaterThan(0);
+      }
     });
 
     it('passes validateLesson', () => {
@@ -223,7 +226,9 @@ describe('defaults', () => {
   it('has a welcome message and AI defaults', () => {
     expect(welcomeMessage.trim().length).toBeGreaterThan(0);
     expect(aiDefaults.rules.trim().length).toBeGreaterThan(0);
-    expect(aiDefaults).toMatchObject({ gradeMin: 1, gradeMax: 10, model: 'gpt-5-mini' });
+    expect(aiDefaults).toEqual({ rules: aiDefaults.rules, model: 'gpt-5-mini' });
+    // Consolidation feedback has no grades (spec): the default rules must not ask for one.
+    expect(aiDefaults.rules).not.toMatch(/\bnot[ăa]|\bscala\b/i);
   });
 });
 

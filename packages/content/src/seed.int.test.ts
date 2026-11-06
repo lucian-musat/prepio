@@ -1,8 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { cardFromRow, cardImagePaths, type CardRow } from '@prepio/shared';
+import { cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
+import { essayTitle } from './consolidation';
+import { loadConsolidation } from './consolidation.testutil';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
 import { seed } from './seed';
+import { TEMPLATES } from './templates';
 
 /** The source card as it should be stored: every image file name prefixed with `seed/`. */
 function withSeedPaths(card: SeedCard): SeedCard {
@@ -38,7 +41,11 @@ const EXPECTED = {
   lessons: 3,
   cards: lessons.reduce((n, l) => n + l.cards.length, 0),
   questions: lessons.reduce((n, l) => n + l.questions.length, 0),
-  consolidation_exercises: lessons.reduce((n, l) => n + l.exercises.length, 0),
+  consolidation_exercises: lessons.reduce((n, l) => n + l.consolidation.length, 0),
+  sources: lessons.reduce((n, l) => n + l.sources.length, 0),
+  consolidation_exercise_sources: lessons.reduce((n, l) => n + l.consolidation.reduce((m, c) => m + c.sources.length, 0), 0),
+  consolidation_ai_context: lessons.reduce((n, l) => n + l.consolidation.length, 0),
+  seed_templates: TEMPLATES.length,
 };
 
 async function count(client: SupabaseClient, table: string): Promise<number> {
@@ -69,7 +76,18 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     cards: await count(client, 'cards'),
     questions: await count(client, 'questions'),
     consolidation_exercises: await count(client, 'consolidation_exercises'),
+    sources: await count(client, 'sources'),
+    consolidation_exercise_sources: await count(client, 'consolidation_exercise_sources'),
+    consolidation_ai_context: await count(client, 'consolidation_ai_context'),
+    seed_templates: await seedTemplates(),
   });
+
+  /** Templates are not lesson content: a reset keeps them, and the seed only inserts the missing ones (by title). */
+  const seedTemplates = async (): Promise<number> => {
+    const { data, error } = await client.from('solution_templates').select('title').in('title', TEMPLATES.map((t) => t.title));
+    if (error) throw error;
+    return data.length;
+  };
 
   beforeAll(() => {
     client = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -110,7 +128,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       expect(row!.status).toBe('published');
       expect(row!.cards).toHaveLength(l.cards.length);
       expect(row!.questions).toHaveLength(l.questions.length);
-      expect(row!.consolidation_exercises).toHaveLength(l.exercises.length);
+      expect(row!.consolidation_exercises).toHaveLength(l.consolidation.length);
     }
 
     expect(await seed(client, { reset: true })).toEqual({ contentSeeded: true, nodes: 14, lessons: 3 });
@@ -165,12 +183,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     const { data: s } = await client.from('settings').select('*').eq('id', 1).single();
     expect(s?.welcome_message).toBe(welcomeMessage);
     const { data: ai } = await client.from('ai_settings').select('*').eq('id', 1).single();
-    expect(ai).toMatchObject({
-      rules: aiDefaults.rules,
-      grade_min: aiDefaults.gradeMin,
-      grade_max: aiDefaults.gradeMax,
-      model: aiDefaults.model,
-    });
+    expect(ai).toMatchObject({ rules: aiDefaults.rules, model: aiDefaults.model });
 
     await client.from('settings').update({ welcome_message: 'Mesaj editat' }).eq('id', 1);
     await seed(client, { reset: true });
@@ -193,6 +206,47 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
         return card;
       });
       expect(readBack).toEqual(l.cards.map(withSeedPaths));
+    }
+  });
+
+  it('stores the sources, templates and consolidation exercises (with links and AI contexts) of every lesson', async () => {
+    const { data: tpl, error: tplErr } = await client.from('solution_templates').select('id,title,exercise_type,points,body');
+    if (tplErr) throw tplErr;
+    for (const t of TEMPLATES) {
+      expect(tpl.find((r) => r.title === t.title), t.title).toMatchObject({ exercise_type: t.exerciseType, points: t.points, body: t.body });
+    }
+    const templateKey = new Map(tpl.map((r) => [r.id as string, TEMPLATES.find((t) => t.title === r.title)?.key ?? null]));
+
+    const { data: dbLessons, error } = await client.from('lessons').select('id,title');
+    if (error) throw error;
+    for (const l of lessons) {
+      const id = dbLessons.find((r) => r.title === l.title)!.id as string;
+      const stored = await loadConsolidation(client, id);
+      expect(stored.sources.map((s) => [s.title, s.author, s.work, s.body])).toEqual(l.sources.map((s) => [s.title, s.author, s.work, s.body]));
+      expect(stored.exercises.length).toBeGreaterThanOrEqual(5);
+      expect(stored.exercises.map((e) => [e.exercise.type, e.exercise.prompt])).toEqual(l.consolidation.map((c) => [c.type, c.prompt]));
+      stored.exercises.forEach(({ exercise, ai }, i) => {
+        const seedEx = l.consolidation[i]!;
+        expect(exercise.position).toBe(i);
+        expect(ai, exercise.prompt).not.toBeNull();
+        expect(validateExercise(exercise, stored.sources, ai), exercise.prompt).toEqual([]);
+        expect(exercise.templateId === null ? null : templateKey.get(exercise.templateId)).toBe(seedEx.template);
+        const sourceKeys = exercise.sources.map((r) => l.sources[stored.sources.findIndex((s) => s.id === r.sourceId)]?.key);
+        expect(sourceKeys).toEqual(seedEx.sources);
+        if (seedEx.ai) expect(ai).toEqual(seedEx.ai);
+      });
+
+      // The former writing exercises, stored like the SQL migration stores them.
+      const essays = stored.exercises.filter((e) => e.exercise.type === 'essay');
+      expect(essays).toHaveLength(2);
+      for (const { exercise, ai } of essays) {
+        if (exercise.type !== 'essay') continue;
+        expect(exercise.requirements).toEqual([{ id: 'r1', text: exercise.requirements[0]!.text, modelAnswer: null, templateId: null, argument: false }]);
+        expect(exercise.prompt).toBe(essayTitle(exercise.requirements[0]!.text));
+        expect(exercise.templateId).toBeNull();
+        expect(ai?.main).toBe('');
+        expect(ai?.requirements.r1?.length).toBeGreaterThan(0);
+      }
     }
   });
 

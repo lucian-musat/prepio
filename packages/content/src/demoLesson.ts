@@ -1,15 +1,18 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
+import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cardImagePaths, cardToRow } from '@prepio/shared';
+import { ensureTemplates, writeConsolidation } from './consolidation';
 import { BUCKET, IMAGES_DIR, check, contentType, seedPath, withStoragePaths } from './seed';
-import type { SeedCard, SeedQuestion } from './types';
+import type { SeedCard, SeedConsolidation, SeedQuestion, SeedSource } from './types';
 
 /**
- * Demo lesson for testing the app by hand (pre-launch only): one card of every type and a few single-choice
- * questions whose first option is always the right one. When a feature is added to lessons, add it here too.
+ * Demo lesson for testing the app by hand (pre-launch only): one card of every type, a few single-choice
+ * questions whose first option is always the right one and a small consolidation set (with the solution templates
+ * it uses, added when missing). When a feature is added to lessons, add it here too.
  * It lives in its own root node, placed before every other node, so it is the first lesson (open in guided mode).
  */
 export const DEMO_NODE_TITLE = 'Demo';
@@ -101,10 +104,115 @@ const demoQuestion = (n: number): SeedQuestion => ({
   explanation: 'Explicația apare după verificare.',
 });
 
-/** Single choice only, no AI writing exercises. */
+/** Single choice only. */
 export const DEMO_QUESTIONS: SeedQuestion[] = [1, 2, 3].map(demoQuestion);
 
-export type DemoResult = { applied: boolean; action: 'create' | 'update' | 'remove' | 'nothing'; cards: number; questions: number };
+export const DEMO_SOURCES: SeedSource[] = [
+  {
+    key: 'demo',
+    title: 'Sursă demo',
+    author: 'Manual de istorie',
+    work: 'clasa a XII-a',
+    body:
+      'Adunările ad-hoc s-au întrunit în 1857. Ele au cerut unirea Principatelor într-un stat numit România. ' +
+      'Deoarece Convenția de la Paris nu interzicea alegerea aceleiași persoane în ambele Principate, Alexandru Ioan ' +
+      'Cuza a fost ales domn la Iași și la București, în ianuarie 1859.',
+  },
+];
+
+const demo = (quote: string) => ({ source: 'demo', quote });
+
+/** A small consolidation set: two marker exercises, a short answer and two AI types (one a two-requirement essay). */
+export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
+  {
+    type: 'short_answer',
+    prompt: 'Numiți domnul ales în ambele Principate, precizat în sursa dată.',
+    template: 'short_answer',
+    sources: ['demo'],
+    accepted: ['Alexandru Ioan Cuza', 'Cuza', 'Alexandru Cuza'],
+    mistakes: [{ answer: 'Carol', message: 'Carol a venit abia în 1866. Caută în sursă cine a fost ales în 1859.' }],
+    explanation: 'Răspunsul este în ultima propoziție a sursei.',
+  },
+  {
+    type: 'source_info',
+    prompt: 'Precizați, din sursa dată, o informație referitoare la Adunările ad-hoc.',
+    template: 'source_info',
+    sources: ['demo'],
+    count: 1,
+    spans: [demo('Adunările ad-hoc s-au întrunit în 1857'), demo('au cerut unirea Principatelor într-un stat numit România')],
+    explanation: 'Primele două propoziții ale sursei sunt despre Adunările ad-hoc.',
+  },
+  {
+    type: 'cause_effect',
+    prompt: 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa dată, precizând rolul fiecăreia.',
+    template: 'cause_effect',
+    sources: ['demo'],
+    pairs: [
+      {
+        cause: demo('Convenția de la Paris nu interzicea alegerea aceleiași persoane în ambele Principate'),
+        effect: demo('Alexandru Ioan Cuza a fost ales domn la Iași și la București'),
+        explanation: 'Conectorul „Deoarece” introduce cauza.',
+      },
+    ],
+  },
+  {
+    type: 'argument',
+    prompt:
+      'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia domnia lui Alexandru Ioan Cuza a ' +
+      'modernizat statul român.',
+    template: 'argument',
+    sources: [],
+    modelAnswer:
+      'Domnia lui Alexandru Ioan Cuza a modernizat statul român, deoarece legea rurală din 1864 a desființat claca ' +
+      'și i-a împroprietărit pe țărani. Așadar, afirmația este adevărată.',
+    ai: {
+      main:
+        'Perioada: domnia lui Alexandru Ioan Cuza (1859–1866). Fapte relevante: unificarea instituțiilor (guvern și ' +
+        'adunare unică, capitala la București, 1862), secularizarea averilor mănăstirești (1863), Statutul Dezvoltător ' +
+        '(1864), legea rurală (1864), legea instrucțiunii publice (1864). Greșeli frecvente: Constituția din 1866 ' +
+        '(adoptată după abdicarea lui Cuza), independența (1877).',
+      requirements: {},
+    },
+  },
+  {
+    type: 'essay',
+    prompt: 'Elaborați un eseu despre Unirea Principatelor (1857–1859).',
+    template: 'essay',
+    sources: [],
+    requirements: [
+      { id: 'r1', text: 'Prezentați o acțiune desfășurată de români în anul 1857.', modelAnswer: null, template: 'facts', argument: false },
+      {
+        id: 'r2',
+        text: 'Formulați un punct de vedere referitor la dubla alegere a lui Alexandru Ioan Cuza și susțineți-l printr-un argument istoric.',
+        modelAnswer: null,
+        template: 'argument',
+        argument: true,
+      },
+    ],
+    ai: {
+      main: '',
+      requirements: {
+        r1:
+          'Acțiuni acceptate din 1857: alegerile pentru Adunările ad-hoc (falsificate în Moldova și reluate), întrunirea ' +
+          'Adunărilor ad-hoc de la Iași și București, rezoluțiile din octombrie 1857 (unirea într-un stat numit România, ' +
+          'prinț străin, autonomie, neutralitate, adunare reprezentativă). Prezentarea cere detalii, nu doar numele acțiunii.',
+        r2:
+          'Punctul de vedere este o apreciere despre dubla alegere (5 și 24 ianuarie 1859), de exemplu că a pus marile ' +
+          'puteri în fața faptului împlinit. Argumentul: un fapt istoric relevant (lacuna Convenției de la Paris, ' +
+          'recunoașterea dublei alegeri de către Conferința de la Paris în 1859), legat prin conectori de cauzalitate și concluzie.',
+      },
+    },
+  },
+];
+
+export type DemoResult = {
+  applied: boolean;
+  action: 'create' | 'update' | 'remove' | 'nothing';
+  cards: number;
+  questions: number;
+  exercises: number;
+  templates: number;
+};
 
 type NodeRow = { id: string; parent_id: string | null; title: string; position: number };
 
@@ -119,18 +227,19 @@ async function demoNode(client: SupabaseClient): Promise<{ node: NodeRow | null;
 }
 
 /**
- * Creates or refreshes the demo lesson: its node is moved before every other root node, its cards and questions
- * are replaced by the ones above, and every student's progress in it is cleared (so it starts fresh). With
+ * Creates or refreshes the demo lesson: its node is moved before every other root node, its cards, questions,
+ * sources and exercises are replaced by the ones above, and every student's progress in it is cleared (so it starts fresh). With
  * `remove`, deletes the demo node (and the lesson, by cascade) instead. Without `apply`, only plans.
  */
 export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; remove?: boolean }): Promise<DemoResult> {
   const { node, firstPosition } = await demoNode(client);
-  const counts = { cards: DEMO_CARDS.length, questions: DEMO_QUESTIONS.length };
+  const none = { cards: 0, questions: 0, exercises: 0, templates: 0 };
 
   if (opts.remove) {
-    if (!node) return { applied: opts.apply, action: 'nothing', cards: 0, questions: 0 };
+    if (!node) return { applied: opts.apply, action: 'nothing', ...none };
+    // Cascades to the lesson and its content; the shared templates stay.
     if (opts.apply) check(await client.from('nodes').delete().eq('id', node.id).select('id'), 'delete demo node');
-    return { applied: opts.apply, action: 'remove', cards: 0, questions: 0 };
+    return { applied: opts.apply, action: 'remove', ...none };
   }
 
   const lessons = node
@@ -138,7 +247,15 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
         id: string;
       }[])
     : [];
-  const result: DemoResult = { applied: opts.apply, action: lessons.length ? 'update' : 'create', ...counts };
+  const { ids: templateIds, missing } = await ensureTemplates(client, opts.apply);
+  const result: DemoResult = {
+    applied: opts.apply,
+    action: lessons.length ? 'update' : 'create',
+    cards: DEMO_CARDS.length,
+    questions: DEMO_QUESTIONS.length,
+    exercises: DEMO_CONSOLIDATION.length,
+    templates: missing.length,
+  };
   if (!opts.apply) return result;
 
   for (const file of new Set(DEMO_CARDS.flatMap((c) => cardImagePaths(c)))) {
@@ -157,7 +274,8 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
 
   let lessonId = lessons[0]?.id;
   if (lessonId) {
-    for (const table of ['cards', 'questions', 'consolidation_exercises', 'lesson_progress'] as const) {
+    // Exercises before sources (their links restrict source deletes); attempts go with the exercises.
+    for (const table of ['cards', 'questions', 'consolidation_exercises', 'sources', 'lesson_progress', 'consolidation_runs'] as const) {
       check(await client.from(table).delete().eq('lesson_id', lessonId), `clear demo ${table}`);
     }
   } else {
@@ -187,6 +305,7 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
     ),
     'insert demo questions',
   );
+  await writeConsolidation(client, lessonId, DEMO_SOURCES, DEMO_CONSOLIDATION, templateIds, randomUUID);
   return result;
 }
 
@@ -197,7 +316,8 @@ export function formatDemo(r: DemoResult): string {
       : r.action === 'remove'
         ? `${r.applied ? 'removed' : 'to remove'}: node „${DEMO_NODE_TITLE}” with lesson „${DEMO_LESSON_TITLE}”`
         : `${r.applied ? (r.action === 'create' ? 'created' : 'refreshed') : `to ${r.action === 'create' ? 'create' : 'refresh'}`}: ` +
-          `„${DEMO_LESSON_TITLE}” with ${r.cards} card(s) and ${r.questions} question(s)` +
+          `„${DEMO_LESSON_TITLE}” with ${r.cards} card(s), ${r.questions} question(s) and ${r.exercises} consolidation exercise(s)` +
+          (r.templates ? `; ${r.templates} solution template(s) ${r.applied ? 'added' : 'to add'}` : '') +
           (r.action === 'update' ? '; progress in it reset' : '');
   return `${r.applied ? '' : 'Dry run (nothing is changed; pass --apply to write)\n'}Demo lesson ${what}.`;
 }

@@ -95,13 +95,24 @@ pnpm content:cloud:add-cards --apply   # inserts the missing cards at the end of
 
 `scripts/content-cloud.sh` uses the same credentials file as `db:cloud` (only `SUPABASE_ACCESS_TOKEN` is needed), fetches the project's service key with `supabase projects api-keys --reveal` (a new `secret` key, or the legacy `service_role` one) and passes it to `packages/content/src/addCards.ts` through the environment only; nothing secret is printed or passed as an argument. The script finds each lesson by its exact seed title (renamed or duplicated lessons are reported and skipped, exit code 1), skips a card when the lesson already has one with the same type and title (re-running is safe), uploads missing images under `images/seed/` without overwriting, and never edits or deletes existing cards. Locally the same script runs with `pnpm --filter @prepio/content add-cards [--apply]` against the `.env` Supabase.
 
+### Consolidation content
+
+The consolidation migration only converts the old writing exercises into essays. The seed solution templates (`packages/content/src/templates.ts`) and each seed lesson's sources and other consolidation exercises are added with (prerequisite: the consolidation migration is pushed and admin/web are deployed; dry run first):
+
+```bash
+pnpm content:cloud:add-consolidation           # dry run: lists the templates, sources and exercises to add, and the lessons skipped
+pnpm content:cloud:add-consolidation --apply   # inserts them
+```
+
+It uses the same credentials path as `add-cards` (`packages/content/src/addConsolidation.ts`). Templates are matched by title and only the missing ones are inserted. A seed lesson is matched by its exact title among the published lessons (not found or duplicated: reported, exit code 1). It gets its sources and its non-essay seed exercises (with source links, templates and AI contexts), after the existing essays, only while it has no consolidation exercise other than an essay; so re-running plans nothing, and a lesson the owner has already started in the admin is left alone. Nothing existing is edited or deleted. Locally: `pnpm --filter @prepio/content add-consolidation [--apply]`.
+
 ## Demo lesson (testing, pre-launch only)
 
-`packages/content/src/demoLesson.ts` defines „[demo] Toate funcționalitățile” in its own root node „Demo”: one card of every type (both image layouts, every rich-text block) and three single-choice questions whose first option is always correct, no writing exercises. The node is placed before every other root node, so the demo is the first lesson (open in guided mode). When a new lesson feature is added, add it to the demo lesson and re-run the script.
+`packages/content/src/demoLesson.ts` defines „[demo] Toate funcționalitățile” in its own root node „Demo”: one card of every type (both image layouts, every rich-text block), three single-choice questions whose first option is always correct, and a short source with five consolidation exercises (short answer, two marker exercises, an argument and a two-requirement essay; the seed templates they use are added if missing). The node is placed before every other root node, so the demo is the first lesson (open in guided mode). When a new lesson feature is added, add it to the demo lesson and re-run the script.
 
 ```bash
 pnpm content:cloud:demo                    # dry run: create or refresh?
-pnpm content:cloud:demo --apply            # creates it, or replaces its cards/questions in place (same lesson id) and resets everyone's progress in it
+pnpm content:cloud:demo --apply            # creates it, or replaces its cards/questions/consolidation in place (same lesson id) and resets everyone's progress in it
 pnpm content:cloud:demo --remove --apply   # deletes the demo node and lesson (do this before real students use the app)
 pnpm content:demo --apply                  # the same against the local .env Supabase
 ```

@@ -1,5 +1,147 @@
 import { EXTRA_CARDS } from '../extraCards';
-import type { SeedLesson } from '../types';
+import { essayFromWriting } from '../consolidation';
+import type { SeedConsolidation, SeedLesson, SeedSource } from '../types';
+
+const sources: SeedSource[] = [
+  {
+    key: 'a',
+    title: 'Proclamarea independenței',
+    author: 'Manual de istorie',
+    work: 'clasa a XII-a',
+    body:
+      'Constituția otomană din decembrie 1876 considera România o „provincie privilegiată” a Imperiului, ceea ce ' +
+      'încălca autonomia statului român. De aceea, guvernul condus de Ion C. Brătianu a hotărât că independența putea ' +
+      'fi obținută doar pe calea armelor, în colaborare cu Rusia.\n\n' +
+      'La 4 aprilie 1877, cele două state au semnat la București o convenție. Potrivit acesteia, trupele ruse puteau ' +
+      'traversa teritoriul României spre Balcani, iar Rusia se obliga să respecte drepturile politice ale statului ' +
+      'român și să-i apere integritatea teritorială. La 9 mai 1877, ministrul de externe Mihail Kogălniceanu a ' +
+      'declarat în Adunarea Deputaților: „Suntem independenți; suntem o națiune de sine stătătoare”. Tributul ' +
+      'datorat Porții a fost redirecționat către armată.',
+  },
+  {
+    key: 'b',
+    title: 'Războiul de Independență și recunoașterea independenței',
+    author: 'Sinteză de istorie a românilor',
+    work: 'epoca modernă',
+    body:
+      'Înfrânți la Plevna în vara anului 1877, rușii au cerut ajutorul armatei române. Ca urmare, trupele române au ' +
+      'trecut Dunărea, iar prințul Carol a primit comanda trupelor ruso-române de lângă Plevna. La 30 august 1877, ' +
+      'românii au cucerit reduta Grivița 1, iar la 28 noiembrie 1877, după un lung asediu, Osman Pașa a capitulat la ' +
+      'Plevna. Armata română a cucerit și Rahova, în noiembrie 1877, și Smârdanul, în ianuarie 1878.\n\n' +
+      '[...] Congresul de la Berlin din 1878 a recunoscut independența României, dar a impus cedarea sudului ' +
+      'Basarabiei către Rusia. În schimb, România a primit Dobrogea, Delta Dunării și Insula Șerpilor.',
+  },
+];
+
+const exercises: SeedConsolidation[] = [
+  {
+    type: 'short_answer',
+    prompt: 'Numiți ministrul de externe care a declarat independența României în Adunarea Deputaților, precizat în sursa A.',
+    template: 'short_answer',
+    sources: ['a', 'b'],
+    accepted: ['Mihail Kogălniceanu', 'Kogălniceanu', 'M. Kogălniceanu'],
+    mistakes: [
+      { answer: 'Ion C. Brătianu', message: 'Ion C. Brătianu conducea guvernul. Caută în sursa A cine era ministru de externe.' },
+      { answer: 'Carol', message: 'Prințul Carol a sancționat actul, dar declarația din Adunarea Deputaților a fost făcută de ministrul de externe.' },
+    ],
+    explanation: 'Numele ministrului apare în sursa A, în fraza despre 9 mai 1877.',
+  },
+  {
+    type: 'multi_answer',
+    prompt: 'Menționați două lupte la care a participat armata română, precizate în sursa B.',
+    template: 'multi_answer',
+    sources: ['a', 'b'],
+    count: 2,
+    groups: [['Plevna'], ['Grivița', 'Grivița 1', 'reduta Grivița', 'reduta Grivița 1'], ['Rahova'], ['Smârdan', 'Smârdanul']],
+    explanation: 'Sursa B numește Plevna, reduta Grivița 1, Rahova și Smârdanul.',
+  },
+  {
+    type: 'source_info',
+    prompt: 'Precizați, din sursa dată, o informație referitoare la convenția încheiată de România cu Rusia.',
+    template: 'source_info',
+    sources: ['a'],
+    count: 1,
+    spans: [
+      { source: 'a', quote: 'La 4 aprilie 1877, cele două state au semnat la București o convenție' },
+      { source: 'a', quote: 'trupele ruse puteau traversa teritoriul României spre Balcani' },
+      { source: 'a', quote: 'Rusia se obliga să respecte drepturile politice ale statului român' },
+      { source: 'a', quote: 'să-i apere integritatea teritorială' },
+    ],
+    explanation: 'Informațiile despre convenția cu Rusia se află la începutul celui de-al doilea paragraf.',
+  },
+  {
+    type: 'source_letter',
+    prompt: 'Scrieți litera corespunzătoare sursei care susține că independența României a fost recunoscută pe plan internațional.',
+    template: 'source_letter',
+    sources: ['a', 'b'],
+    correct: 'B',
+    evidence: { source: 'b', quote: 'Congresul de la Berlin din 1878 a recunoscut independența României' },
+    explanation: 'Sursa A vorbește despre proclamarea independenței; recunoașterea ei de către marile puteri, la Congresul de la Berlin, apare în sursa B.',
+  },
+  {
+    type: 'cause_effect',
+    prompt: 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa dată, precizând rolul fiecăreia.',
+    template: 'cause_effect',
+    sources: ['b'],
+    pairs: [
+      {
+        cause: { source: 'b', quote: 'rușii au cerut ajutorul armatei române' },
+        effect: { source: 'b', quote: 'trupele române au trecut Dunărea' },
+        explanation: 'Conectorul „Ca urmare” introduce efectul cererii de ajutor.',
+      },
+      {
+        cause: { source: 'b', quote: 'Înfrânți la Plevna în vara anului 1877' },
+        effect: { source: 'b', quote: 'rușii au cerut ajutorul armatei române' },
+        explanation: 'Înfrângerile de la Plevna i-au determinat pe ruși să ceară ajutorul românilor.',
+      },
+    ],
+  },
+  {
+    type: 'facts',
+    prompt: 'Prezentați două fapte istorice desfășurate de România în perioada 1914–1918.',
+    template: 'facts',
+    sources: [],
+    count: 2,
+    modelAnswer:
+      '1. În august 1916, România a semnat un tratat politic și o convenție militară cu Antanta, care îi recunoșteau ' +
+      'drepturile asupra Transilvaniei, Banatului și Bucovinei; apoi a declarat război Austro-Ungariei, iar armata ' +
+      'română a intrat în Transilvania.\n' +
+      '2. În vara anului 1917, armata română reorganizată a obținut victoria de la Mărăști și a oprit ofensiva ' +
+      'germano-austro-ungară la Mărășești și Oituz, astfel încât Moldova a rămas neocupată.',
+    ai: {
+      main: [
+        'Perioada: 1914–1918 (Primul Război Mondial). Faptele trebuie să privească România și să fie prezentate (ce s-a întâmplat, când, cine a participat, o consecință sau un detaliu), nu doar menționate.',
+        'Fapte acceptate (exemple): Consiliul de Coroană de la Sinaia (3 august 1914) hotărăște neutralitatea, deși regele Carol I dorea intrarea în război alături de Puterile Centrale; tratatul politic și convenția militară cu Antanta (august 1916), care recunoșteau drepturile României asupra Transilvaniei, Banatului și Bucovinei; intrarea în război și ofensiva în Transilvania (1916); înfrângerea de la Turtucaia, ocuparea Bucureștiului (decembrie 1916) și mutarea autorităților la Iași; victoriile de la Mărăști, Mărășești și Oituz (vara lui 1917); armistițiul de la Focșani (decembrie 1917) și pacea de la Buftea-București (mai 1918), nepromulgată de regele Ferdinand; reintrarea în război (noiembrie 1918); unirea Basarabiei (27 martie 1918), a Bucovinei (28 noiembrie 1918) și a Transilvaniei, Banatului, Crișanei și Maramureșului (1 decembrie 1918, Alba Iulia).',
+        'Cele două fapte trebuie să fie diferite, nu două detalii ale aceluiași eveniment.',
+        'Greșeli frecvente: fapte din afara perioadei (Războiul de Independență, 1877–1878; aderarea la Tripla Alianță, 1883; Conferința de pace de la Paris, 1919–1920); simpla menționare („bătălia de la Mărășești”) fără detalii; date greșite (de exemplu, intrarea în război în 1914); confuzia dintre Antanta și Puterile Centrale.',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'comparison',
+    prompt:
+      'Menționați o asemănare între Convenția româno-rusă din aprilie 1877 și tratatul încheiat de România cu Antanta ' +
+      'în august 1916.',
+    template: 'comparison',
+    sources: [],
+    variant: 'similarity',
+    modelAnswer:
+      'Atât Convenția româno-rusă din 1877, cât și tratatul cu Antanta din 1916 au fost încheiate de România cu mari ' +
+      'puteri înaintea intrării ei în război, pentru a-și atinge obiectivele naționale.',
+    ai: {
+      main: [
+        'Tema: două acorduri încheiate de România cu mari puteri înaintea intrării ei într-un război.',
+        'Convenția româno-rusă (4 aprilie 1877, București): permitea trecerea trupelor ruse prin România spre Balcani; Rusia se obliga să respecte drepturile politice ale României și să-i apere integritatea teritorială; a precedat proclamarea independenței (9 mai 1877) și participarea României la război. Rusia a încălcat-o la Congresul de la Berlin (1878), când a obținut sudul Basarabiei.',
+        'Tratatul politic și convenția militară cu Antanta (august 1916): încheiate cu Franța, Marea Britanie, Rusia și Italia; recunoșteau drepturile României asupra Transilvaniei, Banatului și Bucovinei; au precedat declarația de război adresată Austro-Ungariei și intrarea României în Primul Război Mondial.',
+        'Asemănări acceptate (exemple): ambele au fost încheiate cu mari puteri (în ambele, Rusia a fost parte); ambele au precedat intrarea României într-un război; ambele urmăreau obiective naționale (independența, respectiv unitatea națională); ambele cuprindeau angajamente ale marilor puteri privind teritoriul României (integritatea teritorială, respectiv drepturile asupra unor provincii).',
+        'Răspunsul trebuie să numească ambele acorduri și să spună explicit ce au în comun („atât… cât și…”, „ambele”). Nu se acceptă o deosebire sau descrierea separată a celor două acorduri.',
+        'Greșeli frecvente: confuzia tratatului din 1916 cu aderarea la Tripla Alianță (1883); afirmația că în 1916 România a intrat în război alături de Puterile Centrale; date greșite.',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+];
 
 export const independenta: SeedLesson = {
   key: 'independenta-relatii-internationale',
@@ -297,28 +439,28 @@ export const independenta: SeedLesson = {
         'României în 1878, iar Cadrilaterul în 1913, după al Doilea Război Balcanic.',
     },
   ],
-  exercises: [
-    {
-      prompt:
-        'Menționează două fapte istorice la care participă România în cadrul relațiilor internaționale din perioada 1875–1885.',
-      criteria: [
+  sources,
+  consolidation: [
+    ...exercises,
+    essayFromWriting(
+      'Menționează două fapte istorice la care participă România în cadrul relațiilor internaționale din perioada 1875–1885.',
+      [
         'Menționarea primului fapt istoric la care participă România în cadrul relațiilor internaționale din perioada 1875–1885 (de exemplu: Convenția cu Rusia din aprilie 1877, lupta de la Plevna, cucerirea redutei Grivița, luptele de la Rahova și Smârdan, Congresul de la Berlin din 1878, aderarea la Tripla Alianță din 1883).',
         'Menționarea celui de-al doilea fapt istoric, diferit de primul, din aceeași perioadă.',
         'Faptele sunt corecte istoric și se încadrează în perioada 1875–1885 (de exemplu, neutralitatea din 1914 sau intrarea în război din 1916 nu se punctează).',
         'Faptele implică participarea României la relațiile internaționale (tratate, războaie, congrese, alianțe), nu doar politică internă.',
         'Utilizarea limbajului istoric adecvat (de exemplu: convenție, independență, alianță, tratat).',
       ].join('\n'),
-    },
-    {
-      prompt:
-        'Formulează un punct de vedere referitor la politica externă a României în perioada 1916–1918 și susține-l printr-un argument istoric.',
-      criteria: [
+    ),
+    essayFromWriting(
+      'Formulează un punct de vedere referitor la politica externă a României în perioada 1916–1918 și susține-l printr-un argument istoric.',
+      [
         'Formularea unui punct de vedere referitor la politica externă a României în perioada 1916–1918 (de exemplu: „Intrarea României în Primul Război Mondial alături de Antanta a urmărit realizarea unității naționale.”).',
         'Susținerea punctului de vedere printr-un argument istoric: prezentarea unui fapt istoric relevant, prin precizarea a două informații referitoare la acest fapt (de exemplu: tratatul cu Antanta din august 1916, care recunoștea drepturile României asupra Transilvaniei, Banatului și Bucovinei; luptele de la Mărăști, Mărășești și Oituz din 1917; pacea de la Buftea-București din 1918; unirea Basarabiei din 1918).',
         'Utilizarea conectorilor care exprimă cauzalitatea (deoarece, pentru că etc.) și concluzia (așadar, astfel etc.).',
         'Argumentul este corect istoric, se încadrează în perioada 1916–1918 și susține punctul de vedere formulat.',
         'Utilizarea limbajului istoric adecvat și prezentarea ideilor în succesiune cronologică/logică.',
       ].join('\n'),
-    },
+    ),
   ],
 };

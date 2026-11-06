@@ -1,5 +1,160 @@
 import { EXTRA_CARDS } from '../extraCards';
-import type { SeedLesson } from '../types';
+import { essayFromWriting } from '../consolidation';
+import type { SeedConsolidation, SeedLesson, SeedSource } from '../types';
+
+const sources: SeedSource[] = [
+  {
+    key: 'a',
+    title: 'Aducerea prințului străin',
+    author: 'Manual de istorie',
+    work: 'clasa a XII-a',
+    body:
+      'După abdicarea lui Alexandru Ioan Cuza, în februarie 1866, puterea a fost preluată de o Locotenență ' +
+      'domnească. Oamenii politici au căutat un prinț străin, așa cum ceruseră Adunările ad-hoc, deoarece un domn ' +
+      'dintr-o familie domnitoare a Europei putea pune capăt rivalităților dintre marile familii boierești și putea ' +
+      'spori prestigiul extern al statului.\n\n' +
+      'După ce Filip de Flandra a refuzat tronul, Ion C. Brătianu a negociat cu Carol de Hohenzollern-Sigmaringen, ' +
+      'rudă cu familia regală a Prusiei și susținut de Napoleon al III-lea. Alegerea lui Carol a fost aprobată ' +
+      'printr-un plebiscit în aprilie 1866, iar la 10 mai 1866 noul domn a depus jurământul la București.',
+  },
+  {
+    key: 'b',
+    title: 'Constituția din 1866',
+    author: 'Sinteză de istorie a românilor',
+    work: 'epoca modernă',
+    body:
+      'La 1 iulie 1866, Carol a promulgat Constituția votată de Adunarea Constituantă, după modelul Constituției ' +
+      'Belgiei din 1831. Textul a fost elaborat și adoptat fără consultarea Imperiului Otoman și a puterilor ' +
+      'garante, ceea ce a făcut din el un act de afirmare a autonomiei. Constituția stabilea că statul se numește ' +
+      'România, iar forma de guvernământ era monarhia constituțională ereditară.\n\n' +
+      'Constituția consacra separarea puterilor în stat. Puterea legislativă era exercitată de domn împreună cu ' +
+      'Reprezentanța națională, formată din Adunarea Deputaților și Senat. Puterea executivă era încredințată ' +
+      'domnului, care o exercita prin miniștri, iar puterea judecătorească aparținea curților și tribunalelor.\n\n' +
+      'Erau garantate libertatea presei, libertatea conștiinței și libertatea întrunirilor, iar proprietatea era ' +
+      'declarată „sacră și inviolabilă”. Totuși, votul era cenzitar, astfel că marea majoritate a populației avea ' +
+      'o influență redusă asupra vieții politice.',
+  },
+];
+
+const b = (quote: string) => ({ source: 'b', quote });
+
+const exercises: SeedConsolidation[] = [
+  {
+    type: 'short_answer',
+    prompt: 'Numiți prințul străin care a depus jurământul la București în 1866, precizat în sursa A.',
+    template: 'short_answer',
+    sources: ['a', 'b'],
+    accepted: [
+      'Carol de Hohenzollern-Sigmaringen',
+      'Carol de Hohenzollern',
+      'Carol',
+      'Carol I',
+      'Carol I de Hohenzollern-Sigmaringen',
+    ],
+    mistakes: [
+      { answer: 'Filip de Flandra', message: 'Filip de Flandra a refuzat tronul. Citește din nou sursa A.' },
+      { answer: 'Ion C. Brătianu', message: 'Ion C. Brătianu a negociat aducerea prințului, dar nu a devenit domn.' },
+    ],
+    explanation: 'Numele noului domn apare în al doilea paragraf al sursei A.',
+  },
+  {
+    type: 'multi_answer',
+    prompt: 'Menționați două libertăți garantate de Constituție, precizate în sursa B.',
+    template: 'multi_answer',
+    sources: ['a', 'b'],
+    count: 2,
+    groups: [
+      ['libertatea presei', 'presei', 'presa'],
+      ['libertatea conștiinței', 'conștiinței', 'conștiința'],
+      ['libertatea întrunirilor', 'întrunirilor', 'întrunirile'],
+    ],
+    explanation: 'Sursa B enumeră libertatea presei, libertatea conștiinței și libertatea întrunirilor.',
+  },
+  {
+    type: 'source_info',
+    prompt: 'Menționați, din sursa dată, două informații referitoare la organizarea puterilor în stat.',
+    template: 'source_info',
+    sources: ['b'],
+    count: 2,
+    spans: [
+      b('Constituția consacra separarea puterilor în stat'),
+      b('Puterea legislativă era exercitată de domn împreună cu Reprezentanța națională'),
+      b('Puterea executivă era încredințată domnului'),
+      b('puterea judecătorească aparținea curților și tribunalelor'),
+    ],
+    explanation: 'Informațiile despre puterile statului se află în al doilea paragraf al sursei.',
+  },
+  {
+    type: 'source_letter',
+    prompt: 'Scrieți litera corespunzătoare sursei care susține că alegerea noului domn a fost aprobată prin vot popular.',
+    template: 'source_letter',
+    sources: ['a', 'b'],
+    correct: 'A',
+    evidence: { source: 'a', quote: 'Alegerea lui Carol a fost aprobată printr-un plebiscit în aprilie 1866' },
+    explanation: 'Plebiscitul este o consultare a populației prin vot. Sursa A: „Alegerea lui Carol a fost aprobată printr-un plebiscit”.',
+  },
+  {
+    type: 'cause_effect',
+    prompt: 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa dată, precizând rolul fiecăreia.',
+    template: 'cause_effect',
+    sources: ['b'],
+    pairs: [
+      {
+        cause: b('fără consultarea Imperiului Otoman și a puterilor garante'),
+        effect: b('un act de afirmare a autonomiei'),
+        explanation: 'Conectorul „ceea ce” introduce efectul: românii și-au dat singuri o constituție.',
+      },
+      {
+        cause: b('votul era cenzitar'),
+        effect: b('marea majoritate a populației avea o influență redusă asupra vieții politice'),
+        explanation: 'Conectorul „astfel că” introduce efectul votului cenzitar.',
+      },
+    ],
+  },
+  {
+    type: 'argument',
+    prompt:
+      'Argumentați, printr-un fapt istoric relevant, afirmația conform căreia Constituția din 1866 a contribuit la ' +
+      'modernizarea statului român.',
+    template: 'argument',
+    sources: [],
+    modelAnswer:
+      'Constituția din 1866 a contribuit la modernizarea statului român, deoarece a consacrat separarea puterilor în ' +
+      'stat: puterea legislativă era exercitată de domn și de Parlamentul bicameral, iar cea executivă de domn, prin ' +
+      'miniștri, care răspundeau pentru actele guvernării. În plus, ea garanta drepturi și libertăți precum libertatea ' +
+      'presei și a întrunirilor. Așadar, afirmația este adevărată.',
+    ai: {
+      main: [
+        'Perioada și tema: Constituția din 1866 (promulgată la 1 iulie 1866, la începutul domniei lui Carol I) și contribuția ei la modernizarea statului român.',
+        'Fapte relevante acceptate: consacrarea separării puterilor în stat (legislativă: domnul și Parlamentul bicameral, adică Adunarea Deputaților și Senatul; executivă: domnul, prin miniștri; judecătorească: curțile și tribunalele); garantarea drepturilor și libertăților cetățenești (egalitatea în fața legii, libertatea presei, a conștiinței, a întrunirilor și a asocierii); suveranitatea națională și responsabilitatea ministerială; monarhia constituțională ereditară, care punea capăt luptelor pentru tron; modelul Constituției Belgiei din 1831, una dintre cele mai liberale ale epocii; adoptarea fără consultarea Imperiului Otoman și a puterilor garante (afirmarea autonomiei); consacrarea numelui de România.',
+        'Faptul trebuie prezentat (ce prevedea Constituția și de ce înseamnă aceasta modernizare), nu doar numit.',
+        'Greșeli frecvente: atribuirea Constituției lui Alexandru Ioan Cuza; o dată greșită (1859, 1877); afirmația că instituia votul universal (votul era cenzitar; votul universal a fost introdus abia prin modificarea din 1917); confuzia cu Convenția de la Paris (1858) sau cu Statutul Dezvoltător (1864). Votul cenzitar este o limită a Constituției și nu susține afirmația.',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+  {
+    type: 'comparison',
+    prompt: 'Menționați o deosebire între Convenția de la Paris (1858) și Constituția din 1866.',
+    template: 'comparison',
+    sources: [],
+    variant: 'difference',
+    modelAnswer:
+      'Spre deosebire de Convenția de la Paris, impusă în 1858 de marile puteri, Constituția din 1866 a fost ' +
+      'elaborată și votată de Adunarea Constituantă a României, fără consultarea puterilor garante.',
+    ai: {
+      main: [
+        'Tema: două acte cu caracter constituțional ale statului român modern, Convenția de la Paris (august 1858) și Constituția din 1866 (1 iulie 1866).',
+        'Convenția de la Paris: elaborată de marile puteri garante (act impus din afară); statul se numea Principatele Unite ale Moldovei și Valahiei; fiecare principat avea propriul domn, ales pe viață de Adunarea electivă, propriul guvern și propria adunare; instituții comune: Comisia Centrală de la Focșani și Înalta Curte de Justiție și Casație; domnul trebuia să fie pământean.',
+        'Constituția din 1866: elaborată și votată de Adunarea Constituantă, fără consultarea Imperiului Otoman și a puterilor garante; statul se numea România; monarhie constituțională ereditară, cu un prinț străin (Carol I); un singur Parlament, bicameral (Adunarea Deputaților și Senatul); drepturi și libertăți cetățenești garantate, după modelul Constituției Belgiei din 1831.',
+        'Deosebiri acceptate (exemple): cine a elaborat actul (marile puteri / Adunarea Constituantă); numele statului; domn ales pe viață, pământean / monarhie ereditară cu prinț străin; doi domni și două adunări / un singur domn și un Parlament bicameral.',
+        'Răspunsul trebuie să numească ambele acte și să spună explicit prin ce diferă („spre deosebire de…”, „în timp ce…”). Nu se acceptă o asemănare (de exemplu, separarea puterilor apare în ambele) sau descrierea separată a celor două acte.',
+        'Greșeli frecvente: atribuirea numelui „România” Convenției; confuzia Convenției cu Statutul Dezvoltător (1864); afirmația că, potrivit Convenției, domnul era un prinț străin.',
+      ].join('\n'),
+      requirements: {},
+    },
+  },
+];
 
 export const constitutia1866: SeedLesson = {
   key: 'constitutia-1866',
@@ -251,28 +406,28 @@ export const constitutia1866: SeedLesson = {
         'textul din 1866, colegiile au fost reduse în 1884, iar votul universal a fost introdus în 1917.',
     },
   ],
-  exercises: [
-    {
-      prompt:
-        'Precizează o măsură adoptată în statul român în perioada 1861–1866 și menționează două aspecte cu privire la această măsură.',
-      criteria: [
+  sources,
+  consolidation: [
+    ...exercises,
+    essayFromWriting(
+      'Precizează o măsură adoptată în statul român în perioada 1861–1866 și menționează două aspecte cu privire la această măsură.',
+      [
         'Precizarea unei măsuri adoptate în statul român în perioada 1861–1866 (de exemplu: formarea guvernului unic în 1862, secularizarea averilor mănăstirești în 1863, Legea rurală din 1864, Legea instrucțiunii publice din 1864, Statutul Dezvoltător al Convenției de la Paris, Constituția din 1866).',
         'Menționarea a două aspecte corecte cu privire la măsura precizată (de exemplu, pentru Legea rurală: prevede emanciparea țăranilor, desființarea clăcii, împroprietărirea în funcție de numărul vitelor de muncă; pentru Constituția din 1866: statul se numește România, reflectă principiul separării puterilor, forma de guvernământ este monarhia constituțională).',
         'Cele două aspecte se referă la măsura precizată și sunt distincte între ele.',
         'Măsura se încadrează corect în perioada 1861–1866 (de exemplu, Convenția de la Paris din 1858 nu se punctează).',
         'Utilizarea limbajului istoric adecvat (de exemplu: reformă, împroprietărire, separarea puterilor, monarhie constituțională).',
       ].join('\n'),
-    },
-    {
-      prompt:
-        'Formulează un punct de vedere referitor la Constituția din 1866 și susține-l printr-un argument istoric.',
-      criteria: [
+    ),
+    essayFromWriting(
+      'Formulează un punct de vedere referitor la Constituția din 1866 și susține-l printr-un argument istoric.',
+      [
         'Formularea unui punct de vedere referitor la Constituția din 1866 (de exemplu: „Constituția din 1866 a contribuit la modernizarea statului român.”, „Constituția din 1866 a avut un caracter liberal pentru epoca sa.”).',
         'Susținerea punctului de vedere printr-un argument istoric: prezentarea unui fapt istoric relevant, prin precizarea a două informații referitoare la acest fapt (de exemplu: consacrarea separării puterilor în stat; garantarea drepturilor și libertăților cetățenești; adoptarea fără consultarea puterii suzerane și a puterilor garante).',
         'Utilizarea conectorilor care exprimă cauzalitatea (deoarece, pentru că etc.) și concluzia (așadar, astfel etc.).',
         'Argumentul este corect istoric și susține punctul de vedere formulat.',
         'Utilizarea limbajului istoric adecvat și prezentarea ideilor într-o succesiune logică.',
       ].join('\n'),
-    },
+    ),
   ],
 };

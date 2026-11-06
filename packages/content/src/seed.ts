@@ -5,8 +5,11 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cardImagePaths, cardToRow } from '@prepio/shared';
+import { check, ensureTemplates, writeConsolidation } from './consolidation';
 import { aiDefaults, lessons, tree, welcomeMessage } from './index';
 import type { SeedCard, SeedNode } from './types';
+
+export { check };
 
 export const IMAGES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../images');
 export const BUCKET = 'images';
@@ -18,11 +21,6 @@ export type SeedOptions = {
   reset?: boolean;
 };
 export type SeedResult = { contentSeeded: true; nodes: number; lessons: number } | { contentSeeded: false };
-
-export function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
-  if (res.error) throw new Error(`${what}: ${res.error.message}`);
-  return res.data;
-}
 
 type NodeRow = { id: string; parent_id: string | null; title: string; position: number };
 
@@ -100,7 +98,7 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
   );
   check(
     await client.from('ai_settings').upsert(
-      { id: 1, rules: aiDefaults.rules, grade_min: aiDefaults.gradeMin, grade_max: aiDefaults.gradeMax, model: aiDefaults.model },
+      { id: 1, rules: aiDefaults.rules, model: aiDefaults.model },
       { onConflict: 'id', ignoreDuplicates: true },
     ),
     'ai_settings',
@@ -111,17 +109,11 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
   return result;
 }
 
-/** Short title for an essay exercise: the first 80 characters, cut at a word boundary (same rule as the SQL migration). */
-function essayTitle(prompt: string): string {
-  if (prompt.length <= 80) return prompt;
-  let title = prompt.slice(0, 80);
-  if (!/\s/.test(prompt[80]!) && /\s/.test(title)) title = title.replace(/\s+\S*$/, '');
-  return `${title.replace(/[\s,;:]+$/, '')}…`;
-}
-
 async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; lessons: number }> {
-  // Cascades to lessons, cards, questions and consolidation exercises.
+  // Cascades to lessons, cards, questions, sources and consolidation exercises.
   check(await client.from('nodes').delete().not('id', 'is', null), 'clear nodes');
+  // Templates are a library shared by all lessons: the missing ones are added, existing ones (by title) are kept.
+  const { ids: templateIds } = await ensureTemplates(client, true);
 
   const ids = new Map<string, string>();
   const nodeRows: NodeRow[] = [];
@@ -164,34 +156,7 @@ async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; 
         `insert questions ${lesson.key}`,
       );
     }
-    // Interim: the writing exercises are seeded as essay consolidation exercises (same shapes as the SQL migration's
-    // essay_from_writing_exercise); the full consolidation seed content replaces this later.
-    for (const [i, e] of lesson.exercises.entries()) {
-      const row = check(
-        await client
-          .from('consolidation_exercises')
-          .insert({
-            lesson_id: lessonId,
-            position: i,
-            type: 'essay',
-            prompt: essayTitle(e.prompt),
-            content: {
-              requirements: [{ id: 'r1', text: e.prompt, modelAnswer: null, templateId: null, argument: false }],
-              modelAnswer: null,
-              explanation: null,
-            },
-          })
-          .select('id')
-          .single(),
-        `insert exercise ${lesson.key}`,
-      ) as { id: string };
-      check(
-        await client
-          .from('consolidation_ai_context')
-          .insert({ exercise_id: row.id, context: { main: '', requirements: { r1: e.criteria } } }),
-        `insert exercise context ${lesson.key}`,
-      );
-    }
+    await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, randomUUID);
   }
 
   return { nodes: nodeRows.length, lessons: lessons.length };
