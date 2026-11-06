@@ -1,0 +1,102 @@
+<style>
+  .row{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+  .ph{width:270px;background:#F3FAF7;border:1px solid #D8EAE3;border-radius:22px;overflow:hidden;font-family:system-ui,sans-serif;color:#0F2E28;position:relative;height:540px;display:flex;flex-direction:column}
+  .tb{display:flex;align-items:center;gap:8px;padding:12px 14px;background:#fff;border-bottom:1px solid #D8EAE3}
+  .tb .t{flex:1;font-weight:700;font-size:14px}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#FFF6D9;color:#5E4800;border:1px solid #FFE38A}
+  .chip.low{background:#FDECEC;color:#A54042;border-color:#F5B0B2}
+  .coin{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE38A,#E0AA14);display:inline-block;box-shadow:inset 0 -1px 0 #B88A00;vertical-align:-2px}
+  .body{padding:12px;flex:1;opacity:.45}
+  .card{background:#EEE8FF;border-radius:12px;padding:10px;font-size:12px}
+  .inp{background:#fff;border:1px solid #D8EAE3;border-radius:10px;height:60px;margin-top:8px;padding:6px;font-size:11px;color:#4C6A63}
+  .shade{position:absolute;inset:0;background:rgba(15,46,40,.35)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:14px;font-size:12px}
+  .grab{width:36px;height:4px;border-radius:2px;background:#D8EAE3;margin:0 auto 10px}
+  .h{font-weight:800;font-size:15px;margin-bottom:4px}
+  .m{color:#4C6A63;line-height:1.4;margin-bottom:10px}
+  .pk{display:flex;align-items:center;gap:8px;border:1.5px solid #D8EAE3;border-radius:12px;padding:9px 10px;margin-bottom:7px;position:relative}
+  .pk.sel{border-color:#0F766E;background:#E0F5F1}
+  .pk b{font-size:14px}
+  .pk .pr{margin-left:auto;font-weight:800}
+  .pk .per{font-size:10px;color:#4C6A63;display:block}
+  .badge{position:absolute;top:-8px;right:10px;background:#FFC93C;color:#3A2C00;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px}
+  .btn{border-radius:12px;padding:10px;text-align:center;font-weight:700;font-size:13px;background:#0F766E;color:#fff;margin-top:6px}
+  .btn.sec{background:#E6F4EF;color:#0F2E28}
+  .fine{font-size:10px;color:#8AA69E;text-align:center;margin-top:6px}
+  .ok{text-align:center;padding:10px 0}
+  .big{font-size:34px;font-weight:900;color:#1A7C49}
+  .step{text-align:center;font-size:12px;font-weight:700;color:#38534C;margin-bottom:6px}
+  .hist{font-size:11px;border-top:1px solid #E6F4EF;padding:7px 0;display:flex}
+  .hist span:last-child{margin-left:auto;font-weight:700}
+</style>
+
+<h2>Fluxul „nu ai destule credite” → cumpărare → verificare</h2>
+<p class="subtitle">Totul se întâmplă într-o fereastră peste exercițiu — textul scris rămâne neatins dedesubt. Pachetele sunt exemple (configurabile din admin).</p>
+
+<div class="row">
+  <div>
+    <div class="step">1 · Apasă „Verifică” (cost 2, are 1)</div>
+    <div class="ph">
+      <div class="tb"><span>←</span><span class="t">Consolidare</span><span class="chip low"><span class="coin"></span>1</span></div>
+      <div class="body"><div class="card"><b>Exprimă un punct de vedere…</b></div><div class="inp">Consider că Alexandru Ioan Cuza a fost…</div></div>
+      <div class="shade"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="h">Îți mai trebuie 1 credit</div>
+        <div class="m">Verificarea cu profesorul digital costă <span class="coin"></span> <b>2</b> la acest exercițiu. Ai <b>1</b>. Răspunsul tău rămâne salvat.</div>
+        <div class="pk"><b>20</b>&nbsp;credite<span class="pr">9,99 lei<span class="per">0,50 lei / credit</span></span></div>
+        <div class="pk sel"><span class="badge">CEL MAI ALES</span><b>50</b>&nbsp;credite<span class="pr">19,99 lei<span class="per">0,40 lei / credit</span></span></div>
+        <div class="pk"><b>120</b>&nbsp;credite<span class="pr">39,99 lei<span class="per">0,33 lei / credit</span></span></div>
+        <div class="btn">Cumpără 50 credite · 19,99 lei</div>
+        <div class="btn sec">Sari peste exercițiu</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="step">2 · Confirmare (fără plată deocamdată)</div>
+    <div class="ph">
+      <div class="tb"><span>←</span><span class="t">Consolidare</span><span class="chip"><span class="coin"></span>51</span></div>
+      <div class="body"><div class="card"><b>Exprimă un punct de vedere…</b></div><div class="inp">Consider că Alexandru Ioan Cuza a fost…</div></div>
+      <div class="shade"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="ok"><div class="big">+50</div><div class="h">Credite adăugate!</div><div class="m">Acum ai <span class="coin"></span> <b>51</b> credite.</div></div>
+        <div class="btn">Verifică acum · <span class="coin"></span> 2</div>
+        <div class="btn sec">Înapoi la exercițiu</div>
+        <div class="fine">Plata nu e încă activă — cererea a fost aprobată automat.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="step">3 · Pagina „Creditele mele” (din chip / profil)</div>
+    <div class="ph">
+      <div class="tb"><span>←</span><span class="t">Creditele mele</span></div>
+      <div style="padding:14px;font-size:12px">
+        <div style="background:linear-gradient(135deg,#0D9488,#14B8A6,#5EEAD4);color:#fff;border-radius:16px;padding:14px">
+          <div style="opacity:.85">Sold</div><div style="font-size:30px;font-weight:900"><span class="coin" style="width:22px;height:22px"></span> 49</div>
+          <div style="opacity:.9;font-size:11px">≈ 24–49 verificări</div>
+        </div>
+        <div style="font-weight:800;margin:12px 0 6px">Cumpără credite</div>
+        <div class="pk"><b>20</b>&nbsp;<span class="pr">9,99 lei</span></div>
+        <div class="pk"><span class="badge">CEL MAI ALES</span><b>50</b>&nbsp;<span class="pr">19,99 lei</span></div>
+        <div style="font-weight:800;margin:10px 0 2px">Istoric</div>
+        <div class="hist"><span>Punct de vedere · Cuza</span><span style="color:#A54042">−2</span></div>
+        <div class="hist"><span>Pachet 50 credite</span><span style="color:#1A7C49">+50</span></div>
+        <div class="hist"><span>Verificare nereușită · returnat</span><span style="color:#1A7C49">±0</span></div>
+        <div class="hist"><span>Credite de bun venit</span><span style="color:#1A7C49">+12</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="label">Idei incluse</p>
+  <ul>
+    <li><b>„Verifică acum”</b> după cumpărare pornește direct verificarea care a fost blocată — elevul nu mai caută butonul.</li>
+    <li>Fereastra spune exact <b>câte credite lipsesc</b>, nu doar „nu ai credite”.</li>
+    <li>Preț pe credit calculat automat + un pachet marcat „cel mai ales” (setat din admin).</li>
+    <li>Istoric complet (bun venit, cumpărări, verificări, returnări) — util și pentru suport.</li>
+  </ul>
+</div>

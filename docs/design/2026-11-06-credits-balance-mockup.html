@@ -1,0 +1,76 @@
+<style>
+  .ph{width:300px;background:#F3FAF7;border:1px solid #D8EAE3;border-radius:22px;overflow:hidden;font-family:system-ui,sans-serif;color:#0F2E28;margin:0 auto}
+  .tb{display:flex;align-items:center;gap:8px;padding:12px 14px;background:#fff;border-bottom:1px solid #D8EAE3}
+  .tb .t{flex:1;font-weight:700;font-size:15px}
+  .bar{height:4px;background:#E6F4EF}.bar i{display:block;height:4px;width:40%;background:linear-gradient(90deg,#0D9488,#2DD4BF)}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#FFF6D9;color:#5E4800;border:1px solid #FFE38A}
+  .chip.low{background:#FDECEC;color:#A54042;border-color:#F5B0B2}
+  .coin{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE38A,#E0AA14);display:inline-block;box-shadow:inset 0 -1px 0 #B88A00}
+  .body{padding:14px}
+  .card{background:#EEE8FF;border-radius:14px;padding:12px;font-size:13px;line-height:1.4}
+  .tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#fff;color:#38534C;margin-bottom:6px}
+  .inp{background:#fff;border:1px solid #D8EAE3;border-radius:10px;height:70px;margin-top:10px;padding:8px;font-size:12px;color:#4C6A63}
+  .act{display:flex;gap:8px;padding:12px 14px;background:#fff;border-top:1px solid #D8EAE3}
+  .btn{flex:1;border-radius:12px;padding:11px 8px;text-align:center;font-weight:700;font-size:13px;background:#0F766E;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px}
+  .btn.sec{flex:0 0 auto;background:#E6F4EF;color:#0F2E28;padding:11px 12px}
+  .pill{background:rgba(255,255,255,.2);border-radius:999px;padding:2px 7px;font-size:11px;display:inline-flex;gap:3px;align-items:center}
+  .sub{font-size:11px;color:#4C6A63;text-align:center;padding:0 14px 10px;background:#fff}
+  .note{font-size:12px;color:#4C6A63;margin-top:10px}
+</style>
+
+<h2>Unde vede elevul soldul și cât costă o verificare?</h2>
+<p class="subtitle">Același exercițiu („Punct de vedere”, cost 2), elevul are 7 credite. Alege varianta care ți se pare cea mai clară — sau combină.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#fafafa">
+      <div class="ph">
+        <div class="tb"><span>←</span><span class="t">Consolidare</span><span class="chip"><span class="coin"></span>7</span><span style="font-size:12px;color:#4C6A63">3/10</span></div>
+        <div class="bar"><i></i></div>
+        <div class="body">
+          <div class="card"><b>Exprimă un punct de vedere</b> despre rolul lui Cuza în modernizarea statului.</div>
+          <div class="inp">Consider că Alexandru Ioan Cuza…</div>
+        </div>
+        <div class="act"><span class="btn sec">←</span><span class="btn">Verifică <span class="pill"><span class="coin"></span>2</span></span><span class="btn sec">Sari</span></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A. Sold sus + cost pe buton</h3><p>Soldul stă mereu în bara de sus (și pe Home). Costul e o monedă pe butonul „Verifică” — îl vezi exact în momentul în care decizi.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#fafafa">
+      <div class="ph">
+        <div class="tb"><span>←</span><span class="t">Consolidare</span><span style="font-size:12px;color:#4C6A63">3/10</span></div>
+        <div class="bar"><i></i></div>
+        <div class="body">
+          <div class="card"><span class="tag">✦ Profesorul digital · <span class="coin"></span> 2 credite</span><br><b>Exprimă un punct de vedere</b> despre rolul lui Cuza în modernizarea statului.</div>
+          <div class="inp">Consider că Alexandru Ioan Cuza…</div>
+        </div>
+        <div class="act"><span class="btn sec">←</span><span class="btn">Verifică</span><span class="btn sec">Sari</span></div>
+        <div class="sub">Ai <b>7 credite</b> · după verificare rămân 5</div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B. Etichetă pe exercițiu + sold sub buton</h3><p>Costul e anunțat din start, pe cardul cerinței. Soldul apare doar la exercițiile cu cost, sub buton, cu „rămân X”.</p></div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#fafafa">
+      <div class="ph">
+        <div class="tb"><span>←</span><span class="t">Consolidare</span><span class="chip low"><span class="coin"></span>1</span><span style="font-size:12px;color:#4C6A63">3/10</span></div>
+        <div class="bar"><i></i></div>
+        <div class="body">
+          <div class="card"><span class="tag">✦ Profesorul digital · <span class="coin"></span> 2</span><br><b>Exprimă un punct de vedere</b> despre rolul lui Cuza în modernizarea statului.</div>
+          <div class="inp">Consider că Alexandru Ioan Cuza…</div>
+        </div>
+        <div class="act"><span class="btn sec">←</span><span class="btn">Verifică <span class="pill"><span class="coin"></span>2</span></span><span class="btn sec">Sari</span></div>
+      </div>
+      <p class="note" style="text-align:center">Aici elevul are doar 1 credit: chip-ul devine roșu. Apăsarea pe „Verifică” deschide fereastra de cumpărare (ecranul următor).</p>
+    </div>
+    <div class="card-body"><h3>C. Toate trei (recomandarea mea)</h3><p>Chip cu sold în bara de sus (Home + consolidare, apăsat → pagina de credite), eticheta discretă pe card ca elevul să știe înainte să scrie, și moneda pe buton. Chip-ul se colorează când soldul nu ajunge.</p></div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:18px">
+  <p class="label">Animație (în toate variantele)</p>
+  <p>La verificare, chip-ul face un mic „-2” care plutește în sus și numărul scade animat; la cumpărare, „+50” cu un puls verde. Dacă verificarea eșuează, numărul revine cu mesajul „Nu ți-am luat niciun credit”.</p>
+</div>
