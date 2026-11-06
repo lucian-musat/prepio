@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
 import { creditsLabel } from '@prepio/shared';
 import { useRunner } from '@/components/editor/common';
 import { adjustCreditsAction } from '../actions';
 
+/** The credit adjustment form; the header shows it in a dialog. */
 export default function AdjustCreditsForm({ userId }: { userId: string }) {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
@@ -42,36 +43,33 @@ export default function AdjustCreditsForm({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="mb-4">
-      <Card.Body>
-        <Card.Title as="h2" className="h5 mb-3">Ajustează credite</Card.Title>
-        {alert}
-        {formError && <div className="alert alert-danger" role="alert">{formError}</div>}
-        <Form onSubmit={(e) => { e.preventDefault(); if (!confirming) review(); }}>
-          <div className="d-flex flex-wrap gap-3 mb-3">
-            <Form.Group controlId="adjust-amount" style={{ width: 160 }}>
-              <Form.Label>Credite (±)</Form.Label>
-              <Form.Control type="number" step={1} value={amount} disabled={confirming} onChange={(e) => { setAmount(e.target.value); setFormError(null); }} />
-            </Form.Group>
-            <Form.Group controlId="adjust-reason" className="flex-grow-1" style={{ minWidth: 240 }}>
-              <Form.Label>Motiv</Form.Label>
-              <Form.Control value={reason} maxLength={500} disabled={confirming} onChange={(e) => { setReason(e.target.value); setFormError(null); }} />
-            </Form.Group>
+    <>
+      {alert}
+      {formError && <div className="alert alert-danger" role="alert">{formError}</div>}
+      <Form onSubmit={(e) => { e.preventDefault(); if (!confirming) review(); }}>
+        <div className="d-flex flex-wrap gap-3 mb-3">
+          <Form.Group controlId="adjust-amount" style={{ width: 160 }}>
+            <Form.Label>Credite (±)</Form.Label>
+            <Form.Control type="number" step={1} value={amount} disabled={confirming} onChange={(e) => { setAmount(e.target.value); setFormError(null); }} />
+          </Form.Group>
+          <Form.Group controlId="adjust-reason" className="flex-grow-1" style={{ minWidth: 240 }}>
+            <Form.Label>Motiv</Form.Label>
+            <Form.Control value={reason} maxLength={500} disabled={confirming} onChange={(e) => { setReason(e.target.value); setFormError(null); }} />
+          </Form.Group>
+        </div>
+        {confirming ? (
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            <span>{delta > 0 ? 'Adaugi' : 'Scazi'} {creditsLabel(Math.abs(delta))}. Confirmi?</span>
+            <Button variant="primary" disabled={pending} onClick={apply}>Aplică</Button>
+            <Button variant="outline-secondary" disabled={pending} onClick={() => setConfirming(false)}>Anulează</Button>
           </div>
-          {confirming ? (
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              <span>{delta > 0 ? 'Adaugi' : 'Scazi'} {creditsLabel(Math.abs(delta))}. Confirmi?</span>
-              <Button variant="primary" disabled={pending} onClick={apply}>Aplică</Button>
-              <Button variant="outline-secondary" disabled={pending} onClick={() => setConfirming(false)}>Anulează</Button>
-            </div>
-          ) : (
-            <div className="d-flex align-items-center gap-3">
-              <Button type="submit" variant="primary">Continuă</Button>
-              {done !== null && <span className="text-success" role="status">Ajustat. Sold nou: {done}.</span>}
-            </div>
-          )}
-        </Form>
-      </Card.Body>
-    </Card>
+        ) : (
+          <div className="d-flex align-items-center gap-3">
+            <Button type="submit" variant="primary">Continuă</Button>
+            {done !== null && <span className="text-success" role="status">Ajustat. Sold nou: {done}.</span>}
+          </div>
+        )}
+      </Form>
+    </>
   );
 }

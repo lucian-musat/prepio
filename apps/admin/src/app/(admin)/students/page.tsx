@@ -16,7 +16,7 @@ const EMPTY_LABELS: Partial<Record<StudentFilter, string>> = {
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; filter?: string; notice?: string }>;
 }) {
   const sp = await searchParams;
   const q = (sp.q ?? '').trim();
@@ -30,6 +30,7 @@ export default async function StudentsPage({
   return (
     <>
       <h1 className="h3 mb-3">Elevi</h1>
+      {sp.notice === 'deleted' && <div className="alert alert-success" role="status">Contul a fost șters.</div>}
       <form className="d-flex gap-2 mb-3" role="search" style={{ maxWidth: 480 }}>
         <input type="search" name="q" defaultValue={q} className="form-control" aria-label="Caută elev" placeholder="Nume sau email" />
         {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}

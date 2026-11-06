@@ -2,7 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CONSOLIDATION_TYPE_LABELS, creditsLabel, type ConsolidationType } from '@prepio/shared';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { check, isUuid, UserError } from './db';
+import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from './studentLabels';
 import { getTree, type TreeNode } from './tree';
+
+export type { LearningMode } from './studentLabels';
 
 export const STUDENTS_PAGE_SIZE = 50;
 const HISTORY_LIMIT = 100;
@@ -138,6 +141,25 @@ export async function adjustCredits(db: SupabaseClient, userId: string, delta: n
   return check(res) as number;
 }
 
+/**
+ * Profile fields admins can't read through RLS: the learning mode and who suspended the student (their email, or
+ * null for the system / no suspender). `serviceDb` is the service-role client; call it only after `getStudent`
+ * succeeded with the session client, which proves the caller is an admin.
+ */
+export async function getStudentAccount(
+  serviceDb: SupabaseClient,
+  userId: string,
+): Promise<{ mode: LearningMode | null; suspendedBy: string | null }> {
+  const res = await serviceDb.from('profiles').select('learning_mode,suspended_by').eq('id', userId).maybeSingle();
+  const p = check(res) as { learning_mode: LearningMode | null; suspended_by: string | null } | null;
+  let suspendedBy: string | null = null;
+  if (p?.suspended_by) {
+    const got = await serviceDb.auth.admin.getUserById(p.suspended_by);
+    suspendedBy = got.data?.user?.email ?? null;
+  }
+  return { mode: p?.learning_mode ?? null, suspendedBy };
+}
+
 // ---------------------------------------------------------------- progress
 
 export type LessonProgressRow = {
@@ -230,8 +252,6 @@ export type EventInput = {
   adminEmail: string | null;
 };
 
-const MODE_LABELS: Record<string, string> = { guided: 'Traseu ghidat', free: 'Explorare liberă' };
-const PROVIDER_LABELS: Record<string, string> = { google: 'Google', email: 'email' };
 
 /** Romanian one-liner for a timeline entry. */
 export function eventLabel(e: EventInput): string {

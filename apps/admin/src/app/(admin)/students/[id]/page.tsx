@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CONSOLIDATION_TYPE_LABELS, formatLei, type ConsolidationType } from '@prepio/shared';
-import { getStudent, orderStatusLabel, type AdminLedgerEntry } from '@/lib/data/students';
+import {
+  EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, orderStatusLabel,
+  type AdminLedgerEntry, type AdminOrder,
+} from '@/lib/data/students';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
-import AdjustCreditsForm from './AdjustCreditsForm';
+import ProgressTab from './ProgressTab';
+import StudentHeader from './StudentHeader';
+import TimelineTab from './TimelineTab';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,70 +36,105 @@ function details(e: AdminLedgerEntry): string {
   return parts.join(' · ');
 }
 
-export default async function StudentPage({ params }: { params: Promise<{ id: string }> }) {
+const TABS = [
+  { key: 'parcurs', label: 'Parcurs' },
+  { key: 'cronologie', label: 'Cronologie' },
+  { key: 'credite', label: 'Credite' },
+  { key: 'comenzi', label: 'Comenzi' },
+] as const;
+type Tab = (typeof TABS)[number]['key'];
+
+function LedgerTable({ ledger }: { ledger: AdminLedgerEntry[] }) {
+  if (ledger.length === 0) return <p className="text-muted mb-0">Nicio mișcare încă.</p>;
+  return (
+    <div className="table-responsive">
+      <table className="table table-sm align-middle mb-0">
+        <thead><tr><th>Data</th><th>Tip</th><th>Detalii</th><th>±</th><th>Sold după</th></tr></thead>
+        <tbody>
+          {ledger.map((e) => (
+            <tr key={e.id}>
+              <td className="text-nowrap">{fmt(e.createdAt)}</td>
+              <td>{KIND_LABELS[e.kind] ?? e.kind}</td>
+              <td>{details(e)}</td>
+              <td className={e.delta > 0 ? 'text-success' : 'text-danger'}>{e.delta > 0 ? `+${e.delta}` : e.delta}</td>
+              <td>{e.balanceAfter}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function OrdersTable({ orders }: { orders: AdminOrder[] }) {
+  if (orders.length === 0) return <p className="text-muted mb-0">Nicio comandă.</p>;
+  return (
+    <div className="table-responsive">
+      <table className="table table-sm align-middle mb-0">
+        <thead><tr><th>Data</th><th>Credite</th><th>Preț</th><th>Stare</th></tr></thead>
+        <tbody>
+          {orders.map((o) => (
+            <tr key={o.id}>
+              <td className="text-nowrap">{fmt(o.createdAt)}</td>
+              <td>{o.credits}</td>
+              <td>{formatLei(o.priceBani)}</td>
+              <td>{orderStatusLabel(o)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default async function StudentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const tab: Tab = TABS.find((t) => t.key === sp.tab)?.key ?? 'parcurs';
   const db = await createServerClient();
   const data = await getStudent(db, id);
   if (!data) notFound();
   const { student, ledger, orders } = data;
+  // getStudent succeeded through the session client (admin_students refuses non-admins), so the caller is an admin.
+  const [progress, account, events] = await Promise.all([
+    getStudentProgress(db, id),
+    getStudentAccount(createAdminClient(), id),
+    tab === 'cronologie' ? getStudentEvents(db, id) : Promise.resolve([]),
+  ]);
+
   return (
     <>
       <p className="mb-2"><Link href="/students">‹ Elevi</Link></p>
-      <div className="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-        <div>
-          <h1 className="h3 mb-1">{student.displayName || student.email || 'Elev'}</h1>
-          <div className="text-muted">{student.email ?? '—'} · înscris {fmt(student.createdAt)}</div>
+      <StudentHeader student={student} lessonsTotal={progress.length} mode={account.mode} suspendedBy={account.suspendedBy} />
+
+      <div className="card">
+        <div className="card-header">
+          <nav className="nav nav-tabs card-header-tabs" aria-label="Secțiuni elev">
+            {TABS.map((t) => (
+              <Link
+                key={t.key}
+                href={t.key === 'parcurs' ? `/students/${id}` : `/students/${id}?tab=${t.key}`}
+                className={`nav-link${t.key === tab ? ' active' : ''}`}
+                aria-current={t.key === tab ? 'page' : undefined}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <div className="text-end">
-          <div className="text-muted small">Sold</div>
-          <div className="display-5 fw-bold" data-testid="balance">{student.creditBalance}</div>
+        <div className="card-body">
+          {tab === 'parcurs' && <ProgressTab userId={id} rows={progress} />}
+          {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
+          {tab === 'credite' && <LedgerTable ledger={ledger} />}
+          {tab === 'comenzi' && <OrdersTable orders={orders} />}
         </div>
       </div>
-
-      <AdjustCreditsForm userId={student.id} />
-
-      <h2 className="h5">Istoric credite</h2>
-      {ledger.length === 0 ? (
-        <p className="text-muted">Nicio mișcare încă.</p>
-      ) : (
-        <div className="table-responsive mb-4">
-          <table className="table table-sm align-middle">
-            <thead><tr><th>Data</th><th>Tip</th><th>Detalii</th><th>±</th><th>Sold după</th></tr></thead>
-            <tbody>
-              {ledger.map((e) => (
-                <tr key={e.id}>
-                  <td className="text-nowrap">{fmt(e.createdAt)}</td>
-                  <td>{KIND_LABELS[e.kind] ?? e.kind}</td>
-                  <td>{details(e)}</td>
-                  <td className={e.delta > 0 ? 'text-success' : 'text-danger'}>{e.delta > 0 ? `+${e.delta}` : e.delta}</td>
-                  <td>{e.balanceAfter}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <h2 className="h5">Comenzi</h2>
-      {orders.length === 0 ? (
-        <p className="text-muted">Nicio comandă.</p>
-      ) : (
-        <div className="table-responsive">
-          <table className="table table-sm align-middle">
-            <thead><tr><th>Data</th><th>Credite</th><th>Preț</th><th>Stare</th></tr></thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.id}>
-                  <td className="text-nowrap">{fmt(o.createdAt)}</td>
-                  <td>{o.credits}</td>
-                  <td>{formatLei(o.priceBani)}</td>
-                  <td>{orderStatusLabel(o)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </>
   );
 }
