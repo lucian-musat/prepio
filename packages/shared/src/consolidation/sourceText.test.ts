@@ -80,6 +80,18 @@ describe('sentenceRange', () => {
     const u = tokenizeSource(body);
     expect(sentenceRange(u, 0, 0)).toEqual([0, lastOfFirst]);
   });
+  it.each([
+    ['Au venit boierii, clerici etc. Apoi domnul a plecat. Gata.', 4],
+    ['Dacia a fost cucerită în anul 106 d.Hr. Traian a revenit. Gata.', 7],
+    ['Cetatea a căzut în 513 î.Hr. „Apoi” a urmat pacea. Gata.', 5],
+  ])('ends a sentence at etc./d.Hr./î.Hr. before a capital in %s', (body, lastOfFirst) => {
+    const u = tokenizeSource(body);
+    expect(sentenceRange(u, 0, 0)).toEqual([0, lastOfFirst]);
+  });
+  it('keeps sec./nr./p. inside the sentence even before a capital', () => {
+    const u = tokenizeSource('În sec. XIV, vezi nr. 5 și p. Iorga. Apoi.');
+    expect(sentenceRange(u, 0, 0)).toEqual([0, 8]);
+  });
   it('ends a sentence at a capitalised name', () => {
     const u = tokenizeSource('Discursul a fost rostit de Ion. A doua zi a plecat Ana. Apoi.');
     expect(sentenceRange(u, 0, 0)).toEqual([0, 5]);

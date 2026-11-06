@@ -39,16 +39,26 @@ function foldCase(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-function endsSentence(text: string): boolean {
-  const core = text.replace(/["”“»’)\]]+$/, '').replace(/^[(„"«“‘'[]+/, '');
+/** Abbreviations that often close a sentence: they end one when the next word starts upper-case. */
+const SENTENCE_FINAL_ABBREVIATIONS = new Set(['etc.', 'i.hr.', 'd.hr.']);
+const OPENING_PUNCTUATION = /^[(„"«“‘'[]+/;
+
+function endsSentence(text: string, next: string | undefined): boolean {
+  const core = text.replace(/["”“»’)\]]+$/, '').replace(OPENING_PUNCTUATION, '');
   if (!/[.!?]$/.test(core)) return false;
-  return !(INITIAL.test(core) || ABBREVIATIONS.has(foldCase(core)));
+  if (INITIAL.test(core)) return false;
+  const folded = foldCase(core);
+  if (SENTENCE_FINAL_ABBREVIATIONS.has(folded)) {
+    const head = (next ?? '').replace(OPENING_PUNCTUATION, '').charAt(0);
+    return head !== '' && head !== head.toLowerCase() && head === head.toUpperCase();
+  }
+  return !ABBREVIATIONS.has(folded);
 }
 
 /** Smallest word range covering whole sentences that contain words from..to. */
 export function sentenceRange(t: TokenizedSource, from: number, to: number): [number, number] {
   const w = t.words;
-  const isEnd = (i: number) => i >= w.length - 1 || w[i + 1]!.paragraph !== w[i]!.paragraph || endsSentence(w[i]!.text);
+  const isEnd = (i: number) => i >= w.length - 1 || w[i + 1]!.paragraph !== w[i]!.paragraph || endsSentence(w[i]!.text, w[i + 1]?.text);
   let a = from;
   while (a > 0 && !isEnd(a - 1)) a--;
   let b = to;
