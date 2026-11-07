@@ -103,6 +103,31 @@ The credits change (spec `docs/superpowers/specs/2026-11-06-credits-design.md`) 
    - signed in on the student web: the chip shows the balance, a purchase works (balance and „Creditele mele” history), and one real AI check takes the exercise's cost; admin Elevi lists the student with the same balance.
 6. After any later `pnpm content:cloud:sync-consolidation`, re-set admin-made `credit_cost` changes: the sync replaces the exercises with the seed defaults.
 
+## Student administration rollout
+
+The student administration change (spec `docs/superpowers/specs/2026-11-06-student-administration-design.md`) adds four migrations:
+
+- `20261106193652_student_events`: the timeline table and triggers, `log_app_open`, `log_test_failed`, and the backfill from the existing data;
+- `20261106194440_student_suspension`: suspension on `profiles`, `is_suspended()` in the student RLS, `blocked_emails`, and `handle_new_user()` creating blocked emails suspended;
+- `20261106195014_student_admin`: the admin progress / reset / list / timeline functions, and the suspended-edit guard;
+- `20261106200001_student_event_service`: `check_blocked` from the evaluate route, and „Activi azi” counting only the student's own events.
+
+The block fingerprint reuses the welcome-grant pepper, so there is no env var or secret to set. The new admin reads `profiles.suspended_at` and calls the new functions, and the evaluate, purchase and account-delete routes check the suspension. The new student web and APK show the suspended screen and send the app-opened and test-failed events. Order:
+
+1. `pnpm db:cloud:push:dry` (must list only the four migrations above) → `pnpm db:cloud:push`. **Before any admin deploy:** an admin built from this `main` against the old schema breaks Elevi and the student API routes. The backfill gives every existing account one `registered` event and replays the finished lessons, the finished consolidations and the credit ledger. It runs once inside the migration; never re-run it by hand (it is not idempotent against events logged by the triggers).
+2. Push `main` and wait for **prepio-admin** Ready.
+3. **prepio-web** Ready (same push). Note the Vercel Firewall rule on `prepio-web` (owner IP only, see `docs/STATUS.md`): the web checks only work from that IP.
+4. New EAS `preview` APK (no new native module). An old APK has no suspended screen: for a suspended student it shows empty lessons and refused checks. It still works normally for everyone else. Old APKs are ignored (owner).
+5. Production checks (read-only):
+   - anon REST on `student_events` and `blocked_emails` returns 401/42501 (or `[]`), never rows:
+     `curl -s "$SUPABASE_URL/rest/v1/student_events?select=id" -H "apikey: $ANON"` and the same for `blocked_emails`;
+   - `select count(*) from auth.users u where (select count(*) from public.student_events e where e.user_id = u.id and e.kind = 'registered') <> 1` returns 0 (Supabase SQL editor, read-only);
+   - `select kind, count(*) from public.student_events group by kind` shows the backfilled kinds (`registered`, `welcome_credits`, `lesson_finished`, `consolidation_finished`, `check`, `purchase`, …) and nothing unexpected;
+   - `select count(*) from public.profiles where suspended_at is not null` returns 0 and `select count(*) from public.blocked_emails` returns 0 right after the push;
+   - `POST /api/credits/purchase` and `/api/consolidation/evaluate` still return 401 without a token; admin `/students` logged out → `/login`;
+   - signed in as admin: Elevi shows the „Stare” / „Ultima activitate” columns and the filter chips; a student page shows Parcurs and the backfilled Cronologie;
+   - the owner's phone checks (STATUS "Test student administration on the phone").
+
 ## Schema and content
 
 - Schema: migrations in `supabase/migrations/`, applied with `pnpm db:cloud:push` — full workflow, credentials setup and the one-time history repair in [database-migrations.md](database-migrations.md).
