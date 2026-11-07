@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react-native';
 import type { ConsolidationExercise, ExerciseFeedback } from '@prepio/shared';
 import FeedbackView, { AI_NOTE, Analyzing, CheckError } from './FeedbackView';
 
-const TYPES = ['short_answer', 'multi_answer', 'source_info', 'source_letter', 'cause_effect', 'facts', 'comparison', 'viewpoint', 'argument', 'essay'] as const;
+const TYPES = ['short_answer', 'multi_answer', 'source_info', 'source_letter', 'cause_effect', 'facts', 'comparison', 'viewpoint', 'argument'] as const;
 
-const exercise = (type: (typeof TYPES)[number]) =>
+const exercise = (type: (typeof TYPES)[number] | 'essay') =>
   ({ id: 'e1', position: 1, prompt: 'p', templateId: null, sources: [], modelAnswer: null, explanation: null, creditCost: 2, type }) as unknown as ConsolidationExercise;
 const feedback = (key: string): ExerciseFeedback => ({
   verdict: 'ok',
@@ -12,7 +12,7 @@ const feedback = (key: string): ExerciseFeedback => ({
 });
 
 it.each(TYPES)('%s: the AI note never says "AI"', async (type) => {
-  await render(<FeedbackView exercise={exercise(type)} feedback={feedback(type === 'essay' ? 'whole' : 'answer')} />);
+  await render(<FeedbackView exercise={exercise(type)} feedback={feedback('answer')} />);
   expect(screen.queryAllByText(/\bAI\b/)).toHaveLength(0);
   expect(screen.getByText(/profesorul digital/)).toBeTruthy();
 });
@@ -36,4 +36,9 @@ it('Analyzing and CheckError carry no "AI"', async () => {
     </>,
   );
   expect(screen.queryAllByText(/\bAI\b/)).toHaveLength(0);
+});
+
+it('an essay renders nothing here: each requirement shows its own feedback', async () => {
+  await render(<FeedbackView exercise={exercise('essay')} feedback={feedback('r1')} />);
+  expect(screen.queryByTestId('feedback')).toBeNull();
 });

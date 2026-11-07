@@ -149,10 +149,11 @@ type Props = {
 /**
  * The checked answer's feedback, inline under the answer (types mockup): a verdict box per item (per fact under
  * „FAPTUL i”), „⇅ Inversează rolurile” for swapped roles, the „Vezi …” disclosure and the AI note.
- * The essay shows only its whole-essay item here; each requirement's feedback sits in its own card.
+ * The essay shows nothing here: each requirement's feedback sits in its own card.
  */
 export default function FeedbackView({ exercise, feedback, onSwap }: Props) {
-  const items = exercise.type === 'essay' ? feedback.items.filter((i) => i.key === 'whole') : feedback.items;
+  if (exercise.type === 'essay') return null;
+  const items = feedback.items;
   const reveal = revealOf(exercise, feedback);
   const ai = items.some((i) => i.ai);
   return (
@@ -178,7 +179,7 @@ export default function FeedbackView({ exercise, feedback, onSwap }: Props) {
           </View>
         );
       })}
-      {reveal && (exercise.type !== 'essay' || items.length > 0) ? <Disclosure {...reveal} /> : null}
+      {reveal ? <Disclosure {...reveal} /> : null}
       {ai ? (
         <AppText role="caption" color="textMuted">
           {MIXED_NOTE[exercise.type] ?? AI_NOTE}

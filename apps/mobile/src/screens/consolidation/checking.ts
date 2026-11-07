@@ -121,7 +121,7 @@ export function mergeAiFeedback(ex: ConsolidationExercise, det: ExerciseFeedback
   return out;
 }
 
-/** Requirements judged `ok` out of all of them (the essay's summary when there is no whole-essay verdict). */
+/** Requirements judged `ok` out of all of them (the essay's progress caption and its chip while it has no verdict). */
 export function essayProgress(ex: Extract<ConsolidationExercise, { type: 'essay' }>, feedback: ExerciseFeedback | null) {
   const ok = ex.requirements.filter((r) => feedback?.items.some((i) => i.key === r.id && i.verdict === 'ok')).length;
   return { ok, total: ex.requirements.length };

@@ -119,6 +119,7 @@ function base(e: StudentLedgerEntry): string {
       if (!e.exercise) return 'Verificare';
       const base = e.exercise.type === 'essay' ? 'Eseu' : CONSOLIDATION_TYPE_LABELS[e.exercise.type];
       if (e.exercise.type !== 'essay') return base;
+      // Old ledger rows still carry the removed whole-essay target.
       if (e.target === 'whole') return `${base} · eseul întreg`;
       if (e.target?.startsWith('req:')) {
         const n = (e.exercise.requirements ?? []).indexOf(e.target.slice(4)) + 1;

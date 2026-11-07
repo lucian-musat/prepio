@@ -31,7 +31,7 @@ it('an attempt with a verdict shows its label and colours', () => {
   expect(exerciseStatus(short, attempt('no'))).toEqual({ chip: 'Mai lucrează', tone: VERDICT_TONE.no });
 });
 
-it('an essay without a whole verdict shows „n din N”', () => {
+it('an essay without a verdict shows „n din N”', () => {
   expect(exerciseStatus(essay, attempt(null, [item('r1', 'ok')]))).toEqual({ chip: '1 din 2', tone: VERDICT_TONE.almost });
   expect(exerciseStatus(essay, attempt(null, [item('r1', 'no')]))).toEqual({ chip: '0 din 2', tone: MUTED });
   expect(exerciseStatus(essay, attempt(null, [item('r1', 'ok'), item('r2', 'ok')]))).toEqual({ chip: '2 din 2', tone: VERDICT_TONE.ok });

@@ -9,8 +9,8 @@ export type StatusTone = { fg: string; bg: string; edge: string };
 export const MUTED: StatusTone = { fg: color.textMuted, bg: color.surfaceMuted, edge: color.border };
 
 /**
- * An exercise's state from its latest attempt (end screen chips, exercise map): the verdict; an essay without a
- * whole verdict shows „n din N”; no attempt is „Nerezolvat”.
+ * An exercise's state from its latest attempt (end screen chips, exercise map): the verdict; an essay without a combined
+ * verdict (not every requirement checked yet) shows „n din N”; no attempt is „Nerezolvat”.
  */
 export function exerciseStatus(ex: ConsolidationExercise, attempt: Attempt | undefined): { chip: string; tone: StatusTone } {
   if (attempt?.verdict) return { chip: VERDICT_LABELS[attempt.verdict], tone: VERDICT_TONE[attempt.verdict] };

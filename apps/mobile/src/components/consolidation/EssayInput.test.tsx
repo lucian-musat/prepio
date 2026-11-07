@@ -190,6 +190,78 @@ it('previous / skip are disabled while a requirement check runs', async () => {
   expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
 });
 
+// ---- Per-requirement only (no whole-essay check) ----
+
+const checkBoth = async () => {
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 2, costă 2 credite' })));
+};
+
+it('has no whole-essay check: the intro and the caption speak of requirements only', async () => {
+  await renderScreen();
+  expect(screen.queryByText(/Verifică eseul întreg/)).toBeNull();
+  expect(screen.queryByText('Eseul întreg')).toBeNull();
+  expect(screen.getByText('Scrie fiecare cerință în câmpul ei și verifică-le pe rând.')).toBeTruthy();
+  expect(screen.getByText('0 din 2 cerințe corecte')).toBeTruthy();
+});
+
+it.each([
+  ['ok', 'no', 'almost'],
+  ['ok', 'ok', 'ok'],
+] as const)('both requirements checked (%s + %s): onChecked gets verdict %s, inputs stay editable', async (a, b, verdict) => {
+  mockedEvaluate.mockResolvedValueOnce({ items: [item('r1', a)] }).mockResolvedValueOnce({ items: [item('r2', b)] });
+  const onChecked = jest.fn();
+  await renderScreen(onChecked);
+  await checkBoth();
+  expect(onChecked).toHaveBeenLastCalledWith(expect.objectContaining({ verdict }));
+  expect(screen.getByLabelText('Cerința 1').props.editable).toBe(true);
+  expect(screen.getByLabelText('Cerința 2').props.editable).toBe(true);
+  expect(screen.queryByText('Încearcă din nou')).toBeNull();
+  expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
+});
+
+it('one of two requirements checked: verdict null and „Continuă” replaces „Sari peste”', async () => {
+  mockedEvaluate.mockResolvedValueOnce({ items: [item('r1', 'ok')] });
+  const onChecked = jest.fn();
+  await renderScreen(onChecked);
+  expect(bar().getByRole('button', { name: 'Sari peste, exercițiul următor' })).toBeTruthy();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
+  expect(onChecked).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: null }));
+  expect(bar().getByRole('button', { name: 'Continuă' })).toBeEnabled();
+  expect(screen.getByText('1 din 2 cerințe corecte')).toBeTruthy();
+});
+
+it('ignores a stored whole item', async () => {
+  const onChecked = jest.fn();
+  mockedEvaluate.mockResolvedValueOnce({ items: [item('r2', 'ok')] });
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ExerciseScreen
+        exercise={essay}
+        sources={new Map()}
+        templates={new Map()}
+        index={0}
+        total={1}
+        onBack={jest.fn()}
+        onChecked={onChecked}
+        onContinue={jest.fn()}
+        onRetry={jest.fn()}
+        onSkip={jest.fn()}
+        initial={{
+          answer: { type: 'essay', parts: { r1: 'Prima parte.', r2: 'A doua.' } },
+          feedback: { verdict: 'no', items: [item('whole', 'no'), item('r1', 'ok')] },
+        }}
+      />
+    </SafeAreaProvider>,
+  );
+  expect(screen.getByText('1 din 2 cerințe corecte')).toBeTruthy();
+  expect(screen.getByLabelText('Cerința 1').props.editable).toBe(true);
+  // The old whole verdict (no) does not count: ok + ok is ok.
+  await fireEvent.press(screen.getByText('Formularea unui punct de vedere și susținerea lui'));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Verifică cerința 2, costă 2 credite' })));
+  expect(onChecked).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: 'ok' }));
+});
+
 // ---- Credits gate ----
 
 it('two requirements checked together with 1 credit: the second gets 402, the sheet opens, both texts stay', async () => {

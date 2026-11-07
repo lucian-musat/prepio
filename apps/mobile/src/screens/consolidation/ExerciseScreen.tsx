@@ -141,8 +141,11 @@ export default function ExerciseScreen({
   const gate = useCreditGate({ onSkip, skipDisabled: status === 'loading' || partBusy });
 
   const essay = exercise.type === 'essay';
-  const wholeChecked = essay && !!feedback?.items.some((i) => i.key === 'whole');
-  const checked = essay ? wholeChecked : feedback !== null;
+  // The essay is checked requirement by requirement and never locks: its inputs stay editable.
+  const checked = essay ? false : feedback !== null;
+  const reqIds = essay ? exercise.requirements.map((r) => r.id) : [];
+  const reqItems = (feedback?.items ?? []).filter((i) => reqIds.includes(i.key));
+  const allVerdicts = essay && reqIds.every((id) => reqItems.some((i) => i.key === id));
   const loading = status === 'loading';
   const disabled = loading || checked;
 
@@ -167,7 +170,7 @@ export default function ExerciseScreen({
   };
 
   const check = async () => {
-    // The whole-essay check is gone; requirement checks (Task 6) replace it.
+    // The essay is checked per requirement, inside EssayInput.
     if (essay || busy.current || !isComplete(exercise, answer)) return;
     const a = answer;
     const det = checkExercise(exercise, sourceList, a);
@@ -193,15 +196,6 @@ export default function ExerciseScreen({
       busy.current = false;
     }
   };
-
-  // „Încearcă din nou”: an essay keeps its texts and drops only the feedback; other types start empty again.
-  const retry = essay
-    ? () => {
-        setFeedback(null);
-        setStatus('idle');
-        setError('');
-      }
-    : onRetry;
 
   const swap = () => {
     dispatch({ type: 'swapRoles' });
@@ -267,7 +261,10 @@ export default function ExerciseScreen({
             exercise={exercise}
             value={answer as never}
             onChange={set}
-            onFeedback={(fb) => {
+            onFeedback={(merged) => {
+              // The essay's verdict: all requirements judged, combined (an old `whole` item is ignored).
+              const items = merged.items.filter((i) => reqIds.includes(i.key));
+              const fb = { ...merged, verdict: reqIds.every((id) => items.some((i) => i.key === id)) ? combineVerdict(items) : null };
               setFeedback(fb);
               onChecked({ exerciseId: exercise.id, answer, verdict: fb.verdict, feedback: fb });
             }}
@@ -291,7 +288,7 @@ export default function ExerciseScreen({
   );
   const actions = checked ? (
     <View style={styles.stack}>
-      <Button label="Încearcă din nou" variant="secondary" onPress={retry} />
+      <Button label="Încearcă din nou" variant="secondary" onPress={onRetry} />
       <View style={styles.row}>
         {prev}
         <Button flex label="Continuă" onPress={onContinue} />
@@ -301,7 +298,11 @@ export default function ExerciseScreen({
     <View style={styles.stack}>
       <View style={styles.row}>
         {prev}
-        {feedback?.items.length ? <Button flex label="Continuă" variant="secondary" disabled={moving} onPress={onContinue} /> : skip(true)}
+        {reqItems.length ? (
+          <Button flex label="Continuă" variant={allVerdicts ? 'primary' : 'secondary'} disabled={moving} onPress={onContinue} />
+        ) : (
+          skip(true)
+        )}
       </View>
     </View>
   ) : (

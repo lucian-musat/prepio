@@ -20,7 +20,7 @@ type Props = InputProps<'essay'> & {
   /** Ids of the requirements' templates that exist; their „💡” opens the sheet. */
   templateIds?: Set<string>;
   onOpenTemplate?: (templateId: string) => void;
-  /** Whether any requirement check is in flight (the whole-essay check waits for them). */
+  /** Whether any requirement check is in flight (the screen keeps its navigation still meanwhile). */
   onBusyChange?: (busy: boolean) => void;
   /** The screen's credit gate: a check without enough credits opens the buy sheet instead. */
   gate: CreditGate;
@@ -29,7 +29,7 @@ type Props = InputProps<'essay'> & {
 /**
  * Eseu pe cerințe (types mockup): a collapsible card per requirement with its number, text and state chip, a field
  * with a character count, the connector chips for an argument and „Verifică cerința”, which asks the AI about that
- * requirement alone. Below, „Eseul întreg”: what the whole-essay check (in the action bar) looks at.
+ * requirement alone. Below, how many requirements are right; there is no whole-essay check.
  */
 export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate, onBusyChange, gate }: Props) {
   const reqs = exercise.requirements;
@@ -89,14 +89,12 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
     }
   };
 
-  const written = reqs.filter((r) => filled(value.parts[r.id])).length;
   const { ok } = essayProgress(exercise, feedback);
 
   return (
     <View style={styles.list}>
       <AppText role="note" color="textMuted">
-        Scrie fiecare cerință în câmpul ei. Le poți verifica pe rând; la final primești și feedback pe eseul întreg (structură,
-        cronologie, limbaj).
+        Scrie fiecare cerință în câmpul ei și verifică-le pe rând.
       </AppText>
       {reqs.map((r, i) => {
         const text = value.parts[r.id] ?? '';
@@ -180,16 +178,9 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
           </View>
         );
       })}
-      <View style={styles.whole}>
-        <AppText role="bodyStrong">Eseul întreg</AppText>
-        <AppText role="note" color="textMuted">
-          Structură (introducere, cuprins, încheiere), cronologie, limbaj istoric, relația cauză-efect, încadrare în spațiu.
-        </AppText>
-        <AppText role="caption" color="textMuted">
-          {written < reqs.length ? `Disponibil după ce toate cele ${reqs.length} cerințe sunt scrise · ` : ''}
-          {ok} din {reqs.length} corecte
-        </AppText>
-      </View>
+      <AppText role="caption" color="textMuted">
+        {ok} din {reqs.length} cerințe corecte
+      </AppText>
     </View>
   );
 }
@@ -221,12 +212,4 @@ const styles = StyleSheet.create({
   },
   off: { opacity: 0.45 },
   smallRow: { flexDirection: 'row', alignItems: 'center', gap: space[1.5] },
-  whole: {
-    gap: space[1],
-    backgroundColor: color.surface,
-    borderWidth: border.hairline,
-    borderColor: color.border,
-    borderRadius: radius.md,
-    padding: space[3],
-  },
 });
