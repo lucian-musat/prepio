@@ -7,6 +7,7 @@ import type {
   ConsolidationEvaluateResponse,
 } from '@prepio/shared';
 import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
+import { refreshRegisteredProfile } from './profileRefresh';
 
 export class EvaluateApiError extends Error {
   code: ConsolidationEvaluateErrorCode;
@@ -59,6 +60,15 @@ export async function sessionExpired<E extends Error>(error: E): Promise<never> 
 }
 
 /**
+ * The server refused the call because an admin suspended the account (403 `suspended`): re-read the profile so
+ * the root guard moves to the suspended screen, then throw the server's message.
+ */
+export async function accountSuspended<E extends Error>(error: E): Promise<never> {
+  await refreshRegisteredProfile();
+  throw error;
+}
+
+/**
  * The bearer token, or null when there is no session. An auth outage (expired token that cannot be refreshed
  * offline, stalled Supabase) becomes `outage()` — a connection error that keeps the stored session.
  */
@@ -103,10 +113,12 @@ export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): 
     }
     if (!res.ok) {
       const e = body as Partial<ConsolidationEvaluateError> | null;
-      throw new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED, {
+      const error = new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED, {
         required: e?.required,
         balance: e?.balance ?? e?.credits?.balance,
       });
+      if (res.status === 403 && error.code === 'suspended') return accountSuspended(error);
+      throw error;
     }
     return body as ConsolidationEvaluateResponse;
   } finally {

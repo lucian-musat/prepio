@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Lesson, LessonSummary } from '@prepio/shared';
 import LessonScreen, { SKIP_CONFIRM, SKIP_MESSAGE, lessonProgress } from './LessonScreen';
@@ -6,6 +6,7 @@ import { fetchHome, fetchLesson } from '../lib/content';
 import { fetchProgress, markFinished, savePosition, type LessonPosition } from '../lib/progress';
 import { countConsolidation } from '../lib/consolidation';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
+import { logTestFailed } from '../lib/activity';
 
 jest.mock('../lib/content', () => ({
   fetchLesson: jest.fn(),
@@ -14,6 +15,7 @@ jest.mock('../lib/content', () => ({
 }));
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn(), savePosition: jest.fn(), markFinished: jest.fn() }));
 jest.mock('../lib/consolidation', () => ({ countConsolidation: jest.fn() }));
+jest.mock('../lib/activity', () => ({ logTestFailed: jest.fn() }));
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),
@@ -115,6 +117,7 @@ beforeEach(() => {
   mockedSave.mockResolvedValue(undefined);
   mockedFinish.mockResolvedValue(undefined);
   mockedCount.mockResolvedValue(0);
+  (logTestFailed as jest.Mock).mockResolvedValue(true);
 });
 
 describe('lessonProgress', () => {
@@ -267,6 +270,13 @@ describe('free mode', () => {
     expect(mockedFinish).toHaveBeenCalledWith('l1');
     await press('Înapoi la lecții');
     expect(mockReplace).toHaveBeenCalledWith('/');
+  });
+
+  it('a wrong answer in free mode logs no failed test', async () => {
+    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await answer('Nu', 'Continuă');
+    expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
+    expect(logTestFailed).not.toHaveBeenCalled();
   });
 
   it('a wrong answer still finishes the lesson', async () => {
@@ -444,6 +454,26 @@ describe('guided mode', () => {
     expect(screen.getByText('0 din 1 întrebări corecte')).toBeTruthy();
     expect(mockedFinish).not.toHaveBeenCalled();
     expect(mockedSave).toHaveBeenLastCalledWith('l1', null);
+  });
+
+  it('a failed attempt logs the failed test once, after the position is cleared; a second failed attempt logs again', async () => {
+    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await answer('Nu', 'Continuă');
+    expect(await screen.findByText('Aproape!')).toBeTruthy();
+    await waitFor(() => expect(logTestFailed).toHaveBeenCalledTimes(1));
+    expect(logTestFailed).toHaveBeenCalledWith('l1');
+    expect(mockedSave.mock.invocationCallOrder.at(-1)!).toBeLessThan((logTestFailed as jest.Mock).mock.invocationCallOrder[0]);
+    await press('Reia testul acum');
+    await answer('Nu', 'Continuă');
+    expect(await screen.findByText('Aproape!')).toBeTruthy();
+    await waitFor(() => expect(logTestFailed).toHaveBeenCalledTimes(2));
+  });
+
+  it('a passed attempt does not log a failed test', async () => {
+    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(logTestFailed).not.toHaveBeenCalled();
   });
 
   it('Reia testul acum shows question 1 unanswered', async () => {

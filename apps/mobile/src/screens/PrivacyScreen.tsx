@@ -72,6 +72,10 @@ export default function PrivacyScreen() {
           <AppText role="body">
             Păstrăm doar o amprentă ireversibilă a adresei de email, ca să știm că ai primit deja creditele de bun venit.
           </AppText>
+          <AppText role="body">
+            Dacă un cont este șters în timp ce e suspendat sau dacă un administrator blochează reînregistrarea, păstrăm o
+            amprentă ireversibilă a adresei de email și motivul, ca să nu poată fi creat un cont nou.
+          </AppText>
         </Section>
 
         <Section title="Drepturile tale">

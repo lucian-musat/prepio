@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { space } from '@prepio/shared';
-import { AppText, Button, ScreenLayout, Surface, TextField, goBackOrHome } from '../ui';
+import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { deleteAccount, OFFLINE } from '../lib/api';
+import { OFFLINE } from '../lib/api';
+import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validateDisplayName } from '../lib/profile';
 import { modeOf, type LearningMode } from '../lib/learningMode';
 import LearningModePicker from '../components/LearningModePicker';
@@ -13,7 +14,6 @@ import { useCredits } from '../credits/CreditsProvider';
 
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
-const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
 const MODE_SAVED = 'Modul a fost salvat.';
 // Saved in the database, but the app still holds the old profile (the refresh failed).
 const MODE_SAVED_STALE = 'Modul a fost salvat. Reîncarcă aplicația dacă nu vezi schimbarea.';
@@ -29,9 +29,8 @@ export default function ProfileScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletion = useAccountDeletion();
+  const { deleting } = deletion;
   const [mode, setMode] = useState<LearningMode>(modeOf(profile));
   const [modeSaving, setModeSaving] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
@@ -90,24 +89,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const remove = async () => {
-    if (busy) return;
-    if (!session) {
-      setDeleteError(OFFLINE);
-      return;
-    }
-    setDeleteError(null);
-    setDeleting(true);
-    try {
-      await deleteAccount();
-      // The status change navigates back to the welcome screen; the screen unmounts, so no state reset.
-      await signOut();
-    } catch (e) {
-      setDeleteError(messageOf(e, DELETE_FAILED));
-      setDeleting(false);
-    }
-  };
-
   return (
     <ScreenLayout title="Profilul tău" onBack={goBackOrHome}>
       <View style={styles.stack}>
@@ -163,29 +144,10 @@ export default function ProfileScreen() {
 
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 
-        {confirming ? (
-          <Surface style={styles.confirm}>
-            <AppText accessibilityRole="alert">
-              Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.
-            </AppText>
-            {deleteError ? (
-              <AppText role="small" color="danger" accessibilityRole="alert">
-                {deleteError}
-              </AppText>
-            ) : null}
-            <Button label="Da, șterge contul" tone="danger" onPress={remove} loading={deleting} />
-            <Button
-              label="Renunță"
-              variant="secondary"
-              onPress={() => {
-                setConfirming(false);
-                setDeleteError(null);
-              }}
-              disabled={deleting}
-            />
-          </Surface>
+        {deletion.confirming ? (
+          <DeleteAccountConfirm deletion={deletion} />
         ) : (
-          <Button label="Șterge contul" variant="secondary" tone="danger" onPress={() => setConfirming(true)} disabled={busy} />
+          <Button label="Șterge contul" variant="secondary" tone="danger" onPress={deletion.ask} disabled={busy} />
         )}
 
         <AppText
@@ -205,6 +167,5 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   stack: { gap: space[4] },
   field: { gap: space[2] },
-  confirm: { gap: space[3] },
   link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });

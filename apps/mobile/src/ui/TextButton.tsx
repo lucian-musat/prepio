@@ -6,10 +6,12 @@ type Props = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** danger: a destructive choice (e.g. deleting the account). */
+  tone?: 'primary' | 'danger';
 };
 
 /** Quiet text-only action (underlined link) for a secondary choice under the main buttons; 48 px touch target. */
-export default function TextButton({ label, onPress, disabled = false }: Props) {
+export default function TextButton({ label, onPress, disabled = false, tone = 'primary' }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -19,7 +21,7 @@ export default function TextButton({ label, onPress, disabled = false }: Props) 
       onPress={onPress}
       style={({ pressed }) => [styles.hit, (pressed || disabled) && styles.dim]}
     >
-      <AppText role="label" color="primary" style={styles.label}>
+      <AppText role="label" color={tone} style={styles.label}>
         {label}
       </AppText>
     </Pressable>

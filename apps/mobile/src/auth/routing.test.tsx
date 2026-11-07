@@ -3,6 +3,7 @@ import { renderRouter, screen } from 'expo-router/testing-library';
 import RootLayout from '../../app/_layout';
 import AppLayout from '../../app/(app)/_layout';
 import AuthLayout from '../../app/(auth)/_layout';
+import SuspendedLayout from '../../app/(suspended)/_layout';
 import PrivacyRoute from '../../app/confidentialitate';
 import DeleteAccountRoute from '../../app/sterge-cont';
 import PreviewRoute from '../../app/preview';
@@ -22,6 +23,8 @@ const routes = {
   '(auth)/index': () => <Text>welcome</Text>,
   '(onboarding)/name': () => <Text>name</Text>,
   '(onboarding)/mode': () => <Text>mode</Text>,
+  '(suspended)/_layout': SuspendedLayout,
+  '(suspended)/index': () => <Text>suspended</Text>,
   '(app)/_layout': AppLayout,
   '(app)/index': () => <Text>home</Text>,
   '(app)/lesson/[id]': () => <Text>lesson</Text>,
@@ -32,7 +35,7 @@ const routes = {
 
 // Jest runs as native: the preview page shows its web-only notice, which is enough to prove the route renders.
 const PREVIEW = 'Previzualizarea este disponibilă doar pe web.';
-const SCREENS = ['welcome', 'name', 'mode', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
+const SCREENS = ['welcome', 'name', 'mode', 'suspended', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
 
 it.each([
   ['signedOut', '/', 'welcome'],
@@ -43,6 +46,10 @@ it.each([
   ['needsMode', '/lesson/abc', 'mode'],
   ['ready', '/', 'home'],
   ['ready', '/lesson/abc', 'lesson'],
+  ['suspended', '/', 'suspended'],
+  ['suspended', '/lesson/abc', 'suspended'],
+  ['suspended', '/confidentialitate', 'Politica de confidențialitate'],
+  ['suspended', '/sterge-cont', 'Ștergerea contului'],
   ['signedOut', '/confidentialitate', 'Politica de confidențialitate'],
   ['needsName', '/confidentialitate', 'Politica de confidențialitate'],
   ['ready', '/confidentialitate', 'Politica de confidențialitate'],

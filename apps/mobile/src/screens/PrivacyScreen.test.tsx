@@ -66,3 +66,12 @@ it('explains the credits data and the email fingerprint', async () => {
   ).toBeTruthy();
   expect(screen.getByText('Creditele: soldul, cumpărările de pachete și istoricul verificărilor.')).toBeTruthy();
 });
+
+it('explains the fingerprint kept when a suspended account is deleted or re-registration is blocked', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'Dacă un cont este șters în timp ce e suspendat sau dacă un administrator blochează reînregistrarea, păstrăm o amprentă ireversibilă a adresei de email și motivul, ca să nu poată fi creat un cont nou.',
+    ),
+  ).toBeTruthy();
+});

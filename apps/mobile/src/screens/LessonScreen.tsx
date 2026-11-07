@@ -11,6 +11,7 @@ import { modeOf } from '../lib/learningMode';
 import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
+import { logTestFailed } from '../lib/activity';
 import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import LessonStart from './lesson/LessonStart';
 import { ConsolidationUnlocked, GuidedFailed, GuidedPassed, startConsolidation } from './lesson/GuidedResult';
@@ -192,6 +193,9 @@ export default function LessonScreen() {
       // Not finished (and a finished lesson stays finished): only the attempt is cleared.
       setEnd({ outcome, status: 'saved' });
       save(lesson.id, null);
+      // For the admin timeline; queued after the position write, since the server needs the progress row.
+      // Best-effort: logTestFailed never throws, only the queue's timeout can reject.
+      enqueue(() => logTestFailed(lesson.id)).catch(() => undefined);
     } else {
       commit(outcome);
     }

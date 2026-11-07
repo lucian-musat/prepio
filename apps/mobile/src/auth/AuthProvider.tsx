@@ -4,8 +4,10 @@ import type { Session } from '@supabase/supabase-js';
 import { fetchProfile, type Profile } from '../lib/profile';
 import { getSupabase, isAuthRejection, signOut as signOutSession, withTimeout } from '../lib/supabase';
 import { signOutGoogle } from './google';
+import { localDay, logAppOpen } from '../lib/activity';
+import { registerProfileRefresh } from '../lib/profileRefresh';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'needsName' | 'needsMode' | 'ready';
+export type AuthStatus = 'loading' | 'signedOut' | 'suspended' | 'needsName' | 'needsMode' | 'ready';
 
 export type AuthContextValue = {
   status: AuthStatus;
@@ -34,14 +36,18 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /**
  * A profile that could not be loaded (offline, outage, timeout) lets the student in rather than asking a
  * returning student for their name again; it is retried on the next foreground / auth event.
+ * A suspended account comes first: it only sees the suspended screen, whatever else is missing.
  */
 export function statusFor(profile: Profile | null, loadFailed: boolean): AuthStatus {
+  if (profile?.suspendedReason) return 'suspended';
   if (!profile?.displayName) return loadFailed ? 'ready' : 'needsName';
   return profile.learningMode ? 'ready' : 'needsMode';
 }
 
 /** `ready` without a profile or session: something failed to load and is worth retrying. */
 const degraded = (s: AuthState) => s.status === 'ready' && (!s.session || !s.profile);
+/** Signed in with the profile settled: an auth event for the same student needs no reload. */
+const SETTLED: AuthStatus[] = ['ready', 'suspended', 'needsName', 'needsMode'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading', session: null, profile: null });
@@ -50,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Bumped by every auth change; an async load whose generation is stale drops its result. */
   const generation = useRef(0);
   const userId = useRef<string | null>(null);
+  /** `<user>|<local day>` of the last app-opened event sent by this run: at most one per student per day. */
+  const lastOpen = useRef<string | null>(null);
 
   const apply = useCallback((next: AuthState) => {
     generation.current += 1;
@@ -122,6 +130,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await settle(session);
   }, [apply, settle, setSignedOut]);
 
+  /** Records the app-opened event for a signed-in student who is in, once per local day (the server dedups too). */
+  const noteAppOpen = useCallback(() => {
+    const { status, session } = stateRef.current;
+    if (status !== 'ready' || !session) return;
+    const key = `${session.user.id}|${localDay()}`;
+    if (lastOpen.current === key) return;
+    lastOpen.current = key;
+    void logAppOpen().then((ok) => {
+      // Not recorded (offline, outage): the next foreground tries again.
+      if (!ok && lastOpen.current === key) lastOpen.current = null;
+    });
+  }, []);
+
+  /**
+   * Back in the foreground: re-reads the profile of a loaded student, so a suspension (or a reactivation) made by
+   * an admin while the app was open takes effect. Only a changed suspension moves the status; a failed read
+   * changes nothing.
+   */
+  const recheckSuspension = useCallback(async () => {
+    const { status, session, profile } = stateRef.current;
+    if ((status !== 'ready' && status !== 'suspended') || !session || !profile) return;
+    const start = generation.current;
+    let fresh: Profile | null;
+    try {
+      fresh = await withTimeout(fetchProfile(session.user.id));
+    } catch (e) {
+      console.warn('[auth] suspension check failed:', e);
+      return;
+    }
+    if (start !== generation.current || !fresh || stateRef.current.session?.user.id !== fresh.id) return;
+    if ((fresh.suspendedReason ?? null) === (stateRef.current.profile?.suspendedReason ?? null)) return;
+    const next = { ...stateRef.current, status: statusFor(fresh, false), profile: fresh };
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
   useEffect(() => {
     const auth = getSupabase().auth;
     let mounted = true;
@@ -136,8 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'INITIAL_SESSION') return; // handled by restore()
       if (event === 'SIGNED_OUT' || !session) return setSignedOut();
       const cur = stateRef.current;
-      const settled = cur.status === 'ready' || cur.status === 'needsName' || cur.status === 'needsMode';
-      if (settled && cur.profile && session.user.id === userId.current) {
+      if (SETTLED.includes(cur.status) && cur.profile && session.user.id === userId.current) {
         // Same student, everything loaded: swap the session (new token) without reloading or changing screen.
         const next = { ...cur, session };
         stateRef.current = next;
@@ -152,23 +195,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // On native, refresh the token only while the app is in the foreground (web handles visibility itself);
-    // back in the foreground, retry whatever failed to load.
-    let appState: { remove(): void } | undefined;
-    if (Platform.OS !== 'web') {
-      if (AppState.currentState === 'active') auth.startAutoRefresh();
-      appState = AppState.addEventListener('change', (next) => {
-        if (next !== 'active') return void auth.stopAutoRefresh();
+    // back in the foreground, retry whatever failed to load. On every platform a return to the foreground
+    // re-checks the suspension and counts as an app open (react-native-web maps it to the page visibility).
+    const native = Platform.OS !== 'web';
+    if (native && AppState.currentState === 'active') auth.startAutoRefresh();
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') {
+        if (native) auth.stopAutoRefresh();
+        return;
+      }
+      if (native) {
         auth.startAutoRefresh();
         if (degraded(stateRef.current)) void restore().catch((e) => console.warn('[auth] retry failed:', e));
-      });
-    }
+      }
+      void recheckSuspension();
+      noteAppOpen();
+    });
 
     return () => {
       mounted = false;
       listener.subscription.unsubscribe();
-      appState?.remove();
+      appState.remove();
     };
-  }, [restore, settle, setSignedOut]);
+  }, [restore, settle, setSignedOut, recheckSuspension, noteAppOpen]);
+
+  // The app counts as opened once the student is in (the foreground listener covers later returns).
+  useEffect(() => {
+    if (state.status === 'ready' && state.session) noteAppOpen();
+  }, [state.status, state.session, noteAppOpen]);
 
   const refreshProfile = useCallback(async () => {
     const { session } = stateRef.current;
@@ -177,6 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else if (stateRef.current.status === 'ready') await restore();
     return stateRef.current.profile;
   }, [restore, settle]);
+
+  // Lets the API layer re-read the profile when the server answers 403 `suspended` (see lib/profileRefresh).
+  useEffect(() => registerProfileRefresh(refreshProfile), [refreshProfile]);
 
   const signOut = useCallback(async () => {
     // Forget the Google account too (native), so the next sign-in shows the account picker. Best-effort.

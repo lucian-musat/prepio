@@ -9,6 +9,7 @@ import {
   type StudentLedgerEntry,
 } from './credits';
 import { getAccessToken, signOut } from './supabase';
+import { registerProfileRefresh } from './profileRefresh';
 
 jest.mock('./supabase', () => {
   class AuthOutageError extends Error {
@@ -150,6 +151,22 @@ describe('purchaseCredits', () => {
       code: 'server_error',
       message: 'Achiziția nu a reușit. Încearcă din nou.',
     });
+  });
+
+  it('on 403 suspended refreshes the profile and throws the server message', async () => {
+    const refresh = jest.fn().mockResolvedValue(null);
+    const unregister = registerProfileRefresh(refresh);
+    try {
+      fetchMock.mockResolvedValue(json(403, { error: 'suspended', message: 'Contul tău este suspendat.' }));
+      const err = await purchaseCredits('p1').catch((e) => e);
+      expect(err).toBeInstanceOf(CreditsApiError);
+      expect(err.code).toBe('suspended');
+      expect(err.message).toBe('Contul tău este suspendat.');
+      expect(refresh).toHaveBeenCalledTimes(1);
+      expect(mockSignOut).not.toHaveBeenCalled();
+    } finally {
+      unregister();
+    }
   });
 
   it('uses a generic message for a non-JSON error', async () => {

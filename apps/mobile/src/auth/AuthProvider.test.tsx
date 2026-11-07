@@ -4,8 +4,11 @@ import { AuthProvider, statusFor, useAuth } from './AuthProvider';
 import { fetchProfile } from '../lib/profile';
 import { AUTH_TIMEOUT_MS, getSupabase, signOut as libSignOut } from '../lib/supabase';
 import { signOutGoogle } from './google';
+import { localDay, logAppOpen } from '../lib/activity';
+import { refreshRegisteredProfile } from '../lib/profileRefresh';
 
 jest.mock('../lib/profile', () => ({ fetchProfile: jest.fn() }));
+jest.mock('../lib/activity', () => ({ logAppOpen: jest.fn(), localDay: jest.fn() }));
 jest.mock('./google', () => ({ signOutGoogle: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../lib/supabase', () => ({
   ...jest.requireActual('../lib/supabase'),
@@ -48,7 +51,9 @@ beforeEach(() => {
   mockLibSignOut.mockImplementation(async () => {
     for (const l of [...listeners]) l('SIGNED_OUT', null);
   });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
+  (logAppOpen as jest.Mock).mockResolvedValue(true);
+  (localDay as jest.Mock).mockReturnValue('2026-11-06');
 });
 
 let latest: ReturnType<typeof useAuth>;
@@ -236,7 +241,7 @@ it('refreshProfile resolves with the kept profile when the reload fails', async 
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
   warn.mockRestore();
 });
 
@@ -430,13 +435,129 @@ it('useAuth outside the provider throws', async () => {
 
 describe('statusFor', () => {
   it('asks for the name first, then the mode, then lets the student in', () => {
-    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5 }, false)).toBe('needsName');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5 }, false)).toBe('needsMode');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 }, false)).toBe('ready');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null }, false)).toBe('needsName');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, suspendedReason: null }, false)).toBe('needsMode');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, suspendedReason: null }, false)).toBe('ready');
+  });
+
+  it('a suspended profile is suspended first, even without a name or mode', () => {
+    const reason = 'Cont creat pentru test.';
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: reason }, false)).toBe('suspended');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: reason }, false)).toBe('suspended');
   });
 
   it('lets the student in when the profile could not be loaded', () => {
     expect(statusFor(null, true)).toBe('ready');
+  });
+});
+
+describe('suspension', () => {
+  it('a session with a suspended profile → suspended', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: 'Motiv' });
+    await renderAuth();
+    await waitForState('suspended|-|access-1');
+    expect(logAppOpen).not.toHaveBeenCalled();
+  });
+
+  it('registers refreshProfile for the API layer (a 403 suspended moves the student to suspended)', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    const view = await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    await act(() => refreshRegisteredProfile());
+    await waitForState('suspended|Ana|access-1');
+    await view.unmount();
+    mockFetchProfile.mockClear();
+    await refreshRegisteredProfile();
+    expect(mockFetchProfile).not.toHaveBeenCalled();
+  });
+});
+
+describe('app opened event', () => {
+  let onChange: (s: string) => void;
+  beforeEach(() => {
+    onChange = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, cb) => {
+      onChange = cb as (s: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  });
+
+  it('is logged once when the status becomes ready, and not again on two foregrounds the same day', async () => {
+    await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    await waitFor(() => expect(logAppOpen).toHaveBeenCalledTimes(1));
+    await act(async () => onChange('background'));
+    await act(async () => onChange('active'));
+    await act(async () => onChange('background'));
+    await act(async () => onChange('active'));
+    expect(logAppOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('is logged again on a foreground the next day', async () => {
+    await renderAuth();
+    await waitFor(() => expect(logAppOpen).toHaveBeenCalledTimes(1));
+    (localDay as jest.Mock).mockReturnValue('2026-11-07');
+    await act(async () => onChange('active'));
+    await waitFor(() => expect(logAppOpen).toHaveBeenCalledTimes(2));
+  });
+
+  it('retries on the next foreground when the log failed', async () => {
+    (logAppOpen as jest.Mock).mockResolvedValueOnce(false);
+    await renderAuth();
+    await waitFor(() => expect(logAppOpen).toHaveBeenCalledTimes(1));
+    await act(async () => onChange('active'));
+    await waitFor(() => expect(logAppOpen).toHaveBeenCalledTimes(2));
+    await act(async () => onChange('active'));
+    expect(logAppOpen).toHaveBeenCalledTimes(2);
+  });
+
+  it('is not logged while signed out or before the profile is complete', async () => {
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null });
+    await renderAuth();
+    await waitForState('needsName|-|access-1');
+    await act(async () => onChange('active'));
+    expect(logAppOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe('suspension changes while the app is open', () => {
+  let onChange: (s: string) => void;
+  beforeEach(() => {
+    onChange = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, cb) => {
+      onChange = cb as (s: string) => void;
+      return { remove: jest.fn() } as never;
+    });
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+  });
+
+  it('back in the foreground, a student suspended meanwhile moves to suspended', async () => {
+    await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    await act(async () => onChange('active'));
+    await waitForState('suspended|Ana|access-1');
+  });
+
+  it('back in the foreground, a reactivated student moves back to ready', async () => {
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    await renderAuth();
+    await waitForState('suspended|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
+    await act(async () => onChange('active'));
+    await waitForState('ready|Ana|access-1');
+  });
+
+  it('a failed check keeps the current state', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    mockFetchProfile.mockRejectedValue(new Error('offline'));
+    await act(async () => onChange('active'));
+    expect(state()).toBe('ready|Ana|access-1');
   });
 });

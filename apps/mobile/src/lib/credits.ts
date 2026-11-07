@@ -9,7 +9,7 @@ import {
   type CreditsPurchaseResponse,
 } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
+import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
 import { apiUrl, getSupabase } from './supabase';
 
 export class CreditsApiError extends Error {
@@ -162,7 +162,9 @@ export async function purchaseCredits(packageId: string): Promise<CreditsPurchas
     }
     if (!res.ok) {
       const e = body as Partial<CreditsPurchaseError> | null;
-      throw new CreditsApiError(e?.error ?? 'server_error', e?.message || PURCHASE_FAILED);
+      const error = new CreditsApiError(e?.error ?? 'server_error', e?.message || PURCHASE_FAILED);
+      if (res.status === 403 && error.code === 'suspended') return accountSuspended(error);
+      throw error;
     }
     const ok = body as Partial<CreditsPurchaseResponse> | null;
     if (!ok || typeof ok.balance !== 'number') {

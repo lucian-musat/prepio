@@ -1,4 +1,5 @@
 import { deleteAccount, evaluateConsolidation, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
+import { registerProfileRefresh } from './profileRefresh';
 import { getAccessToken, signOut } from './supabase';
 
 jest.mock('./supabase', () => {
@@ -251,4 +252,38 @@ it('returns the credits field of a successful evaluation', async () => {
   const ok = { items: [], credits: { spent: 1, balance: 4 } };
   fetchMock.mockResolvedValue(json(200, ok));
   await expect(evaluateConsolidation(req)).resolves.toEqual(ok);
+});
+
+describe('a suspended student (403 suspended)', () => {
+  const SUSPENDED = 'Contul tău este suspendat.';
+  let unregister: () => void = () => {};
+  afterEach(() => unregister());
+
+  it('refreshes the profile through the registered refresher and throws the server message', async () => {
+    const refresh = jest.fn().mockResolvedValue(null);
+    unregister = registerProfileRefresh(refresh);
+    fetchMock.mockResolvedValue(json(403, { error: 'suspended', message: SUSPENDED }));
+    const err = await evaluateConsolidation(req).catch((e) => e);
+    expect(err).toBeInstanceOf(EvaluateApiError);
+    expect(err.code).toBe('suspended');
+    expect(err.message).toBe(SUSPENDED);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('still throws the message when no refresher is registered or it fails', async () => {
+    fetchMock.mockResolvedValue(json(403, { error: 'suspended', message: SUSPENDED }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ code: 'suspended', message: SUSPENDED });
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    unregister = registerProfileRefresh(jest.fn().mockRejectedValue(new Error('offline')));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ code: 'suspended', message: SUSPENDED });
+  });
+
+  it('does not refresh the profile for other 403s', async () => {
+    const refresh = jest.fn().mockResolvedValue(null);
+    unregister = registerProfileRefresh(refresh);
+    fetchMock.mockResolvedValue(json(403, { error: 'forbidden', message: 'Nu ai acces.' }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ code: 'forbidden' });
+    expect(refresh).not.toHaveBeenCalled();
+  });
 });

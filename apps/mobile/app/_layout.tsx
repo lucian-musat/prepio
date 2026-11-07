@@ -14,7 +14,7 @@ SplashScreen.preventAutoHideAsync();
 
 /**
  * Keeps the splash up until the fonts and the stored session are resolved, then shows exactly one route group:
- * signed out → (auth), signed in without a name or mode → (onboarding), otherwise → (app). A guarded route that becomes
+ * signed out → (auth), suspended → (suspended), signed in without a name or mode → (onboarding), otherwise → (app). A guarded route that becomes
  * unavailable redirects to the first available one, so nothing in (app) is reachable without a session.
  */
 function RootNavigator() {
@@ -40,6 +40,10 @@ function RootNavigator() {
       >
         <Stack.Protected guard={status === 'signedOut'}>
           <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+        {/* Suspended (by an admin): one screen, whatever the name / mode; the server refuses everything else. */}
+        <Stack.Protected guard={status === 'suspended'}>
+          <Stack.Screen name="(suspended)" />
         </Stack.Protected>
         <Stack.Protected guard={status === 'needsName'}>
           <Stack.Screen name="(onboarding)/name" options={{ title: 'Cum te numești?' }} />
