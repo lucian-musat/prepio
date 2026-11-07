@@ -277,7 +277,8 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const items: FeedbackItem[] = [];
     for (const key of keys) {
       const found = normalized.items.find((i) => i.key === key);
-      if (!found) throw new Error(`model output is missing item "${key}"`);
+      // The returned keys (never the feedback text) make a key mismatch diagnosable from the logs.
+      if (!found) throw new Error(`model output is missing item "${key}" (got keys: ${JSON.stringify(parsed.data.items.map((i) => i.key))})`);
       items.push({ key, verdict: found.verdict, title: found.title, good: found.good, improve: found.improve, ai: true });
     }
     return { status: 200, json: { items, credits: { spent: cost, balance: spend.balance } } };
