@@ -51,13 +51,26 @@ describe.skipIf(!url || !service)('deleteAccount (local Supabase)', () => {
   afterAll(async () => {
     if (reSignedUp.length === 0) return;
     const admin = createClient(url!, anon!, { auth: { persistSession: false } });
+    const failures: string[] = [];
     const signIn = await admin.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
-    if (signIn.error) throw signIn.error;
+    if (signIn.error) failures.push(`admin sign-in: ${signIn.error.message}`);
     for (const id of reSignedUp) {
-      const r = await admin.rpc('admin_reactivate_student', { p_user: id });
-      if (r.error) throw r.error;
-      await db.auth.admin.deleteUser(id);
+      try {
+        if (!signIn.error) {
+          const r = await admin.rpc('admin_reactivate_student', { p_user: id });
+          if (r.error) throw r.error;
+        }
+      } catch (e) {
+        failures.push(`reactivate ${id}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      try {
+        const d = await db.auth.admin.deleteUser(id);
+        if (d.error && d.error.status !== 404) throw d.error;
+      } catch (e) {
+        failures.push(`delete ${id}: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
+    if (failures.length) throw new Error(`cleanup failed: ${failures.join('; ')}`);
   });
 
   /** Deletes the account, signs up again with the same email and returns the new account's suspension state. */

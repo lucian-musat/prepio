@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { refreshIfDenied } from './profileRefresh';
 import { getSupabase } from './supabase';
 
 /** Where the student left a lesson; `results` maps question id → answered correctly in the current attempt. */
@@ -50,7 +51,10 @@ export async function savePosition(
   const { error } = await client
     .from('lesson_progress')
     .upsert({ lesson_id: lessonId, position }, { onConflict: ON_CONFLICT });
-  if (error) throw error;
+  if (error) {
+    await refreshIfDenied(error);
+    throw error;
+  }
 }
 
 /** Marks the lesson finished and clears its saved position. */
@@ -58,5 +62,8 @@ export async function markFinished(lessonId: string, client: SupabaseClient = ge
   const { error } = await client
     .from('lesson_progress')
     .upsert({ lesson_id: lessonId, finished_at: new Date().toISOString(), position: null }, { onConflict: ON_CONFLICT });
-  if (error) throw new Error(SAVE_FAILED);
+  if (error) {
+    await refreshIfDenied(error);
+    throw new Error(SAVE_FAILED);
+  }
 }

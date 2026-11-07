@@ -8,6 +8,7 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
 import ProgressTab from './ProgressTab';
+import { NoticeProvider } from './Notice';
 import StudentHeader from './StudentHeader';
 import TimelineTab from './TimelineTab';
 
@@ -111,6 +112,7 @@ export default async function StudentPage({
   return (
     <>
       <p className="mb-2"><Link href="/students">‹ Elevi</Link></p>
+      <NoticeProvider>
       <StudentHeader student={student} lessonsTotal={progress.length} mode={account.mode} suspendedBy={account.suspendedBy} />
 
       <div className="card">
@@ -135,6 +137,7 @@ export default async function StudentPage({
           {tab === 'comenzi' && <OrdersTable orders={orders} />}
         </div>
       </div>
+      </NoticeProvider>
     </>
   );
 }

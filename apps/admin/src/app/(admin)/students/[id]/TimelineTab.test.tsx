@@ -30,6 +30,14 @@ describe('TimelineTab', () => {
     expect(screen.queryByRole('button', { name: 'Mai vechi' })).toBeNull();
   });
 
+  it('shows an aria-hidden icon per kind, with a neutral fallback', () => {
+    const e = (id: number, kind: string): StudentEvent => ({ ...ev(id), kind });
+    render(<TimelineTab userId="s1" initial={[e(3, 'weird_kind'), e(2, 'suspended'), e(1, 'registered')]} pageSize={50} />);
+    const icons = screen.getAllByTestId('event-icon');
+    expect(icons.map((i) => i.textContent)).toEqual(['•', '🛑', '👋']);
+    for (const i of icons) expect(i.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('loads older events when 50 came back', async () => {
     const first = Array.from({ length: 50 }, (_, i) => ev(100 - i));
     actions.loadMoreEventsAction.mockResolvedValue({ ok: true, data: [ev(3, 'S-a înregistrat cu email')] });

@@ -24,3 +24,11 @@ export async function refreshRegisteredProfile(): Promise<void> {
     console.warn('[profile] refresh failed:', e);
   }
 }
+
+/** Postgres insufficient_privilege: what RLS returns for a suspended student's writes. */
+const INSUFFICIENT_PRIVILEGE = '42501';
+
+/** Refreshes the profile when a write failed with 42501, so a mid-session suspension reaches the suspended screen. */
+export async function refreshIfDenied(error: { code?: string } | null | undefined): Promise<void> {
+  if (error?.code === INSUFFICIENT_PRIVILEGE) await refreshRegisteredProfile();
+}

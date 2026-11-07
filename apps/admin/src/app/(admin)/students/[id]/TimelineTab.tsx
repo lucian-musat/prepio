@@ -7,6 +7,13 @@ import type { StudentEvent } from '@/lib/data/students';
 import { loadMoreEventsAction } from '../actions';
 import { formatDayTime } from './format';
 
+const KIND_ICONS: Record<string, string> = {
+  registered: '👋', welcome_credits: '🎁', name_changed: '✏️', mode_changed: '🧭', app_opened: '📱',
+  lesson_started: '📖', lesson_finished: '✅', test_failed: '❌', consolidation_started: '🧩',
+  consolidation_finished: '🏁', check: '🎓', check_refunded: '↩️', check_blocked: '⛔', purchase: '🪙',
+  credits_adjusted: '⚙️', suspended: '🛑', reactivated: '🔓', progress_reset: '🔄',
+};
+
 /** Newest first, ordered by id; merges the server's first page with the older pages loaded here. */
 function merge(...lists: StudentEvent[][]): StudentEvent[] {
   const byId = new Map<number, StudentEvent>();
@@ -47,6 +54,7 @@ export default function TimelineTab({ userId, initial, pageSize }: { userId: str
           <li key={e.id} className="d-flex gap-3 py-2 border-bottom">
             <span className="text-muted text-nowrap" style={{ minWidth: 96 }}>{formatDayTime(e.createdAt)}</span>
             <span>
+              <span aria-hidden="true" className="me-2" data-testid="event-icon">{KIND_ICONS[e.kind] ?? '•'}</span>
               {e.label}
               {e.details && <span className="d-block small text-muted">{e.details}</span>}
             </span>

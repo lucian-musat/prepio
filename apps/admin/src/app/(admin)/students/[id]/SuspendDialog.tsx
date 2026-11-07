@@ -4,17 +4,20 @@ import { useState } from 'react';
 import { Alert, Button, Form, Modal } from 'react-bootstrap';
 import { useRunner } from '@/components/editor/common';
 import { reactivateStudentAction, suspendStudentAction } from '../actions';
+import { useNotify } from './Notice';
 
 export default function SuspendDialog({ userId, show, onHide }: { userId: string; show: boolean; onHide: () => void }) {
   const [reason, setReason] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const { run, pending, alert } = useRunner();
+  const notify = useNotify();
 
   function submit() {
     if (!reason.trim()) return setFormError('Motivul este obligatoriu.');
     setFormError(null);
     run(() => suspendStudentAction(userId, reason), () => {
       setReason('');
+      notify('Contul a fost suspendat.');
       onHide();
     });
   }
@@ -58,8 +61,12 @@ export function ReactivateDialog({
   onHide: () => void;
 }) {
   const { run, pending, alert } = useRunner();
+  const notify = useNotify();
   return (
     <Modal show={show} onHide={onHide} centered aria-labelledby="reactivate-dialog-text">
+      <Modal.Header closeButton>
+        <Modal.Title as="h2" className="h5">Reactivează contul</Modal.Title>
+      </Modal.Header>
       <Modal.Body>
         {alert}
         <p id="reactivate-dialog-text" className="mb-0">
@@ -68,7 +75,10 @@ export function ReactivateDialog({
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" disabled={pending} onClick={onHide}>Renunță</Button>
-        <Button variant="success" disabled={pending} onClick={() => run(() => reactivateStudentAction(userId), onHide)}>
+        <Button variant="success" disabled={pending} onClick={() => run(() => reactivateStudentAction(userId), () => {
+          notify('Contul a fost reactivat.');
+          onHide();
+        })}>
           Reactivează
         </Button>
       </Modal.Footer>

@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StudentRow } from '@/lib/data/students';
+import { NoticeProvider } from './Notice';
 import StudentHeader from './StudentHeader';
 
+const reset = vi.hoisted(() => vi.fn());
 vi.mock('../actions', () => ({
   adjustCreditsAction: vi.fn(), suspendStudentAction: vi.fn(), reactivateStudentAction: vi.fn(),
-  resetProgressAction: vi.fn(), deleteStudentAction: vi.fn(),
+  resetProgressAction: reset, deleteStudentAction: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
@@ -33,6 +36,18 @@ describe('StudentHeader', () => {
     }
     expect(screen.queryByRole('button', { name: 'Reactivează' })).toBeNull();
     expect(screen.queryByText(/Suspendat de/)).toBeNull();
+  });
+
+  it('resetting the whole path reports success on the page', async () => {
+    reset.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<NoticeProvider><StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} /></NoticeProvider>);
+    await user.click(screen.getByRole('button', { name: 'Resetează tot parcursul' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Resetează parcursul' })).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: 'Resetează' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Tot parcursul a fost resetat.');
+    expect(reset).toHaveBeenCalledWith('s1', null);
   });
 
   it('shows a suspended student with the strip and Reactivează', () => {

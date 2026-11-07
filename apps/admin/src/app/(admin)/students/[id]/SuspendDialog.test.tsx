@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NoticeProvider } from './Notice';
 import SuspendDialog, { ReactivateDialog } from './SuspendDialog';
 
 const actions = vi.hoisted(() => ({ suspendStudentAction: vi.fn(), reactivateStudentAction: vi.fn() }));
@@ -17,7 +18,7 @@ describe('SuspendDialog', () => {
   it('requires a reason', async () => {
     const user = userEvent.setup();
     render(<SuspendDialog userId="s1" show onHide={() => {}} />);
-    expect(screen.getByText('Suspendă contul')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Suspendă contul' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Renunță' })).toBeTruthy();
     await user.type(screen.getByLabelText('Motiv (îl vede elevul)'), '   ');
     await user.click(screen.getByRole('button', { name: 'Suspendă' }));
@@ -37,7 +38,31 @@ describe('SuspendDialog', () => {
   });
 });
 
+describe('success notices', () => {
+  it('suspend reports success on the page', async () => {
+    actions.suspendStudentAction.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<NoticeProvider><SuspendDialog userId="s1" show onHide={() => {}} /></NoticeProvider>);
+    await user.type(screen.getByLabelText('Motiv (îl vede elevul)'), 'Spam');
+    await user.click(screen.getByRole('button', { name: 'Suspendă' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Contul a fost suspendat.');
+  });
+
+  it('reactivate reports success on the page', async () => {
+    actions.reactivateStudentAction.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<NoticeProvider><ReactivateDialog userId="s1" blocked={false} show onHide={() => {}} /></NoticeProvider>);
+    await user.click(screen.getByRole('button', { name: 'Reactivează' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Contul a fost reactivat.');
+  });
+});
+
 describe('ReactivateDialog', () => {
+  it('has a title', () => {
+    render(<ReactivateDialog userId="s1" blocked={false} show onHide={() => {}} />);
+    expect(screen.getByRole('heading', { name: 'Reactivează contul' })).toBeTruthy();
+  });
+
   it('mentions the email block only when blocked', () => {
     const { rerender } = render(<ReactivateDialog userId="s1" blocked={false} show onHide={() => {}} />);
     expect(screen.getByText('Reactivezi contul? Elevul își recapătă accesul imediat.')).toBeTruthy();

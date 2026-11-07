@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { registerProfileRefresh } from './profileRefresh';
 import { fetchProgress, markFinished, positionFromJson, savePosition, type LessonPosition } from './progress';
 
 const L1 = '11111111-1111-4111-8111-111111111111';
@@ -105,5 +106,28 @@ describe('markFinished', () => {
     await expect(markFinished(L1, fakeClient({ data: null, error: new Error('down') }).client)).rejects.toThrow(
       'Progresul nu a putut fi salvat. Încearcă din nou.',
     );
+  });
+});
+
+describe('suspension (42501)', () => {
+  const denied = { code: '42501', message: 'rls' };
+  const refresh = jest.fn(async () => {});
+  let unregister: () => void;
+  beforeEach(() => {
+    refresh.mockClear();
+    unregister = registerProfileRefresh(refresh);
+  });
+  afterEach(() => unregister());
+
+  it('savePosition and markFinished refresh the profile before rethrowing', async () => {
+    await expect(savePosition(L1, POS, fakeClient({ data: null, error: denied }).client)).rejects.toBe(denied);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await expect(markFinished(L1, fakeClient({ data: null, error: denied }).client)).rejects.toThrow();
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('other errors do not refresh the profile', async () => {
+    await expect(savePosition(L1, POS, fakeClient({ data: null, error: { code: '08006' } }).client)).rejects.toBeDefined();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

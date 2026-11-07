@@ -13,6 +13,7 @@ import {
   type SourceLabel,
   type Verdict,
 } from '@prepio/shared';
+import { refreshIfDenied } from './profileRefresh';
 import { getSupabase } from './supabase';
 
 export type ConsolidationData = {
@@ -112,7 +113,10 @@ export async function saveAttempt(a: Attempt, client: SupabaseClient = getSupaba
       { exercise_id: a.exerciseId, answer: a.answer, verdict: a.verdict, feedback: a.feedback },
       { onConflict: 'user_id,exercise_id' },
     );
-  if (error) throw error;
+  if (error) {
+    await refreshIfDenied(error);
+    throw error;
+  }
 }
 
 export type Run = { exerciseIds: string[]; index: number; finished: boolean };
@@ -138,7 +142,10 @@ export async function saveRun(lessonId: string, run: Run, client: SupabaseClient
     },
     { onConflict: 'user_id,lesson_id' },
   );
-  if (error) throw error;
+  if (error) {
+    await refreshIfDenied(error);
+    throw error;
+  }
 }
 
 export type RunStart = { kind: 'resume'; run: Run } | { kind: 'end' } | { kind: 'new'; run: Run };

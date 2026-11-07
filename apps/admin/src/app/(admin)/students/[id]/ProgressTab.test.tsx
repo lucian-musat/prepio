@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LessonProgressRow } from '@/lib/data/students';
+import { NoticeProvider } from './Notice';
 import ProgressTab from './ProgressTab';
 
 const actions = vi.hoisted(() => ({ resetProgressAction: vi.fn() }));
@@ -41,12 +42,26 @@ describe('ProgressTab', () => {
     render(<ProgressTab userId="s1" rows={ROWS} />);
     await user.click(within(row('Războiul')).getByRole('button', { name: 'Resetează' }));
     const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Resetează parcursul' })).toBeTruthy();
     expect(dialog.textContent).toContain(
       'Resetezi lecția „Războiul de Independență”? Se șterg progresul și răspunsurile salvate ale elevului la această lecție. Creditele nu se schimbă.',
     );
     expect(within(dialog).getByRole('button', { name: 'Renunță' })).toBeTruthy();
     await user.click(within(dialog).getByRole('button', { name: 'Resetează' }));
     await waitFor(() => expect(actions.resetProgressAction).toHaveBeenCalledWith('s1', 'l2'));
+  });
+
+  it('reports success on the page after a reset and the alert can be dismissed', async () => {
+    actions.resetProgressAction.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    render(<NoticeProvider><ProgressTab userId="s1" rows={ROWS} /></NoticeProvider>);
+    await user.click(within(row('Războiul')).getByRole('button', { name: 'Resetează' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Resetează' }));
+    const status = await screen.findByRole('status');
+    expect(status.textContent).toContain('Parcursul lecției „Războiul de Independență” a fost resetat.');
+    await user.click(within(status).getByRole('button'));
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows the error inline', async () => {

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { registerProfileRefresh } from './profileRefresh';
 import {
   countConsolidation,
   fetchAttempts,
@@ -238,5 +239,31 @@ describe('runs', () => {
     await saveRun('l1', { exerciseIds: ['a'], index: 0, finished: true }, m2.client);
     const payload = m2.log.find((c) => c.method === 'upsert')!.args[0] as { finished_at: string };
     expect(typeof payload.finished_at).toBe('string');
+  });
+});
+
+describe('suspension (42501)', () => {
+  const denied = { code: '42501', message: 'rls' };
+  const refresh = jest.fn(async () => {});
+  let unregister: () => void;
+  beforeEach(() => {
+    refresh.mockClear();
+    unregister = registerProfileRefresh(refresh);
+  });
+  afterEach(() => unregister());
+
+  it('saveAttempt and saveRun refresh the profile before rethrowing', async () => {
+    const a = mockClient({ consolidation_attempts: { data: null, error: denied } });
+    await expect(saveAttempt(attempt('e1', 'ok'), a.client)).rejects.toBe(denied);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    const r = mockClient({ consolidation_runs: { data: null, error: denied } });
+    await expect(saveRun('l1', { exerciseIds: ['a'], index: 0, finished: false }, r.client)).rejects.toBe(denied);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('other errors do not refresh the profile', async () => {
+    const a = mockClient({ consolidation_attempts: { data: null, error: new Error('x') } });
+    await expect(saveAttempt(attempt('e1', 'ok'), a.client)).rejects.toThrow('x');
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

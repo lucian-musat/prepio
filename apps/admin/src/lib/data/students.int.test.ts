@@ -101,9 +101,26 @@ describe.skipIf(!url || !anon || !serviceKey)('student administration data funct
     service = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
   });
 
+  // service_role has no privileges on blocked_emails. An account re-created with a blocked email comes back suspended;
+  // reactivating it as the admin removes the fingerprint, then it is deleted. Every account is cleaned up on its own.
   afterAll(async () => {
-    for (const id of ids) await service.auth.admin.deleteUser(id);
-    await service.from('blocked_emails').delete().like('reason', '[test]%');
+    const failures: string[] = [];
+    for (const id of ids) {
+      try {
+        const r = await db.rpc('admin_reactivate_student', { p_user: id });
+        if (r.error) throw r.error;
+      } catch (e) {
+        // not suspended / not a student any more: fine, deletion below is what matters
+        void e;
+      }
+      try {
+        const d = await service.auth.admin.deleteUser(id);
+        if (d.error && d.error.status !== 404) throw d.error;
+      } catch (e) {
+        failures.push(`${id}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    if (failures.length) throw new Error(`cleanup failed for ${failures.length} account(s): ${failures.join('; ')}`);
   });
 
   it('filters the list: suspended and active today', async () => {
