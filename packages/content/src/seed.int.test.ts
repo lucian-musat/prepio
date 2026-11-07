@@ -1,9 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
-import { loadConsolidation } from './consolidation.testutil';
+import { AI_TYPES, aiTemplateTypeFor, cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
+import { AI_TEMPLATES } from './aiTemplates';
+import { aiTemplateTypes, loadConsolidation } from './consolidation.testutil';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
-import { withPendingTemplates } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
 
@@ -45,7 +45,13 @@ const EXPECTED = {
   sources: lessons.reduce((n, l) => n + l.sources.length, 0),
   consolidation_exercise_sources: lessons.reduce((n, l) => n + l.consolidation.reduce((m, c) => m + c.sources.length, 0), 0),
   consolidation_ai_context: lessons.reduce((n, l) => n + l.consolidation.length, 0),
+  // One link per AI exercise, one per requirement for the essay.
+  consolidation_ai_template_links: lessons.reduce(
+    (n, l) => n + l.consolidation.reduce((m, c) => m + (c.type === 'essay' ? c.requirements.length : AI_TYPES.has(c.type) ? 1 : 0), 0),
+    0,
+  ),
   seed_templates: TEMPLATES.length,
+  seed_ai_templates: 5,
 };
 
 async function count(client: SupabaseClient, table: string): Promise<number> {
@@ -79,8 +85,16 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     sources: await count(client, 'sources'),
     consolidation_exercise_sources: await count(client, 'consolidation_exercise_sources'),
     consolidation_ai_context: await count(client, 'consolidation_ai_context'),
+    consolidation_ai_template_links: await count(client, 'consolidation_ai_template_links'),
     seed_templates: await seedTemplates(),
+    seed_ai_templates: await seedAiTemplates(),
   });
+
+  const seedAiTemplates = async (): Promise<number> => {
+    const { data, error } = await client.from('ai_templates').select('title').in('title', AI_TEMPLATES.map((t) => t.title));
+    if (error) throw error;
+    return data.length;
+  };
 
   /** Templates are not lesson content: a reset keeps them, and the seed only inserts the missing ones (by title). */
   const seedTemplates = async (): Promise<number> => {
@@ -217,6 +231,19 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     }
     const templateKey = new Map(tpl.map((r) => [r.id as string, TEMPLATES.find((t) => t.title === r.title)?.key ?? null]));
 
+    const { data: aiTpl, error: aiErr } = await client.from('ai_templates').select('title,type,criteria,keywords,response_format');
+    if (aiErr) throw aiErr;
+    for (const t of AI_TEMPLATES) {
+      expect(aiTpl.find((r) => r.title === t.title), t.title).toEqual({
+        title: t.title,
+        type: t.key,
+        criteria: t.criteria,
+        keywords: t.keywords,
+        response_format: t.responseFormat,
+      });
+    }
+    const aiType = await aiTemplateTypes(client);
+
     const { data: dbLessons, error } = await client.from('lessons').select('id,title');
     if (error) throw error;
     for (const l of lessons) {
@@ -229,11 +256,17 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
         const seedEx = l.consolidation[i]!;
         expect(exercise.position).toBe(i);
         expect(ai, exercise.prompt).not.toBeNull();
-        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), exercise.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, ai), exercise.prompt).toEqual([]);
         expect(exercise.templateId === null ? null : templateKey.get(exercise.templateId)).toBe(seedEx.template);
         const sourceKeys = exercise.sources.map((r) => l.sources[stored.sources.findIndex((s) => s.id === r.sourceId)]?.key);
         expect(sourceKeys).toEqual(seedEx.sources);
-        if (seedEx.ai) expect(ai).toEqual(seedEx.ai);
+        if (seedEx.ai) expect({ main: ai!.main, requirements: ai!.requirements }).toEqual(seedEx.ai);
+        // The AI template comes from the exercise type: the exercise's own, or one per essay requirement.
+        const type = aiTemplateTypeFor(exercise.type);
+        const linked = [ai!.templateId, ...Object.values(ai!.requirementTemplates)].filter((id) => id !== null);
+        expect(linked.map((id) => aiType.get(id)), exercise.prompt).toEqual(
+          type === null ? [] : exercise.type === 'essay' ? exercise.requirements.map(() => type) : [type],
+        );
       });
 
       // The essay keeps its requirements (templates resolved) and one AI context per requirement.
@@ -246,7 +279,8 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
         seedEssay.requirements.map((r) => [r.id, r.text, r.modelAnswer, r.argument]),
       );
       expect(exercise.requirements.map((r) => r.templateId && templateKey.get(r.templateId))).toEqual(seedEssay.requirements.map((r) => r.template));
-      expect(ai).toEqual({ main: '', requirements: seedEssay.ai!.requirements });
+      expect(ai).toMatchObject({ main: '', requirements: seedEssay.ai!.requirements, templateId: null });
+      expect(Object.keys(ai!.requirementTemplates).sort()).toEqual(seedEssay.requirements.map((r) => r.id).sort());
 
       // Seed exercises get the type default cost: comparison and argument 2, every other type 1.
       const { data: costs, error: costErr } = await client.from('consolidation_exercises').select('type,credit_cost').eq('lesson_id', id);

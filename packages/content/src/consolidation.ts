@@ -1,15 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  AI_TYPES,
+  aiTemplateTypeFor,
   DEFAULT_CREDIT_COST,
   exerciseToRow,
   type AiContext,
+  type AiTemplateType,
   type AnswerSpan,
   type ConsolidationExercise,
   type SourceRef,
 } from '@prepio/shared';
+import { AI_TEMPLATES } from './aiTemplates';
 import { TEMPLATES } from './templates';
-import type { SeedAiContext, SeedConsolidation, SeedSource, SeedSpan, SeedTemplate } from './types';
+import type { SeedAiTemplate, SeedConsolidation, SeedSource, SeedSpan, SeedTemplate } from './types';
 
 export function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
@@ -55,16 +57,18 @@ const LABELS = ['A', 'B'] as const;
 
 /**
  * Turns a seed exercise into the shared model: source keys become ids (labelled A/B in order), quotes become offsets
- * (`body.indexOf(quote)`, limit = the sentence), template keys become ids. Throws on a quote that is not in its source
- * or an unknown key, naming the exercise. `position` is 0; the writer sets it.
+ * (`body.indexOf(quote)`, limit = the sentence), template keys become ids. An AI exercise (each essay requirement) gets
+ * the AI template of its type from `aiTemplateIds`: seed exercises never name one. Throws on a quote that is not in its
+ * source, an unknown key or a missing AI template type, naming the exercise. `position` is 0; the writer sets it.
  */
 export function toExercise(
   c: SeedConsolidation,
   sourceIds: Map<string, string>,
   bodies: Map<string, string>,
   templateIds: Map<string, string>,
+  aiTemplateIds: Map<AiTemplateType, string>,
   newId: () => string,
-): { exercise: ConsolidationExercise; ai: SeedAiContext } {
+): { exercise: ConsolidationExercise; ai: AiContext } {
   const fail = (msg: string): never => {
     throw new Error(`Exercise „${c.prompt}”: ${msg}`);
   };
@@ -138,13 +142,54 @@ export function toExercise(
   }
 
   // Same shape the admin stores: empty for deterministic types, `main` or one entry per requirement otherwise.
-  let ai: SeedAiContext = { main: '', requirements: {} };
+  const aiType = aiTemplateTypeFor(exercise.type);
+  const aiTemplate = (type: AiTemplateType): string => aiTemplateIds.get(type) ?? fail(`no AI template of type „${type}”`);
+  let ai: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: {} };
   if (exercise.type === 'essay') {
-    ai = { main: '', requirements: Object.fromEntries(exercise.requirements.map((r) => [r.id, c.ai?.requirements[r.id] ?? ''])) };
-  } else if (AI_TYPES.has(exercise.type)) {
-    ai = { main: c.ai?.main ?? '', requirements: {} };
+    ai = {
+      main: '',
+      requirements: Object.fromEntries(exercise.requirements.map((r) => [r.id, c.ai?.requirements[r.id] ?? ''])),
+      templateId: null,
+      requirementTemplates: Object.fromEntries(exercise.requirements.map((r) => [r.id, aiTemplate('essay_requirement')])),
+    };
+  } else if (aiType) {
+    ai = { main: c.ai?.main ?? '', requirements: {}, templateId: aiTemplate(aiType), requirementTemplates: {} };
   }
   return { exercise, ai };
+}
+
+/**
+ * Finds the seed AI templates by title, like `ensureTemplates`: with `apply`, inserts the missing ones; returns
+ * type → id for the templates that exist afterwards and those that were (or, in a dry run, would be) inserted.
+ * Never changes an existing template.
+ */
+export async function ensureAiTemplates(
+  client: SupabaseClient,
+  apply: boolean,
+  templates: SeedAiTemplate[] = AI_TEMPLATES,
+): Promise<{ ids: Map<AiTemplateType, string>; missing: SeedAiTemplate[] }> {
+  const rows = check(
+    await client.from('ai_templates').select('id, title').in('title', templates.map((t) => t.title)).order('created_at'),
+    'find AI templates',
+  ) as { id: string; title: string }[];
+  const ids = new Map<AiTemplateType, string>();
+  const missing: SeedAiTemplate[] = [];
+  for (const t of templates) {
+    const row = rows.find((r) => r.title === t.title);
+    if (row) ids.set(t.key, row.id);
+    else missing.push(t);
+  }
+  if (apply && missing.length) {
+    const inserted = check(
+      await client
+        .from('ai_templates')
+        .insert(missing.map((t) => ({ title: t.title, type: t.key, criteria: t.criteria, keywords: t.keywords, response_format: t.responseFormat })))
+        .select('id, title'),
+      'insert AI templates',
+    ) as { id: string; title: string }[];
+    for (const t of missing) ids.set(t.key, inserted.find((r) => r.title === t.title)!.id);
+  }
+  return { ids, missing };
 }
 
 /**
@@ -181,10 +226,10 @@ export async function ensureTemplates(
 }
 
 /**
- * Inserts sources and exercises (with their source links and AI contexts) into a lesson, after the sources and
- * exercises it already has. Every exercise is converted (and so checked) before anything is written. The writes are
- * not one transaction: when one fails, the rows inserted by this call (ids generated up front) are deleted again and
- * the error is rethrown, saying whether the rollback succeeded.
+ * Inserts sources and exercises (with their source links, AI contexts and AI template links) into a lesson, after the
+ * sources and exercises it already has. Every exercise is converted (and so checked) before anything is written. The
+ * writes are not one transaction: when one fails, the rows inserted by this call (ids generated up front) are deleted
+ * again and the error is rethrown, saying whether the rollback succeeded.
  */
 export async function writeConsolidation(
   client: SupabaseClient,
@@ -192,6 +237,7 @@ export async function writeConsolidation(
   sources: SeedSource[],
   items: SeedConsolidation[],
   templateIds: Map<string, string>,
+  aiTemplateIds: Map<AiTemplateType, string>,
   newId: () => string,
 ): Promise<void> {
   const [lastSource] = check(
@@ -205,13 +251,13 @@ export async function writeConsolidation(
 
   const sourceIds = new Map(sources.map((s) => [s.key, newId()]));
   const bodies = new Map(sources.map((s) => [s.key, s.body]));
-  const converted = items.map((c) => toExercise(c, sourceIds, bodies, templateIds, newId));
+  const converted = items.map((c) => toExercise(c, sourceIds, bodies, templateIds, aiTemplateIds, newId));
 
   try {
     await insertConsolidation(client, lessonId, sources, sourceIds, converted, lastSource, lastExercise);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    // Exercises first: their links restrict source deletes; links and contexts go with them by cascade.
+    // Exercises first: their links restrict source deletes; links (source and AI template) and contexts go with them by cascade.
     const exercises = await client.from('consolidation_exercises').delete().in('id', converted.map((c) => c.exercise.id));
     const srcs = exercises.error ? exercises : await client.from('sources').delete().in('id', [...sourceIds.values()]);
     const rollback = srcs.error
@@ -226,7 +272,7 @@ async function insertConsolidation(
   lessonId: string,
   sources: SeedSource[],
   sourceIds: Map<string, string>,
-  converted: { exercise: ConsolidationExercise; ai: SeedAiContext }[],
+  converted: { exercise: ConsolidationExercise; ai: AiContext }[],
   lastSource: { position: number } | undefined,
   lastExercise: { position: number } | undefined,
 ): Promise<void> {
@@ -263,19 +309,20 @@ async function insertConsolidation(
     exercise.sources.map((s, position) => ({ exercise_id: exercise.id, source_id: s.sourceId, label: s.label, position })),
   );
   if (links.length) check(await client.from('consolidation_exercise_sources').insert(links), 'insert exercise sources');
+  // The jsonb context holds the text only, as the admin stores it; the template ids go to the links.
   check(
-    await client.from('consolidation_ai_context').insert(converted.map(({ exercise, ai }) => ({ exercise_id: exercise.id, context: ai }))),
+    await client
+      .from('consolidation_ai_context')
+      .insert(converted.map(({ exercise, ai }) => ({ exercise_id: exercise.id, context: { main: ai.main, requirements: ai.requirements } }))),
     'insert exercise contexts',
   );
-}
-
-/**
- * Seed contexts carry text only. For validation, mark every AI template as chosen: the seed does not link
- * templates yet (placeholder until the seed links them), so only the other rules are checked here.
- */
-export function withPendingTemplates(exercise: ConsolidationExercise, ai: SeedAiContext | null): AiContext | null {
-  if (!ai) return null;
-  const requirementTemplates: Record<string, string> = {};
-  if (exercise.type === 'essay') for (const r of exercise.requirements) requirementTemplates[r.id] = 'pending';
-  return { ...ai, templateId: 'pending', requirementTemplates };
+  const aiLinks = converted.flatMap(({ exercise, ai }) => [
+    ...(ai.templateId ? [{ exercise_id: exercise.id, requirement_id: '', template_id: ai.templateId }] : []),
+    ...Object.entries(ai.requirementTemplates).map(([requirementId, templateId]) => ({
+      exercise_id: exercise.id,
+      requirement_id: requirementId,
+      template_id: templateId,
+    })),
+  ]);
+  if (aiLinks.length) check(await client.from('consolidation_ai_template_links').insert(aiLinks), 'insert AI template links');
 }

@@ -1,9 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { validateExercise } from '@prepio/shared';
-import { loadConsolidation } from './consolidation.testutil';
+import { aiTemplateTypeFor, validateExercise } from '@prepio/shared';
+import { aiTemplateTypes, loadConsolidation } from './consolidation.testutil';
 import { DEMO_CARDS, DEMO_CONSOLIDATION, DEMO_LESSON_TITLE, DEMO_NODE_TITLE, DEMO_QUESTIONS, DEMO_SOURCES, seedDemo } from './demoLesson';
-import { withPendingTemplates } from './consolidation';
 import { seed } from './seed';
 
 const url = process.env.SUPABASE_URL;
@@ -58,7 +57,16 @@ describe.skipIf(!url || !serviceKey)('seedDemo (integration)', () => {
     expect(lesson?.consolidation_exercises[0]?.count).toBe(DEMO_CONSOLIDATION.length);
     expect(lesson?.sources[0]?.count).toBe(DEMO_SOURCES.length);
     const stored = await loadConsolidation(client, lesson!.id);
-    for (const { exercise, ai } of stored.exercises) expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), exercise.prompt).toEqual([]);
+    const aiType = await aiTemplateTypes(client);
+    for (const { exercise, ai } of stored.exercises) {
+      expect(validateExercise(exercise, stored.sources, ai), exercise.prompt).toEqual([]);
+      // Linked to the seed AI template of its type (one per requirement for the essay).
+      const linked = [ai!.templateId, ...Object.values(ai!.requirementTemplates)].filter((id) => id !== null);
+      const type = aiTemplateTypeFor(exercise.type);
+      expect(linked.map((id) => aiType.get(id)), exercise.prompt).toEqual(
+        type === null ? [] : exercise.type === 'essay' ? exercise.requirements.map(() => type) : [type],
+      );
+    }
   });
 
   it('a second run refreshes the same lesson, stays first and resets progress in it', async () => {

@@ -3,8 +3,9 @@ import { config } from 'dotenv';
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONSOLIDATION_TYPES, validateExercise, type Source } from '@prepio/shared';
-import { check, ensureTemplates, toExercise, withPendingTemplates, writeConsolidation } from './consolidation';
+import { CONSOLIDATION_TYPES, validateExercise, type AiTemplateType, type Source } from '@prepio/shared';
+import { AI_TEMPLATES } from './aiTemplates';
+import { check, ensureAiTemplates, ensureTemplates, toExercise, writeConsolidation } from './consolidation';
 import { lessons as seedLessons } from './index';
 import { TEMPLATES } from './templates';
 import type { SeedLesson } from './types';
@@ -22,6 +23,8 @@ export type SyncResult = {
   lessons: LessonSync[];
   /** Seed templates missing in the database (matched by title): inserted (or, in a dry run, to insert) when a lesson is written. */
   missingTemplates: string[];
+  /** Seed AI templates missing in the database (matched by title): inserted (or, in a dry run, to insert) when a lesson is written. */
+  missingAiTemplates: string[];
   /** Seed templates whose stored points, body or type differ from the seed: reported, never changed. */
   changedTemplates: string[];
   /** Lessons written. */
@@ -43,18 +46,22 @@ function counts(sources: number, types: string[]): ConsolidationCounts {
   return { sources, exercises: types.length, types: byType };
 }
 
-/** Converts and validates every seed exercise (with its AI context) against the seed sources; throws listing every error. */
-function validateSeed(lessons: SeedLesson[], templateKeys: string[]): void {
+/**
+ * Converts and validates every seed exercise (with its AI context and AI templates) against the seed sources; throws
+ * listing every error. Keys stand in for the ids: the seed templates are inserted only when a lesson is written.
+ */
+function validateSeed(lessons: SeedLesson[], templateKeys: string[], aiTemplateTypes: AiTemplateType[]): void {
   const errors: string[] = [];
   const templates = new Map(templateKeys.map((k) => [k, k]));
+  const aiTemplates = new Map(aiTemplateTypes.map((t) => [t, t as string]));
   for (const l of lessons) {
     const ids = new Map(l.sources.map((s) => [s.key, s.key]));
     const bodies = new Map(l.sources.map((s) => [s.key, s.body]));
     const sources: Source[] = l.sources.map((s, position) => ({ id: s.key, position, ...s }));
     for (const c of l.consolidation) {
       try {
-        const { exercise, ai } = toExercise(c, ids, bodies, templates, randomUUID);
-        for (const e of validateExercise(exercise, sources, withPendingTemplates(exercise, ai))) errors.push(`${l.title} — ${c.prompt}: ${e}`);
+        const { exercise, ai } = toExercise(c, ids, bodies, templates, aiTemplates, randomUUID);
+        for (const e of validateExercise(exercise, sources, ai)) errors.push(`${l.title} — ${c.prompt}: ${e}`);
       } catch (err) {
         errors.push(`${l.title}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -97,8 +104,9 @@ async function replaceLesson(
   lesson: SeedLesson,
   old: { exercises: ExerciseRow[]; sources: SourceRow[] },
   templateIds: Map<string, string>,
+  aiTemplateIds: Map<AiTemplateType, string>,
 ): Promise<void> {
-  await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, randomUUID);
+  await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, aiTemplateIds, randomUUID);
   try {
     check(await client.from('consolidation_runs').delete().eq('lesson_id', lessonId), 'delete consolidation runs');
     if (old.exercises.length) {
@@ -128,7 +136,8 @@ async function replaceLesson(
  * the seed's, deleting the old exercises with their student attempts, and the lesson's consolidation runs. A lesson
  * whose exercises (type and prompt, in order) and sources (title and body, in order) already equal the seed's is left
  * alone, so a re-run after `--apply` plans nothing. Every seed exercise is validated before anything is written (an
- * invalid one aborts the run). Missing seed templates are inserted (only when a lesson is written); existing templates
+ * invalid one aborts the run). Missing seed solution and AI templates are inserted (only when a lesson is written; each
+ * written AI exercise is linked to the AI template of its type); existing templates
  * are never changed, those that differ from the seed are only reported. The demo lesson is not handled here
  * (`pnpm content:cloud:demo --apply` refreshes it). Without `apply`, only plans.
  */
@@ -137,11 +146,20 @@ export async function syncConsolidation(
   opts: { apply: boolean; lessons?: SeedLesson[] },
 ): Promise<SyncResult> {
   const lessons = opts.lessons ?? seedLessons;
-  validateSeed(lessons, TEMPLATES.map((t) => t.key));
-  const result: SyncResult = { applied: opts.apply, lessons: [], missingTemplates: [], changedTemplates: [], replaced: 0, problems: 0 };
+  validateSeed(lessons, TEMPLATES.map((t) => t.key), AI_TEMPLATES.map((t) => t.key));
+  const result: SyncResult = {
+    applied: opts.apply,
+    lessons: [],
+    missingTemplates: [],
+    missingAiTemplates: [],
+    changedTemplates: [],
+    replaced: 0,
+    problems: 0,
+  };
 
   const found = await ensureTemplates(client, false);
   result.missingTemplates = found.missing.map((t) => t.title);
+  result.missingAiTemplates = (await ensureAiTemplates(client, false)).missing.map((t) => t.title);
   const stored = check(
     await client.from('solution_templates').select('title, exercise_type, points, body').in('title', TEMPLATES.map((t) => t.title)),
     'read templates',
@@ -189,12 +207,16 @@ export async function syncConsolidation(
     toWrite.push({ id, lesson, old });
   }
 
-  if (!toWrite.length) result.missingTemplates = [];
+  if (!toWrite.length) {
+    result.missingTemplates = [];
+    result.missingAiTemplates = [];
+  }
   if (!opts.apply || !toWrite.length) return result;
 
   const { ids: templateIds } = await ensureTemplates(client, true);
+  const { ids: aiTemplateIds } = await ensureAiTemplates(client, true);
   for (const w of toWrite) {
-    await replaceLesson(client, w.id, w.lesson, w.old, templateIds);
+    await replaceLesson(client, w.id, w.lesson, w.old, templateIds, aiTemplateIds);
     result.replaced++;
   }
   return result;
@@ -222,6 +244,9 @@ export function formatSync(r: SyncResult): string {
   if (r.missingTemplates.length) {
     out.push('', `Templates ${r.applied ? 'added' : 'to add'}:`, ...r.missingTemplates.map((t) => `  + ${t}`));
   }
+  if (r.missingAiTemplates.length) {
+    out.push('', `AI templates ${r.applied ? 'added' : 'to add'}:`, ...r.missingAiTemplates.map((t) => `  + ${t}`));
+  }
   if (r.changedTemplates.length) {
     out.push('', 'Templates that differ from the seed (left as they are; edit them in the admin if needed):', ...r.changedTemplates.map((t) => `  ~ ${t}`));
   }
@@ -230,8 +255,8 @@ export function formatSync(r: SyncResult): string {
   out.push(
     '',
     r.applied
-      ? `Done: ${r.replaced} lesson(s) replaced, ${inSync} already in sync, ${r.problems} problem(s); ${r.missingTemplates.length} template(s) added.`
-      : `Plan: ${replace} lesson(s) to replace, ${inSync} already in sync, ${r.problems} problem(s); ${r.missingTemplates.length} template(s) to add.`,
+      ? `Done: ${r.replaced} lesson(s) replaced, ${inSync} already in sync, ${r.problems} problem(s); ${r.missingTemplates.length} template(s), ${r.missingAiTemplates.length} AI template(s) added.`
+      : `Plan: ${replace} lesson(s) to replace, ${inSync} already in sync, ${r.problems} problem(s); ${r.missingTemplates.length} template(s), ${r.missingAiTemplates.length} AI template(s) to add.`,
   );
   return out.join('\n');
 }

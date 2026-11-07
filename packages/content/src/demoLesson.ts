@@ -5,14 +5,14 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cardImagePaths, cardToRow } from '@prepio/shared';
-import { ensureTemplates, writeConsolidation } from './consolidation';
+import { ensureAiTemplates, ensureTemplates, writeConsolidation } from './consolidation';
 import { BUCKET, IMAGES_DIR, check, contentType, seedPath, withStoragePaths } from './seed';
 import type { SeedCard, SeedConsolidation, SeedQuestion, SeedSource } from './types';
 
 /**
  * Demo lesson for testing the app by hand (pre-launch only): one card of every type, a few single-choice
  * questions whose first option is always the right one and one consolidation exercise of every type, in the BAC order
- * (with the solution templates they use, added when missing). When a feature is added to lessons, add it here too.
+ * (with the solution and AI templates they use, added when missing). When a feature is added to lessons, add it here too.
  * It lives in its own root node, placed before every other node, so it is the first lesson (open in guided mode).
  */
 export const DEMO_NODE_TITLE = 'Demo';
@@ -201,8 +201,8 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
         'Perioada: domnia lui Alexandru Ioan Cuza (1859–1866). Fapte acceptate: dubla alegere (ianuarie 1859), ' +
         'unificarea instituțiilor (guvern și adunare unică, capitala la București, 1862), secularizarea averilor ' +
         'mănăstirești (1863), lovitura de stat și Statutul Dezvoltător (1864), legea rurală (1864), legea ' +
-        'instrucțiunii publice (1864), abdicarea (februarie 1866). Faptele trebuie prezentate, nu doar menționate, și ' +
-        'să fie diferite. Greșeli frecvente: Constituția din 1866 (după abdicare), independența (1877).',
+        'instrucțiunii publice (1864), abdicarea (februarie 1866). Greșeli frecvente: Constituția din 1866 (după ' +
+        'abdicare), independența (1877).',
       requirements: {},
     },
   },
@@ -220,8 +220,8 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
         'Tema: două reforme din domnia lui Alexandru Ioan Cuza. Secularizarea (decembrie 1863): averile mănăstirești ' +
         'au trecut la stat (aproximativ un sfert din terenul agricol). Legea rurală (august 1864): desființarea ' +
         'clăcii și a dijmei, împroprietărirea clăcașilor. Asemănări acceptate: ambele adoptate sub Cuza, de guvernul ' +
-        'Mihail Kogălniceanu; ambele privesc proprietatea asupra pământului; ambele au modernizat societatea. Răspunsul ' +
-        'trebuie să numească ambele reforme și să spună explicit ce au în comun; o deosebire nu se acceptă.',
+        'Mihail Kogălniceanu; ambele privesc proprietatea asupra pământului; ambele au modernizat societatea. ' +
+        'Deosebiri (nu asemănări): secularizarea a trecut averile mănăstirilor la stat, legea rurală i-a împroprietărit pe clăcași.',
       requirements: {},
     },
   },
@@ -246,8 +246,8 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
       main:
         'Tema: reformele lui Alexandru Ioan Cuza (1863–1864), pe baza sursei: secularizarea, legea rurală, legea ' +
         'instrucțiunii publice. Puncte de vedere acceptate: reformele au modernizat societatea / statul; au îmbunătățit ' +
-        'situația țăranilor. Informațiile-suport trebuie să susțină punctul de vedere. Nu este punct de vedere o simplă ' +
-        'informație („Cuza a dat legea rurală”).',
+        'situația țăranilor. Informații-suport potrivite din sursă: trecerea averilor mănăstirești la stat; desființarea ' +
+        'clăcii; împroprietărirea țăranilor; învățământul primar obligatoriu și gratuit.',
       requirements: {},
     },
   },
@@ -291,11 +291,12 @@ export const DEMO_CONSOLIDATION: SeedConsolidation[] = [
         r1:
           'Acțiuni acceptate din 1857: alegerile pentru Adunările ad-hoc (falsificate în Moldova și reluate), întrunirea ' +
           'Adunărilor ad-hoc de la Iași și București, rezoluțiile din octombrie 1857 (unirea într-un stat numit România, ' +
-          'prinț străin, autonomie, neutralitate, adunare reprezentativă). Prezentarea cere detalii, nu doar numele acțiunii.',
+          'prinț străin, autonomie, neutralitate, adunare reprezentativă).',
         r2:
-          'Punctul de vedere este o apreciere despre dubla alegere (5 și 24 ianuarie 1859), de exemplu că a pus marile ' +
-          'puteri în fața faptului împlinit. Argumentul: un fapt istoric relevant (lacuna Convenției de la Paris, ' +
-          'recunoașterea dublei alegeri de către Conferința de la Paris în 1859), legat prin conectori de cauzalitate și concluzie.',
+          'Tema: dubla alegere a lui Alexandru Ioan Cuza (5 și 24 ianuarie 1859). Punct de vedere acceptat (exemplu): ' +
+          'a pus marile puteri în fața faptului împlinit. Fapte potrivite pentru argument: lacuna Convenției de la Paris, ' +
+          'care nu interzicea alegerea aceleiași persoane în ambele principate; recunoașterea dublei alegeri de către ' +
+          'Conferința de la Paris (1859).',
       },
     },
   },
@@ -308,6 +309,7 @@ export type DemoResult = {
   questions: number;
   exercises: number;
   templates: number;
+  aiTemplates: number;
 };
 
 type NodeRow = { id: string; parent_id: string | null; title: string; position: number };
@@ -329,7 +331,7 @@ async function demoNode(client: SupabaseClient): Promise<{ node: NodeRow | null;
  */
 export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; remove?: boolean }): Promise<DemoResult> {
   const { node, firstPosition } = await demoNode(client);
-  const none = { cards: 0, questions: 0, exercises: 0, templates: 0 };
+  const none = { cards: 0, questions: 0, exercises: 0, templates: 0, aiTemplates: 0 };
 
   if (opts.remove) {
     if (!node) return { applied: opts.apply, action: 'nothing', ...none };
@@ -344,6 +346,7 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
       }[])
     : [];
   const { ids: templateIds, missing } = await ensureTemplates(client, opts.apply);
+  const { ids: aiTemplateIds, missing: missingAi } = await ensureAiTemplates(client, opts.apply);
   const result: DemoResult = {
     applied: opts.apply,
     action: lessons.length ? 'update' : 'create',
@@ -351,6 +354,7 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
     questions: DEMO_QUESTIONS.length,
     exercises: DEMO_CONSOLIDATION.length,
     templates: missing.length,
+    aiTemplates: missingAi.length,
   };
   if (!opts.apply) return result;
 
@@ -401,7 +405,7 @@ export async function seedDemo(client: SupabaseClient, opts: { apply: boolean; r
     ),
     'insert demo questions',
   );
-  await writeConsolidation(client, lessonId, DEMO_SOURCES, DEMO_CONSOLIDATION, templateIds, randomUUID);
+  await writeConsolidation(client, lessonId, DEMO_SOURCES, DEMO_CONSOLIDATION, templateIds, aiTemplateIds, randomUUID);
   return result;
 }
 
@@ -414,6 +418,7 @@ export function formatDemo(r: DemoResult): string {
         : `${r.applied ? (r.action === 'create' ? 'created' : 'refreshed') : `to ${r.action === 'create' ? 'create' : 'refresh'}`}: ` +
           `„${DEMO_LESSON_TITLE}” with ${r.cards} card(s), ${r.questions} question(s) and ${r.exercises} consolidation exercise(s)` +
           (r.templates ? `; ${r.templates} solution template(s) ${r.applied ? 'added' : 'to add'}` : '') +
+          (r.aiTemplates ? `; ${r.aiTemplates} AI template(s) ${r.applied ? 'added' : 'to add'}` : '') +
           (r.action === 'update' ? '; progress in it reset' : '');
   return `${r.applied ? '' : 'Dry run (nothing is changed; pass --apply to write)\n'}Demo lesson ${what}.`;
 }

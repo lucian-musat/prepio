@@ -1,12 +1,15 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { validateExercise } from '@prepio/shared';
+import { aiTemplateTypeFor, validateExercise } from '@prepio/shared';
 import { addConsolidation } from './addConsolidation';
-import { loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
+import { AI_TEMPLATES } from './aiTemplates';
+import { aiTemplateTypes, loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
 import { lessons } from './index';
-import { withPendingTemplates } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
+
+/** The seed AI template of a type no exercise links to in the migrated state: renamed away, so it counts as missing. */
+const FACTS = AI_TEMPLATES.find((t) => t.key === 'facts')!;
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,7 +27,15 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
   };
   const snapshot = async () => {
     const out: Record<string, unknown> = {};
-    for (const table of ['solution_templates', 'sources', 'consolidation_exercises', 'consolidation_exercise_sources', 'consolidation_ai_context']) {
+    for (const table of [
+      'solution_templates',
+      'ai_templates',
+      'sources',
+      'consolidation_exercises',
+      'consolidation_exercise_sources',
+      'consolidation_ai_context',
+      'consolidation_ai_template_links',
+    ]) {
       const { data, error } = await client.from(table).select('*');
       if (error) throw error;
       out[table] = JSON.stringify(data.map((r) => JSON.stringify(r)).sort());
@@ -67,31 +78,37 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
   beforeAll(async () => {
     client = createClient(url!, serviceKey!, { auth: { persistSession: false, autoRefreshToken: false } });
     await toProductionState();
+    const renamed = await client.from('ai_templates').update({ title: `[test] ${FACTS.title}` }).eq('title', FACTS.title);
+    if (renamed.error) throw renamed.error;
   });
 
   afterAll(async () => {
     await seed(client, { reset: true });
+    await client.from('ai_templates').delete().like('title', '[test]%');
   });
 
-  it('a dry run plans the templates, sources and non-essay exercises and changes nothing', async () => {
+  it('a dry run plans the templates, AI templates, sources and non-essay exercises and changes nothing', async () => {
     const before = await snapshot();
     const result = await addConsolidation(client, { apply: false });
     expect(result.problems).toBe(0);
     expect(result.planned.filter((p) => p.startsWith('template'))).toHaveLength(TEMPLATES.length);
+    expect(result.planned.filter((p) => p.startsWith('ai template'))).toEqual([`ai template: ${FACTS.title}`]);
     expect(result.planned.filter((p) => p.startsWith('source'))).toHaveLength(SOURCES);
     expect(result.planned.filter((p) => p.startsWith('exercise'))).toHaveLength(NON_ESSAY);
     expect(await snapshot()).toEqual(before);
   });
 
-  it('--apply inserts them after the existing essays, valid, with links, templates and AI contexts', async () => {
+  it('--apply inserts them after the existing essays, valid, with links, templates, AI contexts and AI template links', async () => {
     const result = await addConsolidation(client, { apply: true });
     expect(result.problems).toBe(0);
-    expect(result.planned).toHaveLength(TEMPLATES.length + SOURCES + NON_ESSAY);
+    expect(result.planned).toHaveLength(TEMPLATES.length + 1 + SOURCES + NON_ESSAY);
 
     const { data: tpl, error } = await client.from('solution_templates').select('id,title');
     if (error) throw error;
     const keyOf = new Map(tpl.map((t) => [t.id as string, TEMPLATES.find((x) => x.title === t.title)?.key]));
     expect(TEMPLATES.every((t) => tpl.some((r) => r.title === t.title))).toBe(true);
+    const aiType = await aiTemplateTypes(client);
+    expect(aiType.size).toBe(AI_TEMPLATES.length);
 
     for (const l of lessons) {
       const stored = await loadConsolidation(client, await lessonId(l.title));
@@ -103,10 +120,12 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
       expect(stored.exercises.map((e) => e.exercise.position)).toEqual(stored.exercises.map((_, i) => i));
       for (const [i, c] of seedNonEssay.entries()) {
         const { exercise, ai } = stored.exercises[seedEssays.length + i]!;
-        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), c.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, ai), c.prompt).toEqual([]);
         expect(exercise.templateId && keyOf.get(exercise.templateId)).toBe(c.template);
         expect(exercise.sources).toHaveLength(c.sources.length);
-        if (c.ai) expect(ai).toEqual(c.ai);
+        if (c.ai) expect({ main: ai!.main, requirements: ai!.requirements }).toEqual(c.ai);
+        // The seed AI template of its type (the facts one inserted again by this run).
+        expect(ai!.templateId === null ? null : aiType.get(ai!.templateId), c.prompt).toBe(aiTemplateTypeFor(exercise.type));
       }
     }
   });
@@ -147,7 +166,7 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
     }
   });
 
-  it.each(['consolidation_exercise_sources', 'consolidation_ai_context'])(
+  it.each(['consolidation_exercise_sources', 'consolidation_ai_context', 'consolidation_ai_template_links'])(
     'a failure while inserting %s removes the rows inserted for that lesson and aborts',
     async (table) => {
       await toProductionState();

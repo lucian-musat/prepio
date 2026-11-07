@@ -48,7 +48,7 @@ select throws_ok($$ insert into ai_templates (title, type, criteria) values ('x'
 -- ---------------------------------------------------------------- cascade (as postgres)
 reset role;
 delete from consolidation_exercises where id = '00000000-0000-0000-0000-0000000000b1';
-select is((select count(*)::int from consolidation_ai_template_links), 0, 'deleting an exercise removes its template links');
+select is((select count(*)::int from consolidation_ai_template_links where exercise_id = '00000000-0000-0000-0000-0000000000b1'), 0, 'deleting an exercise removes its template links');
 
 select * from finish();
 rollback;

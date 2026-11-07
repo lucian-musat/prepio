@@ -7,6 +7,7 @@ export type * from './types';
 export { tree } from './tree';
 export { aiDefaults, welcomeMessage } from './defaults';
 export { TEMPLATES } from './templates';
+export { AI_TEMPLATES } from './aiTemplates';
 
 /** Seed lessons, in display order. Card image paths are file names inside `packages/content/images/`. */
 export const lessons: SeedLesson[] = [unireaPrincipatelor, constitutia1866, independenta];

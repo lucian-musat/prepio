@@ -13,14 +13,17 @@ import {
   type Mark,
   type Source,
 } from '@prepio/shared';
-import { essayFromWriting, essayTitle, seedSpans, toExercise, withPendingTemplates } from './consolidation';
+import { AI_TEMPLATES } from './aiTemplates';
+import { essayFromWriting, essayTitle, seedSpans, toExercise } from './consolidation';
 import { DEMO_CONSOLIDATION, DEMO_SOURCES } from './demoLesson';
 import { lessons } from './index';
 import { TEMPLATES } from './templates';
 import type { SeedConsolidation, SeedSource } from './types';
 
-const identity = (keys: string[]) => new Map(keys.map((k) => [k, k]));
+const identity = <K extends string>(keys: K[]) => new Map(keys.map((k) => [k, k as string]));
 const templateIds = identity(TEMPLATES.map((t) => t.key));
+/** AI template ids are their types here, so a test can see which template an exercise got. */
+const aiTemplateIds = identity(AI_TEMPLATES.map((t) => t.key));
 let n = 0;
 const newId = () => `id-${++n}`;
 
@@ -40,8 +43,8 @@ function checkSet(sources: SeedSource[], items: SeedConsolidation[]): string[][]
   const ids = identity(sources.map((s) => s.key));
   const b = new Map(sources.map((s) => [s.key, s.body]));
   return items.map((c) => {
-    const { exercise, ai } = toExercise(c, ids, b, templateIds, newId);
-    return validateExercise(exercise, asSources, withPendingTemplates(exercise, ai));
+    const { exercise, ai } = toExercise(c, ids, b, templateIds, aiTemplateIds, newId);
+    return validateExercise(exercise, asSources, ai);
   });
 }
 
@@ -60,6 +63,7 @@ describe('toExercise', () => {
       sourceIds,
       bodies,
       templateIds,
+      aiTemplateIds,
       newId,
     );
     expect(exercise.type).toBe('source_info');
@@ -72,7 +76,7 @@ describe('toExercise', () => {
     expect(exercise.templateId).toBe('source_info');
     expect(exercise.explanation).toBe('Explicație.');
     expect(exercise.modelAnswer).toBeNull();
-    expect(ai).toEqual({ main: '', requirements: {} });
+    expect(ai).toEqual({ main: '', requirements: {}, templateId: null, requirementTemplates: {} });
   });
 
   it('converts cause-effect pairs and the letter evidence, and keeps the AI context of AI types', () => {
@@ -87,6 +91,7 @@ describe('toExercise', () => {
       sourceIds,
       bodies,
       templateIds,
+      aiTemplateIds,
       newId,
     ).exercise;
     if (pairs.type !== 'cause_effect') throw new Error(pairs.type);
@@ -98,6 +103,7 @@ describe('toExercise', () => {
       sourceIds,
       bodies,
       templateIds,
+      aiTemplateIds,
       newId,
     ).exercise;
     expect(letter.sources).toEqual([
@@ -108,7 +114,51 @@ describe('toExercise', () => {
     expect(letter.evidence).toMatchObject({ sourceId: 'uuid-b', text: 'deoarece' });
 
     const ai = { main: 'Perioada 1859–1866.', requirements: {} };
-    expect(toExercise({ prompt: 'Argumentați.', template: 'argument', sources: [], type: 'argument', ai }, sourceIds, bodies, templateIds, newId).ai).toEqual(ai);
+    expect(toExercise({ prompt: 'Argumentați.', template: 'argument', sources: [], type: 'argument', ai }, sourceIds, bodies, templateIds, aiTemplateIds, newId).ai).toEqual({
+      ...ai,
+      templateId: 'argument',
+      requirementTemplates: {},
+    });
+  });
+
+  it('links every AI exercise, and every essay requirement, to the AI template of its type', () => {
+    for (const type of ['facts', 'comparison', 'viewpoint', 'argument'] as const) {
+      const c = { prompt: type, template: null, sources: [], ai: { main: 'Context.', requirements: {} } };
+      const item: SeedConsolidation =
+        type === 'facts' ? { ...c, type, count: 2 } : type === 'comparison' ? { ...c, type, variant: 'difference' } : type === 'viewpoint' ? { ...c, sources: ['a'], type, count: 1, spans: [{ source: 'a', quote: 'Primul text' }] } : { ...c, type };
+      expect(toExercise(item, sourceIds, bodies, templateIds, aiTemplateIds, newId).ai, type).toMatchObject({ templateId: type, requirementTemplates: {} });
+    }
+    const essay = toExercise(
+      {
+        prompt: 'Eseu.',
+        template: null,
+        sources: [],
+        type: 'essay',
+        requirements: [
+          { id: 'r1', text: 'Menționați.', modelAnswer: null, template: null, argument: false },
+          { id: 'r2', text: 'Argumentați.', modelAnswer: null, template: null, argument: true },
+        ],
+        ai: { main: '', requirements: { r1: 'Unu.', r2: 'Doi.' } },
+      },
+      sourceIds,
+      bodies,
+      templateIds,
+      aiTemplateIds,
+      newId,
+    );
+    expect(essay.ai).toEqual({
+      main: '',
+      requirements: { r1: 'Unu.', r2: 'Doi.' },
+      templateId: null,
+      requirementTemplates: { r1: 'essay_requirement', r2: 'essay_requirement' },
+    });
+  });
+
+  it('throws, naming the exercise, when no AI template of its type is known', () => {
+    const noArgument = new Map([...aiTemplateIds].filter(([k]) => k !== 'argument'));
+    expect(() =>
+      toExercise({ prompt: 'Fără șablon', template: null, sources: [], type: 'argument', ai: { main: 'c', requirements: {} } }, sourceIds, bodies, templateIds, noArgument, newId),
+    ).toThrow(/Fără șablon.*argument/);
   });
 
   it('throws with the exercise prompt when a quote is not in the source', () => {
@@ -118,6 +168,7 @@ describe('toExercise', () => {
         sourceIds,
         bodies,
         templateIds,
+        aiTemplateIds,
         newId,
       ),
     ).toThrow(/Enunț cu citat greșit/);
@@ -125,9 +176,9 @@ describe('toExercise', () => {
 
   it('throws on an unknown template or source key', () => {
     expect(() =>
-      toExercise({ prompt: 'X', template: 'nope', sources: [], type: 'argument', ai: { main: 'c', requirements: {} } }, sourceIds, bodies, templateIds, newId),
+      toExercise({ prompt: 'X', template: 'nope', sources: [], type: 'argument', ai: { main: 'c', requirements: {} } }, sourceIds, bodies, templateIds, aiTemplateIds, newId),
     ).toThrow(/nope/);
-    expect(() => toExercise({ prompt: 'Y', template: null, sources: ['zz'], type: 'facts', count: 2 }, sourceIds, bodies, templateIds, newId)).toThrow(/zz/);
+    expect(() => toExercise({ prompt: 'Y', template: null, sources: ['zz'], type: 'facts', count: 2 }, sourceIds, bodies, templateIds, aiTemplateIds, newId)).toThrow(/zz/);
   });
 });
 
@@ -181,7 +232,7 @@ function intendedAnswers(sources: SeedSource[], items: SeedConsolidation[]): Arr
   };
   const out: Array<{ what: string; verdict: string | null }> = [];
   for (const c of items) {
-    const { exercise: ex } = toExercise(c, ids, b, templateIds, newId);
+    const { exercise: ex } = toExercise(c, ids, b, templateIds, aiTemplateIds, newId);
     const answers: ExerciseAnswer[] = [];
     if (ex.type === 'short_answer') answers.push(...ex.accepted.map((text) => ({ type: ex.type, text })));
     if (ex.type === 'multi_answer') answers.push({ type: ex.type, texts: ex.groups.slice(0, ex.count).map((g) => g.variants[0]!) });

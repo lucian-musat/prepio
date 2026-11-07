@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validateExercise } from '@prepio/shared';
 import { addConsolidation } from './addConsolidation';
-import { withPendingTemplates, writeConsolidation } from './consolidation';
-import { loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
+import { writeConsolidation } from './consolidation';
+import { aiTemplateIdsIn, loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
 import { lessons } from './index';
 import { seed } from './seed';
 import { syncConsolidation } from './syncConsolidation';
@@ -27,10 +27,12 @@ describe.skipIf(!url || !serviceKey)('syncConsolidation (integration)', () => {
     const out: Record<string, unknown> = {};
     for (const table of [
       'solution_templates',
+      'ai_templates',
       'sources',
       'consolidation_exercises',
       'consolidation_exercise_sources',
       'consolidation_ai_context',
+      'consolidation_ai_template_links',
       'consolidation_attempts',
       'consolidation_runs',
     ]) {
@@ -85,7 +87,7 @@ describe.skipIf(!url || !serviceKey)('syncConsolidation (integration)', () => {
     const before = await snapshot();
     const r = await syncConsolidation(client, { apply: true });
     expect(r.lessons.map((l) => l.status)).toEqual(lessons.map(() => 'in_sync'));
-    expect(r).toMatchObject({ replaced: 0, problems: 0, missingTemplates: [], changedTemplates: [] });
+    expect(r).toMatchObject({ replaced: 0, problems: 0, missingTemplates: [], missingAiTemplates: [], changedTemplates: [] });
     expect(await snapshot()).toEqual(before);
   });
 
@@ -121,9 +123,9 @@ describe.skipIf(!url || !serviceKey)('syncConsolidation (integration)', () => {
       );
       stored.exercises.forEach(({ exercise, ai }, i) => {
         const c = l.consolidation[i]!;
-        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), c.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, ai), c.prompt).toEqual([]);
         expect(exercise.templateId && keyOf.get(exercise.templateId)).toBe(c.template);
-        if (c.ai) expect(ai).toEqual(c.ai);
+        if (c.ai) expect({ main: ai!.main, requirements: ai!.requirements }).toEqual(c.ai);
       });
     }
     const attempts = await client.from('consolidation_attempts').select('exercise_id').in('exercise_id', oldEx!.map((e) => e.id));
@@ -147,13 +149,14 @@ describe.skipIf(!url || !serviceKey)('syncConsolidation (integration)', () => {
     const targetId = await lessonId(target.title);
     await client.from('consolidation_exercises').delete().eq('lesson_id', targetId);
     await client.from('sources').delete().eq('lesson_id', targetId);
-    await writeConsolidation(client, targetId, [], MIGRATED_ESSAYS[target.key]!.slice(0, 1), new Map(), randomUUID);
+    const aiIds = await aiTemplateIdsIn(client);
+    await writeConsolidation(client, targetId, [], MIGRATED_ESSAYS[target.key]!.slice(0, 1), new Map(), aiIds, randomUUID);
     await studentWork(targetId);
     // An owner-authored lesson with its own exercise, not in the seed.
     const node = await client.from('lessons').select('node_id').eq('id', targetId).single();
     const own = await client.from('lessons').insert({ node_id: node.data!.node_id, title: '[test] own lesson', position: 99, status: 'published' }).select('id').single();
     if (own.error) throw own.error;
-    await writeConsolidation(client, own.data.id, [], MIGRATED_ESSAYS[target.key]!.slice(1), new Map(), randomUUID);
+    await writeConsolidation(client, own.data.id, [], MIGRATED_ESSAYS[target.key]!.slice(1), new Map(), aiIds, randomUUID);
 
     const others = lessons.filter((l) => l !== target);
     const untouched = async () => Promise.all([...others.map(async (l) => lessonRows(await lessonId(l.title))), lessonRows(own.data.id)]);

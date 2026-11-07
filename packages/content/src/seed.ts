@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cardImagePaths, cardToRow } from '@prepio/shared';
-import { check, ensureTemplates, writeConsolidation } from './consolidation';
+import { check, ensureAiTemplates, ensureTemplates, writeConsolidation } from './consolidation';
 import { aiDefaults, lessons, tree, welcomeMessage } from './index';
 import type { SeedCard, SeedNode } from './types';
 
@@ -112,8 +112,9 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
 async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; lessons: number }> {
   // Cascades to lessons, cards, questions, sources and consolidation exercises.
   check(await client.from('nodes').delete().not('id', 'is', null), 'clear nodes');
-  // Templates are a library shared by all lessons: the missing ones are added, existing ones (by title) are kept.
+  // Templates (solution and AI) are libraries shared by all lessons: the missing ones are added, existing ones (by title) are kept.
   const { ids: templateIds } = await ensureTemplates(client, true);
+  const { ids: aiTemplateIds } = await ensureAiTemplates(client, true);
 
   const ids = new Map<string, string>();
   const nodeRows: NodeRow[] = [];
@@ -156,7 +157,7 @@ async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; 
         `insert questions ${lesson.key}`,
       );
     }
-    await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, randomUUID);
+    await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, aiTemplateIds, randomUUID);
   }
 
   return { nodes: nodeRows.length, lessons: lessons.length };

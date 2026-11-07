@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  AI_TEMPLATE_TYPES,
   CARD_TYPES,
   cardImagePaths,
   parseRichText,
@@ -11,8 +12,9 @@ import {
   type Lesson,
   type Question,
 } from '@prepio/shared';
+import { DEMO_CONSOLIDATION } from './demoLesson';
 import { EXTRA_CARDS } from './extraCards';
-import { aiDefaults, lessons, tree, welcomeMessage, type SeedLesson, type SeedNode } from './index';
+import { AI_TEMPLATES, aiDefaults, lessons, tree, welcomeMessage, type SeedLesson, type SeedNode } from './index';
 
 const imagesDir = fileURLToPath(new URL('../images/', import.meta.url));
 const credits = readFileSync(imagesDir + 'CREDITS.md', 'utf8');
@@ -202,11 +204,47 @@ describe('defaults', () => {
     // Consolidation feedback has no grades (spec): the default rules must not ask for one.
     expect(aiDefaults.rules).not.toMatch(/\bnot[ăa]|\bscala\b/i);
   });
+
+  it('keeps only type-independent rules: the type instructions live in the AI templates', () => {
+    expect(aiDefaults.rules).not.toMatch(/simplă menționare|punct de vedere este o apreciere|deoarece/);
+    // The role, the language and the tone moved from the code into the rules.
+    expect(aiDefaults.rules).toMatch(/profesor de istorie/);
+    expect(aiDefaults.rules).toMatch(/diacritice/);
+    expect(aiDefaults.rules).toMatch(/încurajator/);
+  });
+});
+
+describe('AI templates', () => {
+  it('has exactly one template per type, keyed by its type, with criteria and unique titles', () => {
+    expect(AI_TEMPLATES.map((t) => t.key).sort()).toEqual([...AI_TEMPLATE_TYPES].sort());
+    expect(new Set(AI_TEMPLATES.map((t) => t.title)).size).toBe(AI_TEMPLATES.length);
+    for (const t of AI_TEMPLATES) {
+      expect(t.title.trim(), t.key).not.toBe('');
+      expect(t.criteria.trim().length, t.key).toBeGreaterThan(100);
+    }
+  });
+
+  it('gives the connector-based types the causal and conclusion connectors, and comparison its markers', () => {
+    const keywords = (k: string) => AI_TEMPLATES.find((t) => t.key === k)!.keywords;
+    for (const k of ['argument', 'essay_requirement']) expect(keywords(k), k).toMatch(/deoarece.*așadar|așadar.*deoarece/);
+    for (const w of ['spre deosebire de', 'în timp ce', 'la fel ca', 'ambele']) expect(keywords('comparison')).toContain(w);
+  });
+});
+
+describe('seed AI contexts', () => {
+  const contexts = [...lessons.flatMap((l) => l.consolidation), ...DEMO_CONSOLIDATION].flatMap((c) =>
+    c.ai ? [{ prompt: c.prompt, text: c.ai.main }, ...Object.entries(c.ai.requirements).map(([id, text]) => ({ prompt: `${c.prompt} ${id}`, text }))] : [],
+  );
+
+  it('hold facts only: no type instruction', () => {
+    expect(contexts.length).toBeGreaterThan(20);
+    for (const { prompt, text } of contexts) expect(text, prompt).not.toMatch(/trebuie (să fie )?prezentat|nu doar numit|Nu este punct de vedere|Nu se acceptă/i);
+  });
 });
 
 describe('diacritics', () => {
   it('uses comma-below ș/ț, never cedilla ş/ţ', () => {
-    const all = JSON.stringify({ tree, lessons, welcomeMessage, aiDefaults });
+    const all = JSON.stringify({ tree, lessons, welcomeMessage, aiDefaults, AI_TEMPLATES });
     expect(all).not.toMatch(/[şţŞŢ]/);
   });
 });
