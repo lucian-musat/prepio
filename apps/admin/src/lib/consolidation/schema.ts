@@ -19,6 +19,16 @@ export const aiOutputSchema = z.object({
 });
 export type AiOutput = z.infer<typeof aiOutputSchema>;
 
+/**
+ * The schema sent to OpenAI for one check: `key` is an enum of the expected keys, so the model can't name an item
+ * after its content (it once returned "asemănare_secularizare_legea_rurala" instead of "answer").
+ */
+export function aiOutputSchemaFor(keys: string[]) {
+  const [first, ...rest] = keys;
+  if (first === undefined) throw new Error('aiOutputSchemaFor needs at least one key');
+  return z.object({ items: z.array(aiOutputSchema.shape.items.element.extend({ key: z.enum([first, ...rest]) })) });
+}
+
 export const MAX_ITEMS = 8;
 export const MAX_TITLE_CHARS = 120;
 export const MAX_ENTRY_CHARS = 400;

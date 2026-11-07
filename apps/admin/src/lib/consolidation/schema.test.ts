@@ -1,12 +1,22 @@
 import { zodTextFormat } from 'openai/helpers/zod';
 import { describe, expect, it } from 'vitest';
-import { aiOutputSchema, normalizeAiOutput } from './schema';
+import { aiOutputSchema, aiOutputSchemaFor, normalizeAiOutput } from './schema';
 
 const item = (over: Record<string, unknown> = {}) => ({ key: 'k', verdict: 'ok' as const, title: 'T', good: ['g'], improve: ['i'], ...over });
 
 describe('aiOutputSchema', () => {
   it('sends no length constraints to OpenAI', () => {
     const json = JSON.stringify(zodTextFormat(aiOutputSchema, 'evaluation'));
+    expect(json).not.toMatch(/maxLength|maxItems|minLength|minItems/);
+  });
+
+  it('aiOutputSchemaFor limits the key to the expected keys, also in the schema sent to OpenAI', () => {
+    const schema = aiOutputSchemaFor(['fact-0', 'fact-1']);
+    expect(schema.safeParse({ items: [item({ key: 'fact-1' })] }).success).toBe(true);
+    // The model once named the item after its content instead of using the expected key.
+    expect(schema.safeParse({ items: [item({ key: 'asemănare_secularizare_legea_rurala' })] }).success).toBe(false);
+    const json = JSON.stringify(zodTextFormat(schema, 'evaluation'));
+    expect(json).toContain('"enum":["fact-0","fact-1"]');
     expect(json).not.toMatch(/maxLength|maxItems|minLength|minItems/);
   });
 

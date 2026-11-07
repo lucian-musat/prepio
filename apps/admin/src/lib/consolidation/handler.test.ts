@@ -162,7 +162,8 @@ describe('handleConsolidationEvaluate', () => {
     // No per-student limit: credits pace the student; only the global daily cap remains.
     expect(d.rateLimit).toHaveBeenCalledTimes(1);
     expect(d.rateLimit).toHaveBeenCalledWith('evaluate:global', 300, 86400);
-    expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5-mini' }));
+    // The expected keys go to the evaluator, which restricts the model's output to them.
+    expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-5-mini', keys: ['fact-0', 'fact-1'] }));
   });
 
   it('takes the context from the DB, ignoring extra client fields', async () => {

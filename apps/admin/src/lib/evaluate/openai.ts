@@ -1,17 +1,18 @@
 import 'server-only';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
-import { aiOutputSchema } from '@/lib/consolidation/schema';
+import { aiOutputSchemaFor } from '@/lib/consolidation/schema';
 import { reasoningFor } from './reasoning';
 
-export type Evaluator = (a: { model: string; instructions: string; input: string }) => Promise<unknown>;
+/** `keys`: the item keys the model must return; the structured-output schema allows only these. */
+export type Evaluator = (a: { model: string; instructions: string; input: string; keys: string[] }) => Promise<unknown>;
 
 /** Leaves room for the auth, DB reads and rate limits within the route's 60 s `maxDuration`. */
 export const OPENAI_TIMEOUT_MS = 50_000;
 
 export function createOpenAIEvaluator(apiKey: string): Evaluator {
   const client = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS, maxRetries: 0 });
-  return async ({ model, instructions, input }) => {
+  return async ({ model, instructions, input, keys }) => {
     const reasoning = reasoningFor(model);
     const started = Date.now();
     try {
@@ -22,7 +23,7 @@ export function createOpenAIEvaluator(apiKey: string): Evaluator {
           input,
           store: false,
           ...(reasoning ? { reasoning } : {}),
-          text: { format: zodTextFormat(aiOutputSchema, 'evaluation') },
+          text: { format: zodTextFormat(aiOutputSchemaFor(keys), 'evaluation') },
         },
         { timeout: OPENAI_TIMEOUT_MS },
       );

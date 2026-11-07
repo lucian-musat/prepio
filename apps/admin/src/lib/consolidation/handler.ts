@@ -268,11 +268,11 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     const { instructions, input } = buildConsolidationPrompt({
       rules, exercise, sources, context, template, target: req.target, answer: req.answer, deterministic,
     });
-    const raw = await deps.evaluate({ model, instructions, input });
+    const keys = expectedKeys(exercise, req.target, deterministic);
+    const raw = await deps.evaluate({ model, instructions, input, keys });
     const parsed = aiOutputSchema.safeParse(raw);
     if (!parsed.success) throw new Error('model output failed validation');
 
-    const keys = expectedKeys(exercise, req.target, deterministic);
     const normalized = normalizeAiOutput(parsed.data, keys);
     const items: FeedbackItem[] = [];
     for (const key of keys) {
