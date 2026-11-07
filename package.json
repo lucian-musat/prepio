@@ -26,7 +26,8 @@
     "content:cloud:remove-test-lessons": "bash scripts/content-cloud.sh remove-test-lessons",
     "content:demo": "pnpm --filter @prepio/content demo",
     "content:cloud:demo": "bash scripts/content-cloud.sh demo",
-    "content:cloud:update-ai-settings": "bash scripts/content-cloud.sh update-ai-settings"
+    "content:cloud:update-ai-settings": "bash scripts/content-cloud.sh update-ai-settings",
+    "content:cloud:ai-templates": "bash scripts/content-cloud.sh ai-templates"
   },
   "devDependencies": {
     "supabase": "^2.122.0"

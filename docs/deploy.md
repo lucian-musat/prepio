@@ -88,6 +88,17 @@ The consolidation change (spec `docs/superpowers/specs/2026-11-05-consolidation-
    - student web `/`, a lesson's start screen with the three zones and `/lesson/<id>/consolidare`, admin `/login` and `/templates` (logged out → redirect to `/login`) load with a clean console.
 6. New EAS `preview` APK, **mandatory**: the installed APK can't open lessons after step 1. New font asset (Literata), no new native module. Then the owner's phone-test list in `docs/STATUS.md`.
 
+## AI templates rollout
+
+The AI templates change (spec `docs/superpowers/specs/2026-11-07-ai-templates-design.md`) adds the `ai_templates` and `consolidation_ai_template_links` tables (migration `20261107075311_ai_templates`), new general rules in the AI settings, fact-only contexts on the seed exercises and a template link on every AI exercise. The new admin evaluation reads the template of each exercise, so the content steps go before the push. Do the steps in this exact order:
+
+1. `pnpm db:cloud:push:dry` (must list only `20261107075311_ai_templates`) → `pnpm db:cloud:push`.
+2. `pnpm content:cloud:update-ai-settings` (dry run, then `--apply`): replaces the AI rules with the new general-rules defaults; a re-run plans 0.
+3. `pnpm content:cloud:ai-templates` (dry run, then `--apply`): inserts the seed AI templates (by title), replaces the AI contexts of the seed exercises with the fact-only ones and links every AI exercise without a template link to the seed template of its type (an existing link is never changed). The dry run lists the templates, contexts and links to write and no problems; a re-run plans 0.
+4. `pnpm content:cloud:demo` (dry run, then `--apply`): refreshes the demo lesson, which the previous script doesn't cover.
+5. `git push` `main`: Vercel deploys `prepio-web` and `prepio-admin`. Wait until both are **Ready**.
+6. New EAS `preview` APK (the student UI is unchanged; this only keeps the build in step with `main`).
+
 ## Credits rollout
 
 The credits change (spec `docs/superpowers/specs/2026-11-06-credits-design.md`) adds migrations `20261106132444_credits` and `20261106133031_welcome_credits` (the welcome-grant pepper is generated inside the migration; no env var or secret to set). The new admin charges credits on `/api/consolidation/evaluate` and adds `POST /api/credits/purchase`; the new student web and APK show the balance and can buy. Purchases are approved instantly with no payment (owner decision, test environment only; gate or pay before a public launch). Order:

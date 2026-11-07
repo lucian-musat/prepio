@@ -15,6 +15,7 @@
     "remove-test-lessons": "tsx src/removeTestLessons.ts",
     "demo": "tsx src/demoLesson.ts",
     "update-ai-settings": "tsx src/updateAiSettings.ts",
+    "ai-templates": "tsx src/syncAiTemplates.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
