@@ -15,7 +15,7 @@ Prepio is a multi-platform product made of three apps:
 Stack, layout and commands: see `README.md`. Deploy: `docs/deploy.md`. Database changes: `docs/database-migrations.md`.
 
 - The repo lives in WSL (`~/projects/prepio_new`); run commands with nvm loaded: `wsl -d Ubuntu-22.04 -- bash -ic "cd ~/projects/prepio_new && <cmd>"`.
-- Production: student web https://prepio-web.vercel.app, admin https://prepio-admin.vercel.app, Supabase project `pienbjvwjgnzmnjzmrbh`, Expo `lucianm91s-team/prepio`.
+- Production: student web https://prepio.ro, admin https://admin.prepio.ro, Supabase project `pienbjvwjgnzmnjzmrbh`, Expo `lucianm91s-team/prepio`.
 
 ## Database changes
 

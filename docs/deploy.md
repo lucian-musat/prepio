@@ -5,11 +5,27 @@
 | Service | Where | URL / id |
 | --- | --- | --- |
 | Database + Auth + Storage | Supabase (eu-west-2, London) | `https://pienbjvwjgnzmnjzmrbh.supabase.co` |
-| Admin + `/api/consolidation/evaluate` | Vercel project `prepio-admin`, root `apps/admin` | `https://prepio-admin.vercel.app` |
-| Student web | Vercel project `prepio-web`, root `apps/mobile` | `https://prepio-web.vercel.app` |
+| Admin + `/api/consolidation/evaluate` | Vercel project `prepio-admin`, root `apps/admin` | `https://admin.prepio.ro` |
+| Student web | Vercel project `prepio-web`, root `apps/mobile` | `https://prepio.ro` |
 | Android APK | Expo EAS, owner `lucianm91s-team`, slug `prepio` | projectId `706d0198-4bc6-4079-90f5-6a1ffbde3ef3`, package `dev.musat.prepio` |
 
 Both Vercel projects deploy from `main` of the GitHub repo. Config lives in `apps/admin/vercel.json` (region `lhr1`, next to Supabase) and `apps/mobile/vercel.json` (pnpm install from the repo root, `expo export -p web`, SPA rewrite).
+
+## Domain
+
+`prepio.ro` (bought 2026-11-07, third-party registrar) uses the Vercel nameservers `ns1.vercel-dns.com` / `ns2.vercel-dns.com`; the DNS zone lives in Vercel (team `prepio1` → Domains → `prepio.ro`). No email records yet (MX / SPF / DKIM go there when email is set up).
+
+| Host | Vercel project | Behaviour |
+| --- | --- | --- |
+| `prepio.ro` | `prepio-web` | Production |
+| `www.prepio.ro` | `prepio-web` | 308 → `https://prepio.ro` |
+| `prepio-web.vercel.app` | `prepio-web` | 308 → `https://prepio.ro` |
+| `admin.prepio.ro` | `prepio-admin` | Production |
+| `prepio-admin.vercel.app` | `prepio-admin` | 308 → `https://admin.prepio.ro` |
+
+The `*.vercel.app` redirects break APKs built before the domain change: their API calls go to `prepio-admin.vercel.app`, and Android's HTTP client drops the `Authorization` header when following a redirect to another host, so authenticated calls (AI checks, purchases, account deletion) fail with 401. Install an APK built with the current `eas.json`.
+
+Changing the domain again means updating: the Vercel env vars below (then redeploy), the `/preview` CSP in `apps/mobile/vercel.json`, `EXPO_PUBLIC_API_URL` in `apps/mobile/eas.json` (new APK), Supabase Authentication → URL Configuration (Site URL and Redirect URLs), and the Google OAuth web client's JavaScript origins plus the consent screen Branding (homepage, privacy policy, authorised domains), see [auth-setup.md](auth-setup.md).
 
 ## Environment variables
 
@@ -19,15 +35,15 @@ Admin (Vercel project `prepio-admin`):
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable key (`sb_publishable_...`, public)
 - `SUPABASE_SERVICE_ROLE_KEY` - secret, server only
 - `OPENAI_API_KEY` - secret, server only (set a monthly spend limit in the OpenAI dashboard)
-- `STUDENT_WEB_ORIGINS` = `https://prepio-web.vercel.app` (comma-separated CORS allow-list for the student APIs: `/api/consolidation/evaluate`, `/api/account/delete`)
-- `NEXT_PUBLIC_STUDENT_WEB_URL` = `https://prepio-web.vercel.app` (the student web that the card editor embeds as its live preview, `/preview`). Inlined at build time.
+- `STUDENT_WEB_ORIGINS` = `https://prepio.ro` (comma-separated CORS allow-list for the student APIs: `/api/consolidation/evaluate`, `/api/account/delete`)
+- `NEXT_PUBLIC_STUDENT_WEB_URL` = `https://prepio.ro` (the student web that the card editor embeds as its live preview, `/preview`). Inlined at build time.
 
 Student web (Vercel project `prepio-web`) and the APK (`apps/mobile/eas.json`, profiles `preview` and `production`):
 
-- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://prepio-admin.vercel.app`
+- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` = `https://admin.prepio.ro`
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` = Google OAuth web client id (public). Used by native Google sign-in as `webClientId`; the web flow doesn't need it but it is harmless. Set on Vercel and in `eas.json`.
 - `EXPO_PUBLIC_AUTH_EMAIL_ENABLED` = `false` in production (hides the email-code sign-in button until the domain + SMTP exist); `true` locally. Set on Vercel and in `eas.json`.
-- `EXPO_PUBLIC_ADMIN_ORIGIN` = `https://prepio-admin.vercel.app` (Vercel `prepio-web` only; the APK has no `/preview`). The only origin whose `postMessage` the `/preview` route accepts. Exact origin: no trailing slash and no path, otherwise the preview silently waits forever.
+- `EXPO_PUBLIC_ADMIN_ORIGIN` = `https://admin.prepio.ro` (Vercel `prepio-web` only; the APK has no `/preview`). The only origin whose `postMessage` the `/preview` route accepts. Exact origin: no trailing slash and no path, otherwise the preview silently waits forever.
 
 Provider setup (Google Cloud, Supabase dashboard, rollout checklist): [auth-setup.md](auth-setup.md).
 
@@ -50,12 +66,12 @@ Do these in this exact order:
 
 The card-types change (spec `docs/superpowers/specs/2026-11-03-card-types-design.md`) drops the old `cards.body` / `image_path` / `image_credit` columns. Old builds of the admin, the student web and the APK read those columns, so do these in this exact order, without a pause between steps 3 and 4:
 
-1. Set the two env vars on Vercel **before** pushing: `prepio-admin` → `NEXT_PUBLIC_STUDENT_WEB_URL=https://prepio-web.vercel.app`; `prepio-web` → `EXPO_PUBLIC_ADMIN_ORIGIN=https://prepio-admin.vercel.app` (no trailing slash). Both are inlined at build time; if they are set after the push, both projects need a redeploy.
+1. Set the two env vars on Vercel **before** pushing: `prepio-admin` → `NEXT_PUBLIC_STUDENT_WEB_URL=https://prepio.ro`; `prepio-web` → `EXPO_PUBLIC_ADMIN_ORIGIN=https://admin.prepio.ro` (no trailing slash). Both are inlined at build time; if they are set after the push, both projects need a redeploy.
 2. Optional insurance: export the `cards` table from the Supabase dashboard.
 3. `pnpm db:cloud:push:dry` (must list only `20261103122901_card_types`) → `pnpm db:cloud:push`.
 4. `git push` immediately: both Vercel projects deploy from `main`. Between steps 3 and 4 the live admin errors (it selects dropped columns) and the live student web shows empty cards.
 5. Check the `/preview` CSP header (both forms of the path must carry it):
-   `curl -sI https://prepio-web.vercel.app/preview | grep -i content-security-policy` and the same for `/preview/` → `frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000`.
+   `curl -sI https://prepio.ro/preview | grep -i content-security-policy` and the same for `/preview/` → `frame-ancestors 'self' https://admin.prepio.ro http://localhost:3000`.
 6. Production walk in Chrome: existing lessons render (converted text and image cards); in the admin, create a `[test]` draft lesson with one card of each type, check the live preview (Telefon / Desktop) against production web, then delete it; console clean.
 7. New EAS `preview` APK, **mandatory**: after the migration the installed APK shows empty or placeholder cards. New native modules: `react-native-webview`, `react-native-youtube-iframe`, `expo-web-browser` (config plugin in `app.json`). Run `npx expo install --check` before the build. Then the owner's phone-test list in `docs/STATUS.md`.
 
@@ -81,9 +97,9 @@ The consolidation change (spec `docs/superpowers/specs/2026-11-05-consolidation-
    - anon REST on every new table returns `[]` or 401/42501, never rows: `sources`, `solution_templates`, `consolidation_exercises`, `consolidation_exercise_sources`, `consolidation_ai_context`, `consolidation_attempts`, `consolidation_runs` (e.g. `curl -s "$SUPABASE_URL/rest/v1/consolidation_exercises?select=id" -H "apikey: $ANON"`);
    - a signed-in student can read the published exercises but **not** `consolidation_ai_context` (`[]`);
    - `POST /api/consolidation/evaluate` returns 401 without a token and 403 with a foreign `Origin`:
-     `curl -si -X POST https://prepio-admin.vercel.app/api/consolidation/evaluate -H "Content-Type: application/json" -H "Origin: https://prepio-web.vercel.app" -d '{}'` → 401;
+     `curl -si -X POST https://admin.prepio.ro/api/consolidation/evaluate -H "Content-Type: application/json" -H "Origin: https://prepio.ro" -d '{}'` → 401;
      the same with `-H "Origin: https://evil.example"` → 403;
-   - `https://prepio-admin.vercel.app/api/evaluate` returns 404;
+   - `https://admin.prepio.ro/api/evaluate` returns 404;
    - **one real AI evaluation** from the student web (e.g. an essay requirement or the argument exercise of a seed lesson): 200 with Romanian feedback and no grade (it was never run against OpenAI before the release: no local key);
    - student web `/`, a lesson's start screen with the three zones and `/lesson/<id>/consolidare`, admin `/login` and `/templates` (logged out → redirect to `/login`) load with a clean console.
 6. New EAS `preview` APK, **mandatory**: the installed APK can't open lessons after step 1. New font asset (Literata), no new native module. Then the owner's phone-test list in `docs/STATUS.md`.
@@ -230,6 +246,6 @@ Share the internal-distribution install link from the build page; the phone must
    `curl -s "$SUPABASE_URL/rest/v1/ai_settings?select=*" -H "apikey: $ANON"`
 3. Anonymous sees no lessons since the `student_accounts` migration (expect `[]`): `curl -s "$SUPABASE_URL/rest/v1/lessons?select=id" -H "apikey: $ANON"`.
 4. Evaluate CORS preflight from the student origin returns `Access-Control-Allow-Origin` and allows `Authorization`:
-   `curl -si -X OPTIONS https://prepio-admin.vercel.app/api/consolidation/evaluate -H "Origin: https://prepio-web.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
-5. Admin login works on `https://prepio-admin.vercel.app`; student web loads lessons and an AI consolidation exercise (an essay requirement, a viewpoint, an argument…) returns an evaluation.
-6. The card preview may only be framed by the admin: `curl -sI https://prepio-web.vercel.app/preview` and `curl -sI https://prepio-web.vercel.app/preview/` both return `Content-Security-Policy: frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000`; the admin card editor shows the live preview (not "previzualizarea nu este disponibilă").
+   `curl -si -X OPTIONS https://admin.prepio.ro/api/consolidation/evaluate -H "Origin: https://prepio.ro" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: authorization,content-type"`
+5. Admin login works on `https://admin.prepio.ro`; student web loads lessons and an AI consolidation exercise (an essay requirement, a viewpoint, an argument…) returns an evaluation.
+6. The card preview may only be framed by the admin: `curl -sI https://prepio.ro/preview` and `curl -sI https://prepio.ro/preview/` both return `Content-Security-Policy: frame-ancestors 'self' https://admin.prepio.ro http://localhost:3000`; the admin card editor shows the live preview (not "previzualizarea nu este disponibilă").

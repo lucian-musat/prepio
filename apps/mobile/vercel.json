@@ -7,7 +7,7 @@
     {
       "source": "/preview(/.*)?",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self' https://prepio-admin.vercel.app http://localhost:3000" }
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self' https://admin.prepio.ro http://localhost:3000" }
       ]
     }
   ],

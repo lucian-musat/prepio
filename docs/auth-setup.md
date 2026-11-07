@@ -7,12 +7,12 @@ Redo-able record of how sign-in is configured. No secrets live here.
 Project id `prepio-513509` (owner's Google account). Google Auth Platform:
 
 - Consent screen: External, app name "Prepio", support and developer contact `lucian.m91@gmail.com`, scopes `openid email profile`.
-- Status is currently **Testing** with test user `lucian.m91@gmail.com`. It must be **published to production** at rollout. That requires the Branding page: app homepage `https://prepio-web.vercel.app`, privacy policy `https://prepio-web.vercel.app/confidentialitate`, authorized domain `prepio-web.vercel.app`. Basic scopes need no Google verification.
+- Status is currently **Testing** with test user `lucian.m91@gmail.com`. It must be **published to production** at rollout. That requires the Branding page: app homepage `https://prepio.ro`, privacy policy `https://prepio.ro/confidentialitate`, authorized domain `prepio.ro`. Basic scopes need no Google verification.
 
 ### OAuth client "Prepio web (Supabase)" (Web application)
 
 - Id: `937265826350-m2821ldcll6s563875sq2m479dl955s3.apps.googleusercontent.com`
-- Authorized JavaScript origins: `https://prepio-web.vercel.app`, `http://localhost:8081`
+- Authorized JavaScript origins: `https://prepio.ro`, `http://localhost:8081`
 - Authorized redirect URIs: `https://pienbjvwjgnzmnjzmrbh.supabase.co/auth/v1/callback`, `http://127.0.0.1:54321/auth/v1/callback`
 - Its secret exists only in Supabase (prod dashboard) and the owner's gitignored `supabase/.env`. Never in the repo.
 
@@ -47,15 +47,15 @@ Authentication, Sign In / Providers — in this order:
 
 Authentication, URL Configuration:
 
-- [ ] Site URL `https://prepio-web.vercel.app`
-- [ ] Redirect URLs `https://prepio-web.vercel.app/**` and `http://localhost:8081/**`
+- [ ] Site URL `https://prepio.ro`
+- [ ] Redirect URLs `https://prepio.ro/**` and `http://localhost:8081/**`
 
 Production checks right after the dashboard change:
 
-- [ ] Admin password login still works on `https://prepio-admin.vercel.app`.
+- [ ] Admin password login still works on `https://admin.prepio.ro`.
 - [ ] Confirm email shows ON after saving.
 - [ ] An OTP request for an outside (non-team) address is not delivered / returns an error (default SMTP; expect `email_address_not_authorized`), and no session is issued.
-- [ ] Google sign-in on `https://prepio-web.vercel.app` works.
+- [ ] Google sign-in on `https://prepio.ro` works.
 
 ## Sign-ups are currently OFF (pre-launch)
 
@@ -75,7 +75,7 @@ Since 2026-11-07 „Allow new users to sign up” is **OFF** in production (spam
 ## Environment variables
 
 - Student web (Vercel `prepio-web`): `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (not used by the web flow, harmless) and `EXPO_PUBLIC_AUTH_EMAIL_ENABLED=false`.
-- Admin (Vercel `prepio-admin`): `STUDENT_WEB_ORIGINS` must include `https://prepio-web.vercel.app`.
+- Admin (Vercel `prepio-admin`): `STUDENT_WEB_ORIGINS` must include `https://prepio.ro`.
 - APK: same `EXPO_PUBLIC_*` values in `apps/mobile/eas.json`.
 
 ## Granting admin to an existing user

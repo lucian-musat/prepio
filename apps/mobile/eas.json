@@ -11,7 +11,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pienbjvwjgnzmnjzmrbh.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_NxBHbpGOC4EacSMAVqaCvw_H788faOQ",
-        "EXPO_PUBLIC_API_URL": "https://prepio-admin.vercel.app",
+        "EXPO_PUBLIC_API_URL": "https://admin.prepio.ro",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "937265826350-m2821ldcll6s563875sq2m479dl955s3.apps.googleusercontent.com",
         "EXPO_PUBLIC_AUTH_EMAIL_ENABLED": "false"
       }
@@ -22,7 +22,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pienbjvwjgnzmnjzmrbh.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_NxBHbpGOC4EacSMAVqaCvw_H788faOQ",
-        "EXPO_PUBLIC_API_URL": "https://prepio-admin.vercel.app",
+        "EXPO_PUBLIC_API_URL": "https://admin.prepio.ro",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "937265826350-m2821ldcll6s563875sq2m479dl955s3.apps.googleusercontent.com",
         "EXPO_PUBLIC_AUTH_EMAIL_ENABLED": "false"
       }
