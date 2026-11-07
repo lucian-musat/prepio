@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  AI_TYPES, CONSOLIDATION_TYPES, exerciseFromRow, exerciseToRow, reanchorSpan, sourceFromRow, templateFromRow, validateExercise,
-  type AiContext, type AnswerSpan, type ConsolidationExercise, type ConsolidationRow, type DistributiveOmit,
+  AI_TYPES, CONSOLIDATION_TYPES, aiTemplateFromRow, aiTemplateTypeFor, exerciseFromRow, exerciseToRow, reanchorSpan, sourceFromRow, templateFromRow, validateExercise,
+  type AiContext, type AiTemplate, type AnswerSpan, type ConsolidationExercise, type ConsolidationRow, type DistributiveOmit,
   type SolutionTemplate, type Source, type SourceRef,
 } from '@prepio/shared';
 import { GENERIC_ERROR, UserError, check, checkAffected, renumber, siblings } from './db';
@@ -11,6 +11,7 @@ export type EditorConsolidation = {
   sources: Source[];
   exercises: Array<{ exercise: ConsolidationExercise; ai: AiContext; errors: string[] }>; // errors = validateExercise result (shows detached spans)
   templates: SolutionTemplate[];
+  aiTemplates: AiTemplate[];
 };
 export type SourceInput = { id?: string; title: string | null; author: string; work: string; body: string };
 export type SourceImpact = Array<{ exerciseId: string; prompt: string; detached: string[] }>; // span texts that would detach
@@ -18,12 +19,14 @@ export type ExerciseInput = DistributiveOmit<ConsolidationExercise, 'id' | 'posi
 
 const EMPTY_AI: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: {} };
 const blank = (s: string | null | undefined) => !s || s.trim() === '';
+const MISMATCH = 'Șablonul AI ales nu se potrivește tipului exercițiului.';
 const orNull = (s: unknown) => (typeof s === 'string' && s.trim() !== '' ? s.trim() : null);
 const SOURCE_COLUMNS = 'id,position,title,author,work,body';
 const EXERCISE_COLUMNS = 'id,position,type,prompt,content,template_id,credit_cost';
 
 type JoinRow = { exercise_id: string; source_id: string; label: string };
 
+/** The jsonb context only; the template ids live in `consolidation_ai_template_links`. */
 export function aiFromJson(v: unknown): AiContext {
   const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {};
   const reqs = typeof o.requirements === 'object' && o.requirements !== null ? (o.requirements as Record<string, unknown>) : {};
@@ -46,9 +49,10 @@ async function loadExercises(db: SupabaseClient, lessonId: string, onlyIds?: str
   const rows = check(await q.order('position').order('id')) as unknown as ConsolidationRow[];
   if (rows.length === 0) return { rows, byExercise: new Map<string, SourceRef[]>(), ai: new Map<string, AiContext>() };
   const ids = rows.map((r) => r.id);
-  const [links, ctx] = await Promise.all([
+  const [links, ctx, tplLinks] = await Promise.all([
     db.from('consolidation_exercise_sources').select('exercise_id,source_id,label').in('exercise_id', ids).order('position').order('label'),
     db.from('consolidation_ai_context').select('exercise_id,context').in('exercise_id', ids),
+    db.from('consolidation_ai_template_links').select('exercise_id,requirement_id,template_id').in('exercise_id', ids),
   ]);
   const byExercise = new Map<string, SourceRef[]>();
   for (const l of check(links) as unknown as JoinRow[]) {
@@ -58,21 +62,36 @@ async function loadExercises(db: SupabaseClient, lessonId: string, onlyIds?: str
   }
   const ai = new Map<string, AiContext>();
   for (const c of check(ctx) as unknown as Array<{ exercise_id: string; context: unknown }>) ai.set(c.exercise_id, aiFromJson(c.context));
+  for (const l of check(tplLinks) as unknown as Array<{ exercise_id: string; requirement_id: string; template_id: string }>) {
+    const a = ai.get(l.exercise_id) ?? { ...EMPTY_AI };
+    if (l.requirement_id === '') a.templateId = l.template_id;
+    else a.requirementTemplates = { ...a.requirementTemplates, [l.requirement_id]: l.template_id };
+    ai.set(l.exercise_id, a);
+  }
   return { rows, byExercise, ai };
 }
 
 export async function getConsolidation(db: SupabaseClient, lessonId: string): Promise<EditorConsolidation> {
-  const [sources, loaded, templates] = await Promise.all([
+  const [sources, loaded, templates, aiTemplates] = await Promise.all([
     loadSources(db, lessonId),
     loadExercises(db, lessonId),
     db.from('solution_templates').select('id,title,exercise_type,points,body').order('title').order('id'),
+    db.from('ai_templates').select('id,title,type,criteria,keywords,response_format').order('title').order('id'),
   ]);
+  const aiTemplateList = (check(aiTemplates) as Record<string, unknown>[]).map(aiTemplateFromRow);
+  const typeOf = new Map(aiTemplateList.map((t) => [t.id, t.type]));
   const exercises = loaded.rows.map((row) => {
     const exercise = exerciseFromRow(row, loaded.byExercise.get(row.id) ?? []);
     const ai = loaded.ai.get(row.id) ?? EMPTY_AI;
-    return { exercise, ai, errors: validateExercise(exercise, sources, ai) };
+    const errors = validateExercise(exercise, sources, ai);
+    const expected = aiTemplateTypeFor(exercise.type);
+    const linked = [ai.templateId, ...Object.values(ai.requirementTemplates)].filter((id): id is string => !!id);
+    if (linked.some((id) => typeOf.get(id) !== expected)) errors.push(MISMATCH);
+    return { exercise, ai, errors };
   });
-  return { sources, exercises, templates: (check(templates) as Record<string, unknown>[]).map(templateFromRow) };
+  return {
+    sources, exercises, templates: (check(templates) as Record<string, unknown>[]).map(templateFromRow), aiTemplates: aiTemplateList,
+  };
 }
 
 /** Every span of an exercise (read-only view). */
@@ -208,12 +227,20 @@ function normalizeExercise(input: ExerciseInput): ConsolidationExercise {
 function normalizeAi(ex: ConsolidationExercise, raw: unknown): AiContext {
   if (!AI_TYPES.has(ex.type)) return EMPTY_AI;
   const ai = aiFromJson(raw);
+  const o = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const id = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
   if (ex.type === 'essay') {
+    const given = typeof o.requirementTemplates === 'object' && o.requirementTemplates !== null ? (o.requirementTemplates as Record<string, unknown>) : {};
     const requirements: Record<string, string> = {};
-    for (const r of ex.requirements) requirements[r.id] = (ai.requirements[r.id] ?? '').trim();
-    return { main: '', requirements, templateId: null, requirementTemplates: {} };
+    const requirementTemplates: Record<string, string> = {};
+    for (const r of ex.requirements) {
+      requirements[r.id] = (ai.requirements[r.id] ?? '').trim();
+      const t = id(given[r.id]);
+      if (t) requirementTemplates[r.id] = t; // ids of removed requirements are dropped
+    }
+    return { main: '', requirements, templateId: null, requirementTemplates };
   }
-  return { main: ai.main.trim(), requirements: {}, templateId: null, requirementTemplates: {} };
+  return { main: ai.main.trim(), requirements: {}, templateId: id(o.templateId), requirementTemplates: {} };
 }
 
 export async function saveConsolidationExercise(db: SupabaseClient, lessonId: string, input: ExerciseInput): Promise<{ id: string }> {
@@ -235,6 +262,14 @@ export async function saveConsolidationExercise(db: SupabaseClient, lessonId: st
     if (found.length !== templateIds.size) throw new UserError('Șablonul ales nu există.');
   }
 
+  const chosen = [ai.templateId, ...Object.values(ai.requirementTemplates)].filter((x): x is string => !!x);
+  if (chosen.length) {
+    const found = check(await db.from('ai_templates').select('id,type').in('id', [...new Set(chosen)])) as unknown as Array<{ id: string; type: string }>;
+    const typeOf = new Map(found.map((t) => [t.id, t.type]));
+    if (chosen.some((x) => !typeOf.has(x))) throw new UserError('Șablonul AI ales nu există.');
+    if (chosen.some((x) => typeOf.get(x) !== aiTemplateTypeFor(ex.type))) throw new UserError(MISMATCH);
+  }
+
   const errors = validateExercise(ex, lessonSources, ai);
   if (errors.length) throw new UserError(errors.join(' '));
 
@@ -249,6 +284,12 @@ export async function saveConsolidationExercise(db: SupabaseClient, lessonId: st
       ),
     );
   }
-  check(await db.from('consolidation_ai_context').upsert({ exercise_id: saved.id, context: ai }));
+  check(await db.from('consolidation_ai_context').upsert({ exercise_id: saved.id, context: { main: ai.main, requirements: ai.requirements } }));
+  check(await db.from('consolidation_ai_template_links').delete().eq('exercise_id', saved.id));
+  const links = [
+    ...(ai.templateId ? [{ exercise_id: saved.id, requirement_id: '', template_id: ai.templateId }] : []),
+    ...Object.entries(ai.requirementTemplates).map(([rid, tid]) => ({ exercise_id: saved.id, requirement_id: rid, template_id: tid })),
+  ];
+  if (links.length) check(await db.from('consolidation_ai_template_links').insert(links));
   return saved;
 }

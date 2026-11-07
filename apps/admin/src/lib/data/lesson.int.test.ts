@@ -309,7 +309,7 @@ describe.skipIf(!url || !anon)('lesson data functions (local Supabase)', () => {
     expect(data?.lesson.title).toBe('[test] nou');
     expect(data?.cards.map((c) => (c.type === 'text' ? c.text : null))).toEqual(['A', 'C']);
     expect(data?.questions.map((q) => q.prompt)).toEqual(['Q3', 'Q2']);
-    expect(data?.consolidation).toEqual({ sources: [], exercises: [], templates: expect.any(Array) });
+    expect(data?.consolidation).toEqual({ sources: [], exercises: [], templates: expect.any(Array), aiTemplates: expect.any(Array) });
     expect(await getLessonForEdit(db, '00000000-0000-0000-0000-000000000000')).toBeNull();
   });
 

@@ -27,6 +27,7 @@ const SOURCE: Source = { id: 's1', position: 0, title: null, author: 'D. Berinde
 const data = (over: Partial<EditorConsolidation> = {}): EditorConsolidation => ({
   sources: [SOURCE],
   exercises: [],
+  aiTemplates: [],
   templates: [
     { id: 't-other', title: 'Argumentare', exerciseType: 'argument', points: '', body: 'x' },
     { id: 't-short', title: 'Răspuns scurt pas cu pas', exerciseType: 'short_answer', points: '', body: 'x' },

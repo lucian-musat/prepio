@@ -10,6 +10,7 @@ import {
   deleteSource, getConsolidation, saveConsolidationExercise, saveSource, sourceImpact, type ExerciseInput,
 } from './consolidation';
 import { saveTemplate } from './templates';
+import { saveAiTemplate } from './aiTemplates';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -20,7 +21,7 @@ const password = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
 
 const BODY = 'Bismarck a creat imperiul german în 1871. Apoi a condus țara.';
 const NO_AI: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: {} };
-const AI: AiContext = { main: 'Fapte de referință', requirements: {}, templateId: null, requirementTemplates: {} };
+const aiWith = (templateId: string): AiContext => ({ main: 'Fapte de referință', requirements: {}, templateId, requirementTemplates: {} });
 
 describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', () => {
   let db: SupabaseClient;
@@ -31,6 +32,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   let srcB: string;
   let foreignSrc: string;
   let templateId: string;
+  const aiT = {} as Record<'facts' | 'comparison' | 'viewpoint' | 'argument' | 'essay_requirement', string>;
 
   const spanOf = (sourceId: string, text: string, body = BODY): AnswerSpan => {
     const start = body.indexOf(text);
@@ -51,11 +53,15 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
     srcB = (await saveSource(db, lessonId, { title: 'B', author: 'Autor B', work: 'Opera B', body: 'Alt text.' })).id;
     foreignSrc = (await saveSource(db, otherLessonId, { title: null, author: '', work: '', body: 'Text străin.' })).id;
     templateId = (await saveTemplate(db, { title: '[test] șablon', exerciseType: null, points: '', body: 'corp' })).id;
+    for (const type of ['facts', 'comparison', 'viewpoint', 'argument', 'essay_requirement'] as const) {
+      aiT[type] = (await saveAiTemplate(db, { title: `[test] ai ${type}`, type, criteria: 'c', keywords: '', responseFormat: '' })).id;
+    }
   });
 
   afterAll(async () => {
     if (rootId) await db.from('nodes').delete().eq('id', rootId);
     if (templateId) await db.from('solution_templates').delete().eq('id', templateId);
+    await db.from('ai_templates').delete().in('id', Object.values(aiT));
   });
 
   it('source CRUD: saves, orders, edits and trims', async () => {
@@ -119,11 +125,11 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
     ['source_info', () => ({ ...common, type: 'source_info', prompt: 'P', sources: s(srcA), count: 1, spans: [spanOf(srcA, 'imperiul german')], ai: NO_AI })],
     ['source_letter', () => ({ ...common, type: 'source_letter', prompt: 'P', sources: s(srcA, srcB), correct: 'A', evidence: spanOf(srcA, 'Bismarck'), ai: NO_AI })],
     ['cause_effect', () => ({ ...common, type: 'cause_effect', prompt: 'P', sources: s(srcA), pairs: [{ id: 'p1', cause: { ...spanOf(srcA, 'Bismarck'), id: 'c1' }, effect: { ...spanOf(srcA, 'imperiul german'), id: 'e1' }, explanation: 'de ce' }], ai: NO_AI })],
-    ['facts', () => ({ ...common, type: 'facts', prompt: 'P', sources: s(srcA), count: 2, ai: AI })],
-    ['comparison', () => ({ ...common, type: 'comparison', prompt: 'P', sources: s(srcA), variant: 'difference', ai: AI })],
-    ['viewpoint', () => ({ ...common, type: 'viewpoint', prompt: 'P', sources: s(srcA), count: 1, spans: [spanOf(srcA, 'Apoi a condus țara')], ai: AI })],
-    ['argument', () => ({ ...common, type: 'argument', prompt: 'P', sources: [], ai: AI })],
-    ['essay', () => ({ ...common, type: 'essay', prompt: 'P', sources: s(srcA), requirements: [{ id: 'r1', text: 'Cerința', modelAnswer: 'mod', templateId: null, argument: true }], ai: { main: '', requirements: { r1: 'ctx r1' }, templateId: null, requirementTemplates: {} } })],
+    ['facts', () => ({ ...common, type: 'facts', prompt: 'P', sources: s(srcA), count: 2, ai: aiWith(aiT.facts) })],
+    ['comparison', () => ({ ...common, type: 'comparison', prompt: 'P', sources: s(srcA), variant: 'difference', ai: aiWith(aiT.comparison) })],
+    ['viewpoint', () => ({ ...common, type: 'viewpoint', prompt: 'P', sources: s(srcA), count: 1, spans: [spanOf(srcA, 'Apoi a condus țara')], ai: aiWith(aiT.viewpoint) })],
+    ['argument', () => ({ ...common, type: 'argument', prompt: 'P', sources: [], ai: aiWith(aiT.argument) })],
+    ['essay', () => ({ ...common, type: 'essay', prompt: 'P', sources: s(srcA), requirements: [{ id: 'r1', text: 'Cerința', modelAnswer: 'mod', templateId: null, argument: true }], ai: { main: '', requirements: { r1: 'ctx r1' }, templateId: null, requirementTemplates: { r1: aiT.essay_requirement } } })],
   ];
 
   it.each(cases)('saves and reads back a %s exercise', async (_t, make) => {
@@ -143,7 +149,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
   });
 
   it('non-AI types store an empty AI context', async () => {
-    const { id } = await saveConsolidationExercise(db, lessonId, { ...cases[0][1](), ai: AI });
+    const { id } = await saveConsolidationExercise(db, lessonId, { ...cases[0][1](), ai: aiWith(aiT.facts) });
     expect((await find(id)).ai).toEqual(NO_AI);
     await deleteItem(db, 'consolidation_exercises', id);
   });

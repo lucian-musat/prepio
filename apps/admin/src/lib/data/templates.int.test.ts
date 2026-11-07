@@ -7,6 +7,7 @@ import { createLesson, createNode } from './tree';
 import { deleteItem } from './lesson';
 import { saveConsolidationExercise } from './consolidation';
 import { deleteTemplate, listTemplates, saveTemplate } from './templates';
+import { saveAiTemplate } from './aiTemplates';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -20,6 +21,7 @@ describe.skipIf(!url || !anon)('template data functions (local Supabase)', () =>
   let rootId: string;
   let lessonId: string;
   const created: string[] = [];
+  const aiCreated: string[] = [];
 
   const mk = async (title: string, exerciseType: 'essay' | null = null) => {
     const { id } = await saveTemplate(db, { title, exerciseType, points: 'p', body: 'b' });
@@ -40,6 +42,7 @@ describe.skipIf(!url || !anon)('template data functions (local Supabase)', () =>
   afterAll(async () => {
     if (rootId) await db.from('nodes').delete().eq('id', rootId);
     if (created.length) await db.from('solution_templates').delete().in('id', created);
+    if (aiCreated.length) await db.from('ai_templates').delete().in('id', aiCreated);
   });
 
   it('creates, lists, edits and deletes a template', async () => {
@@ -61,11 +64,17 @@ describe.skipIf(!url || !anon)('template data functions (local Supabase)', () =>
   it('counts usage by exercises and essay requirements; deleting a used template fails with the count', async () => {
     const id = await mk('[test] used');
     const base = { prompt: 'P', modelAnswer: null, explanation: null, sources: [], creditCost: 1 };
-    const a = await saveConsolidationExercise(db, lessonId, { ...base, type: 'argument', templateId: id, ai: { main: 'c', requirements: {}, templateId: null, requirementTemplates: {} } });
+    const mkAi = async (type: 'argument' | 'essay_requirement') => {
+      const { id: aid } = await saveAiTemplate(db, { title: `[test] ai ${type}`, type, criteria: 'c', keywords: '', responseFormat: '' });
+      aiCreated.push(aid);
+      return aid;
+    };
+    const [argT, essT] = [await mkAi('argument'), await mkAi('essay_requirement')];
+    const a = await saveConsolidationExercise(db, lessonId, { ...base, type: 'argument', templateId: id, ai: { main: 'c', requirements: {}, templateId: argT, requirementTemplates: {} } });
     const b = await saveConsolidationExercise(db, lessonId, {
       ...base, type: 'essay', templateId: null,
       requirements: [{ id: 'r1', text: 'R', modelAnswer: null, templateId: id, argument: false }],
-      ai: { main: '', requirements: { r1: 'c' }, templateId: null, requirementTemplates: {} },
+      ai: { main: '', requirements: { r1: 'c' }, templateId: null, requirementTemplates: { r1: essT } },
     });
     expect(await usage(id)).toBe(2);
     await expect(deleteTemplate(db, id)).rejects.toThrow('Șablonul este folosit de 2 exerciții.');

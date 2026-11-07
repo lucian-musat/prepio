@@ -26,6 +26,7 @@ const DATA: EditorConsolidation = {
   sources: [SOURCE],
   exercises: [],
   templates: [{ id: 't-arg', title: 'Argumentare', exerciseType: 'argument', points: '', body: 'x' }],
+  aiTemplates: [],
 };
 
 async function openNew(label: string) {
