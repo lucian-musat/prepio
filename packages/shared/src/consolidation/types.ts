@@ -52,7 +52,24 @@ export type ConsolidationExercise = {
   /** Credits one digital-teacher check costs (AI types only; per requirement for the whole essay). */
   creditCost: number;
 } & ConsolidationContent;
-export type AiContext = { main: string; requirements: Record<string, string> };
+export type AiContext = {
+  main: string;
+  requirements: Record<string, string>;
+  /** Selected AI template of a non-essay AI exercise. */
+  templateId: string | null;
+  /** Selected AI template per essay requirement id. */
+  requirementTemplates: Record<string, string>;
+};
+export type AiTemplateType = 'facts' | 'comparison' | 'viewpoint' | 'argument' | 'essay_requirement';
+/** Reusable AI instructions for one kind of AI-checked item (admin library, never sent to students). */
+export type AiTemplate = {
+  id: string;
+  title: string;
+  type: AiTemplateType;
+  criteria: string;
+  keywords: string;
+  responseFormat: string;
+};
 export type SolutionTemplate = {
   id: string;
   title: string;
@@ -73,7 +90,7 @@ export type ExerciseAnswer =
   | { type: 'viewpoint'; text: string; marks: Mark[] }
   | { type: 'argument'; text: string }
   | { type: 'essay'; parts: Record<string, string> };
-/** One feedback block; `key` identifies it (e.g. 'answer', 'field-0', 'mark-1', 'fact-0', 'viewpoint', 'support-0', 'whole', a requirement id). */
+/** One feedback block; `key` identifies it (e.g. 'answer', 'field-0', 'mark-1', 'fact-0', 'viewpoint', 'support-0', a requirement id). */
 export type FeedbackItem = {
   key: string;
   verdict: Verdict;
@@ -104,7 +121,7 @@ export type ConsolidationRow = {
 /** `POST /api/consolidation/evaluate`: asks the AI to judge one item of an AI-checked exercise. */
 export type ConsolidationEvaluateRequest = {
   exerciseId: string;
-  target: 'exercise' | 'whole' | { requirementId: string };
+  target: 'exercise' | { requirementId: string };
   answer: ExerciseAnswer;
 };
 /** What a check cost and the balance after it. */
@@ -132,5 +149,5 @@ export type ConsolidationEvaluateError = {
   balance?: number;
   credits?: CreditsChange;
 };
-/** Per text field; the essay "whole" check sends up to 6 fields. */
+/** Per text field. */
 export const MAX_ANSWER_CHARS = 3000;

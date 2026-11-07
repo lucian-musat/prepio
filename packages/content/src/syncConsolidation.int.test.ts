@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validateExercise } from '@prepio/shared';
 import { addConsolidation } from './addConsolidation';
-import { writeConsolidation } from './consolidation';
+import { withPendingTemplates, writeConsolidation } from './consolidation';
 import { loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
 import { lessons } from './index';
 import { seed } from './seed';
@@ -121,7 +121,7 @@ describe.skipIf(!url || !serviceKey)('syncConsolidation (integration)', () => {
       );
       stored.exercises.forEach(({ exercise, ai }, i) => {
         const c = l.consolidation[i]!;
-        expect(validateExercise(exercise, stored.sources, ai), c.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), c.prompt).toEqual([]);
         expect(exercise.templateId && keyOf.get(exercise.templateId)).toBe(c.template);
         if (c.ai) expect(ai).toEqual(c.ai);
       });

@@ -21,7 +21,7 @@ const essay: ConsolidationExercise = {
   ],
 };
 
-const ctx = (main: string, requirements: Record<string, string> = {}): AiContext => ({ main, requirements });
+const ctx = (main: string, requirements: Record<string, string> = {}): AiContext => ({ main, requirements, templateId: null, requirementTemplates: {} });
 const run = (
   exercise: ConsolidationExercise, target: Parameters<typeof buildConsolidationPrompt>[0]['target'], answer: ExerciseAnswer,
   over: Partial<Parameters<typeof buildConsolidationPrompt>[0]> = {},
@@ -106,19 +106,6 @@ describe('buildConsolidationPrompt', () => {
     expect(q.input).not.toContain('Conectori detectați');
   });
 
-  it('whole: every requirement text and part in order, BAC writing criteria, key whole', () => {
-    const answer: ExerciseAnswer = { type: 'essay', parts: { r1: 'Text unu', r2: 'Text doi' } };
-    const c = ctx('', { r1: 'Context unu.', r2: 'Context doi.' });
-    const { input } = run(essay, 'whole', answer, { context: c });
-    for (const s of ['Prima cerință', 'A doua cerință', 'Text unu', 'Text doi', 'Context unu.', 'Context doi.']) expect(input).toContain(s);
-    expect(input.indexOf('Text unu')).toBeLessThan(input.indexOf('Text doi'));
-    expect(input.indexOf('Prima cerință')).toBeLessThan(input.indexOf('A doua cerință'));
-    expect(input).toContain('limbaj istoric');
-    expect(input).toContain('relația cauză-efect');
-    expect(input).toContain('lungime');
-    expect(input).toContain('whole');
-    expect(expectedKeys(essay, 'whole', NONE)).toEqual(['whole']);
-  });
 
   it('includes the model answer as a teacher reference when present, and uses no grade wording', () => {
     const { input } = run(facts, 'exercise', { type: 'facts', texts: ['a', 'b'] });
@@ -138,9 +125,6 @@ describe('buildConsolidationPrompt', () => {
     const one = run(withModel, { requirementId: 'r2' }, answer).input;
     expect(one).toContain('Model r2');
     expect(one).not.toContain('Model r1');
-    const whole = run(withModel, 'whole', answer).input;
-    expect(whole).toContain('Model r1');
-    expect(whole).toContain('Model r2');
   });
 
   it('uses a different random nonce per call', () => {

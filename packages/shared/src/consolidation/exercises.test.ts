@@ -11,6 +11,8 @@ import {
   templateFromRow,
   validateExercise,
   validateTemplate,
+  aiTemplateFromRow,
+  aiTemplateTypeFor,
 } from './exercises';
 import type {
   AiContext,
@@ -175,7 +177,7 @@ describe('validateExercise', () => {
   const srcs = [SRC_A, SRC_B];
   const v = (c: object, refs: SourceRef[], ai: AiContext | null = null, extra: object = {}) =>
     validateExercise(make({ ...c, ...extra }, refs), srcs, ai);
-  const ctx: AiContext = { main: 'ctx', requirements: {} };
+  const ctx: AiContext = { main: 'ctx', requirements: {}, templateId: 't1', requirementTemplates: {} };
 
   it('prompt must not be blank', () => {
     const c = { type: 'argument' };
@@ -258,7 +260,8 @@ describe('validateExercise', () => {
   });
   it('essay: 1-6 requirements, none blank', () => {
     const r = (id: string, text = 'T') => ({ id, text, modelAnswer: null, templateId: null, argument: false });
-    const ai = { main: '', requirements: { a: 'x', b: 'x', c: 'x', d: 'x', e: 'x', f: 'x', g: 'x' } };
+    const reqCtx = { a: 'x', b: 'x', c: 'x', d: 'x', e: 'x', f: 'x', g: 'x' };
+    const ai: AiContext = { main: '', requirements: reqCtx, templateId: null, requirementTemplates: { ...reqCtx } };
     expect(v({ type: 'essay', requirements: [r('a')] }, [], ai)).toEqual([]);
     expect(v({ type: 'essay', requirements: [] }, [], ai)).toEqual(['Eseul are nevoie de 1 până la 6 cerințe.']);
     expect(v({ type: 'essay', requirements: ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((i) => r(i)) }, [], ai)).toEqual([
@@ -295,7 +298,7 @@ describe('validateExercise', () => {
     ])('%s needs ai.main', (_t, c) => {
       const refs = c.type === 'viewpoint' ? [REF_A] : [];
       expect(v(c, refs, ctx)).toEqual([]);
-      expect(v(c, refs, { main: ' ', requirements: {} })).toEqual(['Contextul pentru AI este obligatoriu.']);
+      expect(v(c, refs, { ...ctx, main: ' ' })).toEqual(['Contextul pentru AI este obligatoriu.']);
       expect(v(c, refs, null)).toEqual([]);
     });
     it('essay needs every requirement context', () => {
@@ -304,14 +307,36 @@ describe('validateExercise', () => {
         { id: 'b', text: 'T', modelAnswer: null, templateId: null, argument: false },
       ];
       const c = { type: 'essay', requirements: reqs };
-      expect(v(c, [], { main: '', requirements: { a: 'x', b: 'y' } })).toEqual([]);
-      expect(v(c, [], { main: '', requirements: { a: 'x', b: ' ' } })).toEqual([
+      const essayAi: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: { a: 't', b: 't' } };
+      expect(v(c, [], { ...essayAi, requirements: { a: 'x', b: 'y' } })).toEqual([]);
+      expect(v(c, [], { ...essayAi, requirements: { a: 'x', b: ' ' } })).toEqual([
         'Contextul pentru AI este obligatoriu pentru cerința 2.',
       ]);
       expect(v(c, [], null)).toEqual([]);
     });
     it('non-AI types never need it', () => {
-      expect(v({ type: 'short_answer', accepted: ['a'], mistakes: [] }, [], { main: '', requirements: {} })).toEqual([]);
+      expect(v({ type: 'short_answer', accepted: ['a'], mistakes: [] }, [], { ...ctx, main: '', templateId: null })).toEqual([]);
+    });
+    it('AI types need a template when ai is given', () => {
+      const none: AiContext = { main: 'ctx', requirements: {}, templateId: null, requirementTemplates: {} };
+      expect(v({ type: 'argument' }, [], none)).toEqual(['Alege un șablon AI.']);
+      expect(v({ type: 'argument' }, [], null)).toEqual([]);
+    });
+    it('essay needs a template for every requirement', () => {
+      const reqs = ['a', 'b'].map((id) => ({ id, text: 'T', modelAnswer: null, templateId: null, argument: false }));
+      const ai: AiContext = { main: '', requirements: { a: 'x', b: 'y' }, templateId: null, requirementTemplates: { a: 't' } };
+      expect(v({ type: 'essay', requirements: reqs }, [], ai)).toEqual(['Alege un șablon AI pentru cerința 2.']);
+      expect(v({ type: 'essay', requirements: reqs }, [], null)).toEqual([]);
+    });
+    it('aiTemplateTypeFor maps consolidation types', () => {
+      expect(aiTemplateTypeFor('essay')).toBe('essay_requirement');
+      expect(aiTemplateTypeFor('argument')).toBe('argument');
+      expect(aiTemplateTypeFor('short_answer')).toBeNull();
+    });
+    it('aiTemplateFromRow maps snake case', () => {
+      expect(aiTemplateFromRow({ id: 'i', title: 'T', type: 'facts', criteria: 'c', keywords: 'k', response_format: 'r' })).toEqual({
+        id: 'i', title: 'T', type: 'facts', criteria: 'c', keywords: 'k', responseFormat: 'r',
+      });
     });
   });
 });

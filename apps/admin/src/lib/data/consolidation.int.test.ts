@@ -19,8 +19,8 @@ const email = process.env.ADMIN_EMAIL ?? 'admin@prepio.local';
 const password = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
 
 const BODY = 'Bismarck a creat imperiul german în 1871. Apoi a condus țara.';
-const NO_AI: AiContext = { main: '', requirements: {} };
-const AI: AiContext = { main: 'Fapte de referință', requirements: {} };
+const NO_AI: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: {} };
+const AI: AiContext = { main: 'Fapte de referință', requirements: {}, templateId: null, requirementTemplates: {} };
 
 describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', () => {
   let db: SupabaseClient;
@@ -123,7 +123,7 @@ describe.skipIf(!url || !anon)('consolidation data functions (local Supabase)', 
     ['comparison', () => ({ ...common, type: 'comparison', prompt: 'P', sources: s(srcA), variant: 'difference', ai: AI })],
     ['viewpoint', () => ({ ...common, type: 'viewpoint', prompt: 'P', sources: s(srcA), count: 1, spans: [spanOf(srcA, 'Apoi a condus țara')], ai: AI })],
     ['argument', () => ({ ...common, type: 'argument', prompt: 'P', sources: [], ai: AI })],
-    ['essay', () => ({ ...common, type: 'essay', prompt: 'P', sources: s(srcA), requirements: [{ id: 'r1', text: 'Cerința', modelAnswer: 'mod', templateId: null, argument: true }], ai: { main: '', requirements: { r1: 'ctx r1' } } })],
+    ['essay', () => ({ ...common, type: 'essay', prompt: 'P', sources: s(srcA), requirements: [{ id: 'r1', text: 'Cerința', modelAnswer: 'mod', templateId: null, argument: true }], ai: { main: '', requirements: { r1: 'ctx r1' }, templateId: null, requirementTemplates: {} } })],
   ];
 
   it.each(cases)('saves and reads back a %s exercise', async (_t, make) => {

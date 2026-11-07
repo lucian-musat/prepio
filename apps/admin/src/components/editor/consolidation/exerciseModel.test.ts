@@ -17,7 +17,7 @@ describe('draftFor', () => {
       sources: [],
       modelAnswer: null,
       explanation: null,
-      ai: { main: '', requirements: {} },
+      ai: { main: '', requirements: {}, templateId: null, requirementTemplates: {} },
       creditCost: 1,
       ...emptyExerciseContent(type, ids()),
     });
@@ -51,7 +51,7 @@ describe('changeType', () => {
       templateId: 't1',
       modelAnswer: 'Cuza',
       explanation: 'Vezi sursa A.',
-      ai: { main: '', requirements: {} },
+      ai: { main: '', requirements: {}, templateId: null, requirementTemplates: {} },
       creditCost: 1,
       type: 'source_info',
       count: 1,
@@ -82,7 +82,7 @@ describe('toDraft', () => {
   it('drops the position and attaches the AI context', () => {
     const ex = { id: 'e', position: 3, ...draftFor('short_answer', ids()) };
     delete (ex as { ai?: unknown }).ai;
-    const ai = { main: 'ctx', requirements: {} };
+    const ai = { main: 'ctx', requirements: {}, templateId: null, requirementTemplates: {} };
     const d = toDraft(ex as never, ai);
     expect(d).not.toHaveProperty('position');
     expect(d).toMatchObject({ id: 'e', type: 'short_answer', ai });

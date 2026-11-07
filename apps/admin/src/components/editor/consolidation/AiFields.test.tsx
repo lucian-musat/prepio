@@ -47,7 +47,7 @@ describe('AI types: context', () => {
 
   it('a facts exercise without context fails with the shared validator message; the form shows it', async () => {
     const bare = { id: 'e', position: 0, type: 'facts', count: 2, prompt: 'p', templateId: null, sources: [], modelAnswer: null, explanation: null, creditCost: 1 } satisfies ConsolidationExercise;
-    const [message] = validateExercise(bare, [], { main: '', requirements: {} });
+    const [message] = validateExercise(bare, [], { main: '', requirements: {}, templateId: null, requirementTemplates: {} });
     expect(message).toMatch(/Contextul pentru AI/);
     actions.saveConsolidationExercise.mockResolvedValue({ ok: false, error: message });
     const user = await openNew('Prezentare fapte');

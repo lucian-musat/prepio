@@ -100,7 +100,7 @@ describe('Consolidare: exercises', () => {
               id: 'e1', position: 0, prompt: 'Precizați o informație.', templateId: null, sources: [{ sourceId: 's1', label: 'A' }],
               modelAnswer: null, explanation: null, creditCost: 1, type: 'source_info', count: 1, spans: [],
             },
-            ai: { main: '', requirements: {} },
+            ai: { main: '', requirements: {}, templateId: null, requirementTemplates: {} },
             errors: ['Răspunsul marcat „Cuza” nu mai există în sursă.'],
           },
         ],

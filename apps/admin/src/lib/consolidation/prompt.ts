@@ -9,8 +9,6 @@ export type Deterministic = {
   connectors?: Connectors;
   /** `viewpoint`: only the marks the deterministic check accepted (index = position among the student's marks). */
   support?: Array<{ index: number; text: string }>;
-  /** `whole`: connector results of the requirements with the argument flag. */
-  requirementConnectors?: Record<string, Connectors>;
 };
 
 export type PromptArgs = {
@@ -37,7 +35,6 @@ export function expectedKeys(exercise: ConsolidationExercise, target: PromptArgs
     case 'argument':
       return ['fact'];
     case 'essay':
-      if (target === 'whole') return ['whole'];
       return typeof target === 'object' ? [target.requirementId] : [];
     default:
       return [];
@@ -47,15 +44,6 @@ export function expectedKeys(exercise: ConsolidationExercise, target: PromptArgs
 const yn = (b: boolean) => (b ? 'da' : 'nu');
 const connectorLine = (c: Connectors) =>
   `Conectori detectați automat: cauzalitate ${yn(c.causal)}, concluzie ${yn(c.conclusion)}. Nu contrazice acest rezultat.`;
-
-const WHOLE_CRITERIA = [
-  'limbaj istoric (termeni și formulări specifice istoriei)',
-  'structura (introducere, cuprins, încheiere, coerență între părți)',
-  'relația cauză-efect (este formulată și explicată)',
-  'argumentarea (afirmațiile sunt susținute prin fapte istorice)',
-  'ordinea cronologică sau logică a ideilor',
-  'lungime (textul este dezvoltat suficient, nici prea scurt, nici redundant)',
-];
 
 export function buildConsolidationPrompt(a: PromptArgs): { instructions: string; input: string } {
   const nonce = a.nonce ?? randomUUID().replace(/-/g, '');
@@ -97,36 +85,18 @@ export function buildConsolidationPrompt(a: PromptArgs): { instructions: string;
   const ans = a.answer;
 
   if (ex.type === 'essay' && ans.type === 'essay') {
-    if (a.target === 'whole') {
-      lines.push('Eseul are următoarele cerințe, în ordine. Pentru fiecare: cerința, contextul profesorului și textul elevului.');
-      ex.requirements.forEach((r, i) => {
-        lines.push('', `Cerința ${i + 1}: ${r.text}`, `Contextul profesorului: ${a.context.requirements[r.id] ?? ''}`, ...reference(r.modelAnswer));
-        const c = a.deterministic.requirementConnectors?.[r.id];
-        if (c) lines.push(connectorLine(c));
-        lines.push(`Textul elevului pentru cerința ${i + 1}:`, wrap(ans.parts[r.id] ?? ''));
-      });
-      lines.push(
-        '',
-        ...reference(ex.modelAnswer),
-        'Evaluează eseul întreg pe criteriile de scriere de la bacalaureat:',
-        ...WHOLE_CRITERIA.map((c) => `- ${c}`),
-        '',
-        'Cheia elementului așteptat: whole (un singur element, cu verdict, titlu, ce e bine și ce se poate îmbunătăți).',
-      );
-    } else {
-      const id = typeof a.target === 'object' ? a.target.requirementId : '';
-      const r = ex.requirements.find((x) => x.id === id);
-      lines.push(
-        `Cerința: ${r?.text ?? ''}`,
-        '',
-        'Contextul profesorului:',
-        a.context.requirements[id] ?? '',
-        '',
-        ...reference(r?.modelAnswer),
-      );
-      if (a.deterministic.connectors) lines.push(connectorLine(a.deterministic.connectors), '');
-      lines.push('Textul elevului:', wrap(ans.parts[id] ?? ''), '', `Cheia elementului așteptat: ${id} (verdictul pentru această cerință).`);
-    }
+    const id = typeof a.target === 'object' ? a.target.requirementId : '';
+    const r = ex.requirements.find((x) => x.id === id);
+    lines.push(
+      `Cerința: ${r?.text ?? ''}`,
+      '',
+      'Contextul profesorului:',
+      a.context.requirements[id] ?? '',
+      '',
+      ...reference(r?.modelAnswer),
+    );
+    if (a.deterministic.connectors) lines.push(connectorLine(a.deterministic.connectors), '');
+    lines.push('Textul elevului:', wrap(ans.parts[id] ?? ''), '', `Cheia elementului așteptat: ${id} (verdictul pentru această cerință).`);
   } else {
     lines.push('Contextul profesorului:', a.context.main, '', ...reference(ex.modelAnswer));
     switch (ex.type) {

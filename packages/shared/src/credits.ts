@@ -14,14 +14,13 @@ export type CreditsPurchaseError = { error: CreditsPurchaseErrorCode; message: s
 
 type Target = ConsolidationEvaluateRequest['target'];
 
-/** Credits one check of `target` costs: 0 for non-AI types, `creditCost` per requirement for the whole essay. */
-export function checkCost(ex: ConsolidationExercise, target: Target): number {
+/** Credits one check of `target` costs: 0 for non-AI types, else the exercise's `creditCost`. */
+export function checkCost(ex: ConsolidationExercise, _target: Target): number {
   if (!AI_TYPES.has(ex.type)) return 0;
-  if (ex.type === 'essay' && target === 'whole') return ex.creditCost * ex.requirements.length;
   return ex.creditCost;
 }
 
-/** Stable text form of a check target, stored on the ledger row: `exercise`, `whole` or `req:<id>`. */
+/** Stable text form of a check target, stored on the ledger row: `exercise` or `req:<id>`. */
 export function targetKey(target: Target): string {
   return typeof target === 'object' ? `req:${target.requirementId}` : target;
 }

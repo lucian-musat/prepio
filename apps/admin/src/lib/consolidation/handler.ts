@@ -50,7 +50,7 @@ function parseRequest(body: unknown): { exerciseId: string; target: Target; answ
   if (!isObj(body) || typeof body.exerciseId !== 'string' || !isObj(body.answer)) return null;
   const t = body.target;
   let target: Target;
-  if (t === 'exercise' || t === 'whole') target = t;
+  if (t === 'exercise') target = t;
   else if (isObj(t) && typeof t.requirementId === 'string') target = { requirementId: t.requirementId };
   else return null;
   const a = body.answer;
@@ -153,7 +153,7 @@ function validate(ex: ConsolidationExercise, target: Target, answer: ExerciseAns
       const parts = (answer as Extract<ExerciseAnswer, { type: 'essay' }>).parts;
       const known = new Set(ex.requirements.map((r) => r.id));
       if (!Object.keys(parts).every((k) => known.has(k))) return 'bad_request';
-      const ids = target === 'whole' ? ex.requirements.map((r) => r.id) : [(target as { requirementId: string }).requirementId];
+      const ids = [(target as { requirementId: string }).requirementId];
       texts = ids.map((id) => parts[id] ?? '');
       break;
     }
@@ -192,9 +192,6 @@ function deterministicFacts(ex: ConsolidationExercise, target: Target, answer: E
   if (ex.type === 'viewpoint' && answer.type === 'viewpoint') return { support: acceptedSupport(ex, sources, answer) };
   if (ex.type === 'essay' && answer.type === 'essay') {
     const flagged = ex.requirements.filter((r) => r.argument);
-    if (target === 'whole') {
-      return { requirementConnectors: Object.fromEntries(flagged.map((r) => [r.id, detectConnectors(answer.parts[r.id] ?? '')])) };
-    }
     const id = (target as { requirementId: string }).requirementId;
     if (flagged.some((r) => r.id === id)) return { connectors: detectConnectors(answer.parts[id] ?? '') };
   }
@@ -227,7 +224,9 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     if (!loaded) return errorResult('not_found');
     const { exercise, sources, context, rules, model } = loaded;
     // A stored exercise that no longer validates (no AI context, detached span, ...) cannot be evaluated fairly.
-    if (validateExercise(exercise, sources, context).length > 0) return errorResult('not_found');
+    // Placeholder template ids until Task 4 resolves the stored template links; only the other rules are checked here.
+    const links: AiContext = { ...context, templateId: 'pending', requirementTemplates: Object.fromEntries(Object.keys(context.requirements).map((k) => [k, 'pending'])) };
+    if (validateExercise(exercise, sources, links).length > 0) return errorResult('not_found');
     const invalid = validate(exercise, req.target, req.answer);
     if (invalid) return errorResult(invalid);
 

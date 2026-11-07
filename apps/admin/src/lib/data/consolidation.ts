@@ -16,7 +16,7 @@ export type SourceInput = { id?: string; title: string | null; author: string; w
 export type SourceImpact = Array<{ exerciseId: string; prompt: string; detached: string[] }>; // span texts that would detach
 export type ExerciseInput = DistributiveOmit<ConsolidationExercise, 'id' | 'position'> & { id?: string; ai: AiContext };
 
-const EMPTY_AI: AiContext = { main: '', requirements: {} };
+const EMPTY_AI: AiContext = { main: '', requirements: {}, templateId: null, requirementTemplates: {} };
 const blank = (s: string | null | undefined) => !s || s.trim() === '';
 const orNull = (s: unknown) => (typeof s === 'string' && s.trim() !== '' ? s.trim() : null);
 const SOURCE_COLUMNS = 'id,position,title,author,work,body';
@@ -30,6 +30,8 @@ export function aiFromJson(v: unknown): AiContext {
   return {
     main: typeof o.main === 'string' ? o.main : '',
     requirements: Object.fromEntries(Object.entries(reqs).filter((e): e is [string, string] => typeof e[1] === 'string')),
+    templateId: null,
+    requirementTemplates: {},
   };
 }
 
@@ -209,9 +211,9 @@ function normalizeAi(ex: ConsolidationExercise, raw: unknown): AiContext {
   if (ex.type === 'essay') {
     const requirements: Record<string, string> = {};
     for (const r of ex.requirements) requirements[r.id] = (ai.requirements[r.id] ?? '').trim();
-    return { main: '', requirements };
+    return { main: '', requirements, templateId: null, requirementTemplates: {} };
   }
-  return { main: ai.main.trim(), requirements: {} };
+  return { main: ai.main.trim(), requirements: {}, templateId: null, requirementTemplates: {} };
 }
 
 export async function saveConsolidationExercise(db: SupabaseClient, lessonId: string, input: ExerciseInput): Promise<{ id: string }> {

@@ -13,7 +13,7 @@ import {
   type Mark,
   type Source,
 } from '@prepio/shared';
-import { essayFromWriting, essayTitle, seedSpans, toExercise } from './consolidation';
+import { essayFromWriting, essayTitle, seedSpans, toExercise, withPendingTemplates } from './consolidation';
 import { DEMO_CONSOLIDATION, DEMO_SOURCES } from './demoLesson';
 import { lessons } from './index';
 import { TEMPLATES } from './templates';
@@ -41,7 +41,7 @@ function checkSet(sources: SeedSource[], items: SeedConsolidation[]): string[][]
   const b = new Map(sources.map((s) => [s.key, s.body]));
   return items.map((c) => {
     const { exercise, ai } = toExercise(c, ids, b, templateIds, newId);
-    return validateExercise(exercise, asSources, ai);
+    return validateExercise(exercise, asSources, withPendingTemplates(exercise, ai));
   });
 }
 

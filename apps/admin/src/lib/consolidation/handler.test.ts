@@ -200,7 +200,6 @@ describe('handleConsolidationEvaluate', () => {
     const bodies = [
       factsReq({ answer: { type: 'facts', texts: ['a', 'b', 'c'] } }),
       { exerciseId: VIEW, target: 'exercise', answer: { type: 'viewpoint', text: 'Da.', marks: [mark, mark, mark] } },
-      { exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b', r3: 'c' } } },
       { exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', junk: 'x' } } },
     ];
     for (const body of bodies) {
@@ -220,7 +219,6 @@ describe('handleConsolidationEvaluate', () => {
   it('applies the target rules', async () => {
     const essay = { type: 'essay', parts: { r1: 'a', r2: 'b' } };
     const cases = [
-      factsReq({ target: 'whole' }),
       factsReq({ target: { requirementId: 'r1' } }),
       { exerciseId: ESSAY, target: 'exercise', answer: essay },
       { exerciseId: ESSAY, target: { requirementId: 'nope' }, answer: essay },
@@ -344,16 +342,8 @@ describe('handleConsolidationEvaluate', () => {
     expect(input).not.toContain('Ctx r2');
     expect(input).toContain('Conectori detectați automat');
   });
-
-  it('essay whole: every part is required', async () => {
-    const d = deps({ evaluate: vi.fn(async () => okItems('whole')) });
-    let r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: ' ' } } }, 'u1', d);
-    expect(code(r)).toBe('empty');
-    r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, 'u1', d);
-    expect(r.status).toBe(200);
-    expect((r.json as { items: { key: string }[] }).items.map((i) => i.key)).toEqual(['whole']);
-  });
 });
+
 
 describe('handleConsolidationEvaluate: credits', () => {
   const compReq = { exerciseId: COMP, target: 'exercise', answer: { type: 'comparison', text: 'Ambele au avut reforme.' } };
@@ -420,17 +410,11 @@ describe('handleConsolidationEvaluate: credits', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('the whole essay costs credit_cost per requirement; one requirement costs credit_cost', async () => {
+  it('one essay requirement costs credit_cost', async () => {
     const credits = fakeCredits(10);
-    let d = deps({ credits, evaluate: vi.fn(async () => okItems('whole')) });
-    let r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, 'u1', d);
-    expect(r.status).toBe(200);
-    expect(credits.spend).toHaveBeenLastCalledWith('u1', 2, ESSAY, 'whole');
-    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 2, balance: 8 });
-    d = deps({ credits, evaluate: vi.fn(async () => okItems('r1')) });
-    r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, 'u1', d);
+    const d = deps({ credits, evaluate: vi.fn(async () => okItems('r1')) });
+    const r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, 'u1', d);
     expect(credits.spend).toHaveBeenLastCalledWith('u1', 1, ESSAY, 'req:r1');
-    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 1, balance: 7 });
   });
 
   it('refunds when the evaluator throws or the model output is invalid', async () => {

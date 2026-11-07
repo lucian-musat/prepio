@@ -1,5 +1,8 @@
 import type { AiContext, Card, ConsolidationType, DistributiveOmit, Question, SourceLabel } from '@prepio/shared';
 
+/** The AI context text an exercise is authored with; the AI template links are set separately. */
+export type SeedAiContext = Pick<AiContext, 'main' | 'requirements'>;
+
 export type SeedNode = { key: string; title: string; children?: SeedNode[] };
 
 /**
@@ -50,7 +53,7 @@ export type SeedConsolidation = {
   modelAnswer?: string;
   explanation?: string;
   /** Required for the AI-checked types (`main`, or one entry per essay requirement id). */
-  ai?: AiContext;
+  ai?: SeedAiContext;
 } & SeedConsolidationContent;
 
 export type SeedTemplate = { key: string; title: string; exerciseType: ConsolidationType | null; points: string; body: string };

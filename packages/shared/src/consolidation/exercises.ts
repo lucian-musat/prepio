@@ -1,6 +1,8 @@
 import type { DistributiveOmit } from '../types';
 import type {
   AiContext,
+  AiTemplate,
+  AiTemplateType,
   AnswerSpan,
   ConsolidationContent,
   ConsolidationExercise,
@@ -377,10 +379,40 @@ export function validateExercise(ex: ConsolidationExercise, sources: Source[], a
     if (ex.type === 'essay') {
       ex.requirements.forEach((r, i) => {
         if (blank(ai.requirements[r.id])) errors.push(`Contextul pentru AI este obligatoriu pentru cerința ${i + 1}.`);
+        if (!ai.requirementTemplates[r.id]) errors.push(`Alege un șablon AI pentru cerința ${i + 1}.`);
       });
-    } else if (AI_TYPES.has(ex.type) && blank(ai.main)) {
-      errors.push('Contextul pentru AI este obligatoriu.');
+    } else if (AI_TYPES.has(ex.type)) {
+      if (blank(ai.main)) errors.push('Contextul pentru AI este obligatoriu.');
+      if (!ai.templateId) errors.push('Alege un șablon AI.');
     }
   }
   return errors;
+}
+
+export const AI_TEMPLATE_TYPES: AiTemplateType[] = ['facts', 'comparison', 'viewpoint', 'argument', 'essay_requirement'];
+
+export const AI_TEMPLATE_TYPE_LABELS: Record<AiTemplateType, string> = {
+  facts: 'Prezentare fapte',
+  comparison: 'Asemănare / deosebire',
+  viewpoint: 'Punct de vedere',
+  argument: 'Argumentare',
+  essay_requirement: 'Cerință de eseu',
+};
+
+/** The template type an exercise type uses; null for types that are not AI-checked. */
+export function aiTemplateTypeFor(type: ConsolidationType): AiTemplateType | null {
+  if (type === 'essay') return 'essay_requirement';
+  return type === 'facts' || type === 'comparison' || type === 'viewpoint' || type === 'argument' ? type : null;
+}
+
+/** DB row (`ai_templates`, snake case) to the camelCase model. */
+export function aiTemplateFromRow(row: Record<string, unknown>): AiTemplate {
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    type: row.type as AiTemplateType,
+    criteria: String(row.criteria ?? ''),
+    keywords: String(row.keywords ?? ''),
+    responseFormat: String(row.response_format ?? ''),
+  };
 }

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONSOLIDATION_TYPES, validateExercise, type Source } from '@prepio/shared';
-import { check, ensureTemplates, toExercise, writeConsolidation } from './consolidation';
+import { check, ensureTemplates, toExercise, withPendingTemplates, writeConsolidation } from './consolidation';
 import { lessons as seedLessons } from './index';
 import { TEMPLATES } from './templates';
 import type { SeedLesson } from './types';
@@ -54,7 +54,7 @@ function validateSeed(lessons: SeedLesson[], templateKeys: string[]): void {
     for (const c of l.consolidation) {
       try {
         const { exercise, ai } = toExercise(c, ids, bodies, templates, randomUUID);
-        for (const e of validateExercise(exercise, sources, ai)) errors.push(`${l.title} — ${c.prompt}: ${e}`);
+        for (const e of validateExercise(exercise, sources, withPendingTemplates(exercise, ai))) errors.push(`${l.title} — ${c.prompt}: ${e}`);
       } catch (err) {
         errors.push(`${l.title}: ${err instanceof Error ? err.message : String(err)}`);
       }

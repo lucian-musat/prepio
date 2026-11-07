@@ -9,7 +9,7 @@ import {
   type SourceRef,
 } from '@prepio/shared';
 import { TEMPLATES } from './templates';
-import type { SeedConsolidation, SeedSource, SeedSpan, SeedTemplate } from './types';
+import type { SeedAiContext, SeedConsolidation, SeedSource, SeedSpan, SeedTemplate } from './types';
 
 export function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
@@ -64,7 +64,7 @@ export function toExercise(
   bodies: Map<string, string>,
   templateIds: Map<string, string>,
   newId: () => string,
-): { exercise: ConsolidationExercise; ai: AiContext } {
+): { exercise: ConsolidationExercise; ai: SeedAiContext } {
   const fail = (msg: string): never => {
     throw new Error(`Exercise „${c.prompt}”: ${msg}`);
   };
@@ -138,7 +138,7 @@ export function toExercise(
   }
 
   // Same shape the admin stores: empty for deterministic types, `main` or one entry per requirement otherwise.
-  let ai: AiContext = { main: '', requirements: {} };
+  let ai: SeedAiContext = { main: '', requirements: {} };
   if (exercise.type === 'essay') {
     ai = { main: '', requirements: Object.fromEntries(exercise.requirements.map((r) => [r.id, c.ai?.requirements[r.id] ?? ''])) };
   } else if (AI_TYPES.has(exercise.type)) {
@@ -226,7 +226,7 @@ async function insertConsolidation(
   lessonId: string,
   sources: SeedSource[],
   sourceIds: Map<string, string>,
-  converted: { exercise: ConsolidationExercise; ai: AiContext }[],
+  converted: { exercise: ConsolidationExercise; ai: SeedAiContext }[],
   lastSource: { position: number } | undefined,
   lastExercise: { position: number } | undefined,
 ): Promise<void> {
@@ -267,4 +267,15 @@ async function insertConsolidation(
     await client.from('consolidation_ai_context').insert(converted.map(({ exercise, ai }) => ({ exercise_id: exercise.id, context: ai }))),
     'insert exercise contexts',
   );
+}
+
+/**
+ * Seed contexts carry text only. For validation, mark every AI template as chosen: the seed does not link
+ * templates yet (placeholder until the seed links them), so only the other rules are checked here.
+ */
+export function withPendingTemplates(exercise: ConsolidationExercise, ai: SeedAiContext | null): AiContext | null {
+  if (!ai) return null;
+  const requirementTemplates: Record<string, string> = {};
+  if (exercise.type === 'essay') for (const r of exercise.requirements) requirementTemplates[r.id] = 'pending';
+  return { ...ai, templateId: 'pending', requirementTemplates };
 }

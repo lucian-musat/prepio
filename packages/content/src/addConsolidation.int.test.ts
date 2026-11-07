@@ -4,6 +4,7 @@ import { validateExercise } from '@prepio/shared';
 import { addConsolidation } from './addConsolidation';
 import { loadConsolidation, MIGRATED_ESSAYS, toMigratedState } from './consolidation.testutil';
 import { lessons } from './index';
+import { withPendingTemplates } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
 
@@ -102,7 +103,7 @@ describe.skipIf(!url || !serviceKey)('addConsolidation (integration)', () => {
       expect(stored.exercises.map((e) => e.exercise.position)).toEqual(stored.exercises.map((_, i) => i));
       for (const [i, c] of seedNonEssay.entries()) {
         const { exercise, ai } = stored.exercises[seedEssays.length + i]!;
-        expect(validateExercise(exercise, stored.sources, ai), c.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), c.prompt).toEqual([]);
         expect(exercise.templateId && keyOf.get(exercise.templateId)).toBe(c.template);
         expect(exercise.sources).toHaveLength(c.sources.length);
         if (c.ai) expect(ai).toEqual(c.ai);

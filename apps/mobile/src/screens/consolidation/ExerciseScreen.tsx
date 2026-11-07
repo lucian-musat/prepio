@@ -39,7 +39,7 @@ import { NO_MARKS, noop, type PanelMarker, type PanelSource } from '../../compon
 import { evaluateConsolidation } from '../../lib/api';
 import type { Attempt } from '../../lib/consolidation';
 import { AppText, Button, ScreenLayout } from '../../ui';
-import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, markerMarks, mergeAiFeedback, mergeItems, restorable } from './checking';
+import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, markerMarks, mergeAiFeedback, restorable } from './checking';
 import FeedbackView, { Analyzing, CheckError } from './FeedbackView';
 import TemplateSheet from './TemplateSheet';
 
@@ -167,25 +167,20 @@ export default function ExerciseScreen({
   };
 
   const check = async () => {
-    if (busy.current || !isComplete(exercise, answer)) return;
+    // The whole-essay check is gone; requirement checks (Task 6) replace it.
+    if (essay || busy.current || !isComplete(exercise, answer)) return;
     const a = answer;
     const det = checkExercise(exercise, sourceList, a);
     if (!AI_TYPES.has(exercise.type)) return finish(det, a);
     if (aiBlocked(exercise, det, a)) return finish({ ...det, verdict: det.verdict ?? combineVerdict(det.items) }, a);
-    if (!gate.allow(checkCost(exercise, essay ? 'whole' : 'exercise'), check)) return;
+    if (!gate.allow(checkCost(exercise, 'exercise'), check)) return;
     busy.current = true;
     setStatus('loading');
     setError('');
     try {
-      const res = await evaluateConsolidation({ exerciseId: exercise.id, target: essay ? 'whole' : 'exercise', answer: a });
+      const res = await evaluateConsolidation({ exerciseId: exercise.id, target: 'exercise', answer: a });
       if (res.credits) gate.settle(res.credits.balance);
-      if (essay) {
-        // The essay's verdict is the whole-essay verdict; without one it stays null („n din N” in the summary).
-        const merged = mergeItems(feedbackRef.current, res.items);
-        finish({ ...merged, verdict: res.items.find((i) => i.key === 'whole')?.verdict ?? null }, a);
-      } else {
-        finish(mergeAiFeedback(exercise, det, res.items), a);
-      }
+      finish(mergeAiFeedback(exercise, det, res.items), a);
     } catch (e) {
       // Not enough credits: the buy sheet opens instead of an error row.
       if (gate.onError(e, check)) {
@@ -304,8 +299,6 @@ export default function ExerciseScreen({
     </View>
   ) : essay ? (
     <View style={styles.stack}>
-      {/* Waits for requirement checks in flight, so their results are never overwritten. */}
-      <Button label="Verifică eseul întreg" cost={checkCost(exercise, 'whole') || undefined} disabled={!complete || partBusy} loading={loading} onPress={check} />
       <View style={styles.row}>
         {prev}
         {feedback?.items.length ? <Button flex label="Continuă" variant="secondary" disabled={moving} onPress={onContinue} /> : skip(true)}

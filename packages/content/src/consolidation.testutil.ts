@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import {
   exerciseFromRow,
   sourceFromRow,
-  type AiContext,
   type ConsolidationExercise,
   type ConsolidationRow,
   type Source,
@@ -12,11 +11,11 @@ import {
 import { essayFromWriting, writeConsolidation } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
-import type { SeedConsolidation, SeedLesson } from './types';
+import type { SeedAiContext, SeedConsolidation, SeedLesson } from './types';
 
 export type StoredConsolidation = {
   sources: Source[];
-  exercises: Array<{ exercise: ConsolidationExercise; ai: AiContext | null }>;
+  exercises: Array<{ exercise: ConsolidationExercise; ai: SeedAiContext | null }>;
 };
 
 /** Reads a lesson's sources and exercises (with their source links and AI contexts) back through the shared model. */
@@ -31,7 +30,7 @@ export async function loadConsolidation(client: SupabaseClient, lessonId: string
   if (ex.error) throw ex.error;
   type Row = ConsolidationRow & {
     consolidation_exercise_sources: { source_id: string; label: SourceLabel; position: number }[];
-    consolidation_ai_context: { context: AiContext } | { context: AiContext }[] | null;
+    consolidation_ai_context: { context: SeedAiContext } | { context: SeedAiContext }[] | null;
   };
   return {
     sources: src.data.map(sourceFromRow),

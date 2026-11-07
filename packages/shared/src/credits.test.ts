@@ -36,9 +36,7 @@ describe('credit costs', () => {
     expect(checkCost(essay(1, 1), { requirementId: 'r0' })).toBe(1);
   });
 
-  it('checkCost charges the whole essay per requirement and one requirement once', () => {
-    expect(checkCost(essay(4, 1), 'whole')).toBe(4);
-    expect(checkCost(essay(4, 2), 'whole')).toBe(8);
+  it('checkCost charges one essay requirement its creditCost', () => {
     expect(checkCost(essay(4, 3), { requirementId: 'r2' })).toBe(3);
   });
 
@@ -48,7 +46,6 @@ describe('credit costs', () => {
 
   it('targetKey', () => {
     expect(targetKey('exercise')).toBe('exercise');
-    expect(targetKey('whole')).toBe('whole');
     expect(targetKey({ requirementId: 'r1' })).toBe('req:r1');
   });
 });

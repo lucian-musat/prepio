@@ -8,7 +8,7 @@ import { plural } from './plural';
 export type ExerciseDraft = ExerciseInput;
 export type DraftOf<T extends ConsolidationType> = Extract<ExerciseDraft, { type: T }>;
 
-const EMPTY_AI = (): AiContext => ({ main: '', requirements: {} });
+const EMPTY_AI = (): AiContext => ({ main: '', requirements: {}, templateId: null, requirementTemplates: {} });
 
 export function draftFor(type: ConsolidationType, newId: () => string): ExerciseDraft {
   return {
@@ -32,7 +32,7 @@ export function changeType(draft: ExerciseDraft, type: ConsolidationType, newId:
     sources: draft.sources,
     modelAnswer: draft.modelAnswer,
     explanation: draft.explanation,
-    ai: { main: draft.ai.main, requirements: {} },
+    ai: { main: draft.ai.main, requirements: {}, templateId: null, requirementTemplates: {} },
     creditCost: DEFAULT_CREDIT_COST[type],
     ...emptyExerciseContent(type, newId),
   } as ExerciseDraft;

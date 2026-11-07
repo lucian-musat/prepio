@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
 import { loadConsolidation } from './consolidation.testutil';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
+import { withPendingTemplates } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
 
@@ -228,7 +229,7 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
         const seedEx = l.consolidation[i]!;
         expect(exercise.position).toBe(i);
         expect(ai, exercise.prompt).not.toBeNull();
-        expect(validateExercise(exercise, stored.sources, ai), exercise.prompt).toEqual([]);
+        expect(validateExercise(exercise, stored.sources, withPendingTemplates(exercise, ai)), exercise.prompt).toEqual([]);
         expect(exercise.templateId === null ? null : templateKey.get(exercise.templateId)).toBe(seedEx.template);
         const sourceKeys = exercise.sources.map((r) => l.sources[stored.sources.findIndex((s) => s.id === r.sourceId)]?.key);
         expect(sourceKeys).toEqual(seedEx.sources);
