@@ -10,6 +10,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const links = [
     { href: '/', label: 'Conținut' },
     { href: '/templates', label: 'Șabloane de rezolvare' },
+    { href: '/ai-templates', label: 'Șabloane AI' },
     { href: '/students', label: 'Elevi' },
     { href: '/settings', label: 'Setări' },
   ];

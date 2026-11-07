@@ -2,8 +2,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { validateExercise, type ConsolidationExercise, type Source } from '@prepio/shared';
+import { validateExercise, type AiTemplate, type ConsolidationExercise, type Source } from '@prepio/shared';
 import type { EditorConsolidation, ExerciseInput } from '@/lib/data/consolidation';
+import { AiTemplateField } from './AiFields';
 import ConsolidationEditor from './ConsolidationEditor';
 
 const actions = vi.hoisted(() => ({
@@ -37,7 +38,7 @@ async function openNew(label: string) {
   return user;
 }
 
-const CONTEXT_HELP = /Ce trebuie să știe AI-ul ca să dea feedback corect/;
+const CONTEXT_HELP = /Faptele pe care AI-ul le folosește la verificare/;
 
 describe('AI types: context', () => {
   it.each(['Prezentare fapte', 'Asemănare / deosebire', 'Punct de vedere', 'Argumentare'])('%s shows the required context with its help', async (label) => {
@@ -156,5 +157,52 @@ describe('credit cost field', () => {
     await user.click(screen.getByRole('button', { name: 'Adaugă cerință' }));
     await user.selectOptions(screen.getByLabelText('Cost pe cerință'), '2');
     expect(screen.getByText('Eseul întreg: 6 credite.')).toBeTruthy();
+  });
+});
+
+describe('AiTemplateField', () => {
+  const aiTemplates: AiTemplate[] = [
+    { id: 'f1', title: 'Fapte 1', type: 'facts', criteria: 'c', keywords: '', responseFormat: '' },
+    { id: 'g1', title: 'Argument 1', type: 'argument', criteria: 'c', keywords: '', responseFormat: '' },
+    { id: 'r1', title: 'Cerință 1', type: 'essay_requirement', criteria: 'c', keywords: '', responseFormat: '' },
+  ];
+
+  it('lists only templates of its type, a placeholder, a manage link, and reports the id', () => {
+    const onChange = vi.fn();
+    render(<AiTemplateField controlId="x" type="facts" templates={aiTemplates} value={null} onChange={onChange} />);
+    const select = screen.getByLabelText('Șablon AI') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Alege un șablon AI', 'Fapte 1']);
+    expect(screen.getByRole('link', { name: 'Gestionează șabloanele AI' }).getAttribute('href')).toBe('/ai-templates');
+    fireEvent.change(select, { target: { value: 'f1' } });
+    expect(onChange).toHaveBeenCalledWith('f1');
+  });
+
+  it('shows the selector for AI types and saves the chosen id', async () => {
+    actions.saveConsolidationExercise.mockResolvedValue({ ok: true, data: { id: 'new' } });
+    const user = userEvent.setup();
+    render(<ConsolidationEditor lessonId="l1" data={{ ...DATA, aiTemplates }} />);
+    await user.click(screen.getByRole('button', { name: 'Adaugă exercițiu' }));
+    await user.click(screen.getByRole('radio', { name: 'Prezentare fapte' }));
+    fireEvent.change(screen.getByLabelText('Șablon AI'), { target: { value: 'f1' } });
+    fireEvent.change(screen.getByLabelText(/Context pentru AI/), { target: { value: 'ctx' } });
+    await user.click(screen.getByRole('button', { name: 'Salvează' }));
+    expect(actions.saveConsolidationExercise.mock.calls[0]![1]).toMatchObject({ ai: { main: 'ctx', templateId: 'f1' } });
+  });
+
+  it('each essay requirement card has its own selector with essay_requirement templates', async () => {
+    actions.saveConsolidationExercise.mockResolvedValue({ ok: true, data: { id: 'new' } });
+    const user = userEvent.setup();
+    render(<ConsolidationEditor lessonId="l1" data={{ ...DATA, aiTemplates }} />);
+    await user.click(screen.getByRole('button', { name: 'Adaugă exercițiu' }));
+    await user.click(screen.getByRole('radio', { name: 'Eseu pe cerințe' }));
+    await user.click(screen.getByRole('button', { name: 'Adaugă cerință' }));
+    const selects = screen.getAllByLabelText(/^Șablon AI, cerința \d$/) as HTMLSelectElement[];
+    expect(selects).toHaveLength(2);
+    expect([...selects[0]!.options].map((o) => o.textContent)).toEqual(['Alege un șablon AI', 'Cerință 1']);
+    fireEvent.change(selects[1]!, { target: { value: 'r1' } });
+    await user.type(screen.getByLabelText('Enunț'), 'Eseu');
+    await user.click(screen.getByRole('button', { name: 'Salvează' }));
+    const input = actions.saveConsolidationExercise.mock.calls[0]![1] as Extract<ExerciseInput, { type: 'essay' }>;
+    expect(input.ai.requirementTemplates[input.requirements[1]!.id]).toBe('r1');
   });
 });

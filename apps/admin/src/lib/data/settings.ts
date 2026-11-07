@@ -15,7 +15,7 @@ export async function getSettings(db: SupabaseClient): Promise<SettingsInput> {
 
 function validate(i: SettingsInput) {
   if (typeof i.welcomeMessage !== 'string' || !i.welcomeMessage.trim()) throw new UserError('Mesajul de bun venit nu poate fi gol.');
-  if (typeof i.rules !== 'string' || !i.rules.trim()) throw new UserError('Regulile de evaluare nu pot fi goale.');
+  if (typeof i.rules !== 'string' || !i.rules.trim()) throw new UserError('Regulile generale nu pot fi goale.');
   if (typeof i.model !== 'string' || !i.model.trim()) throw new UserError('Modelul nu poate fi gol.');
 }
 

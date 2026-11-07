@@ -3,22 +3,27 @@
 import { Form } from 'react-bootstrap';
 import type { EssayRequirement } from '@prepio/shared';
 import SortableList from '../cards/SortableList';
-import { AiContextField } from './AiFields';
+import { AiContextField, AiTemplateField } from './AiFields';
 import CreditCostField from './CreditCostField';
 import type { FieldsProps } from './exerciseModel';
 
 export const MAX_REQUIREMENTS = 6;
 
 /** 1–6 requirement cards: text, own required AI context, optional model answer and template, argumentation flag. */
-export default function EssayFields({ idPrefix, draft, onChange, templates }: FieldsProps<'essay'>) {
+export default function EssayFields({ idPrefix, draft, onChange, templates, aiTemplates }: FieldsProps<'essay'>) {
   const setRequirements = (requirements: EssayRequirement[]) => {
-    // drop the context of removed requirements
+    // drop the context and AI template of removed requirements
     const ids = new Set(requirements.map((r) => r.id));
     const kept = Object.fromEntries(Object.entries(draft.ai.requirements).filter(([id]) => ids.has(id)));
-    onChange({ ...draft, requirements, ai: { ...draft.ai, requirements: kept } });
+    const keptTemplates = Object.fromEntries(Object.entries(draft.ai.requirementTemplates).filter(([id]) => ids.has(id)));
+    onChange({ ...draft, requirements, ai: { ...draft.ai, requirements: kept, requirementTemplates: keptTemplates } });
   };
   const patch = (i: number, p: Partial<EssayRequirement>) =>
     setRequirements(draft.requirements.map((r, j) => (j === i ? { ...r, ...p } : r)));
+  const setAiTemplate = (id: string, v: string | null) => {
+    const { [id]: _removed, ...rest } = draft.ai.requirementTemplates;
+    onChange({ ...draft, ai: { ...draft.ai, requirementTemplates: v ? { ...rest, [id]: v } : rest } });
+  };
   const setContext = (id: string, v: string) =>
     onChange({ ...draft, ai: { ...draft.ai, requirements: { ...draft.ai.requirements, [id]: v } } });
 
@@ -45,6 +50,14 @@ export default function EssayFields({ idPrefix, draft, onChange, templates }: Fi
                 <Form.Label>Cerința {n}</Form.Label>
                 <Form.Control as="textarea" rows={2} value={r.text} onChange={(e) => patch(i, { text: e.target.value })} />
               </Form.Group>
+              <AiTemplateField
+                controlId={`${id}-ai-template`}
+                label={`Șablon AI, cerința ${n}`}
+                type="essay_requirement"
+                templates={aiTemplates}
+                value={draft.ai.requirementTemplates[r.id] ?? null}
+                onChange={(v) => setAiTemplate(r.id, v)}
+              />
               <AiContextField
                 controlId={`${id}-ai`}
                 label={`Context pentru AI, cerința ${n}`}

@@ -4,7 +4,7 @@ import { useId, useState, type ComponentType } from 'react';
 import { Alert, Button, ButtonGroup, Form, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import {
   CONSOLIDATION_TYPES, CONSOLIDATION_TYPE_LABELS,
-  type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel, type SourceRef,
+  type AiTemplate, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel, type SourceRef,
 } from '@prepio/shared';
 import type { ActionResult } from '@/lib/actionResult';
 import type { ExerciseInput } from '@/lib/data/consolidation';
@@ -58,11 +58,12 @@ export function ExerciseTypePicker({ value, onChange }: { value: ConsolidationTy
   );
 }
 
-export default function ExerciseForm({ initial, sources, templates, errors, onSave, onCancel }: {
+export default function ExerciseForm({ initial, sources, templates, aiTemplates, errors, onSave, onCancel }: {
   initial: ExerciseDraft;
   /** The lesson's sources. */
   sources: Source[];
   templates: SolutionTemplate[];
+  aiTemplates: AiTemplate[];
   /** Stored validation errors of an existing exercise (e.g. detached spans). */
   errors?: string[];
   onSave: (input: ExerciseInput) => Promise<ActionResult<unknown>>;
@@ -177,7 +178,7 @@ export default function ExerciseForm({ initial, sources, templates, errors, onSa
         {!draft.templateId && <Form.Text className="text-warning-emphasis d-block">Exercițiul nu are șablon de rezolvare.</Form.Text>}
       </Form.Group>
 
-      <Fields key={draft.type} idPrefix={idPrefix} draft={draft} onChange={(next) => setDraft(next)} sources={resolved} templates={templates} />
+      <Fields key={draft.type} idPrefix={idPrefix} draft={draft} onChange={(next) => setDraft(next)} sources={resolved} templates={templates} aiTemplates={aiTemplates} />
 
       {/* the essay's model answers belong to its requirements */}
       {draft.type !== 'essay' && (

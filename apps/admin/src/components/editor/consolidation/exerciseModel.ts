@@ -1,5 +1,5 @@
 import {
-  DEFAULT_CREDIT_COST, emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel,
+  DEFAULT_CREDIT_COST, type AiTemplate, emptyExerciseContent, type AiContext, type ConsolidationExercise, type ConsolidationType, type SolutionTemplate, type Source, type SourceLabel,
 } from '@prepio/shared';
 import type { ExerciseInput } from '@/lib/data/consolidation';
 import { plural } from './plural';
@@ -78,10 +78,11 @@ export function cleanDraft(d: ExerciseDraft): ExerciseDraft {
     case 'essay': {
       const ids = new Set(base.requirements.map((r) => r.id));
       const requirements = Object.fromEntries(Object.entries(base.ai.requirements).filter(([id]) => ids.has(id)));
+      const requirementTemplates = Object.fromEntries(Object.entries(base.ai.requirementTemplates).filter(([id]) => ids.has(id)));
       return {
         ...base,
         requirements: base.requirements.map((r) => ({ ...r, modelAnswer: orNull(r.modelAnswer) })),
-        ai: { ...base.ai, requirements },
+        ai: { ...base.ai, requirements, requirementTemplates },
       };
     }
     default:
@@ -103,6 +104,8 @@ export type FieldsProps<T extends ConsolidationType> = {
   sources: Array<{ label: SourceLabel; source: Source }>;
   /** All solution templates (the essay's requirements pick their own). */
   templates: SolutionTemplate[];
+  /** The AI instruction-template library. */
+  aiTemplates: AiTemplate[];
 };
 
 /** The source's title, or its first words. */

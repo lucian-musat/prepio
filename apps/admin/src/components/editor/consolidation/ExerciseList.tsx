@@ -14,7 +14,7 @@ const newId = () => crypto.randomUUID();
 type Editing = { id: string } | { type: ConsolidationType } | 'picking' | null;
 
 export default function ExerciseList({ lessonId, data }: { lessonId: string; data: EditorConsolidation }) {
-  const { sources, exercises, templates } = data;
+  const { sources, exercises, templates, aiTemplates } = data;
   const [editing, setEditing] = useState<Editing>(null);
   const { run, pending, alert } = useRunner();
 
@@ -38,6 +38,7 @@ export default function ExerciseList({ lessonId, data }: { lessonId: string; dat
                 initial={toDraft(ex, ai)}
                 sources={sources}
                 templates={templates}
+                aiTemplates={aiTemplates}
                 errors={errors}
                 onSave={save}
                 onCancel={() => setEditing(null)}
@@ -89,6 +90,7 @@ export default function ExerciseList({ lessonId, data }: { lessonId: string; dat
               initial={draftFor(editing.type, newId)}
               sources={sources}
               templates={templates}
+              aiTemplates={aiTemplates}
               onSave={save}
               onCancel={() => setEditing(null)}
             />

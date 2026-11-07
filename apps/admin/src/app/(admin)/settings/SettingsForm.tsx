@@ -40,9 +40,9 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
         <Card.Body>
           <Card.Title as="h2" className="h5 mb-3">Evaluare AI</Card.Title>
           <Form.Group controlId="ai-rules" className="mb-3">
-            <Form.Label>Reguli de evaluare</Form.Label>
+            <Form.Label>Reguli generale</Form.Label>
             <Form.Control as="textarea" rows={14} value={rules} onChange={(e) => touch(setRules)(e.target.value)} />
-            <Form.Text muted>Instrucțiunile trimise modelului AI pentru evaluarea eseurilor.</Form.Text>
+            <Form.Text muted>Reguli valabile pentru orice exercițiu evaluat cu AI (rol, limbă, ton). Instrucțiunile pe tip de exercițiu stau în Șabloane AI.</Form.Text>
           </Form.Group>
           <Form.Group controlId="ai-model">
             <Form.Label>Model</Form.Label>
