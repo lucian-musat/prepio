@@ -31,6 +31,8 @@ export async function listAiTemplates(db: SupabaseClient): Promise<AiTemplateWit
   return list.sort((a, b) => AI_TEMPLATE_TYPES.indexOf(a.type) - AI_TEMPLATE_TYPES.indexOf(b.type));
 }
 
+const TYPE_LOCKED = 'Șablonul AI este folosit de un exercițiu; tipul nu se poate schimba.';
+
 export async function saveAiTemplate(db: SupabaseClient, input: Omit<AiTemplate, 'id'> & { id?: string }): Promise<{ id: string }> {
   if (typeof input?.title !== 'string' || typeof input.criteria !== 'string' || !AI_TEMPLATE_TYPES.includes(input.type)) {
     throw new UserError(GENERIC_ERROR);
@@ -47,6 +49,10 @@ export async function saveAiTemplate(db: SupabaseClient, input: Omit<AiTemplate,
   if (fields.criteria === '') errors.push('Completează ce urmărește AI-ul în răspuns.');
   if (errors.length) throw new UserError(errors.join(' '));
   if (input.id) {
+    const current = check(await db.from('ai_templates').select('type').eq('id', input.id).maybeSingle());
+    if (current && current.type !== fields.type && ((await usageCounts(db)).get(input.id) ?? 0) > 0) {
+      throw new UserError(TYPE_LOCKED);
+    }
     checkAffected(await db.from('ai_templates').update(fields).eq('id', input.id).select('id'));
     return { id: input.id };
   }

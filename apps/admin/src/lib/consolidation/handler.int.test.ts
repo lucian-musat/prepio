@@ -117,7 +117,7 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
   const item = (key: string) => ({ key, verdict: 'almost', title: 'T', good: ['g'], improve: ['i'] });
 
   it('evaluates one requirement, sending the DB context, its AI template and connector facts', async () => {
-    const evaluate = vi.fn(async (_a: Parameters<Deps['evaluate']>[0]) => ({ items: [item('r1')] }));
+    const evaluate = vi.fn<Deps['evaluate']>(async () => ({ items: [item('r1')] }));
     const r = await handleConsolidationEvaluate(
       { exerciseId, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'Deoarece da. Deci așa.', r2: '' } } },
       userId,
@@ -160,6 +160,21 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
       expect(r.status, id).toBe(404);
       expect(r.json).toMatchObject({ error: 'not_found' });
     }
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(await balance()).toBe(11);
+    expect(await ledger()).toHaveLength(before);
+  });
+
+  it('answers not_found without spending when another requirement has a template of the wrong type', async () => {
+    const tplFacts = await insertTemplate('facts', 'CRITERII-FACTS');
+    const mixed = await insertExercise(lessonId, 1, { r1: tplR1, r2: tplFacts });
+    const evaluate = vi.fn();
+    const before = (await ledger()).length;
+    const r = await handleConsolidationEvaluate(
+      { exerciseId: mixed, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
+    );
+    expect(r.status).toBe(404);
+    expect(r.json).toMatchObject({ error: 'not_found' });
     expect(evaluate).not.toHaveBeenCalled();
     expect(await balance()).toBe(11);
     expect(await ledger()).toHaveLength(before);

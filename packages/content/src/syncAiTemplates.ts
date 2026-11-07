@@ -51,7 +51,9 @@ export async function syncAiTemplates(
 ): Promise<AiTemplatesSyncResult> {
   const seeds = opts.lessons ?? seedLessons;
   const result: AiTemplatesSyncResult = { applied: opts.apply, templatesToAdd: [], contextsToReplace: [], linksToAdd: [], problems: [] };
-  const found = await ensureAiTemplates(client, false);
+  const found = await ensureAiTemplates(client, false, AI_TEMPLATES, { tolerateMismatch: true });
+  for (const m of found.mismatched) result.problems.push(`${m} (nothing is linked to it)`);
+  const unusable = new Set(AI_TEMPLATES.filter((t) => !found.ids.has(t.key) && !found.missing.includes(t)).map((t) => t.key));
   result.templatesToAdd = found.missing.map((t) => t.title);
   const titleOf = (type: AiTemplateType): string => AI_TEMPLATES.find((t) => t.key === type)!.title;
 
@@ -64,7 +66,17 @@ export async function syncAiTemplates(
       .order('position'),
     'list exercises',
   ) as unknown as Row[];
-  const requirementIds = (r: Row): string[] => (r.content?.requirements ?? []).map((q) => String(q.id ?? ''));
+  const requirementIds = (r: Row): string[] => {
+    const ids: string[] = [];
+    for (const q of r.content?.requirements ?? []) {
+      if (typeof q.id === 'string' && q.id !== '') ids.push(q.id);
+      else {
+        const p = `Lesson „${titles.get(r.lesson_id) ?? r.lesson_id}”, exercise „${r.prompt}”: a requirement has no id (skipped)`;
+        if (!result.problems.includes(p)) result.problems.push(p);
+      }
+    }
+    return ids;
+  };
 
   // Step 2: contexts of the seed exercises.
   const contexts: Array<{ exercise_id: string; context: SeedAiContext }> = [];
@@ -104,7 +116,7 @@ export async function syncAiTemplates(
   const links: Array<{ exercise_id: string; requirement_id: string; type: AiTemplateType }> = [];
   for (const e of exercises) {
     const type = aiTemplateTypeFor(e.type);
-    if (!type) continue;
+    if (!type || unusable.has(type)) continue;
     const have = new Set(e.consolidation_ai_template_links.map((l) => l.requirement_id));
     const wanted = e.type === 'essay' ? requirementIds(e) : [''];
     for (const requirementId of wanted) {
@@ -116,7 +128,7 @@ export async function syncAiTemplates(
 
   if (!opts.apply) return result;
 
-  const { ids } = await ensureAiTemplates(client, true);
+  const { ids } = await ensureAiTemplates(client, true, AI_TEMPLATES, { tolerateMismatch: true });
   if (contexts.length) {
     check(await client.from('consolidation_ai_context').upsert(contexts, { onConflict: 'exercise_id' }), 'replace exercise contexts');
   }

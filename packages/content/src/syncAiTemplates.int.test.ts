@@ -101,6 +101,33 @@ describe.skipIf(!url || !serviceKey)('syncAiTemplates (integration)', () => {
     expect(r.linksToAdd.some((l) => l.templateTitle === 'Argumentare (BAC)')).toBe(true);
   });
 
+  it('reports a template with the seed title but another type and links nothing to it', async () => {
+    const title = 'Asemănare / deosebire (BAC)';
+    ok(await client.from('ai_templates').update({ type: 'facts' }).eq('title', title));
+    ok(await client.from('consolidation_ai_template_links').delete().neq('requirement_id', 'none'));
+    const r = await syncAiTemplates(client, { apply: true });
+    expect(r.problems).toContain(`template „${title}” exists with type facts, expected comparison (nothing is linked to it)`);
+    expect(r.templatesToAdd).toEqual([]);
+    expect(r.linksToAdd.some((l) => l.templateTitle === title)).toBe(false);
+    const bad = ok(await client.from('ai_templates').select('id').eq('title', title));
+    expect(ok(await client.from('consolidation_ai_template_links').select('template_id').in('template_id', bad.map((b) => b.id)))).toEqual([]);
+    ok(await client.from('ai_templates').update({ type: 'comparison' }).eq('title', title));
+  });
+
+  it('skips a requirement without an id and names the exercise', async () => {
+    const essayId = ok(
+      await client
+        .from('consolidation_exercises')
+        .insert({ lesson_id: testLessonId, position: 1, type: 'essay', prompt: '[test] essay', content: { requirements: [{ text: 'no id' }, { id: 'r1', text: 'ok' }] } })
+        .select('id')
+        .single(),
+    ).id as string;
+    const r = await syncAiTemplates(client, { apply: false });
+    expect(r.problems).toContain('Lesson „[test] ai templates”, exercise „[test] essay”: a requirement has no id (skipped)');
+    expect(r.linksToAdd.filter((l) => l.prompt === '[test] essay').map((l) => l.requirementId)).toEqual(['r1']);
+    ok(await client.from('consolidation_exercises').delete().eq('id', essayId));
+  });
+
   it('cleans up the [test] rows', async () => {
     ok(await client.from('consolidation_ai_template_links').delete().eq('template_id', otherTemplateId));
     ok(await client.from('ai_templates').delete().eq('id', otherTemplateId));

@@ -19,6 +19,7 @@ function AiTemplateForm({ initial, onSaved, onCancel }: {
   const [keywords, setKeywords] = useState(initial?.keywords ?? '');
   const [responseFormat, setResponseFormat] = useState(initial?.responseFormat ?? '');
   const { run, pending, alert } = useRunner();
+  const typeLocked = (initial?.usage ?? 0) > 0;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +45,12 @@ function AiTemplateForm({ initial, onSaved, onCancel }: {
       </Form.Group>
       <Form.Group className="mb-3" controlId="ai-template-type">
         <Form.Label>Tip</Form.Label>
-        <Form.Select value={type} onChange={(e) => setType(e.target.value as AiTemplateType)}>
+        <Form.Select value={type} disabled={typeLocked} onChange={(e) => setType(e.target.value as AiTemplateType)}>
           {AI_TEMPLATE_TYPES.map((t) => (
             <option key={t} value={t}>{AI_TEMPLATE_TYPE_LABELS[t]}</option>
           ))}
         </Form.Select>
+        {typeLocked && <Form.Text muted>Tipul nu se poate schimba cât timp șablonul este folosit.</Form.Text>}
       </Form.Group>
       <Form.Group className="mb-3" controlId="ai-template-criteria">
         <Form.Label>Ce urmărește AI-ul în răspuns</Form.Label>

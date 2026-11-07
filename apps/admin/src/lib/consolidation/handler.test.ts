@@ -469,7 +469,7 @@ describe('handleConsolidationEvaluate: credits', () => {
   it('one essay requirement costs credit_cost', async () => {
     const credits = fakeCredits(10);
     const d = deps({ credits, evaluate: vi.fn(async () => okItems('r1')) });
-    const r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, 'u1', d);
+    await handleConsolidationEvaluate({ exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a' } } }, 'u1', d);
     expect(credits.spend).toHaveBeenLastCalledWith('u1', 1, ESSAY, 'req:r1');
   });
 

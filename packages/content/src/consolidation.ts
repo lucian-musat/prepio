@@ -167,18 +167,23 @@ export async function ensureAiTemplates(
   client: SupabaseClient,
   apply: boolean,
   templates: SeedAiTemplate[] = AI_TEMPLATES,
-): Promise<{ ids: Map<AiTemplateType, string>; missing: SeedAiTemplate[] }> {
+  opts: { tolerateMismatch?: boolean } = {},
+): Promise<{ ids: Map<AiTemplateType, string>; missing: SeedAiTemplate[]; mismatched: string[] }> {
   const rows = check(
-    await client.from('ai_templates').select('id, title').in('title', templates.map((t) => t.title)).order('created_at'),
+    await client.from('ai_templates').select('id, title, type').in('title', templates.map((t) => t.title)).order('created_at'),
     'find AI templates',
-  ) as { id: string; title: string }[];
+  ) as { id: string; title: string; type: string }[];
   const ids = new Map<AiTemplateType, string>();
   const missing: SeedAiTemplate[] = [];
+  const mismatched: string[] = [];
   for (const t of templates) {
     const row = rows.find((r) => r.title === t.title);
-    if (row) ids.set(t.key, row.id);
-    else missing.push(t);
+    if (!row) missing.push(t);
+    // A template with the seed's title but another type is not usable for this type: reported, never linked.
+    else if (row.type !== t.key) mismatched.push(`template „${t.title}” exists with type ${row.type}, expected ${t.key}`);
+    else ids.set(t.key, row.id);
   }
+  if (mismatched.length && !opts.tolerateMismatch) throw new Error(mismatched.join('; '));
   if (apply && missing.length) {
     const inserted = check(
       await client
@@ -189,7 +194,7 @@ export async function ensureAiTemplates(
     ) as { id: string; title: string }[];
     for (const t of missing) ids.set(t.key, inserted.find((r) => r.title === t.title)!.id);
   }
-  return { ids, missing };
+  return { ids, missing, mismatched };
 }
 
 /**

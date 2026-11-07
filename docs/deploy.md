@@ -97,7 +97,13 @@ The AI templates change (spec `docs/superpowers/specs/2026-11-07-ai-templates-de
 3. `pnpm content:cloud:ai-templates` (dry run, then `--apply`): inserts the seed AI templates (by title), replaces the AI contexts of the seed exercises with the fact-only ones and links every AI exercise without a template link to the seed template of its type (an existing link is never changed). The dry run lists the templates, contexts and links to write and no problems; a re-run plans 0.
 4. `pnpm content:cloud:demo` (dry run, then `--apply`): refreshes the demo lesson, which the previous script doesn't cover.
 5. `git push` `main`: Vercel deploys `prepio-web` and `prepio-admin`. Wait until both are **Ready**.
-6. New EAS `preview` APK (the student UI is unchanged; this only keeps the build in step with `main`).
+6. New EAS `preview` APK, **needed**: the student UI changes (the „Verifică eseul întreg” button is gone; the essay is checked per requirement with a combined verdict). Until the new APK is installed, an old APK's whole-essay button answers „Cererea nu este validă.” and no credits are charged.
+7. AI exercises created or edited in the old admin between the migration push (step 1) and the admin deploy (step 5) have no template link and show „Invalid” in the admin: re-run `pnpm content:cloud:ai-templates` (dry run, then `--apply`) after the deploy.
+8. Post-release checks:
+   - anon REST on `ai_templates` and `consolidation_ai_template_links` is refused or returns `[]`;
+   - admin `/ai-templates` loads with the 5 seed templates and no exercise is marked „Invalid”;
+   - one real AI evaluation (an essay requirement and an argument) returns feedback;
+   - phone check with the next APK: the essay screen shows per-requirement checks and the combined verdict, and no „Verifică eseul întreg”.
 
 ## Credits rollout
 

@@ -62,6 +62,18 @@ describe('AiTemplatesEditor', () => {
     });
   });
 
+  it('disables the type select for a template in use', async () => {
+    const user = userEvent.setup();
+    render(<AiTemplatesEditor templates={templates} />);
+    const items = screen.getAllByTestId('ai-template-item');
+    await user.click(within(items[0]!).getByRole('button', { name: 'Editează' }));
+    expect((screen.getByLabelText('Tip') as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.getByText('Tipul nu se poate schimba cât timp șablonul este folosit.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Anulează' }));
+    await user.click(within(screen.getAllByTestId('ai-template-item')[2]!).getByRole('button', { name: 'Editează' }));
+    expect((screen.getByLabelText('Tip') as HTMLSelectElement).disabled).toBe(false);
+  });
+
   it('shows the server error when deleting a template in use', async () => {
     deleteAiTemplateAction.mockResolvedValue({ ok: false, error: 'Șablonul AI este folosit de un exercițiu.' });
     const user = userEvent.setup();

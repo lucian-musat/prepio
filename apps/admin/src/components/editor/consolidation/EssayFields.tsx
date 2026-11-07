@@ -21,7 +21,7 @@ export default function EssayFields({ idPrefix, draft, onChange, templates, aiTe
   const patch = (i: number, p: Partial<EssayRequirement>) =>
     setRequirements(draft.requirements.map((r, j) => (j === i ? { ...r, ...p } : r)));
   const setAiTemplate = (id: string, v: string | null) => {
-    const { [id]: _removed, ...rest } = draft.ai.requirementTemplates;
+    const rest = Object.fromEntries(Object.entries(draft.ai.requirementTemplates).filter(([k]) => k !== id));
     onChange({ ...draft, ai: { ...draft.ai, requirementTemplates: v ? { ...rest, [id]: v } : rest } });
   };
   const setContext = (id: string, v: string) =>

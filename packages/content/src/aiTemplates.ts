@@ -54,7 +54,7 @@ export const AI_TEMPLATES: SeedAiTemplate[] = [
     ),
     keywords: 'consider că, în opinia mea, cred că, a avut un rol important, a contribuit la, a fost decisiv',
     responseFormat: lines(
-      'Pentru viewpoint spune dacă este o apreciere și dacă privește tema cerută; când este doar o informație, explică diferența (de exemplu: „Spune ce părere ai despre reforme, nu doar ce s-a întâmplat.”).',
+      'Pentru viewpoint spune dacă este o apreciere și dacă privește tema cerută; când este doar o informație, explică diferența (de exemplu: „Spune ce părere ai despre tema cerută, nu doar ce s-a întâmplat.”).',
       'Pentru fiecare informație-suport spune pe scurt de ce susține sau nu punctul de vedere.',
     ),
   },
@@ -86,14 +86,14 @@ export const AI_TEMPLATES: SeedAiTemplate[] = [
       '- „formulați un punct de vedere și susțineți-l printr-un argument istoric”: punctul de vedere este o apreciere, nu o simplă informație; argumentul este un fapt istoric relevant, prezentat și legat de punctul de vedere prin relația cauză-efect.',
       'Se respectă numărul de elemente cerut, iar elementele sunt diferite (același fapt scris de două ori contează o singură dată).',
       'Informațiile sunt din perioada și tema cerinței, potrivit contextului profesorului.',
-      'La cerința cu argument, conectorii de cauzalitate și de concluzie sunt detectați automat: folosește rezultatul și nu îl contrazice.',
+      'Conectorii de cauzalitate și de concluzie (cuvintele cheie) contează doar pentru o cerință care cere un argument sau o relație cauză-efect; atunci sunt detectați automat: folosește rezultatul și nu îl contrazice. La o cerință cu „menționați”, „numiți”, „precizați” sau „prezentați” nu judeca și nu cere conectori.',
       'La prezentări și la argument contează și limbajul istoric adecvat și succesiunea logică a ideilor.',
       'Verdict: „ok” = cerința este îndeplinită complet și corect; „almost” = cerința este îndeplinită parțial (un element lipsă, prezentare fără detalii, argument fără conectori); „no” = informații greșite, din afara temei sau cerința nu este rezolvată.',
     ),
-    keywords: 'deoarece, pentru că, întrucât, ca urmare, așadar, prin urmare, astfel, în concluzie',
+    keywords: 'Doar pentru o cerință care cere un argument sau o relație cauză-efect: deoarece, pentru că, întrucât, ca urmare, așadar, prin urmare, astfel, în concluzie',
     responseFormat: lines(
       'Judecă doar cerința primită, nu tot eseul.',
-      'În „improve” spune ce lipsește față de verbul cerinței (de exemplu: „Cerința îți cere să prezinți reforma: adaugă ce prevedea și când a fost adoptată.”) sau ce informație este greșită.',
+      'În „improve” spune ce lipsește față de verbul cerinței (de exemplu: „Cerința îți cere să prezinți faptul: adaugă ce s-a întâmplat, când și cine a participat.”) sau ce informație este greșită.',
     ),
   },
 ];

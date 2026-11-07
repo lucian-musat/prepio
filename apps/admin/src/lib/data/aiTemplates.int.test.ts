@@ -132,8 +132,22 @@ describe.skipIf(!url || !anon)('AI template data functions (local Supabase)', ()
     const t = await mk('[test] flip', 'argument');
     const { id } = await saveConsolidationExercise(db, lessonId, argument(t));
     expect((await find(id)).errors).toEqual([]);
-    await saveAiTemplate(db, { id: t, title: '[test] flip', type: 'facts', criteria: 'c', keywords: '', responseFormat: '' });
+    // The admin API refuses this; flip the type directly in the DB to keep the mismatch flag covered.
+    const svc = createClient(url!, process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    const { error } = await svc.from('ai_templates').update({ type: 'facts' }).eq('id', t);
+    if (error) throw error;
     expect((await find(id)).errors).toContain('Șablonul AI ales nu se potrivește tipului exercițiului.');
     await deleteItem(db, 'consolidation_exercises', id);
+  });
+
+  it('refuses to change the type of a template in use', async () => {
+    const t = await mk('[test] locked', 'argument');
+    const { id } = await saveConsolidationExercise(db, lessonId, argument(t));
+    await expect(saveAiTemplate(db, { id: t, title: '[test] locked', type: 'facts', criteria: 'c', keywords: '', responseFormat: '' }))
+      .rejects.toThrow('Șablonul AI este folosit de un exercițiu; tipul nu se poate schimba.');
+    // Same type still saves; unused templates can change type.
+    await saveAiTemplate(db, { id: t, title: '[test] locked 2', type: 'argument', criteria: 'c', keywords: '', responseFormat: '' });
+    await deleteItem(db, 'consolidation_exercises', id);
+    await saveAiTemplate(db, { id: t, title: '[test] locked 2', type: 'facts', criteria: 'c', keywords: '', responseFormat: '' });
   });
 });
