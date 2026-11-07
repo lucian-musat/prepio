@@ -62,13 +62,22 @@ async function loadExercises(db: SupabaseClient, lessonId: string, onlyIds?: str
   }
   const ai = new Map<string, AiContext>();
   for (const c of check(ctx) as unknown as Array<{ exercise_id: string; context: unknown }>) ai.set(c.exercise_id, aiFromJson(c.context));
-  for (const l of check(tplLinks) as unknown as Array<{ exercise_id: string; requirement_id: string; template_id: string }>) {
-    const a = ai.get(l.exercise_id) ?? { ...EMPTY_AI };
-    if (l.requirement_id === '') a.templateId = l.template_id;
-    else a.requirementTemplates = { ...a.requirementTemplates, [l.requirement_id]: l.template_id };
-    ai.set(l.exercise_id, a);
+  for (const l of check(tplLinks) as unknown as Array<TemplateLinkRow & { exercise_id: string }>) {
+    ai.set(l.exercise_id, withTemplateLinks(ai.get(l.exercise_id) ?? EMPTY_AI, [l]));
   }
   return { rows, byExercise, ai };
+}
+
+export type TemplateLinkRow = { requirement_id: string; template_id: string };
+
+/** Adds the stored template links of one exercise to its context (`requirement_id` '' = the exercise's own template). */
+export function withTemplateLinks(ai: AiContext, links: TemplateLinkRow[]): AiContext {
+  const out: AiContext = { ...ai, requirementTemplates: { ...ai.requirementTemplates } };
+  for (const l of links) {
+    if (l.requirement_id === '') out.templateId = l.template_id;
+    else out.requirementTemplates[l.requirement_id] = l.template_id;
+  }
+  return out;
 }
 
 export async function getConsolidation(db: SupabaseClient, lessonId: string): Promise<EditorConsolidation> {

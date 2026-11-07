@@ -52,6 +52,24 @@ const contexts: Record<string, unknown> = {
   [COMP]: { main: 'Ctx comp', requirements: {} },
   [ESSAY]: { main: '', requirements: { r1: 'Ctx r1', r2: 'Ctx r2' } },
 };
+const NOLINK = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const WRONGTYPE = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+exercises[NOLINK] = row(NOLINK, 'facts', { count: 2 });
+exercises[WRONGTYPE] = row(WRONGTYPE, 'facts', { count: 2 });
+contexts[NOLINK] = { main: 'Ctx', requirements: {} };
+contexts[WRONGTYPE] = { main: 'Ctx', requirements: {} };
+
+const tpl = (id: string, type: string) => ({ id, title: `T ${id}`, type, criteria: `CRITERII-${id}`, keywords: '', response_format: '' });
+const templates = [
+  tpl('t-facts', 'facts'), tpl('t-comp', 'comparison'), tpl('t-view', 'viewpoint'), tpl('t-arg', 'argument'),
+  tpl('t-r1', 'essay_requirement'), tpl('t-r2', 'essay_requirement'),
+];
+const link = (template_id: string, requirement_id = '') => ({ requirement_id, template_id });
+const templateLinks: Record<string, unknown[]> = {
+  [FACTS]: [link('t-facts')], [NOCTX]: [link('t-facts')], [BLANKCTX]: [link('t-facts')], [DETACHED]: [link('t-view')],
+  [VIEW]: [link('t-view')], [ARG]: [link('t-arg')], [COMP]: [link('t-comp')], [ESSAY]: [link('t-r1', 'r1'), link('t-r2', 'r2')],
+  [WRONGTYPE]: [link('t-arg')],
+};
 const settings = { rules: 'reguli', model: 'gpt-5-mini' };
 
 type DbOpts = { suspended?: boolean; rpc?: (fn: string, args: unknown) => Promise<{ data: unknown; error: { message: string } | null }> };
@@ -61,15 +79,18 @@ function fakeDb(opts: DbOpts = {}): SupabaseClient {
     rpc: opts.rpc ?? (async () => ({ data: null, error: null })),
     from(table: string) {
       let id: unknown;
+      let ids: unknown[] = [];
       const rows = (): unknown => {
         if (table === 'consolidation_exercise_sources') return id === VIEW || id === DETACHED ? [{ source_id: SRC, label: 'A' }] : [];
         if (table === 'sources') return [{ id: SRC, position: 0, title: null, author: 'A', work: 'W', body: BODY }];
+        if (table === 'consolidation_ai_template_links') return templateLinks[id as string] ?? [];
+        if (table === 'ai_templates') return templates.filter((t) => ids.includes(t.id));
         return [];
       };
       const b: Record<string, unknown> = {
         select: () => b,
         eq: (_c: string, v: unknown) => ((id = v), b),
-        in: () => b,
+        in: (_c: string, v: unknown[]) => ((ids = v), b),
         order: () => b,
         maybeSingle: async () => ({
           data: table === 'profiles' ? { suspended_at: opts.suspended ? '2026-11-06T10:00:00Z' : null } : table === 'consolidation_exercises' ? exercises[id as string] ?? null : table === 'consolidation_ai_context' ? (contexts[id as string] ? { context: contexts[id as string] } : null) : null,
@@ -193,6 +214,38 @@ describe('handleConsolidationEvaluate', () => {
       expect(d.rateLimit).not.toHaveBeenCalled();
       expect(d.evaluate).not.toHaveBeenCalled();
     }
+  });
+
+  it('rejects whole: the whole-essay check no longer exists', async () => {
+    const credits = fakeCredits();
+    const d = deps({ credits });
+    const r = await handleConsolidationEvaluate({ exerciseId: ESSAY, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, 'u1', d);
+    expect(r.status).toBe(400);
+    expect(code(r)).toBe('bad_request');
+    expect(d.rateLimit).not.toHaveBeenCalled();
+    expect(credits.spend).not.toHaveBeenCalled();
+    expect(d.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('returns not_found for a missing AI template link or a template of the wrong type, without spending', async () => {
+    for (const exerciseId of [NOLINK, WRONGTYPE]) {
+      const credits = fakeCredits();
+      const d = deps({ credits });
+      const r = await handleConsolidationEvaluate(factsReq({ exerciseId }), 'u1', d);
+      expect(r.status, exerciseId).toBe(404);
+      expect(code(r)).toBe('not_found');
+      expect(d.rateLimit).not.toHaveBeenCalled();
+      expect(credits.spend).not.toHaveBeenCalled();
+      expect(d.evaluate).not.toHaveBeenCalled();
+    }
+  });
+
+  it('sends the exercise AI template and the general rules in the instructions', async () => {
+    const d = deps();
+    await handleConsolidationEvaluate(factsReq(), 'u1', d);
+    const { instructions } = vi.mocked(d.evaluate).mock.calls[0]![0];
+    expect(instructions).toContain('Reguli generale:\nreguli');
+    expect(instructions).toContain('Ce urmărești în răspuns:\nCRITERII-t-facts');
   });
 
   it('rejects answers beyond the exercise bounds without consuming quota', async () => {
@@ -337,10 +390,13 @@ describe('handleConsolidationEvaluate', () => {
       { exerciseId: ESSAY, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'Deoarece da.', r2: '' } } }, 'u1', d,
     );
     expect(r.status).toBe(200);
-    const { input } = vi.mocked(d.evaluate).mock.calls[0]![0];
+    const { input, instructions } = vi.mocked(d.evaluate).mock.calls[0]![0];
     expect(input).toContain('Ctx r1');
     expect(input).not.toContain('Ctx r2');
     expect(input).toContain('Conectori detectați automat');
+    // the requirement's own AI template
+    expect(instructions).toContain('CRITERII-t-r1');
+    expect(instructions).not.toContain('CRITERII-t-r2');
   });
 });
 

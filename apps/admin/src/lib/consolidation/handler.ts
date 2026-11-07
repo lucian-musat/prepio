@@ -1,13 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  AI_TYPES, MAX_ANSWER_CHARS, checkCost, checkExercise, detectConnectors, exerciseFromRow, sourceFromRow, targetKey, tokenizeSource,
-  validateExercise,
-  type AiContext, type ConsolidationEvaluateError, type ConsolidationEvaluateErrorCode, type ConsolidationEvaluateRequest,
+  AI_TYPES, MAX_ANSWER_CHARS, aiTemplateFromRow, aiTemplateTypeFor, checkCost, checkExercise, detectConnectors, exerciseFromRow,
+  sourceFromRow, targetKey, tokenizeSource, validateExercise,
+  type AiContext, type AiTemplate, type ConsolidationEvaluateError, type ConsolidationEvaluateErrorCode, type ConsolidationEvaluateRequest,
   type ConsolidationEvaluateResponse, type ConsolidationExercise, type ConsolidationRow, type ExerciseAnswer, type FeedbackItem,
   type Mark, type Source, type SourceRef,
 } from '@prepio/shared';
 import { isSuspended } from '@/lib/account/suspended';
-import { aiFromJson } from '@/lib/data/consolidation';
+import { aiFromJson, withTemplateLinks, type TemplateLinkRow } from '@/lib/data/consolidation';
 import { isUuid } from '@/lib/data/db';
 import type { Credits } from '@/lib/credits/credits';
 import type { Evaluator } from '@/lib/evaluate/openai';
@@ -82,17 +82,22 @@ function parseRequest(body: unknown): { exerciseId: string; target: Target; answ
 }
 
 type LoadedRow = ConsolidationRow & { lessons: { status: string } | { status: string }[] | null };
-type Loaded = { exercise: ConsolidationExercise; sources: Source[]; context: AiContext; rules: string; model: string };
+type Loaded = {
+  exercise: ConsolidationExercise; sources: Source[]; context: AiContext; rules: string; model: string;
+  /** The AI template of the request target; null when it is missing or any linked template has the wrong type. */
+  template: AiTemplate | null;
+};
 
 const SOURCE_COLUMNS = 'id,position,title,author,work,body';
+const AI_TEMPLATE_COLUMNS = 'id,title,type,criteria,keywords,response_format';
 
 function ok<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what} failed: ${res.error.message}`);
   return res.data;
 }
 
-/** Null = not found or the lesson isn't published. Service-role reads: the context never leaves the server. */
-async function load(db: SupabaseClient, id: string): Promise<Loaded | null> {
+/** Null = not found or the lesson isn't published. Service-role reads: the context and templates never leave the server. */
+async function load(db: SupabaseClient, id: string, target: Target): Promise<Loaded | null> {
   const row = ok(
     await db.from('consolidation_exercises').select('id,position,type,prompt,content,template_id,credit_cost,lessons(status)').eq('id', id).maybeSingle(),
     'exercise lookup',
@@ -120,7 +125,26 @@ async function load(db: SupabaseClient, id: string): Promise<Loaded | null> {
     model: string;
   } | null;
   if (!st) throw new Error('settings lookup failed: no row');
-  return { exercise: exerciseFromRow(row, refs), sources, context: aiFromJson(ctx?.context), rules: st.rules, model: st.model };
+  const tplLinks = ok(
+    await db.from('consolidation_ai_template_links').select('requirement_id,template_id').eq('exercise_id', id),
+    'ai template links',
+  ) as unknown as TemplateLinkRow[];
+  const linkedIds = [...new Set(tplLinks.map((l) => l.template_id))];
+  const templates =
+    linkedIds.length === 0
+      ? []
+      : (ok(await db.from('ai_templates').select(AI_TEMPLATE_COLUMNS).in('id', linkedIds), 'ai templates') as unknown as Record<string, unknown>[]).map(
+          aiTemplateFromRow,
+        );
+
+  const exercise = exerciseFromRow(row, refs);
+  const context = withTemplateLinks(aiFromJson(ctx?.context), tplLinks);
+  // Like the admin's „Invalid” badge: any linked template of another type makes the exercise unusable.
+  const expected = aiTemplateTypeFor(exercise.type);
+  const typesOk = templates.every((t) => t.type === expected);
+  const targetTemplateId = typeof target === 'object' ? context.requirementTemplates[target.requirementId] : context.templateId;
+  const template = (typesOk && templates.find((t) => t.id === targetTemplateId)) || null;
+  return { exercise, sources, context, rules: st.rules, model: st.model, template };
 }
 
 const blank = (s: string | undefined) => !s || s.trim() === '';
@@ -220,13 +244,12 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
   let entryId: number | null = null;
   try {
     if (await isSuspended(deps.db, userId)) return errorResult('suspended');
-    const loaded = await load(deps.db, req.exerciseId);
+    const loaded = await load(deps.db, req.exerciseId, req.target);
     if (!loaded) return errorResult('not_found');
-    const { exercise, sources, context, rules, model } = loaded;
-    // A stored exercise that no longer validates (no AI context, detached span, ...) cannot be evaluated fairly.
-    // Placeholder template ids until Task 4 resolves the stored template links; only the other rules are checked here.
-    const links: AiContext = { ...context, templateId: 'pending', requirementTemplates: Object.fromEntries(Object.keys(context.requirements).map((k) => [k, 'pending'])) };
-    if (validateExercise(exercise, sources, links).length > 0) return errorResult('not_found');
+    const { exercise, sources, context, rules, model, template } = loaded;
+    // A stored exercise that no longer validates (no AI context or template, detached span, ...) cannot be evaluated fairly.
+    if (validateExercise(exercise, sources, context).length > 0) return errorResult('not_found');
+    if (!template) return errorResult('not_found');
     const invalid = validate(exercise, req.target, req.answer);
     if (invalid) return errorResult(invalid);
 
@@ -243,7 +266,7 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
 
     const deterministic = deterministicFacts(exercise, req.target, req.answer, sources);
     const { instructions, input } = buildConsolidationPrompt({
-      rules, exercise, sources, context, target: req.target, answer: req.answer, deterministic,
+      rules, exercise, sources, context, template, target: req.target, answer: req.answer, deterministic,
     });
     const raw = await deps.evaluate({ model, instructions, input });
     const parsed = aiOutputSchema.safeParse(raw);

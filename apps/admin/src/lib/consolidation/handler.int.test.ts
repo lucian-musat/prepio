@@ -31,7 +31,24 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     { id: 'r2', text: '[test] Cerința 2', modelAnswer: null, templateId: null, argument: false },
   ];
 
-  async function insertExercise(lesson: string, creditCost = 1): Promise<string> {
+  // `[test]` AI templates, created here (seed exercises get their links in the content step).
+  const templateIds: string[] = [];
+  let tplR1: string;
+  let tplR2: string;
+  let tplWrong: string;
+  async function insertTemplate(type: string, criteria: string): Promise<string> {
+    const t = await db
+      .from('ai_templates')
+      .insert({ title: `[test] evaluate ${criteria}`, type, criteria, keywords: '', response_format: '' })
+      .select('id')
+      .single();
+    if (t.error) throw t.error;
+    templateIds.push(t.data.id);
+    return t.data.id;
+  }
+
+  /** `links`: requirement id → template id; defaults to the right essay templates. */
+  async function insertExercise(lesson: string, creditCost = 1, links: Record<string, string> = { r1: tplR1, r2: tplR2 }): Promise<string> {
     const e = await db
       .from('consolidation_exercises')
       .insert({
@@ -44,6 +61,11 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
       .from('consolidation_ai_context')
       .insert({ exercise_id: e.data.id, context: { main: '', requirements: { r1: 'CTX-UNU', r2: 'CTX-DOI' } } });
     if (c.error) throw c.error;
+    const rows = Object.entries(links).map(([requirement_id, template_id]) => ({ exercise_id: e.data.id, requirement_id, template_id }));
+    if (rows.length) {
+      const k = await db.from('consolidation_ai_template_links').insert(rows);
+      if (k.error) throw k.error;
+    }
     return e.data.id;
   }
 
@@ -65,13 +87,17 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     const d = await db.from('lessons').insert({ node_id: nodeId, title: '[test] draft', status: 'draft', position: 1 }).select('id').single();
     if (d.error) throw d.error;
     draftLessonId = d.data.id;
+    tplR1 = await insertTemplate('essay_requirement', 'CRITERII-R1');
+    tplR2 = await insertTemplate('essay_requirement', 'CRITERII-R2');
+    tplWrong = await insertTemplate('argument', 'CRITERII-ARG');
     exerciseId = await insertExercise(lessonId);
     draftExerciseId = await insertExercise(draftLessonId);
   });
 
   afterAll(async () => {
     if (userId) await db.auth.admin.deleteUser(userId); // the ledger rows go with it
-    if (nodeId) await db.from('nodes').delete().eq('id', nodeId);
+    if (nodeId) await db.from('nodes').delete().eq('id', nodeId); // the exercises and their template links go with it
+    if (templateIds.length) await db.from('ai_templates').delete().in('id', templateIds);
     await db.from('rate_limits').delete().like('key', `${prefix}%`);
   });
 
@@ -90,7 +116,7 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
   };
   const item = (key: string) => ({ key, verdict: 'almost', title: 'T', good: ['g'], improve: ['i'] });
 
-  it('evaluates one requirement, sending the DB context and connector facts', async () => {
+  it('evaluates one requirement, sending the DB context, its AI template and connector facts', async () => {
     const evaluate = vi.fn(async (_a: Parameters<Deps['evaluate']>[0]) => ({ items: [item('r1')] }));
     const r = await handleConsolidationEvaluate(
       { exerciseId, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'Deoarece da. Deci așa.', r2: '' } } },
@@ -101,29 +127,42 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     expect(r.json).toEqual({ items: [{ ...item('r1'), ai: true }], credits: { spent: 1, balance: 11 } });
     expect(await balance()).toBe(11);
     expect((await ledger()).at(-1)).toMatchObject({ kind: 'check', delta: -1, balance_after: 11, exercise_id: exerciseId, target: 'req:r1' });
-    const { input } = evaluate.mock.calls[0]![0] as { input: string };
+    const { input, instructions } = evaluate.mock.calls[0]![0] as { input: string; instructions: string };
     expect(input).toContain('CTX-UNU');
     expect(input).not.toContain('CTX-DOI');
     expect(input).toContain('cauzalitate da, concluzie da');
+    expect(instructions).toContain('Ce urmărești în răspuns:\nCRITERII-R1');
+    expect(instructions).not.toContain('CRITERII-R2');
   });
 
-  it('evaluates the whole essay once every part is filled', async () => {
-    const evaluate = vi.fn(async (_a: Parameters<Deps['evaluate']>[0]) => ({ items: [item('whole'), item('r1')] }));
-    const answer = { type: 'essay', parts: { r1: 'Text unu', r2: 'Text doi' } };
-    const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, userId, deps(evaluate));
-    expect(r.status).toBe(200);
-    expect((r.json as { items: { key: string }[] }).items.map((i) => i.key)).toEqual(['whole']);
-    // 2 requirements × credit_cost 1
-    expect((r.json as { credits: unknown }).credits).toEqual({ spent: 2, balance: 9 });
-    const { input } = evaluate.mock.calls[0]![0] as { input: string };
-    expect(input).toContain('CTX-UNU');
-    expect(input).toContain('CTX-DOI');
+  it('rejects whole with bad_request; nothing is spent', async () => {
+    const evaluate = vi.fn();
+    const before = (await ledger()).length;
+    const r = await handleConsolidationEvaluate(
+      { exerciseId, target: 'whole', answer: { type: 'essay', parts: { r1: 'Text unu', r2: 'Text doi' } } }, userId, deps(evaluate),
+    );
+    expect(r.status).toBe(400);
+    expect(r.json).toMatchObject({ error: 'bad_request' });
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(await balance()).toBe(11);
+    expect(await ledger()).toHaveLength(before);
+  });
 
-    const missing = { type: 'essay', parts: { r1: 'Text unu', r2: '' } };
-    const e = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer: missing }, userId, deps(evaluate));
-    expect(e.status).toBe(400);
-    expect(e.json).toMatchObject({ error: 'empty' });
-    expect(await balance()).toBe(9);
+  it('answers not_found without spending when the AI template link is missing or of the wrong type', async () => {
+    const unlinked = await insertExercise(lessonId, 1, { r1: tplR1 }); // r2 has no template
+    const wrong = await insertExercise(lessonId, 1, { r1: tplWrong, r2: tplR2 });
+    const evaluate = vi.fn();
+    const before = (await ledger()).length;
+    for (const id of [unlinked, wrong]) {
+      const r = await handleConsolidationEvaluate(
+        { exerciseId: id, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
+      );
+      expect(r.status, id).toBe(404);
+      expect(r.json).toMatchObject({ error: 'not_found' });
+    }
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(await balance()).toBe(11);
+    expect(await ledger()).toHaveLength(before);
   });
 
   it('gives the credits back when the evaluation fails', async () => {
@@ -132,35 +171,38 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
       throw new Error('boom');
     });
     const r = await handleConsolidationEvaluate(
-      { exerciseId, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
+      { exerciseId, target: { requirementId: 'r2' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
     );
     expect(r.status).toBe(502);
     expect(r.json).toEqual({
-      error: 'ai_failed', message: 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.', credits: { spent: 0, balance: 9 },
+      error: 'ai_failed', message: 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.', credits: { spent: 0, balance: 11 },
     });
-    expect(await balance()).toBe(9);
+    expect(await balance()).toBe(11);
     const [check, refund] = (await ledger()).slice(-2);
-    expect(check).toMatchObject({ kind: 'check', delta: -2, target: 'whole' });
-    expect(refund).toMatchObject({ kind: 'refund', delta: 2, balance_after: 9, refund_of: check!.id });
+    expect(check).toMatchObject({ kind: 'check', delta: -1, target: 'req:r2' });
+    expect(refund).toMatchObject({ kind: 'refund', delta: 1, balance_after: 11, refund_of: check!.id });
   });
 
   it('refuses a check the balance cannot cover, without calling the evaluator', async () => {
-    const pricey = await insertExercise(lessonId, 5); // whole essay: 2 × 5 = 10 > 9
+    const pricey = await insertExercise(lessonId, 5);
+    // credit_cost is capped at 5: bring the balance down from 11 to 4 with a real check entry first.
+    const drained = await credits.spend(userId, 7, exerciseId, 'req:r1');
+    expect(drained).toMatchObject({ balance: 4 });
     const evaluate = vi.fn();
     const before = (await ledger()).length;
     const r = await handleConsolidationEvaluate(
-      { exerciseId: pricey, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
+      { exerciseId: pricey, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, userId, deps(evaluate),
     );
     expect(r.status).toBe(402);
     expect(r.json).toEqual({
-      error: 'insufficient_credits', message: 'Nu ai destule credite pentru această verificare.', required: 10, balance: 9,
+      error: 'insufficient_credits', message: 'Nu ai destule credite pentru această verificare.', required: 5, balance: 4,
     });
     expect(evaluate).not.toHaveBeenCalled();
-    expect(await balance()).toBe(9);
+    expect(await balance()).toBe(4);
     expect(await ledger()).toHaveLength(before);
     const ev = await db.from('student_events').select('kind,exercise_id,details').eq('user_id', userId).eq('kind', 'check_blocked');
     expect(ev.error).toBeNull();
-    expect(ev.data).toEqual([{ kind: 'check_blocked', exercise_id: pricey, details: { required: 10, balance: 9 } }]);
+    expect(ev.data).toEqual([{ kind: 'check_blocked', exercise_id: pricey, details: { required: 5, balance: 4 } }]);
   });
 
   it('refuses a suspended student with 403 before anything is spent', async () => {
@@ -184,7 +226,7 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
   it('does not serve an exercise of an unpublished lesson', async () => {
     const evaluate = vi.fn();
     const r = await handleConsolidationEvaluate(
-      { exerciseId: draftExerciseId, target: 'whole', answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } },
+      { exerciseId: draftExerciseId, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } },
       userId,
       deps(evaluate),
     );
@@ -195,9 +237,9 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
   it('has no per-user hourly limit and consumes only the prefixed global key', async () => {
     const answer = { type: 'essay', parts: { r1: 'a', r2: 'b' } };
     const busy = randomUUID(); // no profile, so not suspended; `unlimited` never touches the ledger
-    const evaluate = vi.fn(async () => ({ items: [item('whole')] }));
+    const evaluate = vi.fn(async () => ({ items: [item('r1')] }));
     for (let i = 0; i < 31; i++) {
-      const r = await handleConsolidationEvaluate({ exerciseId, target: 'whole', answer }, busy, deps(evaluate, unlimited));
+      const r = await handleConsolidationEvaluate({ exerciseId, target: { requirementId: 'r1' }, answer }, busy, deps(evaluate, unlimited));
       expect(r.status).toBe(200);
     }
     expect(evaluate).toHaveBeenCalledTimes(31);
