@@ -57,6 +57,10 @@ Production checks right after the dashboard change:
 - [ ] An OTP request for an outside (non-team) address is not delivered / returns an error (default SMTP; expect `email_address_not_authorized`), and no session is issued.
 - [ ] Google sign-in on `https://prepio-web.vercel.app` works.
 
+## Sign-ups are currently OFF (pre-launch)
+
+Since 2026-11-07 „Allow new users to sign up” is **OFF** in production (spam student accounts were being created through the public Supabase Auth API and the APK; the Vercel IP rule on `prepio-web` can't stop that). Existing accounts still sign in; no new account (Google, email OTP or password) can be created. Before a public launch: turn it back ON (Authentication → Sign In / Providers → User Signups, „Save changes”), keep „Confirm email” ON, then check that a new Google account can register on the web and on the APK.
+
 ## Rollout order (production)
 
 1. List production `auth.users` and get the owner's confirmation: the migration backfill makes every existing user an admin.
