@@ -47,16 +47,28 @@ const RO_MONTHS = [
   'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
 ];
 
-/** `8 februarie 2027` in Europe/Bucharest. Month names are explicit so no Intl `ro` data is needed. */
+/**
+ * `8 februarie 2027` in Europe/Bucharest. Month names are explicit so no Intl `ro` data is needed. Never throws:
+ * without usable time zone data (some JS engines) it falls back to the UTC date; an invalid date gives ''.
+ */
 export function formatAccessDate(d: Date): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Bucharest',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-  }).formatToParts(d);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  return `${get('day')} ${RO_MONTHS[get('month') - 1]} ${get('year')}`;
+  const format = (day: number, month: number, year: number) =>
+    `${day} ${RO_MONTHS[month - 1]} ${year}`;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Bucharest',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).formatToParts(d);
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+    const [day, month, year] = [get('day'), get('month'), get('year')];
+    if (Number.isInteger(day) && Number.isInteger(year) && month >= 1 && month <= 12) return format(day, month, year);
+  } catch {
+    // fall through to the UTC date
+  }
+  if (Number.isNaN(d.getTime())) return '';
+  return format(d.getUTCDate(), d.getUTCMonth() + 1, d.getUTCFullYear());
 }
 
 /** `POST /api/access/purchase`. Expected values guard against a stale offer. */

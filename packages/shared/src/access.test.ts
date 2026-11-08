@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { accessStatus, extendAccessUntil, formatAccessDate, hasFullAccess } from './index';
 
 const now = new Date('2027-01-10T10:00:00Z');
@@ -64,5 +64,19 @@ describe('formatAccessDate', () => {
   });
   it('uses the same day when still the same in Bucharest', () => {
     expect(formatAccessDate(new Date('2027-08-15T12:00:00Z'))).toBe('15 august 2027');
+  });
+  it('falls back to the UTC date when Intl throws', () => {
+    const spy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => {
+      throw new RangeError('no time zone data');
+    });
+    try {
+      expect(formatAccessDate(new Date('2027-02-07T23:30:00Z'))).toBe('7 februarie 2027');
+      expect(formatAccessDate(new Date('2027-12-31T12:00:00Z'))).toBe('31 decembrie 2027');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  it('does not throw on an invalid date', () => {
+    expect(() => formatAccessDate(new Date('nope'))).not.toThrow();
   });
 });
