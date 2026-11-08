@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { planLabel } from './[id]/format';
 import { listStudents, STUDENT_FILTERS, STUDENTS_PAGE_SIZE, type StudentFilter } from '@/lib/data/students';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -7,10 +8,14 @@ export const dynamic = 'force-dynamic';
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeZone: 'Europe/Bucharest' });
 const dateTimeFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Bucharest' });
 
-const FILTER_LABELS: Record<StudentFilter, string> = { all: 'Toți', suspended: 'Suspendați', active_today: 'Activi azi' };
+const FILTER_LABELS: Record<StudentFilter, string> = {
+  all: 'Toți', suspended: 'Suspendați', active_today: 'Activi azi', trial: 'Trial', full: 'Acces complet',
+};
 const EMPTY_LABELS: Partial<Record<StudentFilter, string>> = {
   suspended: 'Niciun elev suspendat.',
   active_today: 'Niciun elev activ azi.',
+  trial: 'Niciun elev în trial.',
+  full: 'Niciun elev cu acces complet.',
 };
 
 export default async function StudentsPage({
@@ -24,6 +29,7 @@ export default async function StudentsPage({
   const filter = STUDENT_FILTERS.find((f) => f === sp.filter) ?? 'all';
   const db = await createServerClient();
   const { rows, total } = await listStudents(db, { search: q, page, filter });
+  const now = new Date();
   const pages = Math.max(1, Math.ceil(total / STUDENTS_PAGE_SIZE));
   const href = (p: number, f: StudentFilter = filter) =>
     `/students?${new URLSearchParams({ ...(q ? { q } : {}), ...(f !== 'all' ? { filter: f } : {}), page: String(p) })}`;
@@ -54,7 +60,7 @@ export default async function StudentsPage({
         <div className="table-responsive">
           <table className="table table-hover align-middle">
             <thead>
-              <tr><th>Nume</th><th>Email</th><th>Stare</th><th>Sold</th><th>Ultima activitate</th><th>Înscris</th></tr>
+              <tr><th>Nume</th><th>Email</th><th>Stare</th><th>Plan</th><th>Sold</th><th>Ultima activitate</th><th>Înscris</th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
@@ -65,6 +71,7 @@ export default async function StudentsPage({
                     {s.suspendedAt ? <span className="badge text-bg-danger">Suspendat</span> : <span className="badge text-bg-success">Activ</span>}
                     {s.reregistrationBlocked && <div className="small text-muted">Reînregistrare blocată</div>}
                   </td>
+                  <td>{planLabel(s.accessUntil, now)}</td>
                   <td>{s.creditBalance}</td>
                   <td>{s.lastActivityAt ? dateTimeFmt.format(new Date(s.lastActivityAt)) : '—'}</td>
                   <td>{dateFmt.format(new Date(s.createdAt))}</td>

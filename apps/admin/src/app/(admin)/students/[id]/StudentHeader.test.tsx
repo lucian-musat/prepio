@@ -9,7 +9,7 @@ import StudentHeader from './StudentHeader';
 const reset = vi.hoisted(() => vi.fn());
 vi.mock('../actions', () => ({
   adjustCreditsAction: vi.fn(), suspendStudentAction: vi.fn(), reactivateStudentAction: vi.fn(),
-  resetProgressAction: reset, deleteStudentAction: vi.fn(),
+  resetProgressAction: reset, deleteStudentAction: vi.fn(), grantAccessAction: vi.fn(), revokeAccessAction: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
@@ -18,7 +18,7 @@ afterEach(cleanup);
 const ACTIVE: StudentRow = {
   id: 's1', displayName: 'Madalin Anghel', email: 'madalin@gmail.com', creditBalance: 12, createdAt: '2026-11-04T10:00:00Z',
   provider: 'google', suspendedAt: null, suspendedReason: null, reregistrationBlocked: false,
-  lastActivityAt: '2026-11-01T08:12:00Z', lessonsFinished: 2,
+  lastActivityAt: '2026-11-01T08:12:00Z', lessonsFinished: 2, accessUntil: null,
 };
 
 describe('StudentHeader', () => {
@@ -79,5 +79,27 @@ describe('StudentHeader', () => {
     );
     expect(screen.getByText('Suspendat de admin@prepio.local pe 6 nov 2026 · Motiv: „x”')).toBeTruthy();
     expect(screen.getByText('Explorare liberă')).toBeTruthy();
+  });
+
+  it('shows Trial and only Acordă acces without full access', () => {
+    render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    expect(screen.getByTestId('plan').textContent).toBe('Trial');
+    expect(screen.getByRole('button', { name: 'Acordă acces' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Retrage accesul' })).toBeNull();
+  });
+
+  it('shows the end date and Retrage accesul with full access', async () => {
+    const until = new Date(Date.now() + 90 * 86_400_000);
+    render(<StudentHeader student={{ ...ACTIVE, accessUntil: until.toISOString() }} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    expect(screen.getByTestId('plan').textContent).toMatch(/^Acces până la \d{1,2} \p{L}+ \d{4}$/u);
+    expect(screen.getByRole('button', { name: 'Acordă acces' })).toBeTruthy();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Retrage accesul' }));
+    expect(await screen.findByRole('heading', { name: 'Retrage accesul' })).toBeTruthy();
+  });
+
+  it('opens the grant dialog', async () => {
+    render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Acordă acces' }));
+    expect(await screen.findByRole('heading', { name: 'Acordă acces' })).toBeTruthy();
   });
 });

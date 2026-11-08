@@ -17,6 +17,20 @@ const ev = (id: number, label = `Eveniment ${id}`): StudentEvent => ({
   id, kind: 'app_opened', createdAt: '2026-11-06T16:40:00Z', label, details: null,
 });
 
+describe('TimelineTab icons for access', () => {
+  it('shows access icons and the access_required override', () => {
+    const e = (id: number, kind: string, icon?: string): StudentEvent => ({ ...ev(id), kind, label: kind, icon });
+    render(
+      <TimelineTab
+        userId="s1"
+        initial={[e(5, 'check_blocked', '🚫'), e(4, 'access_expired'), e(3, 'access_revoked'), e(2, 'access_granted'), e(1, 'access_purchased')]}
+        pageSize={50}
+      />,
+    );
+    expect(screen.getAllByTestId('event-icon').map((n) => n.textContent)).toEqual(['🚫', '⌛', '⛔', '🎟️', '⭐']);
+  });
+});
+
 describe('TimelineTab', () => {
   it('shows the empty state', () => {
     render(<TimelineTab userId="s1" initial={[]} pageSize={50} />);

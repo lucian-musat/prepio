@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { eventLabel, orderStatusLabel, progressWhere, type EventInput } from './students';
+import { describe, expect, it, vi } from 'vitest';
+import { LEDGER_KIND_LABELS } from './studentLabels';
+import {
+  eventIcon, eventLabel, grantAccess, mergeOrders, orderLabel, orderStatusLabel, progressWhere, revokeAccess, type EventInput,
+} from './students';
 
 describe('orderStatusLabel', () => {
   it('an order approved without a payment provider is not shown as paid', () => {
@@ -38,6 +41,61 @@ describe('progressWhere', () => {
   });
 });
 
+describe('access orders', () => {
+  const credit = { kind: 'credits' as const, id: 'c', credits: 20, priceBani: 999, status: 'approved', provider: 'none', createdAt: '2026-11-02T10:00:00Z', durationMonths: null, bonusCredits: null };
+  const access = { kind: 'access' as const, id: 'a', credits: null, priceBani: 15000, status: 'approved', provider: 'none', createdAt: '2026-11-03T10:00:00Z', durationMonths: 3, bonusCredits: 100 };
+  it('labels both kinds', () => {
+    expect(orderLabel(access)).toBe('Acces 3 luni · +100 credite');
+    expect(orderLabel({ ...access, durationMonths: 1, bonusCredits: 0 })).toBe('Acces 1 lună');
+    expect(orderLabel(credit)).toBe('20 de credite');
+  });
+  it('merges newest first', () => {
+    expect(mergeOrders([credit], [access]).map((o) => o.id)).toEqual(['a', 'c']);
+    expect(mergeOrders([access], [credit]).map((o) => o.id)).toEqual(['a', 'c']);
+  });
+});
+
+describe('ledger labels', () => {
+  it('names the access bonus', () => {
+    expect(LEDGER_KIND_LABELS.access_bonus).toBe('Credite incluse în acces');
+  });
+});
+
+describe('grantAccess / revokeAccess', () => {
+  const dbWith = (res: { data?: unknown; error?: { message: string } | null }) => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null, ...res });
+    return { db: { rpc } as never, rpc };
+  };
+  it('grants and returns the new end date', async () => {
+    const { db, rpc } = dbWith({ data: '2027-02-08T10:00:00+00:00' });
+    expect(await grantAccess(db, 'u', 2, '  cadou ')).toBe('2027-02-08T10:00:00+00:00');
+    expect(rpc).toHaveBeenCalledWith('admin_grant_access', { p_user: 'u', p_months: 2, p_reason: 'cadou' });
+  });
+  it('validates before calling the database', async () => {
+    const { db, rpc } = dbWith({});
+    await expect(grantAccess(db, 'u', 0, 'x')).rejects.toThrow('Alege între 1 și 24 de luni.');
+    await expect(grantAccess(db, 'u', 25, 'x')).rejects.toThrow('Alege între 1 și 24 de luni.');
+    await expect(grantAccess(db, 'u', 1.5, 'x')).rejects.toThrow('Alege între 1 și 24 de luni.');
+    await expect(grantAccess(db, 'u', 2, '  ')).rejects.toThrow('Scrie motivul.');
+    await expect(revokeAccess(db, 'u', '')).rejects.toThrow('Scrie motivul.');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it('maps database errors to Romanian', async () => {
+    const cases: [string, string][] = [
+      ['reason_required', 'Scrie motivul.'],
+      ['bad_months', 'Alege între 1 și 24 de luni.'],
+      ['not_active', 'Elevul nu are acces activ.'],
+      ['cannot_target_admin', 'Nu poți modifica accesul unui administrator.'],
+      ['student_not_found', 'Elevul nu mai există.'],
+      ['forbidden', 'Nu ai drepturi de administrator.'],
+    ];
+    for (const [code, msg] of cases) {
+      const { db } = dbWith({ error: { message: code } });
+      await expect(revokeAccess(db, 'u', 'x')).rejects.toThrow(msg);
+    }
+  });
+});
+
 describe('eventLabel', () => {
   const ev = (kind: string, o: Partial<EventInput> = {}): string =>
     eventLabel({ kind, details: null, lessonTitle: null, exerciseType: null, adminEmail: null, ...o });
@@ -69,6 +127,24 @@ describe('eventLabel', () => {
     expect(ev('purchase', { details: { credits: 20 } })).toBe('A cumpărat 20 de credite');
     expect(ev('credits_adjusted', { details: { delta: 5, reason: 'bonus' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: credite +5 · bonus');
     expect(ev('credits_adjusted', { details: { delta: -3, reason: 'r' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: credite −3 · r');
+  });
+  it('access events', () => {
+    expect(ev('access_purchased', { details: { months: 3, until: 'x', price_bani: 15000, credits: 100 } })).toBe('Acces cumpărat · 3 luni · 150,00 lei');
+    expect(ev('access_granted', { details: { months: 2, until: 'x', reason: 'cadou' }, adminEmail: 'a@x.ro' })).toBe(
+      'a@x.ro: acces acordat · 2 luni · Motiv: „cadou”',
+    );
+    expect(ev('access_granted', { details: { months: 1, reason: 'r' } })).toBe('Admin: acces acordat · 1 lună · Motiv: „r”');
+    expect(ev('access_revoked', { details: { reason: 'abuz' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: acces retras · Motiv: „abuz”');
+    expect(ev('access_expired', { details: { until: 'x' } })).toBe('Accesul a expirat');
+    expect(ev('check_blocked', { details: { reason: 'access_required', cost: 2 } })).toBe('Verificare refuzată · lecție fără acces');
+  });
+  it('icons', () => {
+    expect(eventIcon('access_purchased', null)).toBe('⭐');
+    expect(eventIcon('access_granted', null)).toBe('🎟️');
+    expect(eventIcon('access_revoked', null)).toBe('⛔');
+    expect(eventIcon('access_expired', null)).toBe('⌛');
+    expect(eventIcon('check_blocked', { reason: 'access_required' })).toBe('🚫');
+    expect(eventIcon('check_blocked', { required: 2 })).toBeUndefined();
   });
   it('admin actions and system suspension', () => {
     expect(ev('suspended', { details: { reason: 'spam' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: cont suspendat · „spam”');

@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CONSOLIDATION_TYPE_LABELS, formatLei, type ConsolidationType } from '@prepio/shared';
+import { CONSOLIDATION_TYPE_LABELS, type ConsolidationType } from '@prepio/shared';
+import { LEDGER_KIND_LABELS } from '@/lib/data/studentLabels';
 import {
-  EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, orderStatusLabel,
+  EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, orderLabel, orderPrice, orderStatusLabel,
   type AdminLedgerEntry, type AdminOrder,
 } from '@/lib/data/students';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -16,14 +17,6 @@ export const dynamic = 'force-dynamic';
 
 const dateTimeFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Bucharest' });
 const fmt = (iso: string) => dateTimeFmt.format(new Date(iso));
-
-const KIND_LABELS: Record<string, string> = {
-  welcome: 'Bun venit',
-  purchase: 'Achiziție',
-  check: 'Verificare',
-  refund: 'Rambursare',
-  admin: 'Ajustare admin',
-};
 
 function details(e: AdminLedgerEntry): string {
   if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
@@ -55,7 +48,7 @@ function LedgerTable({ ledger }: { ledger: AdminLedgerEntry[] }) {
           {ledger.map((e) => (
             <tr key={e.id}>
               <td className="text-nowrap">{fmt(e.createdAt)}</td>
-              <td>{KIND_LABELS[e.kind] ?? e.kind}</td>
+              <td>{LEDGER_KIND_LABELS[e.kind] ?? e.kind}</td>
               <td>{details(e)}</td>
               <td className={e.delta > 0 ? 'text-success' : 'text-danger'}>{e.delta > 0 ? `+${e.delta}` : e.delta}</td>
               <td>{e.balanceAfter}</td>
@@ -72,13 +65,13 @@ function OrdersTable({ orders }: { orders: AdminOrder[] }) {
   return (
     <div className="table-responsive">
       <table className="table table-sm align-middle mb-0">
-        <thead><tr><th>Data</th><th>Credite</th><th>Preț</th><th>Stare</th></tr></thead>
+        <thead><tr><th>Data</th><th>Comandă</th><th>Preț</th><th>Stare</th></tr></thead>
         <tbody>
           {orders.map((o) => (
             <tr key={o.id}>
               <td className="text-nowrap">{fmt(o.createdAt)}</td>
-              <td>{o.credits}</td>
-              <td>{formatLei(o.priceBani)}</td>
+              <td>{orderLabel(o)}</td>
+              <td>{orderPrice(o)}</td>
               <td>{orderStatusLabel(o)}</td>
             </tr>
           ))}

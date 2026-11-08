@@ -12,6 +12,7 @@ const KIND_ICONS: Record<string, string> = {
   lesson_started: '📖', lesson_finished: '✅', test_failed: '❌', consolidation_started: '🧩',
   consolidation_finished: '🏁', check: '🎓', check_refunded: '↩️', check_blocked: '⛔', purchase: '🪙',
   credits_adjusted: '⚙️', suspended: '🛑', reactivated: '🔓', progress_reset: '🔄',
+  access_purchased: '⭐', access_granted: '🎟️', access_revoked: '⛔', access_expired: '⌛',
 };
 
 /** Newest first, ordered by id; merges the server's first page with the older pages loaded here. */
@@ -54,7 +55,7 @@ export default function TimelineTab({ userId, initial, pageSize }: { userId: str
           <li key={e.id} className="d-flex gap-3 py-2 border-bottom">
             <span className="text-muted text-nowrap" style={{ minWidth: 96 }}>{formatDayTime(e.createdAt)}</span>
             <span>
-              <span aria-hidden="true" className="me-2" data-testid="event-icon">{KIND_ICONS[e.kind] ?? '•'}</span>
+              <span aria-hidden="true" className="me-2" data-testid="event-icon">{e.icon ?? KIND_ICONS[e.kind] ?? '•'}</span>
               {e.label}
               {e.details && <span className="d-block small text-muted">{e.details}</span>}
             </span>

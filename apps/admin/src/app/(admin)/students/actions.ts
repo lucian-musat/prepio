@@ -42,6 +42,14 @@ export async function reactivateStudentAction(userId: string): Promise<ActionRes
   return run((db) => students.reactivateStudent(db, userId), userId);
 }
 
+export async function grantAccessAction(userId: string, months: number, reason: string): Promise<ActionResult<string>> {
+  return run((db) => students.grantAccess(db, userId, months, reason), userId);
+}
+
+export async function revokeAccessAction(userId: string, reason: string): Promise<ActionResult<void>> {
+  return run((db) => students.revokeAccess(db, userId, reason), userId);
+}
+
 export async function resetProgressAction(userId: string, lessonId: string | null): Promise<ActionResult<void>> {
   return run((db) => students.resetProgress(db, userId, lessonId), userId);
 }

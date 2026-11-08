@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDay, formatDayTime, formatRelative, initials } from './format';
+import { planLabel, formatDay, formatDayTime, formatRelative, initials } from './format';
 
 describe('student page formatting', () => {
   it('formats a day as d MMM yyyy in Bucharest time', () => {
@@ -24,5 +24,17 @@ describe('student page formatting', () => {
     expect(initials('  ', null)).toBe('?');
     expect(initials('[test] Madalin Anghel', null)).toBe('TM');
     expect(initials('Ștefan', null)).toBe('Ș');
+  });
+});
+
+describe('planLabel', () => {
+  const now = new Date('2026-11-08T12:00:00Z');
+  it('is Trial without access or after it ended', () => {
+    expect(planLabel(null, now)).toBe('Trial');
+    expect(planLabel('2026-11-08T12:00:00Z', now)).toBe('Trial');
+    expect(planLabel('2026-10-01T00:00:00Z', now)).toBe('Trial');
+  });
+  it('names the end date while access is active', () => {
+    expect(planLabel('2027-02-08T10:00:00Z', now)).toBe('Acces până la 8 februarie 2027');
   });
 });

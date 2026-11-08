@@ -1,3 +1,5 @@
+import { formatAccessDate } from '@prepio/shared';
+
 // Dates on the student page, in Bucharest time and with Romanian month abbreviations without dots ("4 nov 2026").
 
 const MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sept', 'oct', 'nov', 'dec'];
@@ -42,4 +44,11 @@ export function initials(name: string | null, email: string | null): string {
   const letters = (name ?? '').split(/\s+/).map(firstAlnum).filter(Boolean);
   if (letters.length) return letters.slice(0, 2).join('');
   return firstAlnum(email ?? '') || '?';
+}
+
+/** The student's plan for the header and the list: "Trial", or "Acces până la 8 februarie 2027" while access lasts. */
+export function planLabel(accessUntil: string | null, now: Date): string {
+  if (accessUntil === null) return 'Trial';
+  const until = new Date(accessUntil);
+  return until.getTime() > now.getTime() ? `Acces până la ${formatAccessDate(until)}` : 'Trial';
 }

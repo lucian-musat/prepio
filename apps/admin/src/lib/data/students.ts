@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CONSOLIDATION_TYPE_LABELS, creditsLabel, type ConsolidationType } from '@prepio/shared';
+import { CONSOLIDATION_TYPE_LABELS, creditsLabel, formatLei, type ConsolidationType } from '@prepio/shared';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { check, isUuid, UserError } from './db';
 import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from './studentLabels';
@@ -22,10 +22,12 @@ export type StudentRow = {
   reregistrationBlocked: boolean;
   lastActivityAt: string | null;
   lessonsFinished: number;
+  /** End of the paid access (may be in the past); null when never bought or granted. */
+  accessUntil: string | null;
 };
 
-export type StudentFilter = 'all' | 'suspended' | 'active_today';
-export const STUDENT_FILTERS: readonly StudentFilter[] = ['all', 'suspended', 'active_today'];
+export type StudentFilter = 'all' | 'suspended' | 'active_today' | 'trial' | 'full';
+export const STUDENT_FILTERS: readonly StudentFilter[] = ['all', 'suspended', 'active_today', 'trial', 'full'];
 
 export type AdminLedgerEntry = {
   id: number;
@@ -41,8 +43,40 @@ export type AdminLedgerEntry = {
   adminEmail: string | null;
 };
 
-/** `provider` is 'none' while purchases are approved without a payment (mock fulfilment). */
-export type AdminOrder = { id: string; credits: number; priceBani: number; status: string; provider: string; createdAt: string };
+/**
+ * A credit order (`kind: 'credits'`, has `credits`) or an access order (`kind: 'access'`, has `durationMonths` and
+ * `bonusCredits`). `provider` is 'none' while purchases are approved without a payment (mock fulfilment).
+ */
+export type AdminOrder = {
+  id: string;
+  kind: 'credits' | 'access';
+  credits: number | null;
+  durationMonths: number | null;
+  bonusCredits: number | null;
+  priceBani: number;
+  status: string;
+  provider: string;
+  createdAt: string;
+};
+
+const monthsLabel = (n: number) => (n === 1 ? '1 lună' : `${n} luni`);
+
+/** "150,00 lei": access prices always show bani, as admins read them in the orders and the timeline. */
+const leiExact = (bani: number) => `${(bani / 100).toFixed(2).replace('.', ',')} lei`;
+
+export const orderPrice = (o: Pick<AdminOrder, 'priceBani' | 'kind'>) => (o.kind === 'access' ? leiExact(o.priceBani) : formatLei(o.priceBani));
+
+/** "Acces 3 luni · +100 credite" or "20 de credite". */
+export function orderLabel(o: AdminOrder): string {
+  if (o.kind === 'credits') return creditsLabel(o.credits ?? 0);
+  const bonus = o.bonusCredits ?? 0;
+  return `Acces ${monthsLabel(o.durationMonths ?? 0)}${bonus > 0 ? ` · +${bonus} ${bonus === 1 ? 'credit' : 'credite'}` : ''}`;
+}
+
+/** Credit and access orders in one list, newest first. */
+export function mergeOrders(...lists: AdminOrder[][]): AdminOrder[] {
+  return lists.flat().sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+}
 
 const ORDER_STATUS_LABELS: Record<string, string> = { pending: 'În așteptare', approved: 'Plătită', failed: 'Eșuată' };
 
@@ -55,7 +89,7 @@ export function orderStatusLabel(o: Pick<AdminOrder, 'status' | 'provider'>): st
 type StudentDb = {
   id: string; display_name: string | null; email: string | null; credit_balance: number; created_at: string; total: number;
   provider: string | null; suspended_at: string | null; suspended_reason: string | null; reregistration_blocked: boolean;
-  last_activity_at: string | null; lessons_finished: number;
+  last_activity_at: string | null; lessons_finished: number; access_until: string | null;
 };
 
 const toStudent = (r: StudentDb): StudentRow => ({
@@ -70,6 +104,7 @@ const toStudent = (r: StudentDb): StudentRow => ({
   reregistrationBlocked: !!r.reregistration_blocked,
   lastActivityAt: r.last_activity_at,
   lessonsFinished: Number(r.lessons_finished ?? 0),
+  accessUntil: r.access_until ?? null,
 });
 
 export async function listStudents(
@@ -101,6 +136,9 @@ export async function getStudent(
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
   ) as { id: string; credits: number; price_bani: number; status: string; provider: string; created_at: string }[];
+  const accessRows = check(await db.rpc('admin_access_orders', { p_user: id })) as {
+    id: string; price_bani: number; bonus_credits: number; duration_months: number; status: string; provider: string; created_at: string;
+  }[];
   return {
     student: toStudent(found[0]),
     ledger: ledgerRows.map((r) => ({
@@ -116,14 +154,30 @@ export async function getStudent(
       exercisePrompt: r.exercise_prompt,
       adminEmail: r.admin_email,
     })),
-    orders: orderRows.map((o) => ({
-      id: o.id,
-      credits: o.credits,
-      priceBani: o.price_bani,
-      status: o.status,
-      provider: o.provider,
-      createdAt: o.created_at,
-    })),
+    orders: mergeOrders(
+      orderRows.map((o): AdminOrder => ({
+        id: o.id,
+        kind: 'credits',
+        credits: o.credits,
+        durationMonths: null,
+        bonusCredits: null,
+        priceBani: o.price_bani,
+        status: o.status,
+        provider: o.provider,
+        createdAt: o.created_at,
+      })),
+      accessRows.map((o): AdminOrder => ({
+        id: o.id,
+        kind: 'access',
+        credits: null,
+        durationMonths: o.duration_months,
+        bonusCredits: o.bonus_credits,
+        priceBani: o.price_bani,
+        status: o.status,
+        provider: o.provider,
+        createdAt: o.created_at,
+      })),
+    ),
   };
 }
 
@@ -241,7 +295,7 @@ export async function getStudentProgress(db: SupabaseClient, userId: string): Pr
 
 // ---------------------------------------------------------------- timeline
 
-export type StudentEvent = { id: number; kind: string; createdAt: string; label: string; details: string | null };
+export type StudentEvent = { id: number; kind: string; createdAt: string; label: string; details: string | null; icon?: string };
 export const EVENTS_PAGE_SIZE = 50;
 
 export type EventInput = {
@@ -281,7 +335,9 @@ export function eventLabel(e: EventInput): string {
       return ['Verificare cu profesorul digital', type, `−${num('cost')}`].filter((x) => x != null).join(' · ');
     }
     case 'check_refunded': return 'Verificare nereușită · credite returnate';
-    case 'check_blocked': return `Verificare blocată · avea ${num('balance')}, trebuiau ${num('required')}`;
+    case 'check_blocked':
+      if (d.reason === 'access_required') return 'Verificare refuzată · lecție fără acces';
+      return `Verificare blocată · avea ${num('balance')}, trebuiau ${num('required')}`;
     case 'purchase': return `A cumpărat ${creditsLabel(num('credits'))}`;
     case 'credits_adjusted': {
       const delta = num('delta');
@@ -290,8 +346,20 @@ export function eventLabel(e: EventInput): string {
     case 'suspended': return `${e.adminEmail ?? 'Sistem (reînregistrare blocată)'}: cont suspendat · „${d.reason ?? ''}”`;
     case 'reactivated': return `${admin}: cont reactivat`;
     case 'progress_reset': return `${admin}: parcurs resetat · ${d.scope === 'all' ? 'toate lecțiile' : `lecția ${lesson}`}`;
+    case 'access_purchased': return `Acces cumpărat · ${monthsLabel(num('months'))} · ${leiExact(num('price_bani'))}`;
+    case 'access_granted': return `${admin}: acces acordat · ${monthsLabel(num('months'))} · Motiv: „${d.reason ?? ''}”`;
+    case 'access_revoked': return `${admin}: acces retras · Motiv: „${d.reason ?? ''}”`;
+    case 'access_expired': return 'Accesul a expirat';
     default: return e.kind;
   }
+}
+
+const EVENT_ICONS: Record<string, string> = { access_purchased: '⭐', access_granted: '🎟️', access_revoked: '⛔', access_expired: '⌛' };
+
+/** Icon that overrides the tab's default for the event, or undefined to use the default. */
+export function eventIcon(kind: string, details: Record<string, unknown> | null): string | undefined {
+  if (kind === 'check_blocked' && details?.reason === 'access_required') return '🚫';
+  return EVENT_ICONS[kind];
 }
 
 type EventDb = {
@@ -311,6 +379,7 @@ export async function getStudentEvents(db: SupabaseClient, userId: string, befor
       kind: r.kind, details: r.details, lessonTitle: r.lesson_title, exerciseType: r.exercise_type, adminEmail: r.admin_email,
     }),
     details: r.kind === 'check' ? r.exercise_prompt : null,
+    icon: eventIcon(r.kind, r.details),
   }));
 }
 
@@ -335,6 +404,38 @@ export async function suspendStudent(db: SupabaseClient, userId: string, reason:
 export async function reactivateStudent(db: SupabaseClient, userId: string): Promise<void> {
   const res = await db.rpc('admin_reactivate_student', { p_user: userId });
   if (res.error) throw rpcError(res.error);
+}
+
+const ACCESS_ERRORS: [string, string][] = [
+  ['reason_required', 'Scrie motivul.'],
+  ['bad_months', 'Alege între 1 și 24 de luni.'],
+  ['not_active', 'Elevul nu are acces activ.'],
+  ['cannot_target_admin', 'Nu poți modifica accesul unui administrator.'],
+  ['student_not_found', 'Elevul nu mai există.'],
+  ['forbidden', 'Nu ai drepturi de administrator.'],
+];
+
+function accessError(error: { message: string }): UserError {
+  const hit = ACCESS_ERRORS.find(([code]) => error.message.includes(code));
+  if (hit) return new UserError(hit[1]);
+  console.error('[data] database error:', error);
+  return new UserError('Operația a eșuat. Încearcă din nou.');
+}
+
+/** Adds `months` to the student's access (no credits); returns the new end date (ISO). */
+export async function grantAccess(db: SupabaseClient, userId: string, months: number, reason: string): Promise<string> {
+  if (!Number.isInteger(months) || months < 1 || months > 24) throw new UserError('Alege între 1 și 24 de luni.');
+  if (!reason || !reason.trim()) throw new UserError('Scrie motivul.');
+  const res = await db.rpc('admin_grant_access', { p_user: userId, p_months: months, p_reason: reason.trim() });
+  if (res.error) throw accessError(res.error);
+  return res.data as string;
+}
+
+/** Ends the student's access now; credits stay. */
+export async function revokeAccess(db: SupabaseClient, userId: string, reason: string): Promise<void> {
+  if (!reason || !reason.trim()) throw new UserError('Scrie motivul.');
+  const res = await db.rpc('admin_revoke_access', { p_user: userId, p_reason: reason.trim() });
+  if (res.error) throw accessError(res.error);
 }
 
 export async function resetProgress(db: SupabaseClient, userId: string, lessonId: string | null): Promise<void> {

@@ -151,3 +151,82 @@ test('reset progress, suspend, reactivate, delete with block', async ({ page }) 
   const blocked = await service.from('profiles').select('reregistration_blocked').eq('id', again).single();
   expect(blocked.data?.reregistration_blocked).toBe(false);
 });
+
+test('grant and revoke access, plan, orders and the Acces complet filter', async ({ page }) => {
+  const email = `test-elevi-${Math.random().toString(36).slice(2, 10)}@test.local`;
+  const id = await createStudent(email);
+  await login(page);
+  await page.goto(`/students/${id}`);
+  await expect(page.getByTestId('plan')).toHaveText('Trial');
+  await expect(page.getByRole('button', { name: 'Retrage accesul' })).toHaveCount(0);
+
+  const inFilter = async (filter: 'trial' | 'full') => {
+    await page.goto(`/students?${new URLSearchParams({ q: email, filter })}`);
+    await expect(page.getByRole('link', { name: filter === 'full' ? 'Acces complet' : 'Trial', exact: true })).toHaveAttribute('aria-current', 'true');
+    return page.getByRole('cell', { name: email });
+  };
+
+  // Grant: needs a reason and 1-24 months.
+  await page.getByRole('button', { name: 'Acordă acces' }).click();
+  const grant = page.getByRole('dialog');
+  await expect(grant).toContainText('Lunile se adaugă la accesul curent. Nu se adaugă credite.');
+  await grant.getByLabel('Număr de luni').fill('30');
+  await grant.getByLabel('Motiv').fill('[test] cadou');
+  await grant.getByRole('button', { name: 'Acordă acces' }).click();
+  await expect(grant).toContainText('Alege între 1 și 24 de luni.');
+  await grant.getByLabel('Număr de luni').fill('2');
+  await grant.getByRole('button', { name: 'Acordă acces' }).click();
+  await expect(grant).toBeHidden();
+  await expect(page.getByRole('status')).toContainText(/^Acces acordat până la \d{1,2} \p{L}+ \d{4}\.$/u);
+  await expect(page.getByTestId('plan')).toHaveText(/^Acces până la /);
+  await expect(page.getByTestId('balance')).toHaveText('12'); // no credits added
+
+  await page.getByRole('link', { name: 'Cronologie' }).click();
+  await expect(page.getByText(/acces acordat · 2 luni · Motiv: „\[test\] cadou”/)).toBeVisible();
+
+  await expect(await inFilter('full')).toBeVisible();
+  await expect(await inFilter('trial')).toHaveCount(0);
+
+  // Revoke.
+  await page.goto(`/students/${id}`);
+  await page.getByRole('button', { name: 'Retrage accesul' }).click();
+  const revoke = page.getByRole('dialog');
+  await expect(revoke).toContainText('Elevul revine la trial acum. Creditele rămân.');
+  await revoke.getByRole('button', { name: 'Retrage accesul' }).click();
+  await expect(revoke).toContainText('Scrie motivul.');
+  await revoke.getByLabel('Motiv').fill('[test] retras');
+  await revoke.getByRole('button', { name: 'Retrage accesul' }).click();
+  await expect(revoke).toBeHidden();
+  await expect(page.getByRole('status')).toHaveText(/Accesul a fost retras\./);
+  await expect(page.getByTestId('plan')).toHaveText('Trial');
+  await expect(page.getByRole('button', { name: 'Retrage accesul' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Cronologie' }).click();
+  await expect(page.getByText(/acces retras · Motiv: „\[test\] retras”/)).toBeVisible();
+
+  await expect(await inFilter('trial')).toBeVisible();
+  await expect(await inFilter('full')).toHaveCount(0);
+});
+
+test('Comenzi lists access orders with credit orders, newest first', async ({ page }) => {
+  const email = `test-elevi-${Math.random().toString(36).slice(2, 10)}@test.local`;
+  const id = await createStudent(email);
+  const settings = await service.from('access_settings').select('price_bani,bonus_credits,duration_months').single();
+  if (settings.error) throw settings.error;
+  const { price_bani, bonus_credits, duration_months } = settings.data;
+  const bought = await service.rpc('purchase_access', {
+    p_user: id, p_price_bani: price_bani, p_bonus: bonus_credits, p_months: duration_months,
+  });
+  if (bought.error) throw bought.error;
+
+  await login(page);
+  await page.goto(`/students/${id}?tab=comenzi`);
+  const row = page.getByRole('row', { name: /^.*Acces \d+ luni/ });
+  await expect(row).toContainText(`Acces ${duration_months} luni · +${bonus_credits} credite`);
+  await expect(row).toContainText(`${(price_bani / 100).toFixed(2).replace('.', ',')} lei`);
+  await expect(row).toContainText('Aprobată (fără plată)');
+
+  await page.goto(`/students/${id}?tab=credite`);
+  await expect(page.getByRole('row', { name: /Credite incluse în acces/ })).toContainText(`+${bonus_credits}`);
+  await page.goto(`/students/${id}?tab=cronologie`);
+  await expect(page.getByText(/Acces cumpărat · \d+ luni · /)).toBeVisible();
+});
