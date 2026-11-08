@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import type { ActionResult } from '@/lib/actionResult';
 import { GENERIC_ERROR, UserError } from '@/lib/data/db';
+import * as access from '@/lib/data/accessSettings';
+import type { AccessSettingsInput } from '@/lib/data/accessSettings';
 import * as credits from '@/lib/data/credits';
 import type { CreditSettingsInput } from '@/lib/data/credits';
 import * as settings from '@/lib/data/settings';
@@ -32,6 +34,19 @@ export async function saveCreditSettingsAction(input: CreditSettingsInput): Prom
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[credit settings action] unexpected error:', e);
+    return { ok: false, error: GENERIC_ERROR };
+  }
+}
+
+export async function saveAccessSettings(input: AccessSettingsInput): Promise<ActionResult> {
+  try {
+    const db = await createServerClient();
+    await access.saveAccessSettings(db, input);
+    revalidatePath('/settings');
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof UserError) return { ok: false, error: e.message };
+    console.error('[access settings action] unexpected error:', e);
     return { ok: false, error: GENERIC_ERROR };
   }
 }
