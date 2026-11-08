@@ -78,6 +78,9 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     const u = await db.auth.admin.createUser({ email, password: 'test-password-123', email_confirm: true });
     if (u.error) throw u.error;
     userId = u.data.user.id;
+    // Full access, so these checks do not depend on the `[test]` lesson being the free lesson.
+    const paid = await db.from('profiles').update({ access_until: new Date(Date.now() + 86_400_000).toISOString() }).eq('id', userId);
+    if (paid.error) throw paid.error;
     const n = await db.from('nodes').insert({ title: '[test] consolidation evaluate' }).select('id').single();
     if (n.error) throw n.error;
     nodeId = n.data.id;
@@ -247,6 +250,40 @@ describe.skipIf(!url || !service)('handleConsolidationEvaluate (local Supabase)'
     );
     expect(r.status).toBe(404);
     expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a trial student on a lesson that is not the free lesson with 403 access_required; nothing is spent', async () => {
+    // A published lesson after `lessonId` in the same node can never be free_lesson_id().
+    const locked = await db.from('lessons').insert({ node_id: nodeId, title: '[test] locked', status: 'published', position: 2 }).select('id').single();
+    if (locked.error) throw locked.error;
+    const lockedExercise = await insertExercise(locked.data.id);
+    const t = await db.auth.admin.createUser({ email: `test-evaluate-trial-${randomUUID()}@prepio.local`, password: 'test-password-123', email_confirm: true });
+    if (t.error) throw t.error;
+    const trialId = t.data.user.id;
+    try {
+      const profile = await db.from('profiles').select('access_until,credit_balance').eq('id', trialId).single();
+      if (profile.error) throw profile.error;
+      expect(profile.data.access_until).toBeNull();
+      const before = profile.data.credit_balance as number;
+      const ledgerRows = async () => {
+        const l = await db.from('credit_ledger').select('id').eq('user_id', trialId);
+        if (l.error) throw l.error;
+        return l.data.length;
+      };
+      const ledgerBefore = await ledgerRows();
+      const evaluate = vi.fn();
+      const r = await handleConsolidationEvaluate(
+        { exerciseId: lockedExercise, target: { requirementId: 'r1' }, answer: { type: 'essay', parts: { r1: 'a', r2: 'b' } } }, trialId, deps(evaluate),
+      );
+      expect(r).toEqual({ status: 403, json: { error: 'access_required', message: 'Lecția face parte din accesul complet.' } });
+      expect(evaluate).not.toHaveBeenCalled();
+      const after = await db.from('profiles').select('credit_balance').eq('id', trialId).single();
+      if (after.error) throw after.error;
+      expect(after.data.credit_balance).toBe(before);
+      expect(await ledgerRows()).toBe(ledgerBefore);
+    } finally {
+      await db.auth.admin.deleteUser(trialId); // its ledger rows and events go with it; the lesson goes with the node
+    }
   });
 
   it('has no per-user hourly limit and consumes only the prefixed global key', async () => {
