@@ -198,7 +198,7 @@ test('grant and revoke access, plan, orders and the Acces complet filter', async
   await revoke.getByRole('button', { name: 'Retrage accesul' }).click();
   await expect(revoke).toBeHidden();
   await expect(page.getByRole('status')).toHaveText(/Accesul a fost retras\./);
-  await expect(page.getByTestId('plan')).toHaveText('Trial');
+  await expect(page.getByTestId('plan')).toHaveText(/^Expirat pe \d{1,2} \p{L}+ \d{4}$/u);
   await expect(page.getByRole('button', { name: 'Retrage accesul' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Cronologie' }).click();
   await expect(page.getByText(/acces retras · Motiv: „\[test\] retras”/)).toBeVisible();

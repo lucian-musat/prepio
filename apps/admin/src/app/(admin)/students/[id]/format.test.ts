@@ -29,10 +29,12 @@ describe('student page formatting', () => {
 
 describe('planLabel', () => {
   const now = new Date('2026-11-08T12:00:00Z');
-  it('is Trial without access or after it ended', () => {
+  it('is Trial without access', () => {
     expect(planLabel(null, now)).toBe('Trial');
-    expect(planLabel('2026-11-08T12:00:00Z', now)).toBe('Trial');
-    expect(planLabel('2026-10-01T00:00:00Z', now)).toBe('Trial');
+  });
+  it('names the end date once access has ended', () => {
+    expect(planLabel('2026-11-08T12:00:00Z', now)).toBe('Expirat pe 8 noiembrie 2026');
+    expect(planLabel('2026-10-01T00:00:00Z', now)).toBe('Expirat pe 1 octombrie 2026');
   });
   it('names the end date while access is active', () => {
     expect(planLabel('2027-02-08T10:00:00Z', now)).toBe('Acces până la 8 februarie 2027');

@@ -6,7 +6,7 @@ import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from '@/lib/data/stud
 import type { StudentRow } from '@/lib/data/students';
 import AdjustCreditsForm from './AdjustCreditsForm';
 import DeleteDialog from './DeleteDialog';
-import { formatDay, formatRelative, initials, planLabel } from './format';
+import { formatDay, formatRelative, hasActiveAccess, initials, planLabel } from './format';
 import GrantAccessDialog from './GrantAccessDialog';
 import ResetDialog from './ResetDialog';
 import RevokeAccessDialog from './RevokeAccessDialog';
@@ -28,7 +28,7 @@ export default function StudentHeader({
   const suspended = student.suspendedAt != null;
   const now = new Date();
   const plan = planLabel(student.accessUntil, now);
-  const fullAccess = plan !== 'Trial';
+  const fullAccess = hasActiveAccess(student.accessUntil, now);
   const meta = [
     student.email ?? '—',
     student.provider ? (PROVIDER_LABELS[student.provider] ?? student.provider) : null,

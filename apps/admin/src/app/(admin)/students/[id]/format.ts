@@ -46,9 +46,17 @@ export function initials(name: string | null, email: string | null): string {
   return firstAlnum(email ?? '') || '?';
 }
 
-/** The student's plan for the header and the list: "Trial", or "Acces până la 8 februarie 2027" while access lasts. */
+/** Full access ⇔ `access_until > now` (same rule as the database). */
+export function hasActiveAccess(accessUntil: string | null, now: Date): boolean {
+  return accessUntil !== null && new Date(accessUntil).getTime() > now.getTime();
+}
+
+/**
+ * The student's plan for the header and the list: "Trial" (never had access), "Acces până la 8 februarie 2027"
+ * while access lasts, "Expirat pe 8 februarie 2027" once it ended (expired or revoked).
+ */
 export function planLabel(accessUntil: string | null, now: Date): string {
   if (accessUntil === null) return 'Trial';
-  const until = new Date(accessUntil);
-  return until.getTime() > now.getTime() ? `Acces până la ${formatAccessDate(until)}` : 'Trial';
+  const until = formatAccessDate(new Date(accessUntil));
+  return hasActiveAccess(accessUntil, now) ? `Acces până la ${until}` : `Expirat pe ${until}`;
 }

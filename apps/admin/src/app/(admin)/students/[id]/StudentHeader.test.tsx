@@ -97,6 +97,14 @@ describe('StudentHeader', () => {
     expect(await screen.findByRole('heading', { name: 'Retrage accesul' })).toBeTruthy();
   });
 
+  it('shows Expirat pe and no Retrage accesul once access has ended', () => {
+    const until = new Date(Date.now() - 3 * 86_400_000);
+    render(<StudentHeader student={{ ...ACTIVE, accessUntil: until.toISOString() }} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    expect(screen.getByTestId('plan').textContent).toMatch(/^Expirat pe \d{1,2} \p{L}+ \d{4}$/u);
+    expect(screen.getByRole('button', { name: 'Acordă acces' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Retrage accesul' })).toBeNull();
+  });
+
   it('opens the grant dialog', async () => {
     render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Acordă acces' }));
