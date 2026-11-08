@@ -77,6 +77,17 @@ it('buys through the shared purchase hook and shows the new state', async () => 
   expect(await screen.findByText('Ai acces complet!')).toBeTruthy();
 });
 
+it('a failed purchase after a successful one does not keep the success message', async () => {
+  mockedPurchase.mockResolvedValueOnce({ orderId: 'o', accessUntil: inDays(90), bonus: 100, balance: 149 });
+  mockedPurchase.mockRejectedValueOnce(new Error('Nu merge.'));
+  await mount();
+  fireEvent.press(screen.getByRole('button', { name: 'Deblochează · 150 lei' }));
+  expect(await screen.findByText('Ai acces complet!')).toBeTruthy();
+  fireEvent.press(await screen.findByRole('button', { name: 'Prelungește cu 3 luni · 150 lei' }));
+  expect(await screen.findByText('Nu merge.')).toBeTruthy();
+  expect(screen.queryByText('Ai acces complet!')).toBeNull();
+});
+
 it('shows the purchase error', async () => {
   mockedPurchase.mockRejectedValue(new Error('Nu merge.'));
   await mount();

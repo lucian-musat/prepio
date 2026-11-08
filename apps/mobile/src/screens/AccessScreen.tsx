@@ -60,6 +60,7 @@ export default function AccessScreen() {
   const verb = trial ? 'Deblochează' : status.plan === 'expired' ? 'Reînnoiește' : `Prelungește cu ${plural(months, 'lună', 'luni')}`;
 
   const buy = async () => {
+    setBought(false); // a new attempt must not keep showing the previous success
     if (await purchase()) setBought(true);
   };
 
