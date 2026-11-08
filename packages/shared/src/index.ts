@@ -14,3 +14,4 @@ export * from './consolidation/exercises';
 export * from './consolidation/check';
 export * from './plural';
 export * from './credits';
+export * from './access';
