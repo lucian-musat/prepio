@@ -1,5 +1,5 @@
 begin;
-select plan(138);
+select plan(154);
 
 -- Fixtures (as postgres). f1, f2 and f4 are students, f3 is an admin. Assertions are scoped to these ids.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
@@ -171,6 +171,27 @@ select results_eq(
   $$ select admin_id, details ->> 'reason' from pg_temp.events('00000000-0000-0000-0000-0000000000f4', 'access_revoked') $$,
   $$ values ('00000000-0000-0000-0000-0000000000f3'::uuid, 'Refund'::text) $$, 'revoke logs access_revoked');
 
+-- Revoking an account without active access is refused and writes nothing: f1 is a trial account, f2 expired.
+update profiles set access_until = null where id = '00000000-0000-0000-0000-0000000000f1';
+update profiles set access_until = now() - interval '1 hour' where id = '00000000-0000-0000-0000-0000000000f2';
+create temp table revoke_before on commit drop as
+  select (select count(*) from access_ledger where kind = 'admin_revoke') as ledger,
+         (select count(*) from pg_temp.events('00000000-0000-0000-0000-0000000000f1', 'access_revoked'))
+         + (select count(*) from pg_temp.events('00000000-0000-0000-0000-0000000000f2', 'access_revoked')) as events;
+grant select on revoke_before to authenticated;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f3","role":"authenticated"}';
+select throws_ok($$ select public.admin_revoke_access('00000000-0000-0000-0000-0000000000f1', 'x') $$,
+  'P0001', 'not_active', 'revoking a trial account is refused');
+select throws_ok($$ select public.admin_revoke_access('00000000-0000-0000-0000-0000000000f2', 'x') $$,
+  'P0001', 'not_active', 'revoking an expired account is refused');
+reset role;
+select is((select count(*) from access_ledger where kind = 'admin_revoke'), (select ledger from revoke_before),
+  'a refused revoke writes no ledger row');
+select is((select count(*) from pg_temp.events('00000000-0000-0000-0000-0000000000f1', 'access_revoked'))
+  + (select count(*) from pg_temp.events('00000000-0000-0000-0000-0000000000f2', 'access_revoked')),
+  (select events from revoke_before), 'a refused revoke logs no event');
+
 -- ---------------------------------------------------------------- expiry log
 -- f4 was revoked: no access_expired for it. f2 expired an hour ago: exactly one.
 update profiles set access_until = now() - interval '1 hour' where id = '00000000-0000-0000-0000-0000000000f2';
@@ -220,6 +241,10 @@ select ok((select count(*) from access_ledger) > 0
   and (select count(*) = 0 from access_ledger where user_id <> auth.uid()), 'a student sees only their own access ledger');
 select throws_ok($$ insert into access_orders (user_id, price_bani, bonus_credits, duration_months, status)
   values (auth.uid(), 1, 0, 1, 'approved') $$, '42501', null, 'a student cannot insert orders');
+select throws_ok($$ insert into access_ledger (user_id, kind, months, until_after)
+  values (auth.uid(), 'purchase', 1, now()) $$, '42501', null, 'a student cannot insert into the access ledger');
+select throws_ok($$ insert into credit_ledger (user_id, delta, balance_after, kind)
+  values (auth.uid(), 1000, 1000, 'access_bonus') $$, '42501', null, 'a student cannot insert into the credit ledger');
 
 -- ---------------------------------------------------------------- admin reads everything
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f3","role":"authenticated"}';
@@ -383,6 +408,10 @@ select throws_ok(
   $$ insert into lesson_progress (lesson_id, position) values ('00000000-0000-0000-0000-0000000000b2', '{"x":1}')
        on conflict (user_id, lesson_id) do update set position = excluded.position $$,
   '42501', null, 'expired: an upsert of progress on a locked lesson is refused');
+select throws_ok(
+  $$ insert into consolidation_runs (lesson_id, exercise_ids) values ('00000000-0000-0000-0000-0000000000b2', array['00000000-0000-0000-0000-0000000000d2']::uuid[])
+       on conflict (user_id, lesson_id) do update set exercise_ids = excluded.exercise_ids $$,
+  '42501', null, 'expired: an upsert of a consolidation run on a locked lesson is refused');
 update lesson_progress set finished_at = now() where lesson_id = '00000000-0000-0000-0000-0000000000b2';
 select is((select finished_at from lesson_progress where lesson_id = '00000000-0000-0000-0000-0000000000b2'), null,
   'expired: a plain update of a locked lesson''s progress changes nothing');
@@ -404,10 +433,43 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f6","role":"authenticated"}';
 select is((select count(*)::int from cards), 0, 'a suspended student with full access still reads 0 cards');
 
+-- ---------------------------------------------------------------- admin lists (plan column, filters, orders)
+-- State here: f1 trial, f2 and f6 full, f4 revoked (access_until = now()), f5 expired. Search scopes to these ids.
+reset role;
+insert into access_orders (user_id, price_bani, bonus_credits, duration_months, status, created_at)
+values ('00000000-0000-0000-0000-0000000000f1', 777, 7, 1, 'approved', now() + interval '1 hour');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f3","role":"authenticated"}';
+select is((select access_until from public.admin_students('', 1, 0, '00000000-0000-0000-0000-0000000000f2')),
+  now() + interval '1 day', 'admin_students returns access_until');
+select results_eq($$ select id from public.admin_students('access-student', 50, 0, null, 'trial') order by id $$,
+  $$ values ('00000000-0000-0000-0000-0000000000f1'::uuid), ('00000000-0000-0000-0000-0000000000f4'::uuid),
+            ('00000000-0000-0000-0000-0000000000f5'::uuid) $$,
+  'filter trial: no access_until, revoked and expired accounts');
+select results_eq($$ select id from public.admin_students('access-student', 50, 0, null, 'full') order by id $$,
+  $$ values ('00000000-0000-0000-0000-0000000000f2'::uuid), ('00000000-0000-0000-0000-0000000000f6'::uuid) $$,
+  'filter full: access_until in the future');
+select is((select count(*)::int from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1')), 4,
+  'admin_access_orders lists the student''s orders');
+select results_eq($$ select price_bani, bonus_credits, duration_months, status, provider
+                       from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1') limit 2 $$,
+  $$ values (777, 7, 1, 'approved'::text, 'none'::text), (15000, 100, 3, 'approved'::text, 'none'::text) $$,
+  'admin_access_orders is newest first and shows the snapshot');
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f1","role":"authenticated"}';
+select throws_ok($$ select * from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1') $$,
+  '42501', null, 'a student cannot list access orders through the admin function');
+reset role;
+select ok(not has_function_privilege('anon', 'public.admin_access_orders(uuid)', 'execute')
+  and has_function_privilege('authenticated', 'public.admin_access_orders(uuid)', 'execute')
+  and not has_function_privilege('service_role', 'public.admin_access_orders(uuid)', 'execute'),
+  'admin_access_orders is granted to authenticated only');
+
 -- ---------------------------------------------------------------- anon
 reset role;
 set local role anon;
 select throws_ok($$ select * from access_settings $$, '42501', null, 'anon cannot read the offer');
+select throws_ok($$ select private.extend_access(null, 1, now()) $$, '42501', null, 'anon cannot execute extend_access');
+select throws_ok($$ select private.log_access_expiries() $$, '42501', null, 'anon cannot execute log_access_expiries');
 
 select * from finish();
 rollback;

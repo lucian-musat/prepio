@@ -259,6 +259,10 @@ begin
   if not found then
     raise exception 'student_not_found' using errcode = 'P0001';
   end if;
+  -- Nothing to end for a trial or an already expired account.
+  if v_current is null or v_current <= v_until then
+    raise exception 'not_active' using errcode = 'P0001';
+  end if;
 
   update public.profiles p set access_until = v_until where p.id = p_user;
   insert into public.access_ledger (user_id, kind, until_before, until_after, admin_id, reason)
@@ -383,6 +387,7 @@ revoke execute on function public.access_open_all() from public, anon, authentic
 grant execute on function public.access_open_all() to authenticated;
 
 -- For the API routes (service role bypasses RLS): may this user open this lesson?
+-- Does not check that the lesson exists or is published; callers must.
 create function public.can_open_lesson_for(p_user uuid, p_lesson uuid)
 returns boolean
 language sql
@@ -459,3 +464,86 @@ create policy consolidation_attempts_access_update on public.consolidation_attem
   with check ((select public.access_open_all()) or exists (
     select 1 from public.consolidation_exercises e
      where e.id = consolidation_attempts.exercise_id and e.lesson_id = (select public.free_lesson_id())));
+
+-- ================================================================ admin lists
+-- The plan (access_until) joins the student list; 'trial' = no active access, 'full' = access_until > now().
+-- Body as in 20261106200001_student_event_service.sql, with the extra column and filters.
+drop function public.admin_students(text, int, int, uuid, text);
+create function public.admin_students(
+  p_search text, p_limit int, p_offset int, p_id uuid default null, p_filter text default 'all')
+returns table (id uuid, display_name text, email text, credit_balance int, created_at timestamptz, total bigint,
+               provider text, suspended_at timestamptz, suspended_reason text, reregistration_blocked boolean,
+               last_activity_at timestamptz, lessons_finished int, access_until timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  v_search text := nullif(btrim(coalesce(p_search, '')), '');
+  v_filter text := coalesce(p_filter, 'all');
+  v_pattern text;
+  v_today timestamptz := date_trunc('day', now() at time zone 'Europe/Bucharest') at time zone 'Europe/Bucharest';
+begin
+  if not public.is_admin() then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  if v_filter not in ('all', 'suspended', 'active_today', 'trial', 'full') then
+    raise exception 'bad_filter' using errcode = 'P0001';
+  end if;
+  -- Treat the search as plain text: escape the like wildcards.
+  v_pattern := '%' || replace(replace(replace(v_search, '\', '\\'), '%', '\%'), '_', '\_') || '%';
+
+  return query
+    select p.id, p.display_name, u.email::text, p.credit_balance, p.created_at, count(*) over (),
+           u.raw_app_meta_data ->> 'provider', p.suspended_at, p.suspended_reason, p.reregistration_blocked,
+           coalesce((select max(e.created_at) from public.student_events e
+                      where e.user_id = p.id and e.admin_id is null),
+                    u.last_sign_in_at),
+           (select count(*)::int from public.lesson_progress lp
+              join public.lessons l on l.id = lp.lesson_id and l.status = 'published'
+             where lp.user_id = p.id and lp.finished_at is not null),
+           p.access_until
+      from public.profiles p
+      join auth.users u on u.id = p.id
+     where not exists (select 1 from public.admins a where a.user_id = p.id)
+       and (p_id is null or p.id = p_id)
+       and (v_search is null or p.display_name ilike v_pattern or u.email ilike v_pattern)
+       and (v_filter <> 'suspended' or p.suspended_at is not null)
+       and (v_filter <> 'active_today'
+            or exists (select 1 from public.student_events e
+                        where e.user_id = p.id and e.admin_id is null and e.created_at >= v_today))
+       and (v_filter <> 'trial' or p.access_until is null or p.access_until <= now())
+       and (v_filter <> 'full' or p.access_until > now())
+     order by p.created_at desc, p.id
+     limit least(greatest(coalesce(p_limit, 50), 1), 200)
+    offset greatest(coalesce(p_offset, 0), 0);
+end;
+$$;
+revoke execute on function public.admin_students(text, int, int, uuid, text) from public, anon, authenticated, service_role;
+grant execute on function public.admin_students(text, int, int, uuid, text) to authenticated;
+
+create function public.admin_access_orders(p_user uuid)
+returns table (id uuid, price_bani int, bonus_credits int, duration_months int, status text, provider text,
+               created_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+begin
+  if not public.is_admin() then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  return query
+    select o.id, o.price_bani, o.bonus_credits, o.duration_months, o.status, o.provider, o.created_at
+      from public.access_orders o
+     where o.user_id = p_user
+     order by o.created_at desc, o.id desc;
+end;
+$$;
+revoke execute on function public.admin_access_orders(uuid) from public, anon, authenticated, service_role;
+grant execute on function public.admin_access_orders(uuid) to authenticated;
