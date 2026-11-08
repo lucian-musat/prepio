@@ -116,16 +116,45 @@ $$;
 
 -- ---------------------------------------------------------------- private helpers
 -- The one extension rule: from the later of now and the current end, add whole calendar months (UTC).
+-- timestamptz + months is computed in the session time zone, so the function pins it to UTC (and is therefore
+-- stable, not immutable).
 create function private.extend_access(p_until timestamptz, p_months int, p_now timestamptz)
 returns timestamptz
 language sql
-immutable
+stable
 set search_path = ''
+set timezone to 'UTC'
 as $$
   select greatest(p_now, coalesce(p_until, p_now)) + p_months * interval '1 month';
 $$;
 revoke execute on function private.extend_access(timestamptz, int, timestamptz)
   from public, anon, authenticated, service_role;
+
+-- Logs one access_expired event for an expiry that has passed, dated at the moment access ended. Skips admins, an
+-- end that has not passed, and an end already logged (by an earlier run, or by an admin revoke, whose event carries
+-- the same until). Shared by the expiry cron and by purchase/grant, which log the expiry they are about to replace
+-- when the cron has not run yet. Returns 1 when it logged, else 0.
+create function private.log_access_expiry(p_user uuid, p_until timestamptz)
+returns int
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if p_until is null or p_until > now()
+     or exists (select 1 from public.admins a where a.user_id = p_user)
+     or exists (
+       select 1 from public.student_events e
+        where e.user_id = p_user
+          and e.kind in ('access_expired', 'access_revoked')
+          and (e.details ->> 'until')::timestamptz = p_until) then
+    return 0;
+  end if;
+  insert into public.student_events (user_id, kind, details, created_at)
+  values (p_user, 'access_expired', jsonb_build_object('until', p_until), p_until);
+  return 1;
+end;
+$$;
+revoke execute on function private.log_access_expiry(uuid, timestamptz) from public, anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------- purchase (service role)
 -- Sells access. No payment yet: the order is approved at once from a snapshot of the offer. The caller passes the
@@ -159,6 +188,7 @@ begin
     raise exception 'profile_not_found' using errcode = 'P0001';
   end if;
 
+  perform private.log_access_expiry(p_user, v_current);
   v_until := private.extend_access(v_current, v_offer.duration_months, now());
 
   insert into public.access_orders (user_id, price_bani, bonus_credits, duration_months, status, approved_at)
@@ -221,6 +251,7 @@ begin
     raise exception 'student_not_found' using errcode = 'P0001';
   end if;
 
+  perform private.log_access_expiry(p_user, v_current);
   v_until := private.extend_access(v_current, p_months, now());
   update public.profiles p set access_until = v_until where p.id = p_user;
   insert into public.access_ledger (user_id, kind, months, until_before, until_after, admin_id, reason)
@@ -294,36 +325,16 @@ revoke execute on function public.admin_save_access_settings(int, int, int) from
 grant execute on function public.admin_save_access_settings(int, int, int) to authenticated;
 
 -- ---------------------------------------------------------------- expiry log
--- One access_expired event per expiry, dated at the moment access ended. Skips an expiry that an admin revoke
--- already logged (the revoke event carries the same until). Idempotent: runs every 10 minutes.
+-- One access_expired event per expiry (see private.log_access_expiry). Idempotent: runs every 10 minutes.
 create function private.log_access_expiries()
 returns int
-language plpgsql
+language sql
 security definer
 set search_path = ''
 as $$
-declare
-  v_count int;
-begin
-  with expired as (
-    select p.id, p.access_until
-      from public.profiles p
-     where p.access_until <= now()
-       and not exists (select 1 from public.admins a where a.user_id = p.id)
-       and not exists (
-         select 1 from public.student_events e
-          where e.user_id = p.id
-            and e.kind in ('access_expired', 'access_revoked')
-            and (e.details ->> 'until')::timestamptz = p.access_until)
-  ), ins as (
-    insert into public.student_events (user_id, kind, details, created_at)
-    select x.id, 'access_expired', jsonb_build_object('until', x.access_until), x.access_until
-      from expired x
-    returning 1
-  )
-  select count(*)::int into v_count from ins;
-  return v_count;
-end;
+  select coalesce(sum(private.log_access_expiry(p.id, p.access_until)), 0)::int
+    from public.profiles p
+   where p.access_until <= now();
 $$;
 revoke execute on function private.log_access_expiries() from public, anon, authenticated, service_role;
 
@@ -498,8 +509,9 @@ begin
   return query
     select p.id, p.display_name, u.email::text, p.credit_balance, p.created_at, count(*) over (),
            u.raw_app_meta_data ->> 'provider', p.suspended_at, p.suspended_reason, p.reregistration_blocked,
+           -- access_expired has no admin either, but it is not something the student did.
            coalesce((select max(e.created_at) from public.student_events e
-                      where e.user_id = p.id and e.admin_id is null),
+                      where e.user_id = p.id and e.admin_id is null and e.kind <> 'access_expired'),
                     u.last_sign_in_at),
            (select count(*)::int from public.lesson_progress lp
               join public.lessons l on l.id = lp.lesson_id and l.status = 'published'
@@ -513,7 +525,8 @@ begin
        and (v_filter <> 'suspended' or p.suspended_at is not null)
        and (v_filter <> 'active_today'
             or exists (select 1 from public.student_events e
-                        where e.user_id = p.id and e.admin_id is null and e.created_at >= v_today))
+                        where e.user_id = p.id and e.admin_id is null and e.kind <> 'access_expired'
+                          and e.created_at >= v_today))
        and (v_filter <> 'trial' or p.access_until is null or p.access_until <= now())
        and (v_filter <> 'full' or p.access_until > now())
      order by p.created_at desc, p.id

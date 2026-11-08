@@ -1,5 +1,5 @@
 begin;
-select plan(154);
+select plan(162);
 
 -- Fixtures (as postgres). f1, f2 and f4 are students, f3 is an admin. Assertions are scoped to these ids.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
@@ -31,6 +31,15 @@ select is(private.extend_access('2026-10-01 00:00Z', 3, '2026-11-08 10:00Z'), '2
   'extend_access: an expired account starts from now');
 select is(private.extend_access('2026-12-01 00:00Z', 3, '2026-11-08 10:00Z'), '2027-03-01 00:00Z'::timestamptz,
   'extend_access: an active account extends from access_until');
+-- Months are added in UTC whatever the session time zone.
+set local timezone = 'Europe/Bucharest';
+select is(private.extend_access('2027-01-31 12:00Z', 1, '2027-01-01Z'), '2027-02-28 12:00Z'::timestamptz,
+  'extend_access: Jan 31 + 1 month = Feb 28 under a Bucharest session');
+select is(private.extend_access('2027-03-15 12:00Z', 1, '2027-01-01Z'), '2027-04-15 12:00Z'::timestamptz,
+  'extend_access: crossing the DST change keeps the UTC time of day');
+reset timezone;
+select is((select provolatile from pg_proc where oid = 'private.extend_access(timestamptz,int,timestamptz)'::regprocedure),
+  's'::"char", 'extend_access is stable, not immutable');
 
 -- ---------------------------------------------------------------- purchase on a trial account
 update profiles set credit_balance = 0 where id = '00000000-0000-0000-0000-0000000000f1';
@@ -76,6 +85,19 @@ update profiles set access_until = now() - interval '1 day' where id = '00000000
 select public.purchase_access('00000000-0000-0000-0000-0000000000f1', 15000, 100, 3);
 select is((select access_until from profiles where id = '00000000-0000-0000-0000-0000000000f1'),
   now() + interval '3 months', 'renewing after expiry starts from now');
+-- The cron had not run yet: the purchase logs the expiry it ended, dated at the old access_until.
+select results_eq(
+  $$ select created_at, details ->> 'until' from pg_temp.events('00000000-0000-0000-0000-0000000000f1', 'access_expired') $$,
+  $$ select now() - interval '1 day', to_jsonb(now() - interval '1 day') #>> '{}' $$,
+  'a purchase after an unlogged expiry logs exactly one access_expired with the old until');
+-- An expiry the cron already logged is not logged again.
+update profiles set access_until = now() - interval '2 days' where id = '00000000-0000-0000-0000-0000000000f1';
+select private.log_access_expiries();
+select public.purchase_access('00000000-0000-0000-0000-0000000000f1', 15000, 100, 3);
+select is((select count(*)::int from pg_temp.events('00000000-0000-0000-0000-0000000000f1', 'access_expired')
+            where details ->> 'until' = to_jsonb(now() - interval '2 days') #>> '{}'), 1,
+  'a purchase after a logged expiry does not log it twice');
+update profiles set access_until = now() + interval '3 months' where id = '00000000-0000-0000-0000-0000000000f1';
 
 -- ---------------------------------------------------------------- offer_changed
 select throws_ok($$ select * from public.purchase_access('00000000-0000-0000-0000-0000000000f2', 14999, 100, 3) $$,
@@ -222,6 +244,9 @@ select ok(has_function_privilege('authenticated', 'public.admin_grant_access(uui
 select ok(not has_function_privilege('service_role', 'public.admin_revoke_access(uuid,text)', 'execute'), 'service_role cannot revoke');
 select ok(not has_function_privilege('authenticated', 'private.log_access_expiries()', 'execute'), 'authenticated cannot run the expiry log');
 select ok(not has_function_privilege('authenticated', 'private.extend_access(timestamptz,int,timestamptz)', 'execute'), 'authenticated cannot call extend_access');
+select ok(not has_function_privilege('authenticated', 'private.log_access_expiry(uuid,timestamptz)', 'execute')
+  and not has_function_privilege('service_role', 'private.log_access_expiry(uuid,timestamptz)', 'execute'),
+  'authenticated and service_role cannot call log_access_expiry');
 
 -- ---------------------------------------------------------------- student RLS (f1)
 set local role authenticated;
@@ -438,8 +463,19 @@ select is((select count(*)::int from cards), 0, 'a suspended student with full a
 reset role;
 insert into access_orders (user_id, price_bani, bonus_credits, duration_months, status, created_at)
 values ('00000000-0000-0000-0000-0000000000f1', 777, 7, 1, 'approved', now() + interval '1 hour');
+-- f7: its only event today is an access expiry, which the student did not do.
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000f7', 'access-idle7@test.local', 'authenticated', 'authenticated', '{}');
+delete from student_events where user_id = '00000000-0000-0000-0000-0000000000f7';
+update profiles set access_until = now() where id = '00000000-0000-0000-0000-0000000000f7';
+insert into student_events (user_id, kind, details, created_at)
+values ('00000000-0000-0000-0000-0000000000f7', 'access_expired', jsonb_build_object('until', now()), now());
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f3","role":"authenticated"}';
+select is((select count(*)::int from public.admin_students('access-idle7', 50, 0, null, 'active_today')), 0,
+  'an access expiry does not make a student active today');
+select is((select last_activity_at from public.admin_students('access-idle7', 50, 0, null, 'all')), null,
+  'an access expiry is not the student''s last activity');
 select is((select access_until from public.admin_students('', 1, 0, '00000000-0000-0000-0000-0000000000f2')),
   now() + interval '1 day', 'admin_students returns access_until');
 select results_eq($$ select id from public.admin_students('access-student', 50, 0, null, 'trial') order by id $$,
@@ -449,7 +485,7 @@ select results_eq($$ select id from public.admin_students('access-student', 50, 
 select results_eq($$ select id from public.admin_students('access-student', 50, 0, null, 'full') order by id $$,
   $$ values ('00000000-0000-0000-0000-0000000000f2'::uuid), ('00000000-0000-0000-0000-0000000000f6'::uuid) $$,
   'filter full: access_until in the future');
-select is((select count(*)::int from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1')), 4,
+select is((select count(*)::int from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1')), 5,
   'admin_access_orders lists the student''s orders');
 select results_eq($$ select price_bani, bonus_credits, duration_months, status, provider
                        from public.admin_access_orders('00000000-0000-0000-0000-0000000000f1') limit 2 $$,
