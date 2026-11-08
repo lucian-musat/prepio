@@ -45,6 +45,9 @@ test.beforeAll(async () => {
   const created = await service.auth.admin.createUser({ ...STUDENT, email_confirm: true });
   if (created.error) throw created.error;
   studentId = created.data.user.id;
+  // Trial students only see the first lesson's content; give this one full access so the new (non-first) lesson is visible.
+  const access = await service.from('profiles').update({ access_until: new Date(Date.now() + 30 * 86_400_000).toISOString() }).eq('id', studentId);
+  if (access.error) throw access.error;
   student = createClient(SB_URL, SB_ANON, { auth: { persistSession: false } });
   const signIn = await student.auth.signInWithPassword(STUDENT);
   if (signIn.error) throw signIn.error;
