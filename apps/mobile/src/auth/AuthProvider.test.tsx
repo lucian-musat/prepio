@@ -51,7 +51,7 @@ beforeEach(() => {
   mockLibSignOut.mockImplementation(async () => {
     for (const l of [...listeners]) l('SIGNED_OUT', null);
   });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
   (logAppOpen as jest.Mock).mockResolvedValue(true);
   (localDay as jest.Mock).mockReturnValue('2026-11-06');
 });
@@ -241,7 +241,7 @@ it('refreshProfile resolves with the kept profile when the reload fails', async 
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
   warn.mockRestore();
 });
 
@@ -435,16 +435,16 @@ it('useAuth outside the provider throws', async () => {
 
 describe('statusFor', () => {
   it('asks for the name first, then the mode, then lets the student in', () => {
-    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null }, false)).toBe('needsName');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, suspendedReason: null }, false)).toBe('needsMode');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null }, false)).toBe('ready');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, suspendedReason: null }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('needsName');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('needsMode');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
   });
 
   it('a suspended profile is suspended first, even without a name or mode', () => {
     const reason = 'Cont creat pentru test.';
-    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: reason }, false)).toBe('suspended');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: reason }, false)).toBe('suspended');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
   });
 
   it('lets the student in when the profile could not be loaded', () => {
@@ -455,7 +455,7 @@ describe('statusFor', () => {
 describe('suspension', () => {
   it('a session with a suspended profile → suspended', async () => {
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: 'Motiv' });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
     await renderAuth();
     await waitForState('suspended|-|access-1');
     expect(logAppOpen).not.toHaveBeenCalled();
@@ -465,7 +465,7 @@ describe('suspension', () => {
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
     const view = await renderAuth();
     await waitForState('ready|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
     await act(() => refreshRegisteredProfile());
     await waitForState('suspended|Ana|access-1');
     await view.unmount();
@@ -516,7 +516,7 @@ describe('app opened event', () => {
   });
 
   it('is not logged while signed out or before the profile is complete', async () => {
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null });
     await renderAuth();
     await waitForState('needsName|-|access-1');
     await act(async () => onChange('active'));
@@ -538,16 +538,16 @@ describe('suspension changes while the app is open', () => {
   it('back in the foreground, a student suspended meanwhile moves to suspended', async () => {
     await renderAuth();
     await waitForState('ready|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
     await act(async () => onChange('active'));
     await waitForState('suspended|Ana|access-1');
   });
 
   it('back in the foreground, a reactivated student moves back to ready', async () => {
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv' });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
     await renderAuth();
     await waitForState('suspended|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
     await act(async () => onChange('active'));
     await waitForState('ready|Ana|access-1');
   });

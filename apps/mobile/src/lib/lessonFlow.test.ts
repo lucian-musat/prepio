@@ -20,27 +20,62 @@ describe('orderedLessons', () => {
 });
 
 describe('lessonAccess', () => {
+  const all = () => true;
   const order = ['1', '2', '3', '4', '5'].map(summary);
   const states = (m: Map<string, string>) => order.map((l) => m.get(l.id));
 
   it('guided: first unfinished is current, later unfinished are locked', () => {
-    expect(states(lessonAccess(order, new Set(['1', '4']), 'guided'))).toEqual([
+    expect(states(lessonAccess(order, new Set(['1', '4']), 'guided', all))).toEqual([
       'finished', 'current', 'locked', 'finished', 'locked',
     ]);
   });
   it('free: unfinished lessons are open', () => {
-    expect(states(lessonAccess(order, new Set(['1', '4']), 'free'))).toEqual([
+    expect(states(lessonAccess(order, new Set(['1', '4']), 'free', all))).toEqual([
       'finished', 'open', 'open', 'finished', 'open',
     ]);
   });
   it('guided with everything finished has no current lesson', () => {
-    const all = lessonAccess(order, new Set(['1', '2', '3', '4', '5']), 'guided');
-    expect([...all.values()].every((s) => s === 'finished')).toBe(true);
+    const res = lessonAccess(order, new Set(['1', '2', '3', '4', '5']), 'guided', all);
+    expect([...res.values()].every((s) => s === 'finished')).toBe(true);
   });
   it('guided with nothing finished makes the first lesson current', () => {
-    expect(states(lessonAccess(order, new Set(), 'guided'))).toEqual([
+    expect(states(lessonAccess(order, new Set(), 'guided', all))).toEqual([
       'current', 'locked', 'locked', 'locked', 'locked',
     ]);
+  });
+
+  describe('with paywall', () => {
+    const only = (...ids: string[]) => (id: string) => ids.includes(id);
+    it('trial + guided: lesson 1 current, the rest paywall', () => {
+      expect(states(lessonAccess(order, new Set(), 'guided', only('1')))).toEqual([
+        'current', 'paywall', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
+    it('trial + free: lesson 1 open, the rest paywall', () => {
+      expect(states(lessonAccess(order, new Set(), 'free', only('1')))).toEqual([
+        'open', 'paywall', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
+    it('trial with the free lesson finished: it stays finished, no current lesson', () => {
+      expect(states(lessonAccess(order, new Set(['1']), 'guided', only('1')))).toEqual([
+        'finished', 'paywall', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
+    it('expired with lesson 2 finished: lesson 2 is paywall (Home keeps the check from progress)', () => {
+      expect(states(lessonAccess(order, new Set(['2']), 'guided', only('1')))).toEqual([
+        'current', 'paywall', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
+    it('the free lesson moved to position 2: openness follows canOpen', () => {
+      expect(states(lessonAccess(order, new Set(), 'guided', only('2')))).toEqual([
+        'paywall', 'current', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
+    it('guided among openable lessons: later openable unfinished are locked', () => {
+      expect(states(lessonAccess(order, new Set(), 'guided', only('1', '2')))).toEqual([
+        'current', 'locked', 'paywall', 'paywall', 'paywall',
+      ]);
+    });
   });
 });
 

@@ -6,6 +6,11 @@ import HomeScreen from './HomeScreen';
 import { fetchHome } from '../lib/content';
 import { fetchProgress } from '../lib/progress';
 
+let mockCanOpen = (_id: string) => true;
+const mockRefreshAccess = jest.fn();
+jest.mock('../access/AccessProvider', () => ({
+  useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), refresh: mockRefreshAccess }),
+}));
 jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 const mockFocusListeners = new Set<() => void>();
@@ -62,6 +67,7 @@ const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanOpen = () => true;
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided', creditBalance: 5 };
   mockedProgress.mockResolvedValue(progressOf());
 });
@@ -279,5 +285,26 @@ describe('lesson states', () => {
     await mockRefocus();
     expect(await screen.findByText('Unu')).toBeTruthy();
     expect(screen.queryByText(/Nu am putut încărca lecțiile/)).toBeNull();
+  });
+});
+
+describe('plan paywall', () => {
+  it('a trial account sees the lessons after the free one as pressable paywall rows that do not navigate', async () => {
+    mockCanOpen = (id) => id === 'a';
+    mockedProgress.mockResolvedValue(progressOf('b'));
+    mockedFetch.mockResolvedValue({
+      welcomeMessage: 'x',
+      sections: [{ path: ['Istorie'], lessons: [lesson('a', 'Prima'), lesson('b', 'A doua'), lesson('c', 'A treia')] }],
+    });
+    await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.getByRole('button', { name: 'Prima' })).toBeTruthy();
+    const second = screen.getByRole('button', { name: 'A doua, blocată, face parte din accesul complet' });
+    expect(screen.getByText('✓ 🔒')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'A treia, blocată, face parte din accesul complet' })).toBeTruthy();
+    await fireEvent.press(second);
+    expect(router.push).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Prima' }));
+    expect(router.push).toHaveBeenCalledWith('/lesson/a');
   });
 });

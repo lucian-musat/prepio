@@ -9,7 +9,14 @@ import { timing } from './motion';
 import { type } from './typography';
 import type { LessonState } from '../lib/lessonFlow';
 
-type Props = { index: number; title: string; state?: LessonState; onPress: () => void };
+type Props = {
+  index: number;
+  title: string;
+  state?: LessonState;
+  /** Only for `paywall`: the lesson was finished before the plan lost it, so the check stays next to the lock. */
+  finished?: boolean;
+  onPress: () => void;
+};
 
 // Prototype `.lesson .num` tile and the `.lesson:hover` / `:active` motion.
 const TILE = space[10] + space[1]; // 44 px
@@ -28,13 +35,14 @@ const tiles = [
  * One lesson on Home (prototype B `.lesson`): number tile, title, chevron; lifts on hover, shrinks on press.
  * `state` adds the learning-mode look: finished (check tile), current (primary border), locked (dimmed, inert).
  */
-export default function LessonListItem({ index, title, state = 'open', onPress }: Props) {
+export default function LessonListItem({ index, title, state = 'open', finished = false, onPress }: Props) {
   const [hovered, setHovered] = useState(false);
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
   const nudge = useSharedValue(0);
   const tile = tiles[index % 2];
   const locked = state === 'locked';
+  const paywall = state === 'paywall';
   const caption = state === 'finished' ? 'Terminată' : state === 'current' ? 'Continuă' : null;
 
   // CSS: `:active` replaces the hover transform, so pressing drops the lift while it shrinks.
@@ -59,7 +67,7 @@ export default function LessonListItem({ index, title, state = 'open', onPress }
     // re-applies its React style when its pressed state re-renders, wiping the animated transform.
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${title}, blocată` : title}
+      accessibilityLabel={paywall ? `${title}, blocată, face parte din accesul complet` : locked ? `${title}, blocată` : title}
       accessibilityState={{ disabled: locked }}
       aria-disabled={locked}
       disabled={locked}
@@ -68,10 +76,10 @@ export default function LessonListItem({ index, title, state = 'open', onPress }
       onHoverOut={onHover(false)}
       onPressIn={onPressState(true)}
       onPressOut={onPressState(false)}
-      style={[styles.hit, locked && styles.locked]}
+      style={[styles.hit, (locked || paywall) && styles.locked]}
     >
       <Animated.View testID="lesson-row" style={[styles.row, hovered && !locked && styles.rowHover, state === 'current' && styles.rowCurrent, rowStyle]}>
-        {state === 'finished' ? (
+        {state === 'finished' || (paywall && finished) ? (
           <View testID="lesson-check" style={[styles.tile, { backgroundColor: color.primary }]}>
             <Icon name="check" tint={color.onPrimary} />
           </View>
@@ -90,6 +98,8 @@ export default function LessonListItem({ index, title, state = 'open', onPress }
         </View>
         {locked ? (
           <AppText>🔒</AppText>
+        ) : paywall ? (
+          <AppText>{finished ? '✓ 🔒' : '🔒'}</AppText>
         ) : (
           <Animated.View style={goStyle}>
             <Icon name="chevron-right" tint={hovered ? color.primary : color.textMuted} />

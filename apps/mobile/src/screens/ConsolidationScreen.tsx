@@ -19,7 +19,7 @@ import {
 } from '../lib/consolidation';
 import { fetchHome } from '../lib/content';
 import { modeOf, type LearningMode } from '../lib/learningMode';
-import { lessonAccess, orderedLessons } from '../lib/lessonFlow';
+import { allOpen, lessonAccess, orderedLessons } from '../lib/lessonFlow';
 import { fetchProgress } from '../lib/progress';
 import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import ExerciseMap from '../components/consolidation/ExerciseMap';
@@ -54,7 +54,7 @@ function Message({ title, body, action }: { title: string; body?: string; action
 /** The lesson to go on to after consolidation: guided, the current one; free, the next in order. */
 function nextLesson(order: LessonSummary[], finished: Set<string>, lessonId: string, mode: LearningMode) {
   if (mode === 'guided') {
-    const access = lessonAccess(order, finished, 'guided');
+    const access = lessonAccess(order, finished, 'guided', allOpen);
     return order.find((l) => access.get(l.id) === 'current');
   }
   const at = order.findIndex((l) => l.id === lessonId);

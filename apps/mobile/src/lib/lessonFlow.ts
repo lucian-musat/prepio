@@ -7,18 +7,28 @@ import type { LessonPosition } from './progress';
 export const orderedLessons = (sections: HomeData['sections']): LessonSummary[] =>
   sections.flatMap((s) => s.lessons);
 
-export type LessonState = 'finished' | 'current' | 'open' | 'locked';
+/** For screens that do not apply the plan yet (the server still refuses locked lessons). */
+export const allOpen = () => true;
 
-/** Guided: only the first unfinished lesson is playable; free: every unfinished lesson is open. */
+export type LessonState = 'finished' | 'current' | 'open' | 'locked' | 'paywall';
+
+/**
+ * Guided: only the first unfinished lesson is playable; free: every unfinished lesson is open.
+ * A lesson the plan does not include (`canOpen` false) is `paywall`, finished or not (the caller keeps the
+ * finished mark from its progress); the guided / free rules apply among the lessons that can be opened.
+ */
 export function lessonAccess(
   order: LessonSummary[],
   finished: Set<string>,
   mode: LearningMode,
+  canOpen: (lessonId: string) => boolean,
 ): Map<string, LessonState> {
   const access = new Map<string, LessonState>();
   let currentTaken = false;
   for (const lesson of order) {
-    if (finished.has(lesson.id)) {
+    if (!canOpen(lesson.id)) {
+      access.set(lesson.id, 'paywall');
+    } else if (finished.has(lesson.id)) {
       access.set(lesson.id, 'finished');
     } else if (mode === 'free') {
       access.set(lesson.id, 'open');

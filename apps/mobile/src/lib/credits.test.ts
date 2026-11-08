@@ -55,6 +55,7 @@ const entry = (over: Partial<StudentLedgerEntry>): StudentLedgerEntry => ({
 });
 
 describe('ledgerLabel', () => {
+  it('access bonus', () => expect(ledgerLabel(entry({ kind: 'access_bonus', delta: 100 }))).toBe('Credite incluse în acces'));
   it('welcome', () => expect(ledgerLabel(entry({ kind: 'welcome', delta: 5 }))).toBe('Credite de bun venit'));
   it('purchase', () => {
     expect(ledgerLabel(entry({ kind: 'purchase', delta: 20 }))).toBe('Pachet 20 de credite');

@@ -7,7 +7,7 @@ import type {
   ConsolidationEvaluateResponse,
 } from '@prepio/shared';
 import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
-import { refreshRegisteredProfile } from './profileRefresh';
+import { refreshRegisteredAccess, refreshRegisteredProfile } from './profileRefresh';
 
 export class EvaluateApiError extends Error {
   code: ConsolidationEvaluateErrorCode;
@@ -118,6 +118,8 @@ export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): 
         balance: e?.balance ?? e?.credits?.balance,
       });
       if (res.status === 403 && error.code === 'suspended') return accountSuspended(error);
+      // Access ended mid-session: re-read it so the lesson list and the paywall catch up; the caller shows the sheet.
+      if (res.status === 403 && error.code === 'access_required') await refreshRegisteredAccess();
       throw error;
     }
     return body as ConsolidationEvaluateResponse;

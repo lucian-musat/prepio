@@ -160,7 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (start !== generation.current || !fresh || stateRef.current.session?.user.id !== fresh.id) return;
-    if ((fresh.suspendedReason ?? null) === (stateRef.current.profile?.suspendedReason ?? null)) return;
+    const cur = stateRef.current.profile;
+    if ((fresh.suspendedReason ?? null) === (cur?.suspendedReason ?? null) && (fresh.accessUntil ?? null) === (cur?.accessUntil ?? null)) return;
     const next = { ...stateRef.current, status: statusFor(fresh, false), profile: fresh };
     stateRef.current = next;
     setState(next);

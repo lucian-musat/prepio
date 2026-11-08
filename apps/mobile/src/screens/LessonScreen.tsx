@@ -8,7 +8,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { countConsolidation } from '../lib/consolidation';
 import { modeOf } from '../lib/learningMode';
-import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
+import { allOpen, attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
@@ -173,7 +173,7 @@ export default function LessonScreen() {
   if (data === null) return <Message title="Lecția nu a fost găsită" />;
 
   const { lesson, order, progress, consolidation } = data;
-  if (mode === 'guided' && lessonAccess(order, progress.finished, mode).get(lesson.id) === 'locked') {
+  if (mode === 'guided' && lessonAccess(order, progress.finished, mode, allOpen).get(lesson.id) === 'locked') {
     return <Message title="Lecția este blocată" body="Termină mai întâi lecțiile de dinainte, în ordine." />;
   }
 
@@ -339,8 +339,8 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
   // Go on to the lesson that is current once this pass counts: after a free → guided switch the finished
   // lessons need not be a prefix of the order, so it is not always the next one. "Ai deblocat" only when this
   // pass is what opened it (it was locked before), not on a redo.
-  const before = lessonAccess(order, progress.finished, 'guided');
-  const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided');
+  const before = lessonAccess(order, progress.finished, 'guided', allOpen);
+  const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided', allOpen);
   const next = order.find((l) => after.get(l.id) === 'current');
   const unlocked = next && before.get(next.id) === 'locked' ? next.title : undefined;
   return (

@@ -45,16 +45,17 @@ describe('validateDisplayName', () => {
 
 describe('fetchProfile', () => {
   it('reads the own profile row and maps display_name', async () => {
-    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana', learning_mode: 'free', credit_balance: 7, suspended_reason: null }, error: null });
+    const { client, from, calls } = fakeClient({ data: { id: USER, display_name: 'Ana', learning_mode: 'free', credit_balance: 7, suspended_reason: null, access_until: '2027-02-08T10:00:00Z' }, error: null });
     await expect(fetchProfile(USER, client)).resolves.toEqual({
       id: USER,
       displayName: 'Ana',
       learningMode: 'free',
       creditBalance: 7,
       suspendedReason: null,
+      accessUntil: '2027-02-08T10:00:00Z',
     });
     expect(from).toHaveBeenCalledWith('profiles');
-    expect(calls).toContainEqual(['select', ['id,display_name,learning_mode,credit_balance,suspended_reason']]);
+    expect(calls).toContainEqual(['select', ['id,display_name,learning_mode,credit_balance,suspended_reason,access_until']]);
     expect(calls).toContainEqual(['eq', ['id', USER]]);
   });
 
@@ -62,7 +63,7 @@ describe('fetchProfile', () => {
     await expect(fetchProfile(USER, fakeClient({ data: null, error: null }).client)).resolves.toBeNull();
     await expect(
       fetchProfile(USER, fakeClient({ data: { id: USER, display_name: null, learning_mode: null, credit_balance: 0 }, error: null }).client),
-    ).resolves.toEqual({ id: USER, displayName: null, learningMode: null, creditBalance: 0, suspendedReason: null });
+    ).resolves.toEqual({ id: USER, displayName: null, learningMode: null, creditBalance: 0, suspendedReason: null, accessUntil: null });
   });
 
   it('maps the suspension reason', async () => {

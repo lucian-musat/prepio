@@ -90,3 +90,27 @@ it('does not animate a locked row on hover or press', async () => {
   await act(async () => jest.advanceTimersByTime(400));
   expect(transform()).toMatchObject({ scale: 1, translateY: 0 });
 });
+
+describe('paywall state', () => {
+  it('stays pressable, shows a lock and a descriptive label', async () => {
+    const onPress = jest.fn();
+    await render(<LessonListItem index={1} title="Lecția" state="paywall" onPress={onPress} />);
+    const row = screen.getByRole('button', { name: 'Lecția, blocată, face parte din accesul complet' });
+    expect(row.props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.getByText('🔒')).toBeTruthy();
+    await fireEvent.press(row);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('is muted', async () => {
+    await render(<LessonListItem index={1} title="Lecția" state="paywall" onPress={() => {}} />);
+    const style = StyleSheet.flatten(screen.getByRole('button').props.style);
+    expect(style.opacity).toBeLessThan(1);
+  });
+
+  it('a finished paywall lesson shows the check next to the lock', async () => {
+    await render(<LessonListItem index={1} title="Lecția" state="paywall" finished onPress={() => {}} />);
+    expect(screen.getByTestId('lesson-check')).toBeTruthy();
+    expect(screen.getByText('✓ 🔒')).toBeTruthy();
+  });
+});

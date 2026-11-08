@@ -9,6 +9,8 @@ export type Profile = {
   creditBalance: number;
   /** Set while an admin has suspended the account: the text the student sees on the suspended screen. */
   suspendedReason: string | null;
+  /** End of the paid access (ISO), or null for a trial account that never bought it. */
+  accessUntil: string | null;
 };
 
 /** Same limit as the database check on `profiles.display_name` (trimmed, 1–60 characters). */
@@ -29,7 +31,7 @@ export function validateDisplayName(raw: string): { ok: true; value: string } | 
 
 /** The student's own profile row, or null if it does not exist. */
 export async function fetchProfile(userId: string, client: SupabaseClient = getSupabase()): Promise<Profile | null> {
-  const { data, error } = await client.from('profiles').select('id,display_name,learning_mode,credit_balance,suspended_reason').eq('id', userId).maybeSingle();
+  const { data, error } = await client.from('profiles').select('id,display_name,learning_mode,credit_balance,suspended_reason,access_until').eq('id', userId).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   return {
@@ -38,6 +40,7 @@ export async function fetchProfile(userId: string, client: SupabaseClient = getS
     learningMode: data.learning_mode,
     creditBalance: data.credit_balance ?? 0,
     suspendedReason: data.suspended_reason ?? null,
+    accessUntil: data.access_until ?? null,
   };
 }
 

@@ -111,6 +111,8 @@ function base(e: StudentLedgerEntry): string {
       return 'Credite de bun venit';
     case 'purchase':
       return `Pachet ${creditsLabel(e.delta)}`;
+    case 'access_bonus':
+      return 'Credite incluse în acces';
     case 'refund':
       return 'Verificare nereușită · returnat';
     case 'admin':

@@ -1,5 +1,5 @@
 import { deleteAccount, evaluateConsolidation, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
-import { registerProfileRefresh } from './profileRefresh';
+import { registerAccessRefresh, registerProfileRefresh } from './profileRefresh';
 import { getAccessToken, signOut } from './supabase';
 
 jest.mock('./supabase', () => {
@@ -285,5 +285,21 @@ describe('a suspended student (403 suspended)', () => {
     fetchMock.mockResolvedValue(json(403, { error: 'forbidden', message: 'Nu ai acces.' }));
     await expect(evaluateConsolidation(req)).rejects.toMatchObject({ code: 'forbidden' });
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('access expired mid-session (403 access_required)', () => {
+  it('triggers the registered access refresh and throws the server message', async () => {
+    const refresh = jest.fn().mockResolvedValue(undefined);
+    const unregister = registerAccessRefresh(refresh);
+    const profile = jest.fn().mockResolvedValue(null);
+    const unregisterProfile = registerProfileRefresh(profile);
+    fetchMock.mockResolvedValue(json(403, { error: 'access_required', message: 'Lecția face parte din accesul complet.' }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ code: 'access_required', message: 'Lecția face parte din accesul complet.' });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(profile).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
+    unregister();
+    unregisterProfile();
   });
 });

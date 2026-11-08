@@ -32,3 +32,26 @@ const INSUFFICIENT_PRIVILEGE = '42501';
 export async function refreshIfDenied(error: { code?: string } | null | undefined): Promise<void> {
   if (error?.code === INSUFFICIENT_PRIVILEGE) await refreshRegisteredProfile();
 }
+
+/**
+ * Same idea for the access state: the AccessProvider registers its `refresh` while mounted, and the API layer calls
+ * it when the server answers 403 `access_required` (access ended while the student was inside a lesson).
+ */
+let currentAccess: Refresher | null = null;
+
+export function registerAccessRefresh(fn: Refresher): () => void {
+  currentAccess = fn;
+  return () => {
+    if (currentAccess === fn) currentAccess = null;
+  };
+}
+
+/** Re-reads the access state through the registered refresher. Never throws; does nothing when none is registered. */
+export async function refreshRegisteredAccess(): Promise<void> {
+  if (!currentAccess) return;
+  try {
+    await currentAccess();
+  } catch (e) {
+    console.warn('[access] refresh failed:', e);
+  }
+}

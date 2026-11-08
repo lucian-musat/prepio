@@ -10,6 +10,7 @@ import { MODE_INFO, modeOf } from '../lib/learningMode';
 import { fetchProgress, type Progress } from '../lib/progress';
 import { useAuth } from '../auth/AuthProvider';
 import CreditChip from '../credits/CreditChip';
+import { useAccess } from '../access/AccessProvider';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
 const LAST_STAGGER = 5;
@@ -24,10 +25,28 @@ function pairs<T>(items: T[]): T[][] {
 }
 
 /** A section's lessons: one column on phones, a two-column grid on wide screens (prototype desktop `.lessons`). */
-function LessonList({ lessons, wide, access }: { lessons: Lesson[]; wide: boolean; access: Map<string, LessonState> }) {
+function LessonList({
+  lessons,
+  wide,
+  access,
+  finished,
+  onPaywall,
+}: {
+  lessons: Lesson[];
+  wide: boolean;
+  access: Map<string, LessonState>;
+  finished: Set<string>;
+  onPaywall: (lessonId: string) => void;
+}) {
   const item = (lesson: Lesson, i: number) => (
     <Enter key={lesson.id} testID={`enter-lesson-${lesson.id}`} index={stagger(i)} style={wide ? styles.cell : undefined}>
-      <LessonListItem index={i} title={lesson.title} state={access.get(lesson.id)} onPress={() => router.push(`/lesson/${lesson.id}`)} />
+      <LessonListItem
+        index={i}
+        title={lesson.title}
+        state={access.get(lesson.id)}
+        finished={finished.has(lesson.id)}
+        onPress={() => (access.get(lesson.id) === 'paywall' ? onPaywall(lesson.id) : router.push(`/lesson/${lesson.id}`))}
+      />
     </Enter>
   );
   if (!wide) return <View style={styles.lessons}>{lessons.map(item)}</View>;
@@ -79,6 +98,9 @@ export default function HomeScreen() {
 
   const [progress, setProgress] = useState<Progress | null>(null);
   const { profile } = useAuth();
+  const { canOpen, refresh: refreshAccess } = useAccess();
+  // The paywall sheet comes with the purchase flow; until then a locked-by-plan row is pressable but inert.
+  const openPaywall = useCallback((_lessonId: string) => {}, []);
   const loaded = useRef(false);
   const cancel = useRef<(() => void) | undefined>(undefined);
 
@@ -87,6 +109,8 @@ export default function HomeScreen() {
   const fetchAll = useCallback(() => {
     cancel.current?.(); // a newer load supersedes an in-flight one
     let live = true;
+    // Refocus also re-reads the plan and the free lesson (an admin may have reordered, or access may have ended).
+    void refreshAccess();
     Promise.all([fetchHome(), fetchProgress()]).then(
       ([home, prog]) => {
         if (!live) return;
@@ -101,7 +125,7 @@ export default function HomeScreen() {
       live = false;
     };
     return cancel.current;
-  }, []);
+  }, [refreshAccess]);
 
   // Blur / unmount cancels whichever load is latest, including one started by retry.
   useFocusEffect(
@@ -144,8 +168,9 @@ export default function HomeScreen() {
 
   const total = data.sections.reduce((sum, s) => sum + s.lessons.length, 0);
   const mode = modeOf(profile);
-  const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode);
-  const done = [...access.values()].filter((st) => st === 'finished').length;
+  const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode, canOpen);
+  // Lessons finished before the plan lost them still count as done.
+  const done = orderedLessons(data.sections).filter((l) => progress.finished.has(l.id)).length;
 
   return (
     <ScreenLayout logo trailing={<HomeTrailing />}>
@@ -171,7 +196,7 @@ export default function HomeScreen() {
                 {lessonCount(section.lessons.length)}
               </AppText>
             </Enter>
-            <LessonList lessons={section.lessons} wide={wide} access={access} />
+            <LessonList lessons={section.lessons} wide={wide} access={access} finished={progress.finished} onPaywall={openPaywall} />
           </View>
         );
       })}
