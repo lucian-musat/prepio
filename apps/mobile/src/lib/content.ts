@@ -7,11 +7,14 @@ export type HomeData = {
   sections: Array<{ path: string[]; lessons: LessonSummary[] }>;
 };
 
-const byPosition = <T extends { position: number }>(a: T, b: T) => a.position - b.position;
+// Ties break by id (plain code-unit order, which matches Postgres uuid order for lowercase uuids), the same rule
+// free_lesson_id() uses in SQL, so the app and the server agree on the free lesson.
+const byPosition = <T extends { position: number; id: string }>(a: T, b: T) =>
+  a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /**
  * Groups lessons under their tree node. Sections follow depth-first tree order
- * (siblings by position); `path` is the titles from the root to the node.
+ * (siblings and lessons by position, then id); `path` is the titles from the root to the node.
  * Nodes without lessons are omitted.
  */
 export function groupLessonsByTree(nodes: TreeNode[], lessons: LessonSummary[]): HomeData['sections'] {

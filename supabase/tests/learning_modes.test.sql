@@ -12,6 +12,9 @@ insert into lessons (id, node_id, title, status) values
   ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000c1', 'Other', 'published');
 insert into lesson_progress (user_id, lesson_id, position) values
   ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000e1', '{"phase":"cards"}');
+-- Full access, so progress writes on any lesson are allowed (trial limits are tested in paid_access.test.sql).
+update profiles set access_until = now() + interval '1 day'
+ where id in ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000d3');
 
 select has_column('public', 'profiles', 'learning_mode', 'profiles.learning_mode exists');
 select ok(exists (select 1 from profiles where id = '00000000-0000-0000-0000-0000000000d1' and learning_mode is null),

@@ -1,5 +1,5 @@
 begin;
-select plan(81);
+select plan(138);
 
 -- Fixtures (as postgres). f1, f2 and f4 are students, f3 is an admin. Assertions are scoped to these ids.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
@@ -227,6 +227,182 @@ select ok((select count(distinct user_id) from access_orders where user_id in
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f2')) = 2, 'an admin reads all orders');
 select ok((select count(distinct user_id) from access_ledger where user_id in
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f4')) = 2, 'an admin reads the whole access ledger');
+
+-- ================================================================ lesson access (Task 2)
+-- Fixture: seeded lessons become drafts so the free lesson is decided by this tree only.
+--   Root A (a1, position 1): lessons b2, b1 (both position 1, so b1 wins by id); child node a3 with lesson b3
+--   Root B (a2, position 2): lesson b4
+-- f5 is a trial student, f6 a suspended student with full access. Content for b1 (free) and b2 (locked).
+reset role;
+update lessons set status = 'draft' where status = 'published';
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000f5', 'access-student5@test.local', 'authenticated', 'authenticated', '{}'),
+  ('00000000-0000-0000-0000-0000000000f6', 'access-student6@test.local', 'authenticated', 'authenticated', '{}');
+insert into nodes (id, parent_id, title, position) values
+  ('00000000-0000-0000-0000-0000000000a1', null, 'Root A', 1),
+  ('00000000-0000-0000-0000-0000000000a2', null, 'Root B', 2),
+  ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000a1', 'Child A', 0);
+insert into lessons (id, node_id, title, position, status) values
+  ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000a1', 'A own 2', 1, 'published'),
+  ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a1', 'A own 1', 1, 'published'),
+  ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000a3', 'A child', 0, 'published'),
+  ('00000000-0000-0000-0000-0000000000b4', '00000000-0000-0000-0000-0000000000a2', 'B own', 0, 'published');
+insert into cards (lesson_id, content) values
+  ('00000000-0000-0000-0000-0000000000b1', '{"text":"free"}'),
+  ('00000000-0000-0000-0000-0000000000b2', '{"text":"locked"}');
+insert into questions (lesson_id, type, prompt, difficulty, options) values
+  ('00000000-0000-0000-0000-0000000000b1', 'single_choice', 'free q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
+  ('00000000-0000-0000-0000-0000000000b2', 'single_choice', 'locked q', 'easy', '[{"id":"a","text":"x","correct":true}]');
+insert into sources (id, lesson_id, body) values
+  ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000b1', 'free source'),
+  ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000b2', 'locked source');
+insert into consolidation_exercises (id, lesson_id, type, prompt) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000b1', 'source_info', 'free ex'),
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000b2', 'source_info', 'locked ex');
+insert into consolidation_exercise_sources (exercise_id, source_id, label) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000c1', 'A'),
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000c2', 'A');
+
+-- ---------------------------------------------------------------- free_lesson_id
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b1'::uuid,
+  'free lesson: first root, own lessons before children, equal positions by id');
+update nodes set position = 3 where id = '00000000-0000-0000-0000-0000000000a1';
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b4'::uuid, 'swapping root positions changes the free lesson');
+update nodes set position = 2 where id = '00000000-0000-0000-0000-0000000000a1';
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b1'::uuid, 'sibling nodes with equal positions sort by id');
+update nodes set position = 1 where id = '00000000-0000-0000-0000-0000000000a1';
+update lessons set status = 'draft' where id = '00000000-0000-0000-0000-0000000000b1';
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b2'::uuid, 'unpublishing the free lesson frees the next one');
+update lessons set status = 'draft' where id = '00000000-0000-0000-0000-0000000000b2';
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b3'::uuid, 'then the child node''s lesson');
+update lessons set status = 'draft' where id in ('00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000b4');
+select is(public.free_lesson_id(), null, 'no published lessons: no free lesson');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f5","role":"authenticated"}';
+select is((select count(*)::int from cards), 0, 'no published lessons: a trial student reads 0 cards without error');
+reset role;
+update lessons set status = 'published' where id in ('00000000-0000-0000-0000-0000000000b1',
+  '00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-0000000000b3', '00000000-0000-0000-0000-0000000000b4');
+select is(public.free_lesson_id(), '00000000-0000-0000-0000-0000000000b1'::uuid, 'republished: b1 is free again');
+
+-- ---------------------------------------------------------------- can_open_lesson_for (service role helper)
+select ok(public.can_open_lesson_for('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000b1'),
+  'can_open_lesson_for: a trial student opens the free lesson');
+select ok(not public.can_open_lesson_for('00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000b2'),
+  'can_open_lesson_for: a trial student cannot open another lesson');
+select ok(public.can_open_lesson_for('00000000-0000-0000-0000-0000000000f3', '00000000-0000-0000-0000-0000000000b2'),
+  'can_open_lesson_for: an admin opens every lesson');
+select ok(public.can_open_lesson_for('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000b2'),
+  'can_open_lesson_for: a student with full access opens every lesson');
+select ok(not has_function_privilege('authenticated', 'public.can_open_lesson_for(uuid,uuid)', 'execute'),
+  'authenticated cannot call can_open_lesson_for');
+select ok(not has_function_privilege('anon', 'public.can_open_lesson_for(uuid,uuid)', 'execute'),
+  'anon cannot call can_open_lesson_for');
+select ok(has_function_privilege('service_role', 'public.can_open_lesson_for(uuid,uuid)', 'execute'),
+  'service_role can call can_open_lesson_for');
+select ok(not has_function_privilege('anon', 'public.access_open_all()', 'execute')
+  and not has_function_privilege('anon', 'public.has_full_access()', 'execute')
+  and not has_function_privilege('anon', 'public.free_lesson_id()', 'execute'), 'anon cannot call the access helpers');
+select ok(has_function_privilege('authenticated', 'public.access_open_all()', 'execute')
+  and has_function_privilege('authenticated', 'public.has_full_access()', 'execute')
+  and has_function_privilege('authenticated', 'public.free_lesson_id()', 'execute'), 'authenticated can call the access helpers');
+
+-- ---------------------------------------------------------------- trial student (f5)
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f5","role":"authenticated"}';
+select ok(not public.has_full_access() and not public.access_open_all(), 'a trial student has no full access');
+select is((select count(*)::int from cards where lesson_id = '00000000-0000-0000-0000-0000000000b1'), 1, 'trial: free lesson cards readable');
+select is((select count(*)::int from questions where lesson_id = '00000000-0000-0000-0000-0000000000b1'), 1, 'trial: free lesson questions readable');
+select is((select count(*)::int from sources where lesson_id = '00000000-0000-0000-0000-0000000000b1'), 1, 'trial: free lesson sources readable');
+select is((select count(*)::int from consolidation_exercises where lesson_id = '00000000-0000-0000-0000-0000000000b1'), 1,
+  'trial: free lesson consolidation exercises readable');
+select is((select count(*)::int from consolidation_exercise_sources where exercise_id = '00000000-0000-0000-0000-0000000000d1'), 1,
+  'trial: free lesson exercise sources readable');
+select is((select count(*)::int from cards where lesson_id <> '00000000-0000-0000-0000-0000000000b1'), 0, 'trial: other lessons'' cards hidden');
+select is((select count(*)::int from questions where lesson_id <> '00000000-0000-0000-0000-0000000000b1'), 0, 'trial: other lessons'' questions hidden');
+select is((select count(*)::int from sources where lesson_id <> '00000000-0000-0000-0000-0000000000b1'), 0, 'trial: other lessons'' sources hidden');
+select is((select count(*)::int from consolidation_exercises where lesson_id <> '00000000-0000-0000-0000-0000000000b1'), 0,
+  'trial: other lessons'' consolidation exercises hidden');
+select is((select count(*)::int from consolidation_exercise_sources where exercise_id <> '00000000-0000-0000-0000-0000000000d1'), 0,
+  'trial: other lessons'' exercise sources hidden');
+select throws_ok($$ insert into lesson_progress (lesson_id, position) values ('00000000-0000-0000-0000-0000000000b2', '{}') $$,
+  '42501', null, 'trial: progress on a locked lesson is refused');
+select throws_ok(
+  $$ insert into consolidation_runs (lesson_id, exercise_ids) values ('00000000-0000-0000-0000-0000000000b2', array['00000000-0000-0000-0000-0000000000d2']::uuid[]) $$,
+  '42501', null, 'trial: a consolidation run on a locked lesson is refused');
+select throws_ok($$ insert into consolidation_attempts (exercise_id, answer) values ('00000000-0000-0000-0000-0000000000d2', '{"a":1}') $$,
+  '42501', null, 'trial: an attempt on a locked lesson''s exercise is refused');
+select lives_ok($$ insert into lesson_progress (lesson_id, position) values ('00000000-0000-0000-0000-0000000000b1', '{}') $$,
+  'trial: progress on the free lesson is saved');
+select lives_ok($$ update lesson_progress set finished_at = now() where lesson_id = '00000000-0000-0000-0000-0000000000b1' $$,
+  'trial: progress on the free lesson is updated');
+select isnt((select finished_at from lesson_progress where lesson_id = '00000000-0000-0000-0000-0000000000b1'), null,
+  'trial: the free lesson update took effect');
+select lives_ok(
+  $$ insert into consolidation_runs (lesson_id, exercise_ids) values ('00000000-0000-0000-0000-0000000000b1', array['00000000-0000-0000-0000-0000000000d1']::uuid[]) $$,
+  'trial: a consolidation run on the free lesson is saved');
+select lives_ok($$ insert into consolidation_attempts (exercise_id, answer) values ('00000000-0000-0000-0000-0000000000d1', '{"a":1}') $$,
+  'trial: an attempt on the free lesson''s exercise is saved');
+
+-- ---------------------------------------------------------------- full access (f5)
+reset role;
+update profiles set access_until = now() + interval '1 day' where id = '00000000-0000-0000-0000-0000000000f5';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f5","role":"authenticated"}';
+select ok(public.has_full_access() and public.access_open_all(), 'access_until in the future is full access');
+select is((select count(*)::int from cards where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1, 'full: locked lesson cards readable');
+select is((select count(*)::int from questions where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1, 'full: questions readable');
+select is((select count(*)::int from sources where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1, 'full: sources readable');
+select is((select count(*)::int from consolidation_exercises where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1,
+  'full: consolidation exercises readable');
+select is((select count(*)::int from consolidation_exercise_sources where exercise_id = '00000000-0000-0000-0000-0000000000d2'), 1,
+  'full: exercise sources readable');
+select lives_ok($$ insert into lesson_progress (lesson_id, position) values ('00000000-0000-0000-0000-0000000000b2', '{}') $$,
+  'full: progress on any lesson is saved');
+select lives_ok(
+  $$ insert into consolidation_runs (lesson_id, exercise_ids) values ('00000000-0000-0000-0000-0000000000b2', array['00000000-0000-0000-0000-0000000000d2']::uuid[]) $$,
+  'full: a consolidation run on any lesson is saved');
+select lives_ok($$ insert into consolidation_attempts (exercise_id, answer) values ('00000000-0000-0000-0000-0000000000d2', '{"a":1}') $$,
+  'full: an attempt on any exercise is saved');
+
+-- ---------------------------------------------------------------- expired (f5)
+reset role;
+update profiles set access_until = now() - interval '1 second' where id = '00000000-0000-0000-0000-0000000000f5';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f5","role":"authenticated"}';
+select ok(not public.has_full_access(), 'expired access is not full access');
+select is((select count(*)::int from cards where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 0, 'expired: locked lesson cards hidden again');
+select is((select count(*)::int from cards where lesson_id = '00000000-0000-0000-0000-0000000000b1'), 1, 'expired: the free lesson stays open');
+select is((select count(*)::int from lesson_progress where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1,
+  'expired: own progress on a locked lesson stays readable');
+select is((select count(*)::int from consolidation_runs where lesson_id = '00000000-0000-0000-0000-0000000000b2'), 1,
+  'expired: own consolidation run on a locked lesson stays readable');
+select is((select count(*)::int from consolidation_attempts where exercise_id = '00000000-0000-0000-0000-0000000000d2'), 1,
+  'expired: own attempt on a locked exercise stays readable');
+select throws_ok(
+  $$ insert into lesson_progress (lesson_id, position) values ('00000000-0000-0000-0000-0000000000b2', '{"x":1}')
+       on conflict (user_id, lesson_id) do update set position = excluded.position $$,
+  '42501', null, 'expired: an upsert of progress on a locked lesson is refused');
+update lesson_progress set finished_at = now() where lesson_id = '00000000-0000-0000-0000-0000000000b2';
+select is((select finished_at from lesson_progress where lesson_id = '00000000-0000-0000-0000-0000000000b2'), null,
+  'expired: a plain update of a locked lesson''s progress changes nothing');
+select throws_ok(
+  $$ insert into consolidation_attempts (exercise_id, answer) values ('00000000-0000-0000-0000-0000000000d2', '{"a":2}')
+       on conflict (user_id, exercise_id) do update set answer = excluded.answer $$,
+  '42501', null, 'expired: an upsert of an attempt on a locked exercise is refused');
+
+-- ---------------------------------------------------------------- admin and suspension
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f3","role":"authenticated"}';
+select is((select count(*)::int from cards where lesson_id in
+  ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')), 2, 'an admin reads every lesson''s cards');
+select is((select count(*)::int from consolidation_exercise_sources where exercise_id in
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000d2')), 2, 'an admin reads every exercise''s sources');
+reset role;
+update profiles set access_until = now() + interval '1 day', suspended_at = now(), suspended_reason = 'x'
+ where id = '00000000-0000-0000-0000-0000000000f6';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f6","role":"authenticated"}';
+select is((select count(*)::int from cards), 0, 'a suspended student with full access still reads 0 cards');
 
 -- ---------------------------------------------------------------- anon
 reset role;

@@ -32,6 +32,21 @@ describe('groupLessonsByTree', () => {
     ]);
     expect(sections[1]?.lessons.map((l) => l.id)).toEqual(['l1', 'l2']);
   });
+
+  it('breaks equal positions by id, like free_lesson_id() in SQL', () => {
+    const tiedNodes: TreeNode[] = [
+      { id: 'n-b', parentId: null, title: 'B', position: 1 },
+      { id: 'n-a', parentId: null, title: 'A', position: 1 },
+    ];
+    const tiedLessons: LessonSummary[] = [
+      { id: 'x2', nodeId: 'n-a', title: 'X2', position: 1 },
+      { id: 'x1', nodeId: 'n-a', title: 'X1', position: 1 },
+      { id: 'y1', nodeId: 'n-b', title: 'Y1', position: 1 },
+    ];
+    const sections = groupLessonsByTree(tiedNodes, tiedLessons);
+    expect(sections.map((s) => s.path)).toEqual([['A'], ['B']]);
+    expect(sections[0]?.lessons.map((l) => l.id)).toEqual(['x1', 'x2']);
+  });
 });
 
 /** Minimal chainable, awaitable stand-in for a PostgREST query builder. */

@@ -325,3 +325,137 @@ revoke execute on function private.log_access_expiries() from public, anon, auth
 
 create extension if not exists pg_cron;
 select cron.schedule('log-access-expiries', '*/10 * * * *', $$select private.log_access_expiries()$$);
+
+-- ================================================================ lesson access
+-- Trial accounts open only the free lesson: the first published lesson in Home order (depth-first over nodes,
+-- siblings by position then id, a node's own lessons by position then id before its children's). The app's
+-- groupLessonsByTree uses the same tie-break. Null when nothing is published, so every policy below still evaluates.
+create function public.free_lesson_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with recursive ranked as (
+    select n.id, n.parent_id,
+           row_number() over (partition by n.parent_id order by n.position, n.id)::int as rank
+      from public.nodes n
+  ), tree as (
+    select r.id, array[r.rank] as path from ranked r where r.parent_id is null
+    union all
+    select r.id, t.path || r.rank from ranked r join tree t on r.parent_id = t.id
+  )
+  -- A node's path is a prefix of its children's, so its own lessons sort first.
+  select l.id
+    from public.lessons l
+    join tree t on t.id = l.node_id
+   where l.status = 'published'
+   order by t.path, l.position, l.id
+   limit 1;
+$$;
+revoke execute on function public.free_lesson_id() from public, anon, authenticated, service_role;
+grant execute on function public.free_lesson_id() to authenticated;
+
+-- Full access <=> access_until > now(); now() is the only clock.
+create function public.has_full_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.access_until > now());
+$$;
+revoke execute on function public.has_full_access() from public, anon, authenticated, service_role;
+grant execute on function public.has_full_access() to authenticated;
+
+create function public.access_open_all()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select public.is_admin() or public.has_full_access();
+$$;
+revoke execute on function public.access_open_all() from public, anon, authenticated, service_role;
+grant execute on function public.access_open_all() to authenticated;
+
+-- For the API routes (service role bypasses RLS): may this user open this lesson?
+create function public.can_open_lesson_for(p_user uuid, p_lesson uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.admins a where a.user_id = p_user)
+      or exists (select 1 from public.profiles p where p.id = p_user and p.access_until > now())
+      or coalesce(p_lesson = public.free_lesson_id(), false);
+$$;
+revoke execute on function public.can_open_lesson_for(uuid, uuid) from public, anon, authenticated, service_role;
+grant execute on function public.can_open_lesson_for(uuid, uuid) to service_role;
+
+-- ---------------------------------------------------------------- enforcement
+-- Restrictive, so they AND with the existing permissive and *_not_suspended policies. The (select ...) wrappers
+-- make both functions InitPlans (once per statement), not per-row calls. lessons, nodes, solution_templates and
+-- ai_templates stay readable: titles are needed for the locked list and templates hold no lesson content.
+
+-- Content: hidden (and not writable) outside the free lesson.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['cards', 'questions', 'sources', 'consolidation_exercises'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to authenticated '
+      'using ((select public.access_open_all()) or lesson_id = (select public.free_lesson_id())) '
+      'with check ((select public.access_open_all()) or lesson_id = (select public.free_lesson_id()))',
+      t || '_access', t);
+  end loop;
+end;
+$$;
+
+create policy consolidation_exercise_sources_access on public.consolidation_exercise_sources
+  as restrictive for all to authenticated
+  using ((select public.access_open_all()) or exists (
+    select 1 from public.consolidation_exercises e
+     where e.id = consolidation_exercise_sources.exercise_id and e.lesson_id = (select public.free_lesson_id())))
+  with check ((select public.access_open_all()) or exists (
+    select 1 from public.consolidation_exercises e
+     where e.id = consolidation_exercise_sources.exercise_id and e.lesson_id = (select public.free_lesson_id())));
+
+-- Own progress: writes only. Select stays as it is, so finished marks and saved positions survive an expiry.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['lesson_progress', 'consolidation_runs'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for insert to authenticated '
+      'with check ((select public.access_open_all()) or lesson_id = (select public.free_lesson_id()))',
+      t || '_access_insert', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for update to authenticated '
+      'using ((select public.access_open_all()) or lesson_id = (select public.free_lesson_id())) '
+      'with check ((select public.access_open_all()) or lesson_id = (select public.free_lesson_id()))',
+      t || '_access_update', t);
+  end loop;
+end;
+$$;
+
+-- Attempts carry only the exercise: allowed when the exercise belongs to the free lesson.
+create policy consolidation_attempts_access_insert on public.consolidation_attempts
+  as restrictive for insert to authenticated
+  with check ((select public.access_open_all()) or exists (
+    select 1 from public.consolidation_exercises e
+     where e.id = consolidation_attempts.exercise_id and e.lesson_id = (select public.free_lesson_id())));
+create policy consolidation_attempts_access_update on public.consolidation_attempts
+  as restrictive for update to authenticated
+  using ((select public.access_open_all()) or exists (
+    select 1 from public.consolidation_exercises e
+     where e.id = consolidation_attempts.exercise_id and e.lesson_id = (select public.free_lesson_id())))
+  with check ((select public.access_open_all()) or exists (
+    select 1 from public.consolidation_exercises e
+     where e.id = consolidation_attempts.exercise_id and e.lesson_id = (select public.free_lesson_id())));
