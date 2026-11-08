@@ -26,7 +26,7 @@ jest.mock('../lib/api', () => {
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn(), imageUrl: (p: string) => `http://x/${p}` }));
 let mockCanOpen = (_id: string) => true;
-jest.mock('../access/AccessProvider', () => ({ useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id) }) }));
+jest.mock('../access/AccessProvider', () => ({ useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), status: { plan: 'trial' }, isAdmin: false }) }));
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),

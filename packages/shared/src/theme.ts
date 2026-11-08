@@ -62,6 +62,14 @@ export const markerPen = { info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8',
 // texts (card, reader, desktop split), `tint` the lilac of the consolidation zone and its cards.
 export const consolidationColor = { paper: '#FFFDF8', tint: '#EEE8FF' } as const;
 
+// Plan pill tones from the approved paid-access mockup (documented exception, like the pens): trial neutral,
+// full access green, the last days orange. `fg` stays AA on `bg` (tested).
+export const planTone = {
+  trial: { fg: palette.neutral[700], bg: '#EEF2F1', border: '#D0DDD9' },
+  full: { fg: palette.teal[700], bg: '#E3F6EF', border: '#9ED9C5' },
+  expiring: { fg: '#8A4B00', bg: '#FFF1E0', border: '#FFC98A' },
+} as const;
+
 // Difficulty badge colours (medium uses a darker yellow for AA on accentSubtle).
 export const difficultyTone: Record<Difficulty, { fg: string; bg: string }> = {
   easy: { fg: color.success, bg: color.successSubtle },

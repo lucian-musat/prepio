@@ -117,6 +117,13 @@ it('applyPurchase unlocks immediately', async () => {
   expect(ctx.canOpen('L2')).toBe(true);
 });
 
+it('applyOffer replaces the shown offer (409 offer_changed)', async () => {
+  await mount();
+  const fresh = { priceBani: 20000, bonusCredits: 50, durationMonths: 6 };
+  await act(async () => ctx.applyOffer(fresh));
+  expect(ctx.offer).toEqual(fresh);
+});
+
 it('refreshes when the app returns to the foreground', async () => {
   await mount();
   mockUntil.mockResolvedValue(inDays(30));

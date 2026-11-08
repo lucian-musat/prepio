@@ -12,6 +12,8 @@ type AccessContextValue = {
   refresh(): Promise<void>;
   /** Applies a successful purchase right away, before the next re-read. */
   applyPurchase(r: AccessPurchaseResponse): void;
+  /** Replaces the shown offer (the server's current one after a 409 `offer_changed`). */
+  applyOffer(offer: AccessOffer): void;
   /** Full access opens every lesson; a trial (or expired) account opens only the free one. */
   canOpen(lessonId: string): boolean;
   /** First lesson in Home order (the same one the server leaves open); null when nothing is published. */
@@ -111,14 +113,16 @@ export function AccessProvider({ children }: { children: ReactNode }) {
     setNow(new Date());
   }, []);
 
+  const applyOffer = useCallback((next: AccessOffer) => setOffer(next), []);
+
   const status = useMemo(() => accessStatus(accessUntil, now), [accessUntil, now]);
   const full = hasFullAccess(status);
   const canOpen = useCallback((lessonId: string) => isAdmin || full || (freeLessonId !== null && lessonId === freeLessonId),
     [isAdmin, full, freeLessonId],);
 
   const value = useMemo(
-    () => ({ status, offer, refresh, applyPurchase, canOpen, freeLessonId, isAdmin, ready }),
-    [status, offer, refresh, applyPurchase, canOpen, freeLessonId, isAdmin, ready],
+    () => ({ status, offer, refresh, applyPurchase, applyOffer, canOpen, freeLessonId, isAdmin, ready }),
+    [status, offer, refresh, applyPurchase, applyOffer, canOpen, freeLessonId, isAdmin, ready],
   );
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }

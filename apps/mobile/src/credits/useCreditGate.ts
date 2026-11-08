@@ -1,4 +1,5 @@
-import { createElement, useCallback, useRef, useState, type ReactElement } from 'react';
+import { Fragment, createElement, useCallback, useRef, useState, type ReactElement } from 'react';
+import PaywallSheet from '../access/PaywallSheet';
 import { EvaluateApiError } from '../lib/api';
 import BuyCreditsSheet from './BuyCreditsSheet';
 import { useCredits } from './CreditsProvider';
@@ -30,6 +31,7 @@ export function useCreditGate(
   const balanceRef = useRef(balance);
   balanceRef.current = balance;
   const [blocked, setBlockedState] = useState<Blocked | null>(null);
+  const [paywall, setPaywall] = useState(false);
   // The blocked check, outside the render closure: „Verifică acum” takes and clears it, so a second tap before the
   // re-render cannot run (and pay for) the check again.
   const runRef = useRef<(() => void) | null>(null);
@@ -58,6 +60,11 @@ export function useCreditGate(
   const onError = useCallback(
     (e: unknown, run: () => void) => {
       if (!(e instanceof EvaluateApiError)) return false;
+      // Access ended mid-session (the API layer has re-read the plan): the paywall sheet, the answer untouched.
+      if (e.code === 'access_required') {
+        setPaywall(true);
+        return true;
+      }
       if (typeof e.balance === 'number') settle(e.balance);
       if (e.code !== 'insufficient_credits') return false;
       setBlocked({ required: e.required ?? (balanceRef.current ?? 0) + 1, run });
@@ -67,7 +74,8 @@ export function useCreditGate(
   );
 
   const close = useCallback(() => setBlocked(null), [setBlocked]);
-  const sheet = createElement(BuyCreditsSheet, {
+  const closePaywall = useCallback(() => setPaywall(false), []);
+  const buySheet = createElement(BuyCreditsSheet, {
     visible: blocked !== null,
     required: blocked?.required ?? 0,
     cost: blocked?.required ?? 0,
@@ -85,6 +93,12 @@ export function useCreditGate(
       run?.();
     },
   });
+  // Mounted only while open: screens that never hit a locked lesson need no AccessProvider around the gate.
+  // After a purchase „Înapoi la exercițiu” closes it; the student checks again (that check costs credits).
+  const paywallSheet = paywall
+    ? createElement(PaywallSheet, { visible: true, doneLabel: 'Înapoi la exercițiu', onClose: closePaywall, onUnlocked: closePaywall })
+    : null;
+  const sheet = createElement(Fragment, null, buySheet, paywallSheet);
 
   return { allow, onError, settle, sheet };
 }

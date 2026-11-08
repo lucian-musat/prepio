@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { border, color, layout, radius, space } from '@prepio/shared';
 import { AppText, Button, Chip, Enter, Hero, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
 import { fetchHome, type HomeData } from '../lib/content';
@@ -11,6 +11,8 @@ import { fetchProgress, type Progress } from '../lib/progress';
 import { useAuth } from '../auth/AuthProvider';
 import CreditChip from '../credits/CreditChip';
 import { useAccess } from '../access/AccessProvider';
+import AccessBanner from '../access/AccessBanner';
+import PaywallSheet from '../access/PaywallSheet';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
 const LAST_STAGGER = 5;
@@ -99,8 +101,12 @@ export default function HomeScreen() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const { profile } = useAuth();
   const { canOpen, refresh: refreshAccess, ready: accessReady } = useAccess();
-  // The paywall sheet comes with the purchase flow; until then a locked-by-plan row is pressable but inert.
-  const openPaywall = useCallback((_lessonId: string) => {}, []);
+  // The paywall sheet: for a tapped lesson outside the plan, or with no lesson (the banner's offer).
+  const [sheet, setSheet] = useState<{ lessonId: string | null } | null>(null);
+  const openPaywall = useCallback((lessonId: string) => setSheet({ lessonId }), []);
+  // `/?paywall=<id>`: a locked deep link that LessonAccessGuard sent back here.
+  const { paywall: paywallParam } = useLocalSearchParams<{ paywall?: string }>();
+  const handledParam = useRef<string | null>(null);
   const loaded = useRef(false);
   const cancel = useRef<(() => void) | undefined>(undefined);
 
@@ -134,6 +140,30 @@ export default function HomeScreen() {
       return () => cancel.current?.();
     }, [fetchAll]),
   );
+
+  // Once the lessons and the plan are known: open the sheet for a linked lesson the plan does not include; an
+  // openable or unknown id only clears the parameter.
+  useEffect(() => {
+    if (!paywallParam) {
+      handledParam.current = null; // the same link can open the sheet again later
+      return;
+    }
+    if (handledParam.current === paywallParam || !data || !accessReady) return;
+    handledParam.current = paywallParam;
+    const known = orderedLessons(data.sections).some((l) => l.id === paywallParam);
+    if (known && !canOpen(paywallParam)) setSheet({ lessonId: paywallParam });
+    else router.setParams({ paywall: undefined });
+  }, [paywallParam, data, accessReady, canOpen]);
+
+  const closeSheet = () => {
+    setSheet(null);
+    if (paywallParam) router.setParams({ paywall: undefined });
+  };
+  const unlocked = () => {
+    const id = sheet?.lessonId;
+    closeSheet();
+    if (id) router.push(`/lesson/${id}`);
+  };
 
   const retry = () => {
     setFailed(false);
@@ -171,9 +201,11 @@ export default function HomeScreen() {
   const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode, canOpen);
   // Lessons finished before the plan lost them still count as done.
   const done = orderedLessons(data.sections).filter((l) => progress.finished.has(l.id)).length;
+  const sheetTitle = sheet?.lessonId ? orderedLessons(data.sections).find((l) => l.id === sheet.lessonId)?.title : undefined;
 
   return (
     <ScreenLayout logo trailing={<HomeTrailing />}>
+      <AccessBanner onOffer={() => setSheet({ lessonId: null })} />
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} />
       </Enter>
@@ -200,6 +232,7 @@ export default function HomeScreen() {
           </View>
         );
       })}
+      <PaywallSheet visible={sheet !== null} lessonTitle={sheetTitle} lessonCount={total} onClose={closeSheet} onUnlocked={unlocked} />
     </ScreenLayout>
   );
 }

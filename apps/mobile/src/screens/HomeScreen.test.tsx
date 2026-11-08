@@ -9,10 +9,19 @@ import { fetchProgress } from '../lib/progress';
 let mockCanOpen = (_id: string) => true;
 const mockRefreshAccess = jest.fn();
 let mockAccessReady = true;
-jest.mock('../access/AccessProvider', () => ({
-  useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), refresh: mockRefreshAccess, ready: mockAccessReady }),
-}));
-jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
+// The in-memory plan of the manual mock, with the lesson rule, the refresh and `ready` under the test's control.
+jest.mock('../access/AccessProvider', () => {
+  const store = jest.requireActual('../access/__mocks__/AccessProvider');
+  return {
+    ...store,
+    useAccess: () => ({ ...store.useAccess(), canOpen: (id: string) => mockCanOpen(id), refresh: mockRefreshAccess, ready: mockAccessReady }),
+  };
+});
+jest.mock('../credits/CreditsProvider');
+jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn() }));
+const { mockResetAccess } = jest.requireMock<typeof import('../access/__mocks__/AccessProvider')>('../access/AccessProvider');
+const { mockResetCredits } = jest.requireMock<typeof import('../credits/__mocks__/CreditsProvider')>('../credits/CreditsProvider');
+let mockParams: { paywall?: string } = {};
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 const mockFocusListeners = new Set<() => void>();
 const mockRefocus = () => act(async () => mockFocusListeners.forEach((l) => l()));
@@ -21,7 +30,8 @@ jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
   return {
-    router: { push: jest.fn() },
+    router: { push: jest.fn(), setParams: jest.fn() },
+    useLocalSearchParams: () => mockParams,
     // Runs on mount and again whenever a test calls `mockRefocus()`.
     useFocusEffect: (cb: () => void | (() => void)) => {
       useEffect(() => {
@@ -70,6 +80,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockCanOpen = () => true;
   mockAccessReady = true;
+  mockParams = {};
+  mockResetAccess({ accessUntil: new Date(Date.now() + 40 * 86400000).toISOString() });
+  mockResetCredits(5);
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided', creditBalance: 5 };
   mockedProgress.mockResolvedValue(progressOf());
 });
@@ -308,6 +321,65 @@ describe('plan paywall', () => {
     expect(router.push).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByRole('button', { name: 'Prima' }));
     expect(router.push).toHaveBeenCalledWith('/lesson/a');
+  });
+
+  const trialHome = async () => {
+    mockCanOpen = (id) => id === 'a';
+    mockResetAccess();
+    mockedFetch.mockResolvedValue({
+      welcomeMessage: 'x',
+      sections: [{ path: ['Istorie'], lessons: [lesson('a', 'Prima'), lesson('b', 'A doua'), lesson('c', 'A treia')] }],
+    });
+    await renderHome();
+    await screen.findByText('Prima');
+  };
+
+  it('tapping a paywall lesson opens the sheet for it; buying opens that lesson', async () => {
+    const { purchaseAccess } = jest.requireMock<typeof import('../lib/access')>('../lib/access');
+    (purchaseAccess as jest.Mock).mockResolvedValue({
+      orderId: 'o1', accessUntil: new Date(Date.now() + 90 * 86400000).toISOString(), bonus: 100, balance: 105,
+    });
+    await trialHome();
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'A doua, blocată, face parte din accesul complet' }));
+    expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
+    expect(screen.getByText('„A doua” face parte din accesul complet.')).toBeTruthy();
+    expect(screen.getByText('📚 Toate cele 3 lecții, în orice mod de învățare')).toBeTruthy();
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deblochează · 150 lei' })));
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
+    expect(router.push).toHaveBeenCalledWith('/lesson/b');
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('„Mai târziu” closes the sheet', async () => {
+    await trialHome();
+    await fireEvent.press(screen.getByRole('button', { name: 'A treia, blocată, face parte din accesul complet' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Mai târziu' }));
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('the trial banner shows the offer and opens the sheet without a lesson', async () => {
+    await trialHome();
+    await fireEvent.press(screen.getByRole('button', { name: 'Vezi oferta · 150 lei' }));
+    expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
+    expect(screen.queryByText(/face parte din accesul complet\.$/)).toBeNull();
+  });
+
+  it('/?paywall=<id> opens the sheet for that lesson and clears the parameter on close', async () => {
+    mockParams = { paywall: 'c' };
+    await trialHome();
+    expect(await screen.findByTestId('paywall-sheet')).toBeTruthy();
+    expect(screen.getByText('„A treia” face parte din accesul complet.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Mai târziu' }));
+    expect(router.setParams).toHaveBeenCalledWith({ paywall: undefined });
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('/?paywall=<id> for an openable or unknown lesson does not open the sheet', async () => {
+    mockParams = { paywall: 'a' };
+    await trialHome();
+    await act(async () => {});
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
   });
 });
 

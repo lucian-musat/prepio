@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
-import { color, creditsLabel, feedbackText, palette, radius, space } from '@prepio/shared';
+import { color, creditsLabel, feedbackText, palette, planTone, plural, radius, space } from '@prepio/shared';
+import { useAccess } from '../access/AccessProvider';
 import { AppText } from '../ui';
 import { easing, timing } from '../ui/motion';
 import Coin from './Coin';
@@ -29,9 +30,26 @@ function Floating({ delta }: { delta: number }) {
   );
 }
 
-/** Balance pill for the top bars: coin + balance, red when below `need`; opens the credits page. */
+type Plan = { tone: keyof typeof planTone; text: string; label: string };
+
+/** The plan half of the pill (mockup option B): trial and expired „Trial”, full „★”, the last 7 days „⏳ n zile”. */
+function usePlan(): Plan {
+  const { status, isAdmin } = useAccess();
+  if (isAdmin || status.plan === 'full') return { tone: 'full', text: '★ ·', label: 'Acces complet' };
+  if (status.plan === 'expiring') {
+    const days = plural(status.daysLeft, 'zi', 'zile');
+    return { tone: 'expiring', text: `⏳ ${days} ·`, label: `Acces complet încă ${days}` };
+  }
+  return { tone: 'trial', text: 'Trial ·', label: 'Trial' };
+}
+
+/**
+ * The top-bar pill: plan + coin + balance in one element („Trial · 🪙 12”, „★ · 🪙 112”, „⏳ 5 zile · 🪙 40”),
+ * red when the balance is below `need`; floats „−2” / „+50” on balance changes; opens „Abonamentul meu”.
+ */
 export default function CreditChip({ need }: { need?: number }) {
   const { balance, change } = useCredits();
+  const plan = usePlan();
   const reduced = useReducedMotion();
   const seen = useRef(change?.id ?? 0); // a change from before this chip mounted is not replayed
   const [floating, setFloating] = useState<{ id: number; delta: number } | null>(null);
@@ -46,18 +64,22 @@ export default function CreditChip({ need }: { need?: number }) {
 
   if (balance === null) return null;
   const low = need !== undefined && balance < need;
+  const tone = planTone[plan.tone];
   return (
     <View>
       <Pressable
         testID="credit-chip"
         accessibilityRole="button"
-        accessibilityLabel={`Ai ${creditsLabel(balance)}. Deschide creditele mele.`}
-        onPress={() => router.push('/credits')}
+        accessibilityLabel={`${plan.label}, ${creditsLabel(balance)}, deschide abonamentul`}
+        onPress={() => router.push('/abonament')}
         hitSlop={8}
-        style={[styles.chip, low ? styles.low : styles.normal]}
+        style={[styles.chip, low ? styles.low : { backgroundColor: tone.bg, borderColor: tone.border }]}
       >
+        <AppText role="label" numberOfLines={1} style={{ color: tone.fg }}>
+          {plan.text}
+        </AppText>
         <Coin size={14} />
-        <AppText role="label" style={{ color: low ? feedbackText.wrong : palette.yellow[800] }}>
+        <AppText role="label" style={{ color: low ? feedbackText.wrong : tone.fg }}>
           {balance}
         </AppText>
       </Pressable>
@@ -76,7 +98,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[1],
     paddingHorizontal: space[2],
   },
-  normal: { backgroundColor: color.accentSubtle, borderColor: palette.yellow[200] },
   low: { backgroundColor: color.dangerSubtle, borderColor: palette.red[200] },
   float: { position: 'absolute', top: -space[1], right: 0, left: 0, alignItems: 'center' },
 });

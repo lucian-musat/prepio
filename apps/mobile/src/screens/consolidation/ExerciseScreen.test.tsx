@@ -9,7 +9,10 @@ jest.mock('../../lib/api', () => ({ ...jest.requireActual('../../lib/api'), eval
 jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../access/AccessProvider');
+jest.mock('../../lib/access', () => ({ ...jest.requireActual('../../lib/access'), purchaseAccess: jest.fn() }));
 const { mockResetCredits } = jest.requireMock<typeof import('../../credits/__mocks__/CreditsProvider')>('../../credits/CreditsProvider');
+const { mockResetAccess } = jest.requireMock<typeof import('../../access/__mocks__/AccessProvider')>('../../access/AccessProvider');
 const mockedEvaluate = evaluateConsolidation as jest.Mock;
 const mockedPackages = fetchCreditPackages as jest.Mock;
 const mockedPurchase = purchaseCredits as jest.Mock;
@@ -17,6 +20,7 @@ const mockedPurchase = purchaseCredits as jest.Mock;
 beforeEach(() => {
   jest.clearAllMocks();
   mockResetCredits(7);
+  mockResetAccess();
   mockedPackages.mockResolvedValue([
     { id: 'p20', credits: 20, priceBani: 999, featured: false },
     { id: 'p50', credits: 50, priceBani: 1999, featured: true },
@@ -50,7 +54,7 @@ it('an AI exercise shows the cost tag, the balance chip and „Verifică” with
   await mount(comparison);
   expect(screen.getByLabelText('Profesorul digital, costă 2 credite')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Verifică, costă 2 credite' })).toBeTruthy();
-  expect(screen.getByLabelText('Ai 7 credite. Deschide creditele mele.')).toBeTruthy();
+  expect(screen.getByLabelText('Trial, 7 credite, deschide abonamentul')).toBeTruthy();
   expect(screen.getByText('3/10')).toBeTruthy();
 });
 
@@ -65,7 +69,7 @@ it('a deterministic exercise shows neither the tag nor a cost', async () => {
 
 const ANSWER = 'Atât Cuza, cât și Carol I au modernizat statul român prin reforme.';
 const ok = { key: 'comparison', verdict: 'ok', title: 'Deosebire corectă', good: [], improve: [], ai: true };
-const chip = (n: number) => screen.getByLabelText(`Ai ${creditsLabel(n)}. Deschide creditele mele.`);
+const chip = (n: number) => screen.getByLabelText(`Trial, ${creditsLabel(n)}, deschide abonamentul`);
 const typeAnswer = async () => fireEvent.changeText(screen.getByLabelText('Răspunsul tău'), ANSWER);
 const verify = () => within(screen.getByTestId('action-bar')).getByRole('button', { name: 'Verifică, costă 2 credite' });
 
@@ -116,6 +120,43 @@ it('the server says 402 although the app thought there were enough: the sheet us
   expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
   expect(chip(2)).toBeTruthy();
   expect(screen.queryByText('Nu ai destule credite.')).toBeNull();
+});
+
+it('403 access_required: the paywall sheet opens over the exercise, the typed answer stays, no error row', async () => {
+  const { purchaseAccess } = jest.requireMock<typeof import('../../lib/access')>('../../lib/access');
+  (purchaseAccess as jest.Mock).mockResolvedValue({
+    orderId: 'o1', accessUntil: new Date(Date.now() + 90 * 86400000).toISOString(), bonus: 100, balance: 107,
+  });
+  // The API layer has already re-read the plan (lib/api, tested there): the student is back in the trial.
+  mockResetAccess({ accessUntil: new Date(Date.now() - 60_000).toISOString() });
+  mockedEvaluate.mockRejectedValueOnce(new EvaluateApiError('access_required', 'Lecția face parte din accesul complet.'));
+  await mount(comparison);
+  await typeAnswer();
+  await act(async () => void fireEvent.press(verify()));
+  expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
+  expect(screen.getByText('Reînnoiește accesul')).toBeTruthy();
+  expect(screen.queryByText('Lecția face parte din accesul complet.')).toBeNull();
+  expect(screen.getByLabelText('Răspunsul tău').props.value).toBe(ANSWER);
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Reînnoiește · 150 lei' })));
+  expect(screen.getByText('Ai acces complet!')).toBeTruthy();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Înapoi la exercițiu' })));
+  expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  expect(screen.getByLabelText('Răspunsul tău').props.value).toBe(ANSWER);
+  mockedEvaluate.mockResolvedValueOnce({ items: [ok], credits: { spent: 2, balance: 105 } });
+  await act(async () => void fireEvent.press(verify()));
+  expect(mockedEvaluate).toHaveBeenLastCalledWith(expect.objectContaining({ answer: expect.anything() }));
+  expect(mockedEvaluate).toHaveBeenCalledTimes(2);
+});
+
+it('403 access_required, then „Mai târziu”: back to the exercise with the answer', async () => {
+  mockResetAccess({ accessUntil: null });
+  mockedEvaluate.mockRejectedValueOnce(new EvaluateApiError('access_required', 'Lecția face parte din accesul complet.'));
+  await mount(comparison);
+  await typeAnswer();
+  await act(async () => void fireEvent.press(verify()));
+  await fireEvent.press(screen.getByRole('button', { name: 'Mai târziu' }));
+  expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  expect(screen.getByLabelText('Răspunsul tău').props.value).toBe(ANSWER);
 });
 
 it('a refunded failure shows the server message and leaves the balance as it was', async () => {

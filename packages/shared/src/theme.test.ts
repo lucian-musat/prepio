@@ -13,6 +13,7 @@ import {
   motion,
   opacity,
   palette,
+  planTone,
   pressScale,
   radius,
   shadowColor,
@@ -33,6 +34,15 @@ describe('design tokens', () => {
       expect(contrastRatio(color.text, bg)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(color.textMuted, bg)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it('plan pill tones are the approved paid-access mockup colours; each text stays AA on its background', () => {
+    expect(planTone).toEqual({
+      trial: { fg: '#38534C', bg: '#EEF2F1', border: '#D0DDD9' },
+      full: { fg: '#0F766E', bg: '#E3F6EF', border: '#9ED9C5' },
+      expiring: { fg: '#8A4B00', bg: '#FFF1E0', border: '#FFC98A' },
+    });
+    for (const t of Object.values(planTone)) expect(contrastRatio(t.fg, t.bg)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('semantic colours match the approved variant B', () => {
