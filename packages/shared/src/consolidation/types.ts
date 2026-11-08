@@ -137,7 +137,8 @@ export type ConsolidationEvaluateErrorCode =
   | 'ai_failed'
   | 'bad_request'
   | 'unauthorized'
-  | 'suspended';
+  | 'suspended'
+  | 'access_required';
 /**
  * `message` is in Romanian. `insufficient_credits` carries `required` and `balance`; an `ai_failed` after a successful
  * refund carries `credits` (`spent: 0`).

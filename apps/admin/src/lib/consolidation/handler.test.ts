@@ -14,10 +14,11 @@ const NOCTX = '99999999-9999-4999-8999-999999999999';
 const BLANKCTX = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const DETACHED = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
+const LESSON = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const BODY = 'Domnitorul a făcut reforma. Apoi a plecat în exil.';
 const COMP = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const row = (id: string, type: string, content: Record<string, unknown>, status = 'published', creditCost = 1) => ({
-  id, position: 0, type, prompt: 'Enunț', content, template_id: null, credit_cost: creditCost, lessons: { status },
+  id, position: 0, type, prompt: 'Enunț', content, template_id: null, credit_cost: creditCost, lesson_id: LESSON, lessons: { status },
 });
 const viewContent = (text: string) => ({
   count: 2,
@@ -72,11 +73,14 @@ const templateLinks: Record<string, unknown[]> = {
 };
 const settings = { rules: 'reguli', model: 'gpt-5-mini' };
 
-type DbOpts = { suspended?: boolean; rpc?: (fn: string, args: unknown) => Promise<{ data: unknown; error: { message: string } | null }> };
+type DbOpts = { suspended?: boolean; access?: boolean; accessRpc?: (args: unknown) => Promise<{ data: unknown; error: { message: string } | null }>; rpc?: (fn: string, args: unknown) => Promise<{ data: unknown; error: { message: string } | null }> };
 
 function fakeDb(opts: DbOpts = {}): SupabaseClient {
   return {
-    rpc: opts.rpc ?? (async () => ({ data: null, error: null })),
+    rpc: async (fn: string, args: unknown) => {
+      if (fn === 'can_open_lesson_for') return opts.accessRpc ? opts.accessRpc(args) : { data: opts.access ?? true, error: null };
+      return (opts.rpc ?? (async () => ({ data: null, error: null })))(fn, args);
+    },
     from(table: string) {
       let id: unknown;
       let ids: unknown[] = [];
@@ -557,5 +561,67 @@ describe('handleConsolidationEvaluate: suspended students', () => {
   it('a malformed request is still a 400 for a suspended student (parse comes first)', async () => {
     const r = await handleConsolidationEvaluate(null, 'u1', deps({ db: fakeDb({ suspended: true }) }));
     expect(r.status).toBe(400);
+  });
+});
+
+describe('handleConsolidationEvaluate: access gate', () => {
+  const compReq = { exerciseId: COMP, target: 'exercise', answer: { type: 'comparison', text: 'Ambele au avut reforme.' } };
+
+  it('a locked lesson gets 403 access_required; no rate limit, spend or evaluation', async () => {
+    const credits = fakeCredits();
+    const accessRpc = vi.fn(async () => ({ data: false, error: null }));
+    const d = deps({ db: fakeDb({ accessRpc }), credits });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', d);
+    expect(r).toEqual({ status: 403, json: { error: 'access_required', message: 'Lecția face parte din accesul complet.' } });
+    expect(accessRpc).toHaveBeenCalledWith({ p_user: 'u1', p_lesson: LESSON });
+    expect(d.rateLimit).not.toHaveBeenCalled();
+    expect(credits.spend).not.toHaveBeenCalled();
+    expect(d.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('logs check_blocked with reason and cost', async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ access: false, rpc }) }));
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('log_student_event_service', {
+      p_user: 'u1', p_kind: 'check_blocked', p_exercise: COMP, p_details: { reason: 'access_required', cost: 2 },
+    });
+  });
+
+  it('a failing log is swallowed; the answer is still 403', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const rpc = vi.fn(async () => { throw new Error('network down'); });
+    const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ access: false, rpc }) }));
+    expect(r.status).toBe(403);
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+
+  it('a suspended student is refused as suspended before the access check', async () => {
+    const accessRpc = vi.fn(async () => ({ data: false, error: null }));
+    const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ suspended: true, accessRpc }) }));
+    expect(code(r)).toBe('suspended');
+    expect(accessRpc).not.toHaveBeenCalled();
+  });
+
+  it('the access check comes before the rate limit and the spend', async () => {
+    const log: string[] = [];
+    const d = deps({
+      db: fakeDb({ accessRpc: async () => (log.push('access'), { data: true, error: null }) }),
+      credits: fakeCredits(7, log),
+      rateLimit: vi.fn(async () => (log.push('rate'), true)),
+      evaluate: vi.fn(async () => okItems('answer')),
+    });
+    await handleConsolidationEvaluate(compReq, 'u1', d);
+    expect(log).toEqual(['access', 'rate', 'spend:2:exercise']);
+  });
+
+  it('a failing access lookup fails closed: ai_failed, nothing spent', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const credits = fakeCredits();
+    const r = await handleConsolidationEvaluate(
+      compReq, 'u1', deps({ db: fakeDb({ accessRpc: async () => ({ data: null, error: { message: 'down' } }) }), credits }),
+    );
+    expect(code(r)).toBe('ai_failed');
+    expect(credits.spend).not.toHaveBeenCalled();
   });
 });

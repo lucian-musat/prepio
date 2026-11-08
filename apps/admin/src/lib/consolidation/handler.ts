@@ -30,6 +30,7 @@ const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: 
   insufficient_credits: { status: 402, message: 'Nu ai destule credite pentru această verificare.' },
   ai_failed: { status: 502, message: 'Evaluarea nu a reușit. Încearcă din nou.' },
   suspended: { status: 403, message: 'Contul tău este suspendat.' },
+  access_required: { status: 403, message: 'Lecția face parte din accesul complet.' },
 };
 /** `ai_failed` once the spent credits were given back. */
 const REFUNDED_MESSAGE = 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
@@ -81,9 +82,9 @@ function parseRequest(body: unknown): { exerciseId: string; target: Target; answ
   return { exerciseId: body.exerciseId, target, answer };
 }
 
-type LoadedRow = ConsolidationRow & { lessons: { status: string } | { status: string }[] | null };
+type LoadedRow = ConsolidationRow & { lesson_id: string; lessons: { status: string } | { status: string }[] | null };
 type Loaded = {
-  exercise: ConsolidationExercise; sources: Source[]; context: AiContext; rules: string; model: string;
+  exercise: ConsolidationExercise; lessonId: string; sources: Source[]; context: AiContext; rules: string; model: string;
   /** The AI template of the request target; null when it is missing or any linked template has the wrong type. */
   template: AiTemplate | null;
 };
@@ -99,7 +100,7 @@ function ok<T>(res: { data: T; error: { message: string } | null }, what: string
 /** Null = not found or the lesson isn't published. Service-role reads: the context and templates never leave the server. */
 async function load(db: SupabaseClient, id: string, target: Target): Promise<Loaded | null> {
   const row = ok(
-    await db.from('consolidation_exercises').select('id,position,type,prompt,content,template_id,credit_cost,lessons(status)').eq('id', id).maybeSingle(),
+    await db.from('consolidation_exercises').select('id,position,type,prompt,content,template_id,credit_cost,lesson_id,lessons(status)').eq('id', id).maybeSingle(),
     'exercise lookup',
   ) as unknown as LoadedRow | null;
   const lesson = Array.isArray(row?.lessons) ? row.lessons[0] : row?.lessons;
@@ -144,7 +145,7 @@ async function load(db: SupabaseClient, id: string, target: Target): Promise<Loa
   const typesOk = templates.every((t) => t.type === expected);
   const targetTemplateId = typeof target === 'object' ? context.requirementTemplates[target.requirementId] : context.templateId;
   const template = (typesOk && templates.find((t) => t.id === targetTemplateId)) || null;
-  return { exercise, sources, context, rules: st.rules, model: st.model, template };
+  return { exercise, lessonId: row.lesson_id, sources, context, rules: st.rules, model: st.model, template };
 }
 
 const blank = (s: string | undefined) => !s || s.trim() === '';
@@ -234,6 +235,25 @@ async function logCheckBlocked(db: SupabaseClient, userId: string, exerciseId: s
   }
 }
 
+/** Whether the student's plan opens this lesson (the `can_open_lesson_for` RPC). Throws on database errors. */
+async function canOpenLesson(db: SupabaseClient, userId: string, lessonId: string): Promise<boolean> {
+  const { data, error } = await db.rpc('can_open_lesson_for', { p_user: userId, p_lesson: lessonId });
+  if (error) throw new Error(`access lookup failed: ${error.message}`);
+  return data === true;
+}
+
+/** Puts the check refused for lack of access on the timeline; a failure is only logged. */
+async function logAccessBlocked(db: SupabaseClient, userId: string, exerciseId: string, cost: number) {
+  try {
+    const { error } = await db.rpc('log_student_event_service', {
+      p_user: userId, p_kind: 'check_blocked', p_exercise: exerciseId, p_details: { reason: 'access_required', cost },
+    });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.error('[consolidation/evaluate] logging check_blocked (access_required) failed:', e);
+  }
+}
+
 /** `userId` is the authenticated caller (verified by the route); quotas are per user. */
 export async function handleConsolidationEvaluate(body: unknown, userId: string, deps: Deps): Promise<HandlerResult> {
   const req = parseRequest(body);
@@ -246,16 +266,22 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     if (await isSuspended(deps.db, userId)) return errorResult('suspended');
     const loaded = await load(deps.db, req.exerciseId, req.target);
     if (!loaded) return errorResult('not_found');
-    const { exercise, sources, context, rules, model, template } = loaded;
+    const { exercise, lessonId, sources, context, rules, model, template } = loaded;
     // A stored exercise that no longer validates (no AI context or template, detached span, ...) cannot be evaluated fairly.
     if (validateExercise(exercise, sources, context).length > 0) return errorResult('not_found');
     if (!template) return errorResult('not_found');
     const invalid = validate(exercise, req.target, req.answer);
     if (invalid) return errorResult(invalid);
 
+    const cost = checkCost(exercise, req.target);
+    // Locked lessons (trial / expired access) are refused before any charge; a lookup failure fails closed (ai_failed).
+    if (!(await canOpenLesson(deps.db, userId, lessonId))) {
+      await logAccessBlocked(deps.db, userId, exercise.id, cost);
+      return errorResult('access_required');
+    }
+
     if (!(await deps.rateLimit(GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS))) return errorResult('rate_limited');
 
-    const cost = checkCost(exercise, req.target);
     const spend = await deps.credits.spend(userId, cost, exercise.id, targetKey(req.target));
     if (spend.entryId === null) {
       await logCheckBlocked(deps.db, userId, exercise.id, cost, spend.balance);
