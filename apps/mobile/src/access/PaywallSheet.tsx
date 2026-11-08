@@ -31,6 +31,11 @@ type Props = {
   lessonCount?: number;
   /** The button after a purchase; „Deschide lecția” with a lesson, otherwise „Continuă”. */
   doneLabel?: string;
+  /**
+   * Whether the tapped lesson is playable once the access is bought (the learning mode may still lock it, e.g. guided
+   * order). False: the success button reads „Înapoi la lecții” and only closes the sheet. Default true.
+   */
+  canOpenAfterPurchase?: boolean;
   /** „Mai târziu”, the backdrop, Android back: nothing bought. */
   onClose: () => void;
   /** After „Ai acces complet!”: the caller moves on (opens the tapped lesson, back to the exercise). */
@@ -42,7 +47,7 @@ const untilOf = (s: AccessStatus): string | null => (s.plan === 'trial' ? null :
 
 type Done = { bonus: number };
 
-function Body({ lessonTitle, lessonCount, doneLabel, onClose, onUnlocked, onPending }: Omit<Props, 'visible'> & { onPending(p: boolean): void }) {
+function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true, onClose, onUnlocked, onPending }: Omit<Props, 'visible'> & { onPending(p: boolean): void }) {
   const { status, offer, refresh } = useAccess();
   const { purchase, pending, error } = useAccessPurchase();
   const [done, setDone] = useState<Done | null>(null);
@@ -57,6 +62,8 @@ function Body({ lessonTitle, lessonCount, doneLabel, onClose, onUnlocked, onPend
   useEffect(() => onPending(pending), [pending, onPending]);
 
   if (done) {
+    // A tapped lesson that the learning mode still locks: back to Home, which shows the order.
+    const stayHome = !!lessonTitle && !doneLabel && !canOpenAfterPurchase;
     return (
       <>
         <View style={styles.done}>
@@ -73,7 +80,16 @@ function Body({ lessonTitle, lessonCount, doneLabel, onClose, onUnlocked, onPend
             {status.plan === 'trial' ? 'Toate lecțiile sunt deschise.' : `Toate lecțiile sunt deschise până la ${formatAccessDate(status.until)}.`}
           </AppText>
         </View>
-        <Button label={doneLabel ?? (lessonTitle ? 'Deschide lecția' : 'Continuă')} onPress={onUnlocked} />
+        {stayHome ? (
+          <>
+            <Button label="Înapoi la lecții" onPress={onClose} />
+            <AppText role="small" color="textMuted" style={styles.center}>
+              Lecțiile se deschid în ordine, pe traseul ghidat.
+            </AppText>
+          </>
+        ) : (
+          <Button label={doneLabel ?? (lessonTitle ? 'Deschide lecția' : 'Continuă')} onPress={onUnlocked} />
+        )}
       </>
     );
   }

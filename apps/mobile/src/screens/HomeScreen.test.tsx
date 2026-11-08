@@ -335,6 +335,7 @@ describe('plan paywall', () => {
   };
 
   it('tapping a paywall lesson opens the sheet for it; buying opens that lesson', async () => {
+    mockedProgress.mockResolvedValue(progressOf('a'));
     const { purchaseAccess } = jest.requireMock<typeof import('../lib/access')>('../lib/access');
     (purchaseAccess as jest.Mock).mockResolvedValue({
       orderId: 'o1', accessUntil: new Date(Date.now() + 90 * 86400000).toISOString(), bonus: 100, balance: 105,
@@ -349,6 +350,42 @@ describe('plan paywall', () => {
     await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
     expect(router.push).toHaveBeenCalledWith('/lesson/b');
     expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  const buyFrom = async (name: string) => {
+    const { purchaseAccess } = jest.requireMock<typeof import('../lib/access')>('../lib/access');
+    (purchaseAccess as jest.Mock).mockResolvedValue({
+      orderId: 'o1', accessUntil: new Date(Date.now() + 90 * 86400000).toISOString(), bonus: 100, balance: 105,
+    });
+    await fireEvent.press(screen.getByRole('button', { name }));
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deblochează · 150 lei' })));
+  };
+
+  it('guided, lesson 1 unfinished: after buying lesson 2 stays in order -> „Înapoi la lecții”, no navigation', async () => {
+    await trialHome();
+    await buyFrom('A doua, blocată, face parte din accesul complet');
+    expect(screen.getByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Deschide lecția' })).toBeNull();
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Înapoi la lecții' })));
+    expect(router.push).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+  });
+
+  it('free mode: after buying the tapped lesson opens', async () => {
+    mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free', creditBalance: 5 };
+    await trialHome();
+    await buyFrom('A doua, blocată, face parte din accesul complet');
+    expect(screen.queryByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeNull();
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
+    expect(router.push).toHaveBeenCalledWith('/lesson/b');
+  });
+
+  it('guided, lesson 1 finished: lesson 2 becomes current -> „Deschide lecția”', async () => {
+    mockedProgress.mockResolvedValue(progressOf('a'));
+    await trialHome();
+    await buyFrom('A doua, blocată, face parte din accesul complet');
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
+    expect(router.push).toHaveBeenCalledWith('/lesson/b');
   });
 
   it('„Mai târziu” closes the sheet', async () => {

@@ -201,6 +201,8 @@ export default function HomeScreen() {
   const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode, canOpen);
   // Lessons finished before the plan lost them still count as done.
   const done = orderedLessons(data.sections).filter((l) => progress.finished.has(l.id)).length;
+  // Would the tapped lesson be playable with full access? (guided order may still lock it)
+  const afterPurchase = sheet?.lessonId ? lessonAccess(orderedLessons(data.sections), progress.finished, mode, () => true).get(sheet.lessonId) : undefined;
   const sheetTitle = sheet?.lessonId ? orderedLessons(data.sections).find((l) => l.id === sheet.lessonId)?.title : undefined;
 
   return (
@@ -232,7 +234,7 @@ export default function HomeScreen() {
           </View>
         );
       })}
-      <PaywallSheet visible={sheet !== null} lessonTitle={sheetTitle} lessonCount={total} onClose={closeSheet} onUnlocked={unlocked} />
+      <PaywallSheet visible={sheet !== null} lessonTitle={sheetTitle} lessonCount={total} canOpenAfterPurchase={afterPurchase !== 'locked'} onClose={closeSheet} onUnlocked={unlocked} />
     </ScreenLayout>
   );
 }

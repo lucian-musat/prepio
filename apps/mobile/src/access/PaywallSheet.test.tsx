@@ -105,6 +105,26 @@ it('success: applies the plan and the credits, confirms, then opens the lesson',
   expect(onUnlocked).toHaveBeenCalledTimes(1);
 });
 
+it('guided order keeps the tapped lesson locked: „Înapoi la lecții” + hint, pressing only closes', async () => {
+  mockedPurchase.mockResolvedValue(OK);
+  const { onClose, onUnlocked } = await mount({ canOpenAfterPurchase: false });
+  await fireEvent.press(unlock());
+  expect(screen.getByText('Ai acces complet!')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Deschide lecția' })).toBeNull();
+  expect(screen.getByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Înapoi la lecții' }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onUnlocked).not.toHaveBeenCalled();
+});
+
+it('openable after the purchase (default): „Deschide lecția” and no hint', async () => {
+  mockedPurchase.mockResolvedValue(OK);
+  await mount();
+  await fireEvent.press(unlock());
+  expect(screen.queryByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Deschide lecția' })).toBeTruthy();
+});
+
 it('offer_changed: shows the new offer and the message, and stays open', async () => {
   const fresh = { priceBani: 20000, bonusCredits: 50, durationMonths: 6 };
   mockedPurchase.mockRejectedValueOnce(new AccessApiError('offer_changed', 'x', fresh));
