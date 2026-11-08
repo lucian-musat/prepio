@@ -136,6 +136,17 @@ The credits change (spec `docs/superpowers/specs/2026-11-06-credits-design.md`) 
    - signed in on the student web: the chip shows the balance, a purchase works (balance and „Creditele mele” history), and one real AI check takes the exercise's cost; admin Elevi lists the student with the same balance.
 6. After any later `pnpm content:cloud:sync-consolidation`, re-set admin-made `credit_cost` changes: the sync replaces the exercises with the seed defaults.
 
+## Paid access rollout
+
+The paid access change (spec `docs/superpowers/specs/2026-11-08-paid-access-design.md`) adds migration `20261108091845_paid_access` (access offer, orders, ledger, restrictive RLS on the content tables, and the pg_cron job `log-access-expiries`). Order:
+
+1. Check that `pg_cron` is available on the cloud project: `select * from pg_available_extensions where name = 'pg_cron'`, or enable it in the Supabase dashboard (Database → Extensions). The dry run does NOT execute SQL, so it can't prove this.
+2. `pnpm db:cloud:push:dry` (must list only `20261108091845_paid_access`) → `pnpm db:cloud:push`.
+3. Verify: `select jobname, schedule from cron.job` shows `log-access-expiries`; some minutes later `select status from cron.job_run_details order by start_time desc limit 5` shows a succeeded run.
+4. Only then deploy admin and student web (push `main`, wait for Ready). The web client selects `profiles.access_until` and evaluate calls `can_open_lesson_for`: deploying before the push breaks sign-in and checks.
+5. New EAS `preview` APK. Old APKs show locked lessons as empty screens (they can't read the content) and have no way to buy.
+6. Every existing account starts in trial (production is test-only). Checks: anon REST on `access_ledger` / `access_orders` returns `[]` or 401/42501; `POST /api/access/purchase` returns 401 without a token; a trial student sees one open lesson and the sheet on the others; after one purchase the pill shows the plan and the credits grew by the bonus.
+
 ## Student administration rollout
 
 The student administration change (spec `docs/superpowers/specs/2026-11-06-student-administration-design.md`) adds four migrations:
