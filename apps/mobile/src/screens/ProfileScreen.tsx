@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { space } from '@prepio/shared';
+import { formatAccessDate, space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import { OFFLINE } from '../lib/api';
@@ -11,6 +11,7 @@ import { modeOf, type LearningMode } from '../lib/learningMode';
 import LearningModePicker from '../components/LearningModePicker';
 import { ownMessage } from '../lib/errorMessage';
 import { useCredits } from '../credits/CreditsProvider';
+import { useAccess } from '../access/AccessProvider';
 
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
@@ -25,6 +26,8 @@ const messageOf = (e: unknown, fallback: string) => (e instanceof Error && e.mes
 export default function ProfileScreen() {
   const { session, profile, refreshProfile, signOut } = useAuth();
   const { balance } = useCredits();
+  const { status } = useAccess();
+  const planLabel = status.plan === 'trial' ? 'Trial' : status.plan === 'expired' ? 'Expirat' : `Acces până la ${formatAccessDate(status.until)}`;
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -134,6 +137,8 @@ export default function ProfileScreen() {
           ) : null}
           {modeSaved ? <AppText role="small" color="success">{modeSaved}</AppText> : null}
         </View>
+
+        <Button label={`Abonamentul meu · ${planLabel}`} variant="secondary" onPress={() => router.push('/abonament')} disabled={busy} />
 
         <Button
           label={`Creditele mele · ${balance ?? 0}`}

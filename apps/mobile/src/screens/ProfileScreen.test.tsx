@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { formatAccessDate } from '@prepio/shared';
 import ProfileScreen from './ProfileScreen';
 import { updateDisplayName, updateLearningMode } from '../lib/profile';
 import { deleteAccount } from '../lib/api';
@@ -22,6 +23,8 @@ jest.mock('../lib/profile', () => ({
   updateLearningMode: jest.fn(),
 }));
 jest.mock('../credits/CreditsProvider');
+jest.mock('../access/AccessProvider');
+const { mockResetAccess } = jest.requireMock<typeof import('../access/__mocks__/AccessProvider')>('../access/AccessProvider');
 jest.mock('../lib/api', () => ({ ...jest.requireActual('../lib/api'), deleteAccount: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true } }));
 
@@ -40,6 +43,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSession = { user: { id: 'u1' } };
   mockMode = 'guided';
+  mockResetAccess();
 });
 
 it('shows the current name', async () => {
@@ -171,4 +175,22 @@ it('has a „Creditele mele” row with the balance that opens the credits page'
   await renderScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Creditele mele · 49' }));
   expect(router.push).toHaveBeenCalledWith('/credits');
+});
+
+it('shows the subscription row with the plan label above the credits row', async () => {
+  await renderScreen();
+  expect(screen.getByRole('button', { name: 'Abonamentul meu · Trial' })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Abonamentul meu · Trial' }));
+  expect(require('expo-router').router.push).toHaveBeenCalledWith('/abonament');
+});
+
+it('labels full and expired plans', async () => {
+  const d = new Date(Date.now() + 40 * 86400000);
+  mockResetAccess({ accessUntil: d.toISOString() });
+  const { unmount } = await renderScreen();
+  expect(screen.getByRole('button', { name: `Abonamentul meu · Acces până la ${formatAccessDate(d)}` })).toBeTruthy();
+  unmount();
+  mockResetAccess({ accessUntil: new Date(Date.now() - 86400000).toISOString() });
+  await renderScreen();
+  expect(screen.getByRole('button', { name: 'Abonamentul meu · Expirat' })).toBeTruthy();
 });
