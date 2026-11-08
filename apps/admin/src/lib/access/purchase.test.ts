@@ -31,6 +31,10 @@ describe('handleAccessPurchase', () => {
     [{ ...OK_BODY, expectedDurationMonths: '3' }],
     [{ expectedPriceBani: 15000, expectedBonusCredits: 100 }],
     [{ ...OK_BODY, expectedPriceBani: Number.MAX_SAFE_INTEGER + 2 }],
+    // Above Postgres int: the RPC would fail with a server error instead of a 400.
+    [{ ...OK_BODY, expectedPriceBani: 2147483648 }],
+    [{ ...OK_BODY, expectedBonusCredits: 2147483648 }],
+    [{ ...OK_BODY, expectedDurationMonths: 2147483648 }],
   ])('rejects bad body %j with 400 and no RPC', async (body) => {
     const { db, rpc } = fakeDb({});
     const r = await handleAccessPurchase(body, USER, db);

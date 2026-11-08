@@ -17,7 +17,9 @@ export function purchaseError(code: AccessPurchaseErrorCode, offer?: AccessOffer
   return { status, json: offer ? { error: code, message, offer } : { error: code, message } };
 }
 
-const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+/** Postgres `int` maximum: larger values would make the RPC fail instead of answering bad_request. */
+const PG_INT_MAX = 2147483647;
+const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= PG_INT_MAX;
 
 /** Buys full access instantly (no payment provider yet) through the service-role RPC. Stale expected values → 409. */
 export async function handleAccessPurchase(body: unknown, userId: string, db: SupabaseClient): Promise<PurchaseResult> {
