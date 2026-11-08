@@ -7,9 +7,6 @@ import type { LessonPosition } from './progress';
 export const orderedLessons = (sections: HomeData['sections']): LessonSummary[] =>
   sections.flatMap((s) => s.lessons);
 
-/** For screens that do not apply the plan yet (the server still refuses locked lessons). */
-export const allOpen = () => true;
-
 export type LessonState = 'finished' | 'current' | 'open' | 'locked' | 'paywall';
 
 /**

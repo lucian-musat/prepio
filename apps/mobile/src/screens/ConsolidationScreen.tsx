@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { space, type LessonSummary } from '@prepio/shared';
 import { useAuth } from '../auth/AuthProvider';
+import { useAccess } from '../access/AccessProvider';
 import {
   fetchAttempts,
   fetchConsolidation,
@@ -19,7 +20,7 @@ import {
 } from '../lib/consolidation';
 import { fetchHome } from '../lib/content';
 import { modeOf, type LearningMode } from '../lib/learningMode';
-import { allOpen, lessonAccess, orderedLessons } from '../lib/lessonFlow';
+import { lessonAccess, orderedLessons } from '../lib/lessonFlow';
 import { fetchProgress } from '../lib/progress';
 import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import ExerciseMap from '../components/consolidation/ExerciseMap';
@@ -52,13 +53,20 @@ function Message({ title, body, action }: { title: string; body?: string; action
 }
 
 /** The lesson to go on to after consolidation: guided, the current one; free, the next in order. */
-function nextLesson(order: LessonSummary[], finished: Set<string>, lessonId: string, mode: LearningMode) {
+function nextLesson(
+  order: LessonSummary[],
+  finished: Set<string>,
+  lessonId: string,
+  mode: LearningMode,
+  canOpen: (id: string) => boolean,
+) {
   if (mode === 'guided') {
-    const access = lessonAccess(order, finished, 'guided', allOpen);
+    const access = lessonAccess(order, finished, 'guided', canOpen);
     return order.find((l) => access.get(l.id) === 'current');
   }
   const at = order.findIndex((l) => l.id === lessonId);
-  return at >= 0 ? order[at + 1] : undefined;
+  const following = at >= 0 ? order[at + 1] : undefined;
+  return following && canOpen(following.id) ? following : undefined;
 }
 
 // Run and attempt writes never block the student: a failure is only logged, like lesson positions.
@@ -74,6 +82,7 @@ export default function ConsolidationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = String(id);
   const mode = modeOf(useAuth().profile);
+  const { canOpen } = useAccess();
   const [loaded, setLoaded] = useState<Loaded | null | undefined>(undefined);
   const [reload, setReload] = useState(0);
   const [run, setRun] = useState<Run | null>(null);
@@ -154,7 +163,7 @@ export default function ConsolidationScreen() {
 
   const exercise = run ? data.exercises.find((e) => e.id === run.exerciseIds[run.index]) : undefined;
   if (!run || !exercise) {
-    const next = nextLesson(order, finished, lessonId, mode);
+    const next = nextLesson(order, finished, lessonId, mode, canOpen);
     return (
       <ConsolidationEnd
         exercises={data.exercises}

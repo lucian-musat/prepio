@@ -16,6 +16,8 @@ jest.mock('../lib/content', () => ({
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn(), savePosition: jest.fn(), markFinished: jest.fn() }));
 jest.mock('../lib/consolidation', () => ({ countConsolidation: jest.fn() }));
 jest.mock('../lib/activity', () => ({ logTestFailed: jest.fn() }));
+let mockCanOpen = (_id: string) => true;
+jest.mock('../access/AccessProvider', () => ({ useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id) }) }));
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),
@@ -109,6 +111,7 @@ const answer = async (text: 'Da' | 'Nu', next: string) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanOpen = () => true;
   mockCanGoBack = false;
   mockMode = 'free';
   mockId = 'l1';
@@ -432,6 +435,16 @@ describe('guided mode', () => {
     expect(screen.getByText('Ai deblocat: Lecția doi')).toBeTruthy();
     await press('Mergi la lecția următoare');
     expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('trial: passing the free lesson claims no unlock and offers no button into the paywalled lesson', async () => {
+    mockCanOpen = (id) => id === 'l1';
+    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    expect(screen.queryByText(/Ai deblocat/)).toBeNull();
+    expect(screen.queryByText('Mergi la lecția următoare')).toBeNull();
+    expect(actionBar().getByRole('button', { name: 'Înapoi acasă' })).toBeTruthy();
   });
 
   it('Înapoi acasă goes home from the passed screen', async () => {
@@ -790,5 +803,17 @@ describe('zones and consolidation', () => {
     await renderLesson(lesson());
     await screen.findByText(SKIP);
     expect(screen.queryByText('Continuă de unde ai rămas')).toBeNull();
+  });
+});
+
+describe('free mode with a paywall', () => {
+  it('trial: no next-lesson button into a paywalled lesson', async () => {
+    mockCanOpen = (id) => id === 'l1';
+    mockedCount.mockResolvedValue(2);
+    await openLesson(lesson({ cards: [] }), SKIP);
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
+    expect(actionBar().getByRole('button', { name: 'Începe consolidarea' })).toBeTruthy();
+    expect(actionBar().queryByRole('button', { name: 'Mergi la lecția următoare' })).toBeNull();
   });
 });

@@ -1,12 +1,13 @@
 import { act, render } from '@testing-library/react-native';
 import { AppState, Text } from 'react-native';
 import { AccessProvider, useAccess } from './AccessProvider';
-import { fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId } from '../lib/access';
+import { fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId, fetchIsAdmin } from '../lib/access';
 import { refreshRegisteredAccess } from '../lib/profileRefresh';
 
 let mockProfile: { id: string; accessUntil: string | null } | null;
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockProfile }) }));
-jest.mock('../lib/access', () => ({ fetchAccessOffer: jest.fn(), fetchAccessUntil: jest.fn(), fetchFreeLessonId: jest.fn() }));
+jest.mock('../lib/access', () => ({ fetchAccessOffer: jest.fn(), fetchAccessUntil: jest.fn(), fetchFreeLessonId: jest.fn(), fetchIsAdmin: jest.fn() }));
+const mockAdmin = fetchIsAdmin as jest.Mock;
 const mockOffer = fetchAccessOffer as jest.Mock;
 const mockUntil = fetchAccessUntil as jest.Mock;
 const mockFree = fetchFreeLessonId as jest.Mock;
@@ -27,6 +28,7 @@ beforeEach(() => {
   mockOffer.mockReset().mockResolvedValue(OFFER);
   mockUntil.mockReset().mockResolvedValue(null);
   mockFree.mockReset().mockResolvedValue('L1');
+  mockAdmin.mockReset().mockResolvedValue(false);
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_t, cb) => {
     onChange = cb as (s: string) => void;
     return { remove: jest.fn() } as never;
@@ -138,5 +140,51 @@ it('a profile reload with a new access_until replaces the local value', async ()
       <Probe />
     </AccessProvider>,
   );
+  expect(ctx.status.plan).toBe('full');
+});
+
+it('an admin with no access_until can open every lesson', async () => {
+  mockAdmin.mockResolvedValue(true);
+  await mount();
+  expect(ctx.status).toEqual({ plan: 'trial' });
+  expect(ctx.isAdmin).toBe(true);
+  expect(ctx.canOpen('L2')).toBe(true);
+});
+
+it('a student is not an admin', async () => {
+  await mount();
+  expect(ctx.isAdmin).toBe(false);
+});
+
+it('is ready after the first read settles, even when every read fails', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  mockUntil.mockRejectedValue(new Error('offline'));
+  mockOffer.mockRejectedValue(new Error('offline'));
+  mockFree.mockRejectedValue(new Error('offline'));
+  mockAdmin.mockRejectedValue(new Error('offline'));
+  await mount();
+  expect(ctx.ready).toBe(true);
+});
+
+it('is not ready while the first read is pending', async () => {
+  mockUntil.mockReturnValue(new Promise(() => {}));
+  await mount();
+  expect(ctx.ready).toBe(false);
+});
+
+it('a refresh that started before applyPurchase does not overwrite it', async () => {
+  await mount();
+  let resolveOld!: (v: string | null) => void;
+  mockUntil.mockReturnValueOnce(new Promise<string | null>((r) => (resolveOld = r)));
+  let pending!: Promise<void>;
+  await act(async () => {
+    pending = ctx.refresh();
+  });
+  await act(async () => ctx.applyPurchase({ orderId: 'o', accessUntil: inDays(90), bonus: 100, balance: 105 }));
+  expect(ctx.status.plan).toBe('full');
+  await act(async () => {
+    resolveOld(null); // the stale read says trial
+    await pending;
+  });
   expect(ctx.status.plan).toBe('full');
 });

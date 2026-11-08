@@ -25,6 +25,8 @@ jest.mock('../lib/api', () => {
 });
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn(), imageUrl: (p: string) => `http://x/${p}` }));
+let mockCanOpen = (_id: string) => true;
+jest.mock('../access/AccessProvider', () => ({ useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id) }) }));
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),
@@ -94,6 +96,7 @@ const FACT_2 = 'În 1877 România își proclamă independența de stat.';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanOpen = () => true;
   mockMode = 'free';
   mocked.data.mockResolvedValue({ lessonId: 'l1', exercises: [shortEx, factsEx], sources: new Map(), templates: new Map([['t1', template]]) });
   mocked.attempts.mockResolvedValue(new Map());
@@ -243,6 +246,17 @@ it('reopening with a finished run lands on the end screen; with all correct only
   expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
   await press('Reia consolidarea');
   expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 0, finished: false });
+});
+
+it.each(['free', 'guided'] as const)('trial (%s): no next-lesson button into a paywalled lesson, only „Înapoi acasă”', async (mode) => {
+  mockMode = mode;
+  mockCanOpen = (id) => id === 'l1';
+  mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: true });
+  mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'ok')));
+  await open();
+  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(bar().queryByRole('button', { name: 'Mergi la lecția următoare' })).toBeNull();
+  expect(bar().getByRole('button', { name: 'Înapoi acasă' })).toBeTruthy();
 });
 
 it('the last lesson offers „Înapoi acasă”', async () => {

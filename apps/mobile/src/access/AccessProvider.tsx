@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native';
 import { accessStatus, hasFullAccess, type AccessOffer, type AccessPurchaseResponse, type AccessStatus } from '@prepio/shared';
 import { useAuth } from '../auth/AuthProvider';
-import { fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId } from '../lib/access';
+import { fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId, fetchIsAdmin } from '../lib/access';
 import { registerAccessRefresh } from '../lib/profileRefresh';
 
 type AccessContextValue = {
@@ -16,6 +16,10 @@ type AccessContextValue = {
   canOpen(lessonId: string): boolean;
   /** First lesson in Home order (the same one the server leaves open); null when nothing is published. */
   freeLessonId: string | null;
+  /** Admins have every lesson open, like on the server. */
+  isAdmin: boolean;
+  /** False until the first access read has settled (success or failure): trial-only locks are not final before. */
+  ready: boolean;
 };
 
 const AccessContext = createContext<AccessContextValue | null>(null);
@@ -27,6 +31,10 @@ export function AccessProvider({ children }: { children: ReactNode }) {
   const [accessUntil, setAccessUntil] = useState<string | null>(profileUntil);
   const [offer, setOffer] = useState<AccessOffer | null>(null);
   const [freeLessonId, setFreeLessonId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [ready, setReady] = useState(false);
+  // Bumped by every refresh start and by applyPurchase: a refresh that was overtaken must not overwrite newer state.
+  const generation = useRef(0);
   // Re-evaluates the plan against the clock whenever the state is re-read (focus, foreground, purchase).
   const [now, setNow] = useState(() => new Date());
   const mounted = useRef(true);
@@ -47,18 +55,30 @@ export function AccessProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     const id = userIdRef.current;
-    if (!id) return;
+    if (!id) {
+      setReady(true); // nothing to read (no profile): do not hold the UI back
+      return;
+    }
+    const gen = ++generation.current;
     // Each read is independent: one failing (offline) keeps the previous value of the others.
-    const [until, nextOffer, free] = await Promise.allSettled([fetchAccessUntil(id), fetchAccessOffer(), fetchFreeLessonId()]);
+    const [until, nextOffer, free, admin] = await Promise.allSettled([
+      fetchAccessUntil(id),
+      fetchAccessOffer(),
+      fetchFreeLessonId(),
+      fetchIsAdmin(),
+    ]);
     // Drop results that arrive after unmount or after another student signed in.
-    if (!mounted.current || userIdRef.current !== id) return;
+    if (!mounted.current || userIdRef.current !== id || gen !== generation.current) return;
     if (until.status === 'fulfilled') setAccessUntil(until.value);
     else console.warn('[access] access_until could not be refreshed:', until.reason);
     if (nextOffer.status === 'fulfilled') setOffer(nextOffer.value);
     else console.warn('[access] offer could not be refreshed:', nextOffer.reason);
     if (free.status === 'fulfilled') setFreeLessonId(free.value);
     else console.warn('[access] free lesson could not be refreshed:', free.reason);
+    if (admin.status === 'fulfilled') setIsAdmin(admin.value);
+    else console.warn('[access] admin check could not be refreshed:', admin.reason);
     setNow(new Date());
+    setReady(true);
   }, []);
 
   const refreshRef = useRef(refresh);
@@ -85,17 +105,20 @@ export function AccessProvider({ children }: { children: ReactNode }) {
   }, [accessUntil]);
 
   const applyPurchase = useCallback((r: AccessPurchaseResponse) => {
+    generation.current++; // an in-flight refresh started earlier is stale now
+    setReady(true);
     setAccessUntil(r.accessUntil);
     setNow(new Date());
   }, []);
 
   const status = useMemo(() => accessStatus(accessUntil, now), [accessUntil, now]);
   const full = hasFullAccess(status);
-  const canOpen = useCallback((lessonId: string) => full || (freeLessonId !== null && lessonId === freeLessonId), [full, freeLessonId]);
+  const canOpen = useCallback((lessonId: string) => isAdmin || full || (freeLessonId !== null && lessonId === freeLessonId),
+    [isAdmin, full, freeLessonId],);
 
   const value = useMemo(
-    () => ({ status, offer, refresh, applyPurchase, canOpen, freeLessonId }),
-    [status, offer, refresh, applyPurchase, canOpen, freeLessonId],
+    () => ({ status, offer, refresh, applyPurchase, canOpen, freeLessonId, isAdmin, ready }),
+    [status, offer, refresh, applyPurchase, canOpen, freeLessonId, isAdmin, ready],
   );
   return <AccessContext.Provider value={value}>{children}</AccessContext.Provider>;
 }

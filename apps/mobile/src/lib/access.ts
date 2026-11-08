@@ -1,8 +1,6 @@
 import type { AccessOffer, AccessPurchaseError, AccessPurchaseErrorCode, AccessPurchaseResponse } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
-import { fetchHome } from './content';
-import { orderedLessons } from './lessonFlow';
 import { apiUrl, getSupabase } from './supabase';
 
 export class AccessApiError extends Error {
@@ -48,10 +46,18 @@ export async function fetchAccessUntil(userId: string, client: SupabaseClient = 
   return data?.access_until ?? null;
 }
 
-/** The free lesson: the first lesson in Home order, the same one the server opens for a trial account. */
-export async function fetchFreeLessonId(): Promise<string | null> {
-  const home = await fetchHome();
-  return orderedLessons(home.sections)[0]?.id ?? null;
+/** The free lesson as the server computes it (`free_lesson_id()`, the function RLS uses); null when nothing is published. */
+export async function fetchFreeLessonId(client: SupabaseClient = getSupabase()): Promise<string | null> {
+  const { data, error } = await client.rpc('free_lesson_id');
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+/** Whether the signed-in user is an admin (admins always have every lesson open, like on the server). */
+export async function fetchIsAdmin(client: SupabaseClient = getSupabase()): Promise<boolean> {
+  const { data, error } = await client.rpc('is_admin');
+  if (error) throw error;
+  return data === true;
 }
 
 /** The student's own access ledger, newest first; purchases carry the price paid. Admin id / reason are not read. */

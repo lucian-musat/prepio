@@ -5,10 +5,11 @@ import { space, type Lesson, type LessonSummary } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { useAuth } from '../auth/AuthProvider';
+import { useAccess } from '../access/AccessProvider';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { countConsolidation } from '../lib/consolidation';
 import { modeOf } from '../lib/learningMode';
-import { allOpen, attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
+import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
@@ -115,6 +116,7 @@ export const SKIP_CONFIRM = 'Da, sari la verificare';
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const mode = modeOf(useAuth().profile);
+  const { canOpen } = useAccess();
   const [data, setData] = useState<Loaded | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
@@ -173,7 +175,7 @@ export default function LessonScreen() {
   if (data === null) return <Message title="Lecția nu a fost găsită" />;
 
   const { lesson, order, progress, consolidation } = data;
-  if (mode === 'guided' && lessonAccess(order, progress.finished, mode, allOpen).get(lesson.id) === 'locked') {
+  if (mode === 'guided' && lessonAccess(order, progress.finished, mode, canOpen).get(lesson.id) === 'locked') {
     return <Message title="Lecția este blocată" body="Termină mai întâi lecțiile de dinainte, în ordine." />;
   }
 
@@ -306,6 +308,7 @@ type EndProps = Loaded & {
 
 /** The screen after the last step: waits for the finished mark, then the free or guided result. */
 function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetrySave, onReviewCards, onRetake }: EndProps) {
+  const { canOpen } = useAccess();
   if (!end || end.status === 'saving') return <Loading />;
   const { outcome } = end;
   if (end.status === 'error') {
@@ -320,12 +323,13 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
     );
   }
   if (mode === 'free') {
-    // Free mode: the next lesson is simply the next one in order (none after the last).
+    // Free mode: the next lesson is simply the next one in order (none after the last, none behind the paywall).
     const at = order.findIndex((l) => l.id === lesson.id);
+    const following = at >= 0 ? order[at + 1]?.id : undefined;
     return (
       <LessonDone
         lessonId={lesson.id}
-        nextId={at >= 0 ? order[at + 1]?.id : undefined}
+        nextId={following !== undefined && canOpen(following) ? following : undefined}
         title={lesson.title}
         correct={outcome.correct}
         total={outcome.total}
@@ -339,8 +343,8 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
   // Go on to the lesson that is current once this pass counts: after a free → guided switch the finished
   // lessons need not be a prefix of the order, so it is not always the next one. "Ai deblocat" only when this
   // pass is what opened it (it was locked before), not on a redo.
-  const before = lessonAccess(order, progress.finished, 'guided', allOpen);
-  const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided', allOpen);
+  const before = lessonAccess(order, progress.finished, 'guided', canOpen);
+  const after = lessonAccess(order, new Set([...progress.finished, lesson.id]), 'guided', canOpen);
   const next = order.find((l) => after.get(l.id) === 'current');
   const unlocked = next && before.get(next.id) === 'locked' ? next.title : undefined;
   return (

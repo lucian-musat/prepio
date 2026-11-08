@@ -8,8 +8,9 @@ import { fetchProgress } from '../lib/progress';
 
 let mockCanOpen = (_id: string) => true;
 const mockRefreshAccess = jest.fn();
+let mockAccessReady = true;
 jest.mock('../access/AccessProvider', () => ({
-  useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), refresh: mockRefreshAccess }),
+  useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), refresh: mockRefreshAccess, ready: mockAccessReady }),
 }));
 jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
@@ -68,6 +69,7 @@ const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', 
 beforeEach(() => {
   jest.clearAllMocks();
   mockCanOpen = () => true;
+  mockAccessReady = true;
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided', creditBalance: 5 };
   mockedProgress.mockResolvedValue(progressOf());
 });
@@ -307,4 +309,19 @@ describe('plan paywall', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Prima' }));
     expect(router.push).toHaveBeenCalledWith('/lesson/a');
   });
+});
+
+it('keeps the spinner until the access read has settled', async () => {
+  mockAccessReady = false;
+  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [{ path: ['I'], lessons: [lesson('a', 'Prima')] }] });
+  const r = await renderHome();
+  await act(async () => {});
+  expect(screen.queryByText('Prima')).toBeNull();
+  mockAccessReady = true;
+  await r.rerender(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <HomeScreen />
+    </SafeAreaProvider>,
+  );
+  expect(await screen.findByText('Prima')).toBeTruthy();
 });

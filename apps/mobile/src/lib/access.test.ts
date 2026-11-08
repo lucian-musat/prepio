@@ -1,9 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AccessOffer } from '@prepio/shared';
-import { AccessApiError, fetchAccessHistory, fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId, purchaseAccess } from './access';
+import { AccessApiError, fetchAccessHistory, fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId, fetchIsAdmin, purchaseAccess } from './access';
 import { getAccessToken, signOut } from './supabase';
 import { registerProfileRefresh } from './profileRefresh';
-import { fetchHome } from './content';
 
 jest.mock('./supabase', () => {
   class AuthOutageError extends Error {
@@ -17,17 +16,14 @@ jest.mock('./supabase', () => {
     AuthOutageError,
   };
 });
-jest.mock('./content', () => ({ fetchHome: jest.fn() }));
 
 const mockToken = getAccessToken as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
-const mockHome = fetchHome as jest.Mock;
 const fetchMock = jest.fn();
 const ORIGINAL_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 beforeEach(() => {
   fetchMock.mockReset();
-  mockHome.mockReset();
   mockToken.mockReset().mockResolvedValue('token-1');
   mockSignOut.mockReset().mockResolvedValue(undefined);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -52,7 +48,8 @@ function fakeClient(results: Record<string, { data: unknown; error: unknown }>) 
     b.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(results[table]).then(res, rej);
     return b;
   });
-  return { client: { from } as unknown as SupabaseClient, from, calls };
+  const rpc = jest.fn(async (fn: string) => results[`rpc:${fn}`]);
+  return { client: { from, rpc } as unknown as SupabaseClient, from, rpc, calls };
 }
 
 describe('fetchAccessOffer', () => {
@@ -109,14 +106,28 @@ describe('fetchAccessHistory', () => {
 });
 
 describe('fetchFreeLessonId', () => {
-  const l = (id: string) => ({ id, nodeId: 'n', title: id, position: 0 });
-  it('is the first lesson of the Home order', async () => {
-    mockHome.mockResolvedValue({ welcomeMessage: '', sections: [{ path: ['A'], lessons: [l('x'), l('y')] }, { path: ['B'], lessons: [l('z')] }] });
-    await expect(fetchFreeLessonId()).resolves.toBe('x');
+  it("is the server's free_lesson_id()", async () => {
+    const { client, rpc } = fakeClient({ 'rpc:free_lesson_id': { data: 'x', error: null } });
+    await expect(fetchFreeLessonId(client)).resolves.toBe('x');
+    expect(rpc).toHaveBeenCalledWith('free_lesson_id');
   });
   it('is null with no published lessons', async () => {
-    mockHome.mockResolvedValue({ welcomeMessage: '', sections: [] });
-    await expect(fetchFreeLessonId()).resolves.toBeNull();
+    const { client } = fakeClient({ 'rpc:free_lesson_id': { data: null, error: null } });
+    await expect(fetchFreeLessonId(client)).resolves.toBeNull();
+  });
+  it('throws on an rpc error', async () => {
+    const { client } = fakeClient({ 'rpc:free_lesson_id': { data: null, error: new Error('boom') } });
+    await expect(fetchFreeLessonId(client)).rejects.toThrow('boom');
+  });
+});
+
+describe('fetchIsAdmin', () => {
+  it('reads is_admin()', async () => {
+    const yes = fakeClient({ 'rpc:is_admin': { data: true, error: null } });
+    await expect(fetchIsAdmin(yes.client)).resolves.toBe(true);
+    expect(yes.rpc).toHaveBeenCalledWith('is_admin');
+    const no = fakeClient({ 'rpc:is_admin': { data: false, error: null } });
+    await expect(fetchIsAdmin(no.client)).resolves.toBe(false);
   });
 });
 

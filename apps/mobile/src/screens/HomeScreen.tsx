@@ -98,7 +98,7 @@ export default function HomeScreen() {
 
   const [progress, setProgress] = useState<Progress | null>(null);
   const { profile } = useAuth();
-  const { canOpen, refresh: refreshAccess } = useAccess();
+  const { canOpen, refresh: refreshAccess, ready: accessReady } = useAccess();
   // The paywall sheet comes with the purchase flow; until then a locked-by-plan row is pressable but inert.
   const openPaywall = useCallback((_lessonId: string) => {}, []);
   const loaded = useRef(false);
@@ -156,7 +156,7 @@ export default function HomeScreen() {
     );
   }
 
-  if (!data || !progress) {
+  if (!data || !progress || !accessReady) {
     return (
       <ScreenLayout logo trailing={<HomeTrailing />}>
         <View style={styles.loader}>
