@@ -1,0 +1,163 @@
+<style>
+  .row{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;margin:10px 0 30px}
+  .cap{width:300px;font-size:13px;color:#555;margin:8px auto 0;text-align:left;line-height:1.4}
+  .cap b{color:#111}
+  .ph{width:300px;background:#F3FAF7;border:1px solid #D8EAE3;border-radius:22px;overflow:hidden;font-family:system-ui,sans-serif;color:#0F2E28;position:relative}
+  .tb{display:flex;align-items:center;gap:7px;padding:12px 14px;background:#fff;border-bottom:1px solid #D8EAE3}
+  .tb .t{flex:1;font-weight:800;font-size:15px;color:#0F766E}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#FFF6D9;color:#5E4800;border:1px solid #FFE38A;white-space:nowrap}
+  .plan{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  .plan.trial{background:#EEF2F1;color:#38534C;border:1px solid #D0DDD9}
+  .plan.full{background:#E3F6EF;color:#0F766E;border:1px solid #9ED9C5}
+  .plan.warn{background:#FFF1E0;color:#8A4B00;border:1px solid #FFC98A}
+  .coin{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE38A,#E0AA14);display:inline-block;box-shadow:inset 0 -1px 0 #B88A00}
+  .av{width:28px;height:28px;border-radius:50%;background:#E6F4EF;color:#0F766E;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .body{padding:12px 14px}
+  .sec{font-weight:800;font-size:13px;margin:6px 0 8px}
+  .li{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #D8EAE3;border-radius:14px;padding:10px 12px;margin-bottom:8px;font-size:13px;font-weight:600}
+  .li .n{width:24px;height:24px;border-radius:50%;background:#0F766E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+  .li.lock{color:#7A8F8A;background:#F7FAF9}
+  .li.lock .n{background:#D0DDD9;color:#fff}
+  .li .r{margin-left:auto;font-size:12px}
+  .ban{border-radius:14px;padding:10px 12px;font-size:12px;line-height:1.4;margin-bottom:10px}
+  .ban.trial{background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff}
+  .ban.warn{background:#FFF1E0;color:#6B3A00;border:1px solid #FFC98A}
+  .ban .bt{display:inline-block;margin-top:7px;background:#fff;color:#0F766E;border-radius:10px;padding:6px 10px;font-weight:800}
+  .ban.warn .bt{background:#8A4B00;color:#fff}
+  .dim{position:absolute;inset:0;background:rgba(15,46,40,.45)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 14px}
+  .sheet h4{margin:0 0 4px;font-size:17px}
+  .sheet .s{font-size:12px;color:#4C6A63;margin-bottom:10px}
+  .ben{font-size:13px;line-height:1.5;margin:0 0 12px;padding:0;list-style:none}
+  .ben li{padding:3px 0}
+  .price{display:flex;align-items:baseline;gap:6px;margin-bottom:10px}
+  .price b{font-size:24px}.price span{font-size:12px;color:#4C6A63}
+  .btn{border-radius:12px;padding:12px 8px;text-align:center;font-weight:800;font-size:14px;background:#0F766E;color:#fff}
+  .btn.ghost{background:transparent;color:#4C6A63;font-weight:600;font-size:13px;padding:8px}
+  .foot{font-size:10.5px;color:#7A8F8A;text-align:center;margin-top:4px}
+  .card2{background:#fff;border:1px solid #D8EAE3;border-radius:14px;padding:12px;margin-bottom:10px;font-size:13px}
+  .card2 .h{font-weight:800;margin-bottom:4px}
+  .bar{height:6px;background:#E6F4EF;border-radius:4px;margin:8px 0 4px}.bar i{display:block;height:6px;border-radius:4px;background:#0F766E}
+</style>
+
+<h2>Abonamentul (accesul) prin ochii elevului</h2>
+<p class="subtitle">Machete, nu design final — păstrează stilul actual al aplicației. Spune-mi ce schimbi; în bara de sus alege varianta de indicator (mai jos).</p>
+
+<h3>1 · Trial → plată</h3>
+<div class="row">
+  <div>
+    <div class="ph">
+      <div class="tb"><span class="t">Prepio</span><span class="plan trial">🔒 Trial</span><span class="chip"><span class="coin"></span>12</span><span class="av">A</span></div>
+      <div class="body">
+        <div class="ban trial"><b>Ești în perioada de probă.</b> Ai acces la prima lecție. Deblochează toate lecțiile + 100 de credite pentru 3 luni.<br><span class="bt">Vezi oferta · 150 lei</span></div>
+        <div class="sec">Epoca modernă</div>
+        <div class="li"><span class="n">1</span>Revoluția de la 1848<span class="r">▶</span></div>
+        <div class="li lock"><span class="n">2</span>Unirea Principatelor<span class="r">🔒</span></div>
+        <div class="li lock"><span class="n">3</span>Domnia lui Cuza<span class="r">🔒</span></div>
+        <div class="li lock"><span class="n">4</span>Războiul de independență<span class="r">🔒</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Home în trial.</b> Indicator „Trial” în bară, banner sus cu oferta, lecțiile 2+ cu lacăt (alt lacăt decât cel al traseului ghidat).</div>
+  </div>
+
+  <div>
+    <div class="ph" style="height:470px">
+      <div class="tb"><span class="t">Prepio</span><span class="plan trial">🔒 Trial</span><span class="chip"><span class="coin"></span>12</span><span class="av">A</span></div>
+      <div class="body">
+        <div class="li"><span class="n">1</span>Revoluția de la 1848<span class="r">✓</span></div>
+        <div class="li lock"><span class="n">2</span>Unirea Principatelor<span class="r">🔒</span></div>
+      </div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <h4>Deblochează toate lecțiile</h4>
+        <div class="s">„Unirea Principatelor” face parte din accesul complet.</div>
+        <ul class="ben">
+          <li>📚 <b>Toate cele 24 de lecții</b>, în orice mod de învățare</li>
+          <li>🪙 <b>+100 de credite</b> pentru profesorul digital</li>
+          <li>📅 Acces <b>3 luni</b> — până la 8 februarie 2027</li>
+          <li>🎁 Îți păstrezi creditele pe care le ai deja</li>
+        </ul>
+        <div class="price"><b>150 lei</b><span>plată unică · nu se reînnoiește automat</span></div>
+        <div class="btn">Deblochează · 150 lei</div>
+        <div class="btn ghost">Mai târziu</div>
+        <div class="foot">Plată în curând — momentan accesul se acordă fără plată.</div>
+      </div>
+    </div>
+    <div class="cap"><b>Popup-ul</b> (la atingerea unei lecții blocate sau din banner). Dupa „Deblochează”: confirmare „Ai acces complet!”, „+100”, lecțiile se deschid.</div>
+  </div>
+</div>
+
+<h3>2 · Acces activ → aproape de expirare → expirat</h3>
+<div class="row">
+  <div>
+    <div class="ph">
+      <div class="tb"><span class="t">Prepio</span><span class="plan full">★ Complet</span><span class="chip"><span class="coin"></span>112</span><span class="av">A</span></div>
+      <div class="body">
+        <div class="sec">Epoca modernă</div>
+        <div class="li"><span class="n">1</span>Revoluția de la 1848<span class="r">✓</span></div>
+        <div class="li"><span class="n">2</span>Unirea Principatelor<span class="r">▶</span></div>
+        <div class="li"><span class="n">3</span>Domnia lui Cuza<span class="r">▶</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Acces activ.</b> Fără banner; doar indicatorul „Complet” în bară. Atingerea lui deschide „Abonamentul meu”.</div>
+  </div>
+
+  <div>
+    <div class="ph">
+      <div class="tb"><span class="t">Prepio</span><span class="plan warn">⏳ 5 zile</span><span class="chip"><span class="coin"></span>40</span><span class="av">A</span></div>
+      <div class="body">
+        <div class="ban warn"><b>Accesul tău expiră în 5 zile</b> (8 februarie). Reînnoiește acum: primești încă 3 luni, adăugate la zilele rămase, și +100 de credite.<br><span class="bt">Reînnoiește · 150 lei</span></div>
+        <div class="li"><span class="n">2</span>Unirea Principatelor<span class="r">✓</span></div>
+        <div class="li"><span class="n">3</span>Domnia lui Cuza<span class="r">▶</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Ultimele 7 zile.</b> Indicatorul devine portocaliu cu zilele rămase + banner de reînnoire (poate fi închis o dată pe zi).</div>
+  </div>
+
+  <div>
+    <div class="ph">
+      <div class="tb"><span class="t">Prepio</span><span class="plan trial">🔒 Trial</span><span class="chip"><span class="coin"></span>18</span><span class="av">A</span></div>
+      <div class="body">
+        <div class="ban trial"><b>Accesul tău a expirat</b> pe 8 februarie. Progresul și cele 18 credite rămân ale tale. Reînnoiește ca să redeschizi toate lecțiile.<br><span class="bt">Reînnoiește · 150 lei</span></div>
+        <div class="li"><span class="n">1</span>Revoluția de la 1848<span class="r">✓</span></div>
+        <div class="li lock"><span class="n">2</span>Unirea Principatelor<span class="r">✓ 🔒</span></div>
+        <div class="li lock"><span class="n">3</span>Domnia lui Cuza<span class="r">🔒</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Expirat.</b> Înapoi la trial; lecțiile terminate rămân marcate ✓ dar blocate.</div>
+  </div>
+</div>
+
+<h3>3 · „Abonamentul meu” (din indicator și din Profil)</h3>
+<div class="row">
+  <div>
+    <div class="ph">
+      <div class="tb"><span>←</span><span class="t" style="color:#0F2E28">Abonamentul meu</span></div>
+      <div class="body">
+        <div class="card2"><div class="h">★ Acces complet</div>Activ până la <b>8 februarie 2027</b><div class="bar"><i style="width:62%"></i></div><span style="font-size:11px;color:#4C6A63">mai ai 34 de zile</span></div>
+        <div class="card2"><div class="h">Ce include</div>Toate lecțiile · +100 de credite la fiecare plată · 3 luni</div>
+        <div class="btn">Prelungește cu 3 luni · 150 lei</div>
+        <div style="font-size:11px;color:#4C6A63;text-align:center;margin-top:6px">Lunile noi se adaugă după 8 februarie.</div>
+        <div class="sec" style="margin-top:14px">Istoric</div>
+        <div class="li" style="font-weight:500">8 nov 2026 · Acces 3 luni · 150 lei</div>
+      </div>
+    </div>
+    <div class="cap">Pagina abonamentului: starea, ce include, prelungirea și istoricul plăților de acces.</div>
+  </div>
+</div>
+
+<h3>Indicatorul din bara de sus — care variantă?</h3>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Pastilă cu text, separată de credite</h3><p><span class="plan trial">🔒 Trial</span> / <span class="plan full">★ Complet</span> / <span class="plan warn">⏳ 5 zile</span> lângă <span class="chip"><span class="coin"></span>12</span> — ca în machetele de mai sus.</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>O singură pastilă combinată</h3><p><span class="chip">Trial · <span class="coin"></span>12</span> / <span class="chip" style="background:#E3F6EF;color:#0F766E;border-color:#9ED9C5">★ · <span class="coin"></span>112</span> — mai puțin loc ocupat pe telefon, dar două informații într-un singur element.</p></div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Stea pe avatar</h3><p>Avatarul profilului primește o insignă (★ verde / ⏳ portocaliu / nimic în trial). Cel mai discret, dar „Trial” nu se vede scris.</p></div>
+  </div>
+</div>
