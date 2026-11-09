@@ -1,6 +1,7 @@
 import { checkExercise } from '../consolidation/check';
 import { AI_TYPES, exerciseFromRow, validateExercise } from '../consolidation/exercises';
-import { spanToWords, tokenizeSource } from '../consolidation/sourceText';
+import { judgeMark } from '../consolidation/marks';
+import { tokenizeSource, type TokenizedSource } from '../consolidation/sourceText';
 import type {
   ConsolidationType,
   ExerciseAnswer,
@@ -80,6 +81,7 @@ export function validateBacItem(item: BacItem, sources: Source[], barem: BacBare
     }
     item.requirements.forEach((r, i) => {
       if (blank(requirements[r.id]?.text)) errors.push(`Baremul cerinței ${i + 1} este obligatoriu.`);
+      if ((requirements[r.id]?.points ?? 0) < 1) errors.push(`Cerința ${i + 1} trebuie să aibă cel puțin 1 punct.`);
     });
   }
   return errors;
@@ -139,13 +141,21 @@ const isEmpty = (a: ExerciseAnswer | undefined): boolean => {
   }
 };
 
-/** Distinct expected spans fully covered by the marks (a repeated mark on one span counts once). */
+/**
+ * Distinct expected spans that a mark covers while staying within the span's limit (its sentence
+ * unless the admin set one) — the same notion as an "ok" mark in consolidation. Extra words inside
+ * the limit still count; a mark running past it does not. A repeated mark on one span counts once.
+ */
 function coveredSpans(item: Extract<BacItem, { type: 'source_info' }>, sources: Source[], fb: ExerciseFeedback): number {
-  const t = tokenizeSource(sources.find((s) => s.id === item.sources[0]?.sourceId)?.body ?? '');
-  const cores = item.spans.map((s) => ({ sourceId: s.sourceId, range: spanToWords(t, s) }));
+  const tokens = new Map<string, TokenizedSource>();
+  const tok = (id: string): TokenizedSource => {
+    let t = tokens.get(id);
+    if (!t) tokens.set(id, (t = tokenizeSource(sources.find((s) => s.id === id)?.body ?? '')));
+    return t;
+  };
   const marks = (fb.marks ?? []).filter((m) => m.verdict !== 'no');
   const covers = marks.map((m) =>
-    cores.flatMap((c, i) => (c.range && c.sourceId === m.sourceId && m.from <= c.range[0] && m.to >= c.range[1] ? [i] : [])),
+    item.spans.flatMap((span, i) => (span.sourceId === m.sourceId && judgeMark(tok(span.sourceId), m, span) === 'ok' ? [i] : [])),
   );
   const owner = new Map<number, number>(); // span index -> mark index
   const augment = (mi: number, seen: Set<number>): boolean => {

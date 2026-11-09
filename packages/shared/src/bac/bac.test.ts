@@ -94,8 +94,19 @@ describe('source_info', () => {
   );
   const a = (...marks: Mark[]): ExerciseAnswer => ({ type: 'source_info', marks });
   it('exact span', () => expect(score(it0, a(markOf(S1))).points).toBe(3));
-  it('extra words around still count', () => {
-    expect(score(it0, a({ ...markOf(S1), to: markOf(S2).to })).points).toBe(3);
+  it('extra words inside the same sentence still count', () => {
+    const inner = item({ type: 'source_info', count: 1, spans: [spanOf('v', 'ales pe viață')] }, 3, [{ sourceId: 'sa', label: 'A' }]);
+    expect(score(inner, a(markOf(S1))).points).toBe(3);
+  });
+  it('a mark running past the sentence does not count', () => {
+    expect(score(it0, a({ ...markOf(S1), to: markOf(S2).to })).points).toBe(0);
+  });
+  it('a whole-source mark scores 0', () => {
+    expect(score(it0, a({ sourceId: 'sa', from: 0, to: T.words.length - 1 })).points).toBe(0);
+  });
+  it('two whole-source marks on count 2 score 0', () => {
+    const whole: Mark = { sourceId: 'sa', from: 0, to: T.words.length - 1 };
+    expect(score(it0, a(whole, { ...whole })).points).toBe(0);
   });
   it('too-short mark does not count', () => expect(score(it0, a(markOf('Domnul urma'))).points).toBe(0));
   it('two exact', () => expect(score(it0, a(markOf(S1), markOf(S2))).points).toBe(6));
@@ -182,6 +193,12 @@ describe('validateBacItem', () => {
   it('checks the essay point sum', () => {
     expect(validateBacItem(essay(30), [], barem())).toEqual([]);
     expect(validateBacItem(essay(29), [], barem()).some((e) => e.startsWith('Cerințele eseului (24 p) și ordonarea ideilor (6 p)'))).toBe(true);
+  });
+  it('requires at least 1 point per essay requirement', () => {
+    const b = barem();
+    b.essay!.requirements.r1 = rule(0);
+    b.essay!.requirements.r5 = rule(9);
+    expect(validateBacItem(essay(30), [], b)).toContain('Cerința 1 trebuie să aibă cel puțin 1 punct.');
   });
   it('requires template, barem text and in-range steps', () => {
     const it0 = item({ type: 'argument', templateId: null }, 6);
