@@ -146,7 +146,10 @@ export default function BacListScreen() {
               key={r.id}
               row={r}
               locked={!full}
-              onPress={() => (full ? router.push(`/bac/${r.id}`) : setPaywall(true))}
+              onPress={() =>
+                // A completed subject (no open attempt) opens its latest result, which offers „Reia subiectul”.
+                full ? router.push(r.state === 'completed' ? `/bac/${r.id}/rezultat` : `/bac/${r.id}`) : setPaywall(true)
+              }
             />
           ))}
       </View>

@@ -77,6 +77,16 @@ it('opens the subject for a student with full access', async () => {
   expect(router.push).toHaveBeenCalledWith('/bac/a');
 });
 
+it('a completed subject opens its latest result; draft, grading and failed open the paper', async () => {
+  await renderList();
+  await fireEvent.press(await screen.findByText('Subiect E'));
+  expect(router.push).toHaveBeenLastCalledWith('/bac/e/rezultat');
+  for (const [title, id] of [['Subiect B', 'b'], ['Subiect C', 'c'], ['Subiect D', 'd']] as const) {
+    await fireEvent.press(screen.getByText(title));
+    expect(router.push).toHaveBeenLastCalledWith(`/bac/${id}`);
+  }
+});
+
 it('opens the paywall instead of navigating when the plan does not include it', async () => {
   mockResetAccess({ accessUntil: null });
   await renderList();

@@ -185,8 +185,8 @@ export default function BacPaperScreen() {
     setSubmitting(true);
     setMode('grading');
     try {
-      // Nothing pending may land after the submission (it would reopen a draft).
-      draft.discard();
+      // The pending edit is saved first, so nothing lands after the submission (it would reopen a draft) and a
+      // submission that fails without storing the answers loses nothing.
       await draft.flush();
       const res = await submitBac({ subjectId: id, answers: draft.answers });
       gate.settle(res.credits.balance);
@@ -197,6 +197,14 @@ export default function BacPaperScreen() {
       if (e instanceof BacApiError && e.code === 'already_grading') {
         setMode('grading');
         return;
+      }
+      // A lost connection or a timeout (mapped to grading_failed) may leave the server grading: follow it if so.
+      if (!(e instanceof BacApiError) || e.code === 'grading_failed') {
+        const open = await fetchOpenAttempt(id).catch(() => null);
+        if (open?.status === 'grading') {
+          setMode('grading');
+          return;
+        }
       }
       setMode('submit');
       if (gate.onError(e, () => void send())) return;

@@ -22,8 +22,6 @@ export type BacDraft = {
   setPosition(p: BacPosition): void;
   /** Saves a pending change now (blur, tab switch). */
   flush(): Promise<void>;
-  /** Drops a pending change without saving it (the paper was just submitted). */
-  discard(): void;
   /** An empty paper on Subiectul I (after a graded attempt: the next save starts a new draft). */
   reset(): void;
   reload(): void;
@@ -136,11 +134,6 @@ export function useBacDraft(subjectId: string): BacDraft {
     [schedule],
   );
 
-  const discard = useCallback(() => {
-    clearTimer();
-    dirty.current = false;
-  }, []);
-
   const reset = useCallback(() => {
     clearTimer();
     dirty.current = false;
@@ -157,5 +150,5 @@ export function useBacDraft(subjectId: string): BacDraft {
   // Leaving the paper saves what is pending.
   useEffect(() => () => void flush(), [flush]);
 
-  return { status, attempt, answers, position, saveState, setAnswer, setPosition, flush, discard, reset, reload };
+  return { status, attempt, answers, position, saveState, setAnswer, setPosition, flush, reset, reload };
 }

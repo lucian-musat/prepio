@@ -11,6 +11,7 @@ import {
   type BacAttemptView,
   type BacPaper,
 } from '../../lib/bac';
+import { OFFLINE } from '../../lib/api';
 import { fetchCreditPackages } from '../../lib/credits';
 import BacPaperScreen from './BacPaperScreen';
 
@@ -201,6 +202,36 @@ it('rate_limited shows the message on the submit view', async () => {
   await openSubmit();
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText('Corectarea nu este disponibilă acum. Încearcă din nou mai târziu.')).toBeTruthy();
+  expect(send()).toBeTruthy();
+});
+
+it('an edit made just before a failed submit is still saved', async () => {
+  mockedSubmit.mockRejectedValue(new BacApiError('rate_limited', 'Corectarea nu este disponibilă acum. Încearcă din nou mai târziu.'));
+  await mount();
+  await act(async () => void fireEvent.changeText(await screen.findByLabelText('Răspunsul tău'), 'Cuza'));
+  await openSubmit();
+  await act(async () => void fireEvent.press(send()));
+  expect(await screen.findByText('Corectarea nu este disponibilă acum. Încearcă din nou mai târziu.')).toBeTruthy();
+  expect(mockedSave).toHaveBeenCalledWith('s1', { 'i1-1': { type: 'short_answer', text: 'Cuza' } }, { section: 1, index: 0 });
+});
+
+it('a lost connection on submit while the server is already grading shows the grading view', async () => {
+  mockedOpen.mockResolvedValueOnce(attempt({ answers: MOST })).mockResolvedValue(attempt({ status: 'grading', answers: MOST }));
+  mockedSubmit.mockRejectedValue(new BacApiError('grading_failed', OFFLINE));
+  await mount();
+  await openSubmit();
+  await act(async () => void fireEvent.press(send()));
+  expect(await screen.findByText('Corectăm lucrarea…')).toBeTruthy();
+  expect(screen.queryByText(OFFLINE)).toBeNull();
+});
+
+it('a lost connection on submit with nothing being graded shows the error inline', async () => {
+  mockedOpen.mockResolvedValue(attempt({ answers: MOST }));
+  mockedSubmit.mockRejectedValue(new BacApiError('grading_failed', OFFLINE));
+  await mount();
+  await openSubmit();
+  await act(async () => void fireEvent.press(send()));
+  expect(await screen.findByText(OFFLINE)).toBeTruthy();
   expect(send()).toBeTruthy();
 });
 
