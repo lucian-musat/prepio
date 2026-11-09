@@ -12,16 +12,21 @@ import { isUuid } from '@/lib/data/db';
 import type { Credits } from '@/lib/credits/credits';
 import type { Grader } from '@/lib/evaluate/openai';
 import type { RateLimit } from '@/lib/evaluate/rateLimit';
+import type { BacCharge } from './charge';
 import { buildBacItemPrompt, buildBacStylePrompt } from './prompt';
 import { bacGradeSchema, bacStyleSchema } from './schema';
 
-export type BacDeps = { db: SupabaseClient; grade: Grader; rateLimit: RateLimit; credits: Credits; now?: () => Date };
+/** `credits` is used for refunds; charging goes through `charge` (spend + ledger entry on the attempt, atomically). */
+export type BacDeps = { db: SupabaseClient; grade: Grader; rateLimit: RateLimit; credits: Credits; charge: BacCharge; now?: () => Date };
 export type BacHandlerResult = { status: number; json: BacSubmitResponse | BacSubmitError };
 
 /** Papers per day across all students; separate from the consolidation checks' `evaluate:global` budget. */
 export const BAC_RATE_KEY = 'bac:global';
 export const BAC_RATE_LIMIT = 60;
 export const BAC_RATE_WINDOW_SECONDS = 86400;
+/** Papers per day per student, consumed before the global slot so one account cannot burn the global budget. */
+export const bacUserRateKey = (userId: string) => `bac:user:${userId}`;
+export const BAC_USER_RATE_LIMIT = 5;
 
 const ERRORS: Record<BacSubmitErrorCode, { status: number; message: string }> = {
   bad_request: { status: 400, message: 'Cererea nu este validă.' },
@@ -261,6 +266,22 @@ async function whileGrading(db: SupabaseClient, attemptId: string, patch: Record
   return rows.length > 0;
 }
 
+async function isGrading(db: SupabaseClient, userId: string, subjectId: string): Promise<boolean> {
+  const busy = ok(
+    await db.from('bac_attempts').select('id').eq('user_id', userId).eq('subject_id', subjectId).eq('status', 'grading').maybeSingle(),
+    'attempt lookup',
+  );
+  return !!busy;
+}
+
+/** The ledger entry stored on the attempt (by `bac_charge_attempt`); null when nothing was charged. */
+async function storedLedgerEntry(db: SupabaseClient, attemptId: string): Promise<number | null> {
+  const row = ok(await db.from('bac_attempts').select('ledger_entry').eq('id', attemptId).maybeSingle(), 'attempt lookup') as {
+    ledger_entry: number | string | null;
+  } | null;
+  return row?.ledger_entry == null ? null : Number(row.ledger_entry);
+}
+
 async function currentBalance(db: SupabaseClient, userId: string): Promise<number> {
   const row = ok(await db.from('profiles').select('credit_balance').eq('id', userId).maybeSingle(), 'balance lookup') as {
     credit_balance: number;
@@ -442,20 +463,25 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
     if (!loaded) return bacError('not_found');
     const answers = sanitizeAnswers(loaded.items, req.answers);
 
+    const cost = loaded.creditCost;
+    // Cheap pre-checks so a request that cannot be charged never consumes a rate-limit slot. The guarded claim and
+    // the atomic charge below remain the real protection against races.
+    if (await isGrading(db, userId, subjectId)) return bacError('already_grading');
+    const before = await currentBalance(db, userId);
+    if (before < cost) return bacError('insufficient_credits', { required: cost, balance: before });
+    if (!(await deps.rateLimit(bacUserRateKey(userId), BAC_USER_RATE_LIMIT, BAC_RATE_WINDOW_SECONDS))) return bacError('rate_limited');
     if (!(await deps.rateLimit(BAC_RATE_KEY, BAC_RATE_LIMIT, BAC_RATE_WINDOW_SECONDS))) return bacError('rate_limited');
 
     attemptId = await claimAttempt(db, userId, subjectId, answers, now().toISOString());
     if (attemptId === null) return bacError('already_grading');
 
-    const cost = loaded.creditCost;
-    const spend = await deps.credits.spend(userId, cost, null, `bac:${subjectId}`);
+    // Spends and stores the ledger entry on the attempt in one transaction, so the stale sweep can always refund it.
+    const spend = await deps.charge(attemptId, userId, cost, `bac:${subjectId}`);
     if (spend.entryId === null) {
       await whileGrading(db, attemptId, { status: 'draft' });
       return bacError('insufficient_credits', { required: cost, balance: spend.balance });
     }
     entryId = spend.entryId;
-    // Stored before any grading, so the stale sweep can refund it if this function dies.
-    if (!(await whileGrading(db, attemptId, { ledger_entry: entryId }))) throw new Error('attempt left grading before its ledger entry was stored');
     await logEvent(db, userId, 'bac_submitted', { subject_id: subjectId, cost });
 
     const ctx: ScoreCtx = { grade: deps.grade, model: loaded.model, rules: loaded.rules, sources: loaded.sources };
@@ -474,6 +500,16 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
   } catch (e) {
     console.error('[bac/submit] failed:', e);
     if (attemptId === null) return bacError('grading_failed');
+    if (entryId === null) {
+      // The charge may have committed with its response lost: the attempt is the source of truth.
+      try {
+        entryId = await storedLedgerEntry(db, attemptId);
+      } catch (lookupError) {
+        // Unknown outcome: leave the attempt in `grading`; the stale sweep refunds a stored entry and fails it.
+        console.error(`[bac/submit] ledger lookup for attempt ${attemptId} failed:`, lookupError);
+        return bacError('grading_failed');
+      }
+    }
     if (entryId === null) {
       // Claimed but not paid: let the student submit again.
       try {

@@ -5,6 +5,7 @@ import { bacError, handleBacSubmit, type BacDeps } from '@/lib/bac/handler';
 import { createOpenAIGrader } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 import { createCredits } from '@/lib/credits/credits';
+import { createBacCharge } from '@/lib/bac/charge';
 
 export const dynamic = 'force-dynamic';
 /** The paper's grading calls run in parallel with a 40 s timeout each; Vercel's default would kill the function first. */
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
       db,
       rateLimit: createRateLimit(db),
       credits: createCredits(db),
+      charge: createBacCharge(db),
       grade: apiKey
         ? createOpenAIGrader(apiKey)
         : async () => {

@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BacItemResult, BacSubmitResponse } from '@prepio/shared';
 import type { Grader } from '@/lib/evaluate/openai';
-import { BAC_RATE_KEY, BAC_RATE_LIMIT, handleBacSubmit, type BacDeps } from './handler';
+import type { BacCharge } from './charge';
+import { BAC_RATE_KEY, BAC_RATE_LIMIT, BAC_USER_RATE_LIMIT, bacUserRateKey, handleBacSubmit, type BacDeps } from './handler';
 
 const USER = 'u1';
 const SUBJ = '10000000-0000-4000-8000-000000000001';
@@ -169,16 +170,34 @@ function grader(by: Record<string, unknown> = {}, fallback: unknown = { points: 
   });
 }
 
-function setup(o: { access?: boolean; suspended?: boolean; balance?: number; grade?: Grader; rate?: boolean; published?: boolean } = {}) {
+type SetupOpts = {
+  access?: boolean;
+  suspended?: boolean;
+  balance?: number;
+  grade?: Grader;
+  rate?: boolean | ((key: string) => boolean);
+  published?: boolean;
+};
+function setup(o: SetupOpts = {}) {
   const tables = seed({ published: o.published, balance: o.balance });
   if (o.suspended) tables.profiles![0]!.suspended_at = '2026-11-09T10:00:00Z';
   const f = fakeDb(tables, { access: o.access });
   const credits = fakeCredits(o.balance ?? 50);
-  const deps: BacDeps = {
+  // Like bac_charge_attempt: only the caller's grading attempt; spend and ledger_entry together.
+  const charge = vi.fn<BacCharge>(async (attemptId, userId, amount, target) => {
+    const attempt = tables.bac_attempts!.find((a) => a.id === attemptId && a.user_id === userId && a.status === 'grading');
+    if (!attempt) throw new Error('bac_charge_attempt failed: attempt_not_grading');
+    const spent = await credits.spend(userId, amount, null, target);
+    if (spent.entryId !== null) attempt.ledger_entry = spent.entryId;
+    return spent;
+  });
+  const rate = o.rate ?? true;
+  const deps: BacDeps & { charge: typeof charge } = {
     db: f.db,
     grade: o.grade ?? grader(),
-    rateLimit: vi.fn(async () => o.rate ?? true),
+    rateLimit: vi.fn(async (key: string) => (typeof rate === 'function' ? rate(key) : rate)),
     credits,
+    charge,
     now: () => new Date('2026-11-09T12:00:00Z'),
   };
   return { ...f, credits, deps };
@@ -246,8 +265,8 @@ describe('handleBacSubmit', () => {
     expect(s.credits.spend).not.toHaveBeenCalled();
   });
 
-  it('returns 429 rate_limited and spends nothing', async () => {
-    const s = setup({ rate: false });
+  it('returns 429 rate_limited when the global cap is reached and spends nothing', async () => {
+    const s = setup({ rate: (key) => key !== BAC_RATE_KEY });
     const r = await handleBacSubmit(body(), USER, s.deps);
     expect(r).toEqual({
       status: 429,
@@ -260,14 +279,95 @@ describe('handleBacSubmit', () => {
     expect(s.tables.bac_attempts).toEqual([]);
   });
 
-  it('returns 402 insufficient_credits and puts the attempt back to draft', async () => {
+  it('checks the per-user daily cap before the global one', async () => {
+    const s = setup();
+    await handleBacSubmit(body(), USER, s.deps);
+    expect(BAC_USER_RATE_LIMIT).toBe(5);
+    expect(vi.mocked(s.deps.rateLimit).mock.calls).toEqual([
+      [bacUserRateKey(USER), BAC_USER_RATE_LIMIT, 86400],
+      [BAC_RATE_KEY, BAC_RATE_LIMIT, 86400],
+    ]);
+    expect(bacUserRateKey(USER)).toBe('bac:user:u1');
+  });
+
+  it('returns 429 rate_limited at the per-user cap without consuming the global slot', async () => {
+    const s = setup({ rate: (key) => key !== bacUserRateKey(USER) });
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r).toEqual({
+      status: 429,
+      json: { error: 'rate_limited', message: 'Corectarea nu este disponibilă acum. Încearcă din nou mai târziu.' },
+    });
+    expect(s.deps.rateLimit).not.toHaveBeenCalledWith(BAC_RATE_KEY, expect.anything(), expect.anything());
+    expect(s.deps.charge).not.toHaveBeenCalled();
+    expect(s.tables.bac_attempts).toEqual([]);
+  });
+
+  it('returns 402 insufficient_credits before any rate limit when the balance is below the cost', async () => {
     const s = setup({ balance: 3 });
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(402);
+    expect(r.json).toMatchObject({ error: 'insufficient_credits', required: 10, balance: 3 });
+    expect(s.deps.rateLimit).not.toHaveBeenCalled();
+    expect(s.deps.charge).not.toHaveBeenCalled();
+    expect(s.tables.bac_attempts).toEqual([]);
+  });
+
+  it('returns 409 already_grading before any rate limit when the subject is being graded', async () => {
+    const s = setup();
+    s.tables.bac_attempts!.push({ id: 'busy', user_id: USER, subject_id: SUBJ, status: 'grading', answers: {}, ledger_entry: 4 });
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(409);
+    expect(code(r)).toBe('already_grading');
+    expect(s.deps.rateLimit).not.toHaveBeenCalled();
+    expect(s.deps.charge).not.toHaveBeenCalled();
+  });
+
+  it('returns 402 when the charge finds the balance spent meanwhile and puts the attempt back to draft', async () => {
+    const s = setup({ balance: 3 });
+    s.tables.profiles![0]!.credit_balance = 50; // the pre-check saw enough; the charge does not
     const r = await handleBacSubmit(body(), USER, s.deps);
     expect(r.status).toBe(402);
     expect(r.json).toMatchObject({ error: 'insufficient_credits', required: 10, balance: 3 });
     expect(s.deps.grade).not.toHaveBeenCalled();
     expect(s.tables.bac_attempts).toHaveLength(1);
     expect(s.tables.bac_attempts![0]).toMatchObject({ status: 'draft', user_id: USER, subject_id: SUBJ });
+    expect(s.tables.bac_attempts![0]!.ledger_entry ?? null).toBeNull();
+  });
+
+  it('charges through the atomic charge with the attempt, user, cost and target', async () => {
+    const s = setup();
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(200);
+    expect(s.deps.charge).toHaveBeenCalledWith('a1', USER, 10, `bac:${SUBJ}`);
+  });
+
+  it('a charge that committed but whose response was lost is refunded from the stored entry', async () => {
+    const s = setup();
+    const real = s.deps.charge;
+    s.deps.charge = vi.fn(async (...args: Parameters<BacCharge>) => {
+      await real(...args);
+      throw new Error('fetch failed');
+    });
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(502);
+    expect(r.json).toMatchObject({ error: 'grading_failed', credits: { spent: 0, balance: 50 } });
+    expect(s.credits.refund).toHaveBeenCalledWith(1);
+    expect(s.credits.balance).toBe(50);
+    expect(s.tables.bac_attempts![0]).toMatchObject({ status: 'failed', ledger_entry: 1 });
+    expect(s.deps.grade).not.toHaveBeenCalled();
+  });
+
+  it('a charge that failed before committing refunds nothing and fails the attempt', async () => {
+    const s = setup();
+    s.deps.charge = vi.fn<BacCharge>(async () => {
+      throw new Error('fetch failed');
+    });
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(502);
+    expect(code(r)).toBe('grading_failed');
+    expect(s.credits.refund).not.toHaveBeenCalled();
+    expect(s.tables.bac_attempts![0]).toMatchObject({ status: 'failed' });
+    expect(s.tables.bac_attempts![0]!.ledger_entry ?? null).toBeNull();
   });
 
   it('reuses the open draft and spends the subject cost once with a null exercise', async () => {

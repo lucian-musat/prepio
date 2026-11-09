@@ -7,7 +7,8 @@ import type { BacSubmitResponse } from '@prepio/shared';
 import { createRateLimit, type RateLimit } from '@/lib/evaluate/rateLimit';
 import { createCredits, type Credits } from '@/lib/credits/credits';
 import type { Grader } from '@/lib/evaluate/openai';
-import { BAC_RATE_KEY, handleBacSubmit, type BacDeps } from './handler';
+import { createBacCharge, type BacCharge } from './charge';
+import { BAC_RATE_KEY, bacUserRateKey, handleBacSubmit, type BacDeps } from './handler';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -71,7 +72,12 @@ describe.skipIf(!url || !service)('handleBacSubmit (local Supabase)', () => {
     await db.from('rate_limits').delete().like('key', `${prefix}%`);
   });
 
-  const deps = (grade: Grader): BacDeps => ({ db, rateLimit, credits, grade });
+  const deps = (grade: Grader, charge: BacCharge = createBacCharge(db)): BacDeps => ({ db, rateLimit, credits, charge, grade });
+  const counts = async () => {
+    const { data, error } = await db.from('rate_limits').select('key,count').like('key', `${prefix}%`).order('key');
+    if (error) throw error;
+    return data;
+  };
   const body = () => ({
     subjectId,
     answers: { [shortId]: { type: 'short_answer', text: 'Carol I' }, [argId]: { type: 'argument', text: 'Deoarece statul s-a modernizat.' } },
@@ -128,6 +134,28 @@ describe.skipIf(!url || !service)('handleBacSubmit (local Supabase)', () => {
     expect((await events()).at(-1)).toEqual({ kind: 'bac_grading_failed', details: { subject_id: subjectId } });
   });
 
+  it('refunds a charge that committed when its response was lost', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const before = await balance();
+    const real = createBacCharge(db);
+    const lost: BacCharge = async (...args) => {
+      await real(...args);
+      throw new Error('fetch failed');
+    };
+    const grade = vi.fn<Grader>(async () => ({ points: 4, feedback: '' }));
+    const r = await handleBacSubmit(body(), userId, deps(grade, lost));
+    expect(r.status).toBe(502);
+    expect(r.json).toMatchObject({ error: 'grading_failed', credits: { spent: 0, balance: before } });
+    expect(grade).not.toHaveBeenCalled();
+    expect(await balance()).toBe(before);
+    const all = await attempts();
+    expect(all).toHaveLength(2); // the failed attempt was reused
+    expect(all[1]!.status).toBe('failed');
+    expect(all[1]!.ledger_entry).not.toBeNull();
+    const refund = await db.from('credit_ledger').select('kind').eq('refund_of', all[1]!.ledger_entry).single();
+    expect(refund.data).toEqual({ kind: 'refund' });
+  });
+
   it('grades the reopened failed attempt; a concurrent second submit gets already_grading', async () => {
     const before = await balance();
     let release!: () => void;
@@ -152,7 +180,21 @@ describe.skipIf(!url || !service)('handleBacSubmit (local Supabase)', () => {
     expect(all).toHaveLength(2); // the failed attempt was reused, not duplicated
     expect(all[1]).toMatchObject({ status: 'graded', points: 16 });
 
-    const keys = await db.from('rate_limits').select('key').like('key', `${prefix}%`);
-    expect(keys.data!.map((k) => k.key)).toEqual([`${prefix}${BAC_RATE_KEY}`]);
+    // Four papers reached the rate limits (the 409 stopped at the pre-check), per user and globally.
+    expect(await counts()).toEqual([
+      { key: `${prefix}${BAC_RATE_KEY}`, count: 4 },
+      { key: `${prefix}${bacUserRateKey(userId)}`, count: 4 },
+    ]);
+  });
+
+  it('answers 402 from the balance pre-check without consuming a rate-limit slot', async () => {
+    const before = await balance();
+    expect(before).toBeLessThan(COST);
+    const slots = await counts();
+    const r = await handleBacSubmit(body(), userId, deps(vi.fn<Grader>()));
+    expect(r.status).toBe(402);
+    expect(r.json).toMatchObject({ error: 'insufficient_credits', required: COST, balance: before });
+    expect(await counts()).toEqual(slots);
+    expect(await balance()).toBe(before);
   });
 });
