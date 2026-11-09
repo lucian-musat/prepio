@@ -2,7 +2,7 @@ import 'server-only';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { aiOutputSchemaFor } from '@/lib/consolidation/schema';
-import { bacGradeSchema, bacStyleSchema } from '@/lib/bac/schema';
+import { bacTextFormat } from '@/lib/bac/schema';
 import { reasoningFor } from './reasoning';
 
 /** `keys`: the item keys the model must return; the structured-output schema allows only these. */
@@ -59,7 +59,7 @@ export function createOpenAIGrader(apiKey: string): Grader {
   return async ({ model, instructions, input, kind }) => {
     const reasoning = reasoningFor(model);
     const started = Date.now();
-    const format = kind === 'style' ? zodTextFormat(bacStyleSchema, 'style') : zodTextFormat(bacGradeSchema, 'grade');
+    const format = bacTextFormat(kind);
     try {
       const res = await client.responses.parse(
         { model, instructions, input, store: false, ...(reasoning ? { reasoning } : {}), text: { format } },
