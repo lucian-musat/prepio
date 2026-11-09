@@ -19,6 +19,10 @@ export const useSourcePanel = () => useContext(PanelContext);
 type Props = {
   sources: PanelSource[];
   prompt: string;
+  /** Before the prompt, in the prompt's line (a BAC item's „5.”). */
+  promptLead?: string;
+  /** After the prompt, smaller and muted (a BAC item's „· 7 puncte”). */
+  promptTail?: string;
   marker?: PanelMarker;
   /** Above the prompt (the type chip, „💡 Cum rezolv”); on desktop it sits in the right column with the prompt. */
   header?: ReactNode;
@@ -33,7 +37,7 @@ type Props = {
  * - from 900 px wide, the long source in a left column beside the prompt and the answer.
  * Answer slots inside `children` open the source with their pen through `useSourcePanel`.
  */
-export default function SourcePanel({ sources, prompt, marker, header, children }: Props) {
+export default function SourcePanel({ sources, prompt, promptLead, promptTail, marker, header, children }: Props) {
   const { width } = useWindowDimensions();
   const isLong = useMemo(() => new Map(sources.map((s) => [s.label, !isShortSource(s.source.body)])), [sources]);
   const longSources = sources.filter((s) => isLong.get(s.label));
@@ -79,7 +83,27 @@ export default function SourcePanel({ sources, prompt, marker, header, children 
       </AppText>
     </View>
   ) : null;
-  const promptText = <AppText role="question">{prompt}</AppText>;
+  const promptText =
+    promptLead || promptTail ? (
+      <AppText role="question">
+        {promptLead ? (
+          <AppText role="question" color="primary">
+            {promptLead}{' '}
+          </AppText>
+        ) : null}
+        <AppText role="question">{prompt}</AppText>
+        {promptTail ? (
+          <>
+            {' '}
+            <AppText role="note" color="textMuted">
+              {promptTail}
+            </AppText>
+          </>
+        ) : null}
+      </AppText>
+    ) : (
+      <AppText role="question">{prompt}</AppText>
+    );
 
   if (split) {
     return (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, creditsLabel, radius, space, VERDICT_LABELS, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
+import { border, color, creditsLabel, plural, radius, space, VERDICT_LABELS, wordCount, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
 import { evaluateConsolidation } from '../../lib/api';
 import { mergeItems, essayProgress } from '../../screens/consolidation/checking';
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
@@ -16,14 +16,17 @@ const filled = (s: string | undefined) => !!s && s.trim() !== '';
 
 type Props = InputProps<'essay'> & {
   /** A requirement was checked: the feedback with its item merged in (the screen saves the attempt). */
-  onFeedback: (feedback: ExerciseFeedback) => void;
+  onFeedback?: (feedback: ExerciseFeedback) => void;
   /** Ids of the requirements' templates that exist; their „💡” opens the sheet. */
   templateIds?: Set<string>;
   onOpenTemplate?: (templateId: string) => void;
   /** Whether any requirement check is in flight (the screen keeps its navigation still meanwhile). */
   onBusyChange?: (busy: boolean) => void;
-  /** The screen's credit gate: a check without enough credits opens the buy sheet instead. */
-  gate: CreditGate;
+  /**
+   * The screen's credit gate: a check without enough credits opens the buy sheet instead. Without it (a BAC paper)
+   * the requirements are only written: no „Verifică cerința”, and the total word count instead of the progress.
+   */
+  gate?: CreditGate;
 };
 
 /**
@@ -63,7 +66,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
   const inFlight = useRef<Set<string>>(new Set());
 
   const check = async (r: EssayRequirement) => {
-    if (inFlight.current.has(r.id)) return;
+    if (!gate || !onFeedback || inFlight.current.has(r.id)) return;
     inFlight.current.add(r.id);
     const run = () => void check(r);
     if (!gate.allow(exercise.creditCost, run)) {
@@ -94,7 +97,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
   return (
     <View style={styles.list}>
       <AppText role="note" color="textMuted">
-        Scrie fiecare cerință în câmpul ei și verifică-le pe rând.
+        {gate ? 'Scrie fiecare cerință în câmpul ei și verifică-le pe rând.' : 'Scrie fiecare cerință în câmpul ei.'}
       </AppText>
       {reqs.map((r, i) => {
         const text = value.parts[r.id] ?? '';
@@ -104,7 +107,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
         const current = stale ? undefined : item;
         const isOpen = open.has(r.id);
         const tone = current ? VERDICT_TONE[current.verdict] : null;
-        const state = current ? VERDICT_LABELS[current.verdict] : filled(text) ? 'Neverificat' : 'Necompletat';
+        const state = current ? VERDICT_LABELS[current.verdict] : filled(text) ? (gate ? 'Neverificat' : 'Completat') : 'Necompletat';
         return (
           <View key={r.id} testID={`requirement-${r.id}`} style={styles.card}>
             <Pressable
@@ -152,6 +155,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                       </AppText>
                     </Pressable>
                   ) : null}
+                  {gate ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Verifică cerința ${i + 1}, costă ${creditsLabel(exercise.creditCost)}`}
@@ -168,6 +172,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                       {exercise.creditCost}
                     </AppText>
                   </Pressable>
+                  ) : null}
                 </View>
                 {busy[r.id] ? <Analyzing /> : null}
                 {errors[r.id] ? <CheckError message={errors[r.id]!} onRetry={() => check(r)} /> : null}
@@ -179,7 +184,9 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
         );
       })}
       <AppText role="caption" color="textMuted">
-        {ok} din {reqs.length} cerințe corecte
+        {gate
+          ? `${ok} din ${reqs.length} cerințe corecte`
+          : `${plural(reqs.reduce((n, r) => n + wordCount(value.parts[r.id] ?? ''), 0), 'cuvânt', 'cuvinte')} în total`}
       </AppText>
     </View>
   );

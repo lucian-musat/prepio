@@ -23,16 +23,7 @@ import {
 import CostTag from '../../credits/CostTag';
 import CreditChip from '../../credits/CreditChip';
 import { useCreditGate } from '../../credits/useCreditGate';
-import ArgumentInput from '../../components/consolidation/ArgumentInput';
-import CauseEffectInput from '../../components/consolidation/CauseEffectInput';
-import ComparisonInput from '../../components/consolidation/ComparisonInput';
-import EssayInput from '../../components/consolidation/EssayInput';
-import FactsInput from '../../components/consolidation/FactsInput';
-import LetterInput from '../../components/consolidation/LetterInput';
-import MultiAnswerInput from '../../components/consolidation/MultiAnswerInput';
-import ShortAnswerInput from '../../components/consolidation/ShortAnswerInput';
-import SourceInfoInput from '../../components/consolidation/SourceInfoInput';
-import ViewpointInput from '../../components/consolidation/ViewpointInput';
+import ExerciseInput from '../../components/consolidation/ExerciseInput';
 import { initialMarker, markerReducer, type MarkerConfig } from '../../components/marker/markerReducer';
 import SourcePanel, { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePanel';
 import { NO_MARKS, noop, type PanelMarker, type PanelSource } from '../../components/marker/SourceReader';
@@ -232,50 +223,30 @@ export default function ExerciseScreen({
     </View>
   );
 
-  const common = { sources: panelSources.map((s) => s.source), feedback, disabled };
-  const input = (() => {
-    const set = (v: ExerciseAnswer) => setAnswer(v);
-    switch (exercise.type) {
-      case 'short_answer':
-        return <ShortAnswerInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'multi_answer':
-        return <MultiAnswerInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'source_info':
-        return <SourceInfoInput {...common} exercise={exercise} value={answer as never} onChange={set} marker={marker!} />;
-      case 'source_letter':
-        return <LetterInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'cause_effect':
-        return <CauseEffectInput {...common} exercise={exercise} value={answer as never} onChange={set} marker={marker!} />;
-      case 'facts':
-        return <FactsInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'comparison':
-        return <ComparisonInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'viewpoint':
-        return <ViewpointInput {...common} exercise={exercise} value={answer as never} onChange={set} marker={marker!} />;
-      case 'argument':
-        return <ArgumentInput {...common} exercise={exercise} value={answer as never} onChange={set} />;
-      case 'essay':
-        return (
-          <EssayInput
-            {...common}
-            exercise={exercise}
-            value={answer as never}
-            onChange={set}
-            onFeedback={(merged) => {
-              // The essay's verdict: all requirements judged, combined (an old `whole` item is ignored).
-              const items = merged.items.filter((i) => reqIds.includes(i.key));
-              const fb = { ...merged, verdict: reqIds.every((id) => items.some((i) => i.key === id)) ? combineVerdict(items) : null };
-              setFeedback(fb);
-              onChecked({ exerciseId: exercise.id, answer, verdict: fb.verdict, feedback: fb });
-            }}
-            templateIds={new Set(templates.keys())}
-            onOpenTemplate={setSheet}
-            onBusyChange={setPartBusy}
-            gate={gate}
-          />
-        );
-    }
-  })();
+  const input = (
+    <ExerciseInput
+      exercise={exercise}
+      sources={panelSources.map((s) => s.source)}
+      value={answer}
+      onChange={(v: ExerciseAnswer) => setAnswer(v)}
+      feedback={feedback}
+      disabled={disabled}
+      marker={marker}
+      templateIds={new Set(templates.keys())}
+      onOpenTemplate={setSheet}
+      essayChecks={{
+        onFeedback: (merged) => {
+          // The essay's verdict: all requirements judged, combined (an old `whole` item is ignored).
+          const items = merged.items.filter((i) => reqIds.includes(i.key));
+          const fb = { ...merged, verdict: reqIds.every((id) => items.some((i) => i.key === id)) ? combineVerdict(items) : null };
+          setFeedback(fb);
+          onChecked({ exerciseId: exercise.id, answer, verdict: fb.verdict, feedback: fb });
+        },
+        onBusyChange: setPartBusy,
+        gate,
+      }}
+    />
+  );
 
   const complete = isComplete(exercise, answer);
   // Nothing is left while a check runs: its result belongs to this exercise.

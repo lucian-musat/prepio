@@ -1,7 +1,8 @@
 import { Fragment, createElement, useCallback, useRef, useState, type ReactElement } from 'react';
 import PaywallSheet from '../access/PaywallSheet';
 import { EvaluateApiError } from '../lib/api';
-import BuyCreditsSheet from './BuyCreditsSheet';
+import { BacApiError } from '../lib/bac';
+import BuyCreditsSheet, { type BuyCreditsVariant } from './BuyCreditsSheet';
 import { useCredits } from './CreditsProvider';
 
 /** What a digital-teacher check asks of the credits before and after it runs. */
@@ -22,9 +23,10 @@ type Blocked = { required: number; run: () => void };
 /**
  * The credit gate of a check and its BuyCreditsSheet (render `sheet` next to the screen). The sheet opens over
  * the exercise, so whatever the student typed stays where it is; „Verifică acum” re-runs the blocked check.
+ * `variant: 'bac'` gates a BAC paper's submission (BacApiError, „Trimite acum”, no skip).
  */
 export function useCreditGate(
-  opts: { onSkip?: () => void; skipDisabled?: boolean } = {},
+  opts: { onSkip?: () => void; skipDisabled?: boolean; variant?: BuyCreditsVariant } = {},
 ): CreditGate & { sheet: ReactElement } {
   const { balance, setBalance } = useCredits();
   // The latest balance: a kept `run` re-enters `allow` after a purchase, from a render that predates it.
@@ -59,7 +61,7 @@ export function useCreditGate(
 
   const onError = useCallback(
     (e: unknown, run: () => void) => {
-      if (!(e instanceof EvaluateApiError)) return false;
+      if (!(e instanceof EvaluateApiError || e instanceof BacApiError)) return false;
       // Access ended mid-session (the API layer has re-read the plan): the paywall sheet, the answer untouched.
       if (e.code === 'access_required') {
         setPaywall(true);
@@ -77,6 +79,7 @@ export function useCreditGate(
   const closePaywall = useCallback(() => setPaywall(false), []);
   const buySheet = createElement(BuyCreditsSheet, {
     visible: blocked !== null,
+    variant: opts.variant,
     required: blocked?.required ?? 0,
     cost: blocked?.required ?? 0,
     onClose: close,
@@ -96,7 +99,7 @@ export function useCreditGate(
   // Mounted only while open: screens that never hit a locked lesson need no AccessProvider around the gate.
   // After a purchase „Înapoi la exercițiu” closes it; the student checks again (that check costs credits).
   const paywallSheet = paywall
-    ? createElement(PaywallSheet, { visible: true, doneLabel: 'Înapoi la exercițiu', onClose: closePaywall, onUnlocked: closePaywall })
+    ? createElement(PaywallSheet, { visible: true, doneLabel: opts.variant === 'bac' ? 'Înapoi la lucrare' : 'Înapoi la exercițiu', onClose: closePaywall, onUnlocked: closePaywall })
     : null;
   const sheet = createElement(Fragment, null, buySheet, paywallSheet);
 

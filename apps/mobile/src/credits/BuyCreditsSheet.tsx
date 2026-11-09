@@ -11,8 +11,30 @@ import PackagePicker, { PAYMENT_FOOTNOTE } from './PackagePicker';
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as TemplateSheet
 
+/** What the sheet is for: a consolidation check (the default) or submitting a BAC paper. */
+export type BuyCreditsVariant = 'exercise' | 'bac';
+
+const COPY: Record<BuyCreditsVariant, { action: string; back: string; lead: string; tail: string; kept: string }> = {
+  exercise: {
+    action: 'Verifică acum',
+    back: 'Înapoi la exercițiu',
+    lead: 'Verificarea cu profesorul digital costă',
+    tail: ' la acest exercițiu',
+    kept: 'Răspunsul tău rămâne salvat.',
+  },
+  bac: {
+    action: 'Trimite acum',
+    back: 'Înapoi la lucrare',
+    lead: 'Corectarea lucrării costă',
+    tail: '',
+    kept: 'Răspunsurile tale rămân salvate.',
+  },
+};
+
 type Props = {
   visible: boolean;
+  /** `bac`: „Trimite acum”, „Înapoi la lucrare” and no skip button. */
+  variant?: BuyCreditsVariant;
   /** What the blocked check costs (the server's number after a 402). */
   required: number;
   /** What „Verifică acum” will cost. */
@@ -31,7 +53,8 @@ type Props = {
  * balance. Choose a package and buy it (approved at once, no payment yet), or skip the exercise; after the purchase
  * „Verifică acum” runs the blocked check. A bottom sheet on the phone, a centred dialog from 900 px.
  */
-export default function BuyCreditsSheet({ visible, required, cost, onClose, onSkip, skipDisabled = false, onCheckNow }: Props) {
+export default function BuyCreditsSheet({ visible, variant = 'exercise', required, cost, onClose, onSkip, skipDisabled = false, onCheckNow }: Props) {
+  const copy = COPY[variant];
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const dialog = width >= SPLIT_MIN_WIDTH;
@@ -51,7 +74,8 @@ export default function BuyCreditsSheet({ visible, required, cost, onClose, onSk
     if (!buying) onClose();
   };
   const have = balance ?? 0;
-  const skip = <Button label="Sari peste exercițiu" variant="secondary" disabled={buying || skipDisabled} onPress={onSkip} />;
+  const skip =
+    variant === 'bac' ? null : <Button label="Sari peste exercițiu" variant="secondary" disabled={buying || skipDisabled} onPress={onSkip} />;
   // A package that still leaves the balance short: back to the packages (the title says what is still missing), so
   // „Verifică acum” never runs a check the balance cannot pay for.
   const enough = have >= cost;
@@ -70,8 +94,8 @@ export default function BuyCreditsSheet({ visible, required, cost, onClose, onSk
             Acum ai {creditsLabel(have)}.
           </AppText>
         </View>
-        <Button label="Verifică acum" cost={cost} onPress={onCheckNow} />
-        <Button label="Înapoi la exercițiu" variant="secondary" onPress={onClose} />
+        <Button label={copy.action} cost={cost} onPress={onCheckNow} />
+        <Button label={copy.back} variant="secondary" onPress={onClose} />
       </>
     ) : (
       <>
@@ -81,16 +105,16 @@ export default function BuyCreditsSheet({ visible, required, cost, onClose, onSk
         <AppText
           role="note"
           color="textMuted"
-          accessibilityLabel={`Verificarea cu profesorul digital costă ${creditsLabel(required)} la acest exercițiu. Ai ${have}. Răspunsul tău rămâne salvat.`}
+          accessibilityLabel={`${copy.lead} ${creditsLabel(required)}${copy.tail}. Ai ${have}. ${copy.kept}`}
         >
-          Verificarea cu profesorul digital costă{' '}
+          {copy.lead}{' '}
           <View style={styles.inlineCoin}>
             <Coin size={13} />
           </View>{' '}
           <AppText role="note" style={styles.strong}>
             {required}
           </AppText>{' '}
-          la acest exercițiu. Ai <AppText role="note" style={styles.strong}>{have}</AppText>. Răspunsul tău rămâne salvat.
+          {copy.tail}. Ai <AppText role="note" style={styles.strong}>{have}</AppText>. {copy.kept}
         </AppText>
         <PackagePicker onBought={(_, credits) => setAdded(credits)} onBusyChange={setBuying} />
         {skip}
