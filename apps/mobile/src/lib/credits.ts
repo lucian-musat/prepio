@@ -101,6 +101,10 @@ export async function fetchCreditBalance(userId: string, client: SupabaseClient 
 
 /** A check or refund row names its exercise (type, essay part) and its lesson: „Punct de vedere · Cuza”. */
 export function ledgerLabel(e: StudentLedgerEntry): string {
+  // BAC paper grading rows target `bac:<subject id>`; the generic label (the ledger query does not join subjects).
+  if ((e.kind === 'check' || e.kind === 'refund') && e.target?.startsWith('bac:')) {
+    return e.kind === 'refund' ? 'Corectare nereușită · returnat' : 'Corectare subiect';
+  }
   const lesson = (e.kind === 'check' || e.kind === 'refund') && e.exercise?.lesson ? ` · ${e.exercise.lesson}` : '';
   return base(e) + lesson;
 }

@@ -71,6 +71,10 @@ describe('ledgerLabel', () => {
     expect(ledgerLabel(entry({ target: 'whole', exercise }))).toBe('Eseu · eseul întreg');
   });
   it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare'));
+  it('BAC grading rows', () => {
+    expect(ledgerLabel(entry({ kind: 'check', delta: -10, target: 'bac:s1' }))).toBe('Corectare subiect');
+    expect(ledgerLabel(entry({ kind: 'refund', delta: 10, target: 'bac:s1' }))).toBe('Corectare nereușită · returnat');
+  });
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));
   it('check and refund rows name the lesson of their exercise', () => {
     const viewpoint = { type: 'viewpoint' as const, prompt: 'p', lesson: 'Cuza' };
