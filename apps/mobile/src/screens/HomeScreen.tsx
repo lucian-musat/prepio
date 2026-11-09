@@ -218,6 +218,17 @@ export default function HomeScreen() {
           bg={color.primarySubtle}
         />
       </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>
+        <Surface style={styles.bacRow}>
+          <AppText role="section">📝</AppText>
+          <View style={styles.bacText}>
+            <AppText role="bodyStrong">Subiecte BAC</AppText>
+            <AppText role="small" color="textMuted">
+              Exersează lucrarea completă
+            </AppText>
+          </View>
+        </Surface>
+      </Pressable>
       {data.sections.map((section, s) => {
         const title = section.path.join(' › ');
         return (
@@ -253,6 +264,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modeChip: { marginBottom: space[4] },
+  bacCard: { marginBottom: space[6] },
+  bacRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  bacText: { flex: 1 },
   loader: { marginTop: space[12], alignItems: 'center' },
   // Prototype `.sec-title`: baseline-aligned title and count, 10 px above the list.
   header: {
