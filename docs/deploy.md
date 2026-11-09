@@ -147,6 +147,21 @@ The paid access change (spec `docs/superpowers/specs/2026-11-08-paid-access-desi
 5. New EAS `preview` APK. Old APKs show locked lessons as empty screens (they can't read the content) and have no way to buy.
 6. Every existing account starts in trial (production is test-only). Checks: anon REST on `access_ledger` / `access_orders` returns `[]` or 401/42501; `POST /api/access/purchase` returns 401 without a token; a trial student sees one open lesson and the sheet on the others; after one purchase the pill shows the plan and the credits grew by the bonus.
 
+## BAC subjects rollout
+
+The BAC subjects change (spec `docs/superpowers/specs/2026-11-09-bac-subjects-design.md`) adds migration `20261109102217_bac_subjects`: the tables `bac_subjects`, `bac_sources`, `bac_items`, `bac_item_sources`, `bac_item_barem` (admin-only) and `bac_attempts` with their RLS (sources / items / links need full access), the `save_bac_draft` RPC, the grading helpers, the new `student_events` kinds, `ai_settings.bac_rules` (default `''`) and the pg_cron job `fail-stale-bac-grading` (every 5 min: an attempt in `grading` for more than 5 minutes is refunded and set to `failed`). The admin gets „Subiecte BAC” (`/bac`), the student page tab, „Reguli de notare BAC” in Setări and `POST /api/bac/submit` (OpenAI, same `OPENAI_API_KEY`; no new env var). The student web and APK get the Home card, `/bac`, the paper and the result. No new native module. Order:
+
+1. `pnpm db:cloud:push:dry` (must list only `20261109102217_bac_subjects`) → `pnpm db:cloud:push`. **Before any deploy:** the new admin and web read the new tables.
+2. Verify the cron job: `select jobname, schedule, active from cron.job where jobname = 'fail-stale-bac-grading'` shows `*/5 * * * *` and `active = true`; some minutes later `select status from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'fail-stale-bac-grading') order by start_time desc limit 3` shows succeeded runs.
+3. Push `main` and wait for **prepio-admin** and **prepio-web** Ready.
+4. Admin → Setări → „Reguli de notare BAC”: after the migration it is **empty** in production (the default text is written only by `pnpm seed`, and only while empty). Paste the strict-examiner default from `packages/content/src/defaults.ts` (`DEFAULT_BAC_RULES`) or write your own, and save. Grade no real paper before this is set.
+5. Subjects: production has none after the push. Enter them in admin → „Subiecte BAC” (publishing needs exactly 90 points and every item valid). `pnpm seed` (see "Schema and content") now also adds every seed BAC subject that is missing by title (the demo „Istorie 2026 · Varianta 3”, published) and fills an empty „Reguli de notare BAC”; it never changes an existing subject. Production is test-only, so running it there is harmless; delete the demo subject in admin if it isn't wanted.
+6. New EAS `preview` APK (JS-only change). An old APK has no „Subiecte BAC” entry and otherwise works.
+7. Checks:
+   - anon REST on `bac_subjects`, `bac_sources`, `bac_items`, `bac_item_barem`, `bac_attempts` returns `[]` or 401/42501, never rows; `POST /api/bac/submit` returns 401 without a token;
+   - a trial student sees the list with 🔒 and the paywall sheet, and reads no items / sources through REST;
+   - **one real graded paper by the owner** (full access, enough credits): fill a few items and the essay, submit; expect „Corectăm lucrarea…”, then the grade with „Notă orientativă — poate diferi de corectarea unui profesor.” and short feedback lines; the credits drop by the subject's cost once; admin → Elevi → the student → „Subiecte BAC” lists the attempt and „Credite” shows „Corectare subiect · <titlu>”. If grading fails, the student sees the refund message and the prepio-admin Vercel logs show why (a paper is about 10 parallel OpenAI calls of up to 40 s each, inside the 60 s route budget).
+
 ## Student administration rollout
 
 The student administration change (spec `docs/superpowers/specs/2026-11-06-student-administration-design.md`) adds four migrations:
