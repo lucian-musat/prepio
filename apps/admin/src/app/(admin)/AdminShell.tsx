@@ -9,6 +9,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const links = [
     { href: '/', label: 'Conținut' },
+    { href: '/bac', label: 'Subiecte BAC' },
     { href: '/templates', label: 'Șabloane de rezolvare' },
     { href: '/ai-templates', label: 'Șabloane AI' },
     { href: '/students', label: 'Elevi' },

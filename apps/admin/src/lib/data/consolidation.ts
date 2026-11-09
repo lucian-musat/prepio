@@ -104,7 +104,7 @@ export async function getConsolidation(db: SupabaseClient, lessonId: string): Pr
 }
 
 /** Every span of an exercise (read-only view). */
-function spansOf(ex: ConsolidationExercise): AnswerSpan[] {
+export function spansOf(ex: ConsolidationExercise): AnswerSpan[] {
   switch (ex.type) {
     case 'source_info':
     case 'viewpoint':
@@ -119,7 +119,7 @@ function spansOf(ex: ConsolidationExercise): AnswerSpan[] {
 }
 
 /** Copy of the exercise with `fn` applied to every span. */
-function mapSpans(ex: ConsolidationExercise, fn: (s: AnswerSpan) => AnswerSpan): ConsolidationExercise {
+export function mapSpans(ex: ConsolidationExercise, fn: (s: AnswerSpan) => AnswerSpan): ConsolidationExercise {
   switch (ex.type) {
     case 'source_info':
     case 'viewpoint':
@@ -199,7 +199,7 @@ export async function deleteSource(db: SupabaseClient, id: string): Promise<void
 }
 
 /** Rebuilds the exercise from untrusted input through the shared model and trims the free-text fields (never span text). */
-function normalizeExercise(input: ExerciseInput): ConsolidationExercise {
+export function normalizeExercise(input: ExerciseInput): ConsolidationExercise {
   if (!CONSOLIDATION_TYPES.includes(input?.type) || !Array.isArray(input.sources)) throw new UserError(GENERIC_ERROR);
   const sources: SourceRef[] = input.sources.map((s, i) => ({ sourceId: String(s?.sourceId ?? ''), label: i === 0 ? 'A' : 'B' }));
   const ex = exerciseFromRow(

@@ -10,7 +10,7 @@ import type { FieldsProps } from './exerciseModel';
 export const MAX_REQUIREMENTS = 6;
 
 /** 1–6 requirement cards: text, own required AI context, optional model answer and template, argumentation flag. */
-export default function EssayFields({ idPrefix, draft, onChange, templates, aiTemplates }: FieldsProps<'essay'>) {
+export default function EssayFields({ idPrefix, draft, onChange, templates, aiTemplates, bac }: FieldsProps<'essay'>) {
   const setRequirements = (requirements: EssayRequirement[]) => {
     // drop the context and AI template of removed requirements
     const ids = new Set(requirements.map((r) => r.id));
@@ -29,7 +29,7 @@ export default function EssayFields({ idPrefix, draft, onChange, templates, aiTe
 
   return (
     <>
-    <CreditCostField idPrefix={idPrefix} value={draft.creditCost} requirements={draft.requirements.length} onChange={(creditCost) => onChange({ ...draft, creditCost })} />
+    {!bac && <CreditCostField idPrefix={idPrefix} value={draft.creditCost} requirements={draft.requirements.length} onChange={(creditCost) => onChange({ ...draft, creditCost })} />}
     <fieldset className="mb-3">
       <legend className="form-label fs-6 mb-1">Cerințe ({draft.requirements.length}/{MAX_REQUIREMENTS})</legend>
       <SortableList
@@ -50,20 +50,25 @@ export default function EssayFields({ idPrefix, draft, onChange, templates, aiTe
                 <Form.Label>Cerința {n}</Form.Label>
                 <Form.Control as="textarea" rows={2} value={r.text} onChange={(e) => patch(i, { text: e.target.value })} />
               </Form.Group>
-              <AiTemplateField
-                controlId={`${id}-ai-template`}
-                label={`Șablon AI, cerința ${n}`}
-                type="essay_requirement"
-                templates={aiTemplates}
-                value={draft.ai.requirementTemplates[r.id] ?? null}
-                onChange={(v) => setAiTemplate(r.id, v)}
-              />
-              <AiContextField
-                controlId={`${id}-ai`}
-                label={`Context pentru AI, cerința ${n}`}
-                value={draft.ai.requirements[r.id] ?? ''}
-                onChange={(v) => setContext(r.id, v)}
-              />
+              {/* BAC essays are graded against their barem: no AI template or context */}
+              {!bac && (
+                <>
+                  <AiTemplateField
+                    controlId={`${id}-ai-template`}
+                    label={`Șablon AI, cerința ${n}`}
+                    type="essay_requirement"
+                    templates={aiTemplates}
+                    value={draft.ai.requirementTemplates[r.id] ?? null}
+                    onChange={(v) => setAiTemplate(r.id, v)}
+                  />
+                  <AiContextField
+                    controlId={`${id}-ai`}
+                    label={`Context pentru AI, cerința ${n}`}
+                    value={draft.ai.requirements[r.id] ?? ''}
+                    onChange={(v) => setContext(r.id, v)}
+                  />
+                </>
+              )}
               <Form.Group className="mb-2" controlId={`${id}-model`}>
                 <Form.Label>Răspuns model, cerința {n} (opțional)</Form.Label>
                 <Form.Control

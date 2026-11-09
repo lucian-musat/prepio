@@ -106,6 +106,8 @@ export type FieldsProps<T extends ConsolidationType> = {
   templates: SolutionTemplate[];
   /** The AI instruction-template library. */
   aiTemplates: AiTemplate[];
+  /** A BAC subject item: no credit cost and no AI context or template (graded against its barem). */
+  bac?: boolean;
 };
 
 /** The source's title, or its first words. */

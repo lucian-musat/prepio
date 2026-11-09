@@ -10,6 +10,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
   const [welcomeMessage, setWelcomeMessage] = useState(initial.welcomeMessage);
   const [rules, setRules] = useState(initial.rules);
   const [model, setModel] = useState(initial.model);
+  const [bacRules, setBacRules] = useState(initial.bacRules);
   const [saved, setSaved] = useState(false);
   const { run, pending, alert } = useRunner();
   const touch = <T,>(set: (v: T) => void) => (v: T) => { set(v); setSaved(false); };
@@ -20,7 +21,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
         e.preventDefault();
         setSaved(false);
         run(
-          () => saveSettings({ welcomeMessage, rules, model }),
+          () => saveSettings({ welcomeMessage, rules, model, bacRules }),
           () => setSaved(true),
         );
       }}
@@ -48,6 +49,11 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
             <Form.Label>Model</Form.Label>
             <Form.Control value={model} onChange={(e) => touch(setModel)(e.target.value)} />
             <Form.Text muted>Numele modelului OpenAI folosit la evaluare, de exemplu gpt-5-mini.</Form.Text>
+          </Form.Group>
+          <Form.Group controlId="ai-bac-rules" className="mt-3">
+            <Form.Label>Reguli de notare BAC</Form.Label>
+            <Form.Control as="textarea" rows={10} value={bacRules} onChange={(e) => touch(setBacRules)(e.target.value)} />
+            <Form.Text muted>Instrucțiuni pentru corectorul subiectelor BAC (strictețe, reguli generale de barem).</Form.Text>
           </Form.Group>
         </Card.Body>
       </Card>

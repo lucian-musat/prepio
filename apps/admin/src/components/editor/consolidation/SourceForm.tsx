@@ -4,7 +4,8 @@ import { useId, useState } from 'react';
 import { Alert, Button, ButtonGroup, Form } from 'react-bootstrap';
 import type { Source } from '@prepio/shared';
 import { previewSourceImpact, saveSource } from '@/app/(admin)/lessons/[id]/actions';
-import type { SourceImpact } from '@/lib/data/consolidation';
+import type { ActionResult } from '@/lib/actionResult';
+import type { SourceImpact, SourceInput } from '@/lib/data/consolidation';
 
 const FAILED = 'Operația a eșuat. Încearcă din nou.';
 
@@ -12,11 +13,16 @@ const FAILED = 'Operația a eșuat. Încearcă din nou.';
  * Add / edit a source. Saving an edited text first asks for the impact: marked answers that would no
  * longer be found are listed and the save needs a confirmation (they get flagged in their exercises).
  */
-export default function SourceForm({ lessonId, initial, onDone, onCancel }: {
+export default function SourceForm({ lessonId, initial, onDone, onCancel, save: saveAction, previewImpact }: {
+  /** Owner of the source; ignored when `save` and `previewImpact` are given. */
   lessonId: string;
   initial?: Source;
   onDone: () => void;
   onCancel: () => void;
+  /** Defaults to the lesson's `saveSource` (the BAC editor saves into its subject section). */
+  save?: (input: SourceInput) => Promise<ActionResult<{ id: string }>>;
+  /** Defaults to the lesson's `previewSourceImpact`. */
+  previewImpact?: (sourceId: string, body: string) => Promise<ActionResult<SourceImpact>>;
 }) {
   const id = useId();
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -40,7 +46,8 @@ export default function SourceForm({ lessonId, initial, onDone, onCancel }: {
   };
 
   const doSave = async () => {
-    const res = await saveSource(lessonId, { ...(initial ? { id: initial.id } : {}), title: title || null, author, work, body });
+    const input: SourceInput = { ...(initial ? { id: initial.id } : {}), title: title || null, author, work, body };
+    const res = await (saveAction ? saveAction(input) : saveSource(lessonId, input));
     if (res.ok) onDone();
     else setError(res.error);
   };
@@ -52,7 +59,7 @@ export default function SourceForm({ lessonId, initial, onDone, onCancel }: {
     setImpact(null);
     if (!initial || body === initial.body) return void save();
     void busy(async () => {
-      const res = await previewSourceImpact(initial.id, body);
+      const res = await (previewImpact ?? previewSourceImpact)(initial.id, body);
       if (!res.ok) return setError(res.error);
       const list = res.data ?? [];
       if (list.length) setImpact(list);

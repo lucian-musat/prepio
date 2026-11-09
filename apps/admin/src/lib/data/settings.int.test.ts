@@ -27,7 +27,7 @@ describe.skipIf(!url || !anon)('settings data functions (local Supabase)', () =>
     if (original) await saveSettings(db, original);
   });
 
-  const valid: SettingsInput = { welcomeMessage: '[test] Bun venit', rules: '[test] reguli', model: 'test-model' };
+  const valid: SettingsInput = { welcomeMessage: '[test] Bun venit', rules: '[test] reguli', model: 'test-model', bacRules: '[test] reguli BAC' };
 
   it('persists both rows', async () => {
     await saveSettings(db, valid);

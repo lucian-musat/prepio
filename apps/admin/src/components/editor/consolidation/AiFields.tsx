@@ -52,7 +52,8 @@ export function AiContextField({ controlId, label = 'Context pentru AI', value, 
 
 type AiType = 'facts' | 'comparison' | 'viewpoint' | 'argument';
 
-function MainContext({ idPrefix, draft, onChange, aiTemplates }: Pick<FieldsProps<AiType>, 'idPrefix' | 'draft' | 'onChange' | 'aiTemplates'>) {
+function MainContext({ idPrefix, draft, onChange, aiTemplates, bac }: Pick<FieldsProps<AiType>, 'idPrefix' | 'draft' | 'onChange' | 'aiTemplates' | 'bac'>) {
+  if (bac) return null;
   return (
     <>
       <CreditCostField idPrefix={idPrefix} value={draft.creditCost} onChange={(creditCost) => onChange({ ...draft, creditCost })} />
@@ -74,16 +75,16 @@ function MainContext({ idPrefix, draft, onChange, aiTemplates }: Pick<FieldsProp
 
 type AnyOnChange = FieldsProps<AiType>['onChange'];
 
-export function FactsFields({ idPrefix, draft, onChange, aiTemplates }: FieldsProps<'facts'>) {
+export function FactsFields({ idPrefix, draft, onChange, aiTemplates, bac }: FieldsProps<'facts'>) {
   return (
     <>
       <CountField idPrefix={idPrefix} label="Câte fapte se cer (N)" value={draft.count} onChange={(count) => onChange({ ...draft, count })} />
-      <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} />
+      <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} bac={bac} />
     </>
   );
 }
 
-export function ComparisonFields({ idPrefix, draft, onChange, aiTemplates }: FieldsProps<'comparison'>) {
+export function ComparisonFields({ idPrefix, draft, onChange, aiTemplates, bac }: FieldsProps<'comparison'>) {
   return (
     <>
       <fieldset className="mb-3">
@@ -101,7 +102,7 @@ export function ComparisonFields({ idPrefix, draft, onChange, aiTemplates }: Fie
           />
         ))}
       </fieldset>
-      <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} />
+      <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} bac={bac} />
     </>
   );
 }
@@ -110,12 +111,12 @@ export function ViewpointFields(props: FieldsProps<'viewpoint'>) {
   return (
     <>
       <SpansFields {...(props as unknown as FieldsProps<'source_info' | 'viewpoint'>)} />
-      <MainContext idPrefix={props.idPrefix} draft={props.draft} onChange={props.onChange as AnyOnChange} aiTemplates={props.aiTemplates} />
+      <MainContext idPrefix={props.idPrefix} draft={props.draft} onChange={props.onChange as AnyOnChange} aiTemplates={props.aiTemplates} bac={props.bac} />
     </>
   );
 }
 
 /** „Argumentare”: the statement to argue is the prompt, so only the context is needed. */
-export function ArgumentFields({ idPrefix, draft, onChange, aiTemplates }: FieldsProps<'argument'>) {
-  return <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} />;
+export function ArgumentFields({ idPrefix, draft, onChange, aiTemplates, bac }: FieldsProps<'argument'>) {
+  return <MainContext idPrefix={idPrefix} draft={draft} onChange={onChange as AnyOnChange} aiTemplates={aiTemplates} bac={bac} />;
 }
