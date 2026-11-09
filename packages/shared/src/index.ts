@@ -15,3 +15,5 @@ export * from './consolidation/check';
 export * from './plural';
 export * from './credits';
 export * from './access';
+export * from './bac/types';
+export * from './bac/bac';
