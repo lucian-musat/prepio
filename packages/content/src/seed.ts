@@ -93,6 +93,10 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
   const result: SeedResult =
     opts.reset || !existing.count ? { contentSeeded: true, ...(await replaceContent(client)) } : { contentSeeded: false };
 
+  // BAC subjects are not lesson content: every run (reset or not) adds the missing ones by title and never touches an
+  // existing subject or its students' attempts. The solution templates are ensured only when a subject is missing.
+  await writeBacSubjects(client, async () => (await ensureTemplates(client, true)).ids, randomUUID);
+
   // Only create when missing: never overwrite the owner's edits.
   check(
     await client.from('settings').upsert({ id: 1, welcome_message: welcomeMessage }, { onConflict: 'id', ignoreDuplicates: true }),
@@ -162,8 +166,6 @@ async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; 
     }
     await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, aiTemplateIds, randomUUID);
   }
-  // BAC subjects are not lesson content: a reset keeps them (they may have students' attempts); missing ones are added by title.
-  await writeBacSubjects(client, templateIds, randomUUID);
 
   return { nodes: nodeRows.length, lessons: lessons.length };
 }

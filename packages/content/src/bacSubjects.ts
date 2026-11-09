@@ -124,7 +124,7 @@ const SUBIECTUL_I: SeedBacItem[] = [
     count: 2,
     groups: [
       ['Moldova', 'Principatul Moldovei'],
-      ['Țara Românească', 'Valahia', 'Muntenia', 'Principatul Țării Românești'],
+      ['Țara Românească', 'Valahia', 'Principatul Țării Românești'],
     ],
     barem: { text: `câte 3 puncte pentru fiecare dintre răspunsurile: Moldova, Țara Românească ${ANY_WORDING} (3px2=6p)`, steps: [0, 3, 6] },
   },
@@ -284,13 +284,37 @@ const SUBIECTUL_II: SeedBacItem[] = [
         'a învins oastea maghiară',
         'înfrângerea oastei lui Ludovic I',
         'înfrângerea oastei maghiare',
-      ],
+        ...['oastea lui Ludovic', 'oastea lui Ludovic I', 'oastea trimisă de Ludovic', 'oastea trimisă de Ludovic I',
+          'oastea Ungariei', 'oastea regelui Ungariei', 'oastea ungară', 'oastea maghiară', 'oastea trimisă împotriva sa']
+          .flatMap((army) => [`a înfrânt ${army}`, `a învins ${army}`, `a respins ${army}`]),
+        ...['ungară', 'maghiară', 'Ungariei'].flatMap((d) => [
+          `a scos Moldova de sub dominația ${d}`,
+          `a scos Moldova de sub dominație ${d}`,
+          `Moldova ieșea de sub dominația ${d}`,
+          `Moldova ieșea de sub dominație ${d}`,
+          `Moldova a ieșit de sub dominația ${d}`,
+          `eliberarea Moldovei de sub dominația ${d}`,
+        ]),
+        ...['a întemeiat', 'a fondat'].flatMap((verb) => [
+          `${verb} Moldova`,
+          `${verb} statul Moldova`,
+          `${verb} statul independent Moldova`,
+          `${verb} statul moldovean`,
+          `${verb} statul independent moldovean`,
+        ]),
+        'fondarea statului independent Moldova',
+        'fondarea statului Moldova',
+        'întemeierea statului independent Moldova',
+        'întemeierea statului Moldova',
+        'a obținut independența Moldovei',
+      ].filter((v, i, all) => all.indexOf(v) === i),
     ],
     barem: {
       text:
         '3 puncte pentru răspunsul: Bogdan 3 puncte pentru menționarea oricărei acțiuni desfășurate de acesta în ' +
         'Moldova, precizate în sursa dată Exemple: l-a îndepărtat pe Balc, urmașul lui Dragoș, de la putere, forțându-l ' +
-        `să plece din Moldova; a înfrânt oastea trimisă de Ludovic I împotriva sa (1364) etc. ${ANY_WORDING_QUOTE}`,
+        'să plece din Moldova; a înfrânt oastea trimisă de Ludovic I împotriva sa (1364); a scos Moldova de sub ' +
+        `dominația ungară; a întemeiat statul independent Moldova etc. ${ANY_WORDING_QUOTE}`,
       steps: [0, 3, 6],
     },
   },
@@ -570,11 +594,11 @@ export function toBacSubject(subject: SeedBacSubject, templateIds: Map<string, s
  * Inserts every seed subject whose title is not in `bac_subjects` yet (idempotent by title: an existing subject, with
  * its students' attempts, is never touched). Every subject is converted (and so checked) before anything is written.
  * When a write fails, the subject inserted by this call is deleted again and the error rethrown. Returns how many
- * subjects were inserted.
+ * subjects were inserted. `templateIds` is only called when a subject is missing.
  */
 export async function writeBacSubjects(
   client: SupabaseClient,
-  templateIds: Map<string, string>,
+  templateIds: () => Promise<Map<string, string>>,
   newId: () => string,
   subjects: SeedBacSubject[] = BAC_SUBJECTS,
 ): Promise<number> {
@@ -583,7 +607,9 @@ export async function writeBacSubjects(
     'find BAC subjects',
   ) as { title: string }[];
   const missing = subjects.filter((s) => !existing.some((e) => e.title === s.title));
-  const converted = missing.map((s) => ({ subject: s, ...toBacSubject(s, templateIds, newId) }));
+  if (missing.length === 0) return 0;
+  const ids = await templateIds();
+  const converted = missing.map((s) => ({ subject: s, ...toBacSubject(s, ids, newId) }));
 
   for (const c of converted) {
     const subjectId = newId();

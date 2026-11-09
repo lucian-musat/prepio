@@ -352,6 +352,25 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     }
   });
 
+  it('a seed without reset on a database with lessons adds a missing BAC subject, once', async () => {
+    const subjectsTitled = async () =>
+      check(await client.from('bac_subjects').select('id').eq('title', ISTORIE_2026_V3.title)) as Array<{ id: string }>;
+    const ids = (await subjectsTitled()).map((s) => s.id);
+    // Items first: their source links restrict deleting the sources that the subject's cascade would remove.
+    check(await client.from('bac_items').delete().in('subject_id', ids));
+    check(await client.from('bac_subjects').delete().in('id', ids));
+    expect(await subjectsTitled()).toHaveLength(0);
+    expect(await count(client, 'lessons')).toBeGreaterThan(0);
+
+    expect(await seed(client)).toEqual({ contentSeeded: false });
+    const [created] = await subjectsTitled();
+    expect(created).toBeDefined();
+    expect(check(await client.from('bac_items').select('id').eq('subject_id', created!.id))).toHaveLength(14);
+
+    expect(await seed(client)).toEqual({ contentSeeded: false });
+    expect((await subjectsTitled()).map((s) => s.id)).toEqual([created!.id]);
+  });
+
   it('writes the default BAC grading rules only when they are empty', async () => {
     const { data: ai } = await client.from('ai_settings').select('bac_rules').eq('id', 1).single();
     expect(ai?.bac_rules).toBe(DEFAULT_BAC_RULES);

@@ -157,6 +157,20 @@ describe('BAC seed subjects', () => {
           ],
         }),
       ).toBe(6);
+      // „Muntenia” is not the polity named in the sources.
+      expect(score(item(1, 3), { type: 'multi_answer', texts: ['Moldova', 'Muntenia'] })).toBe(3);
+      for (const action of [
+        'a scos Moldova de sub dominația ungară',
+        'a scos Moldova de sub dominația maghiară',
+        'a întemeiat statul independent Moldova',
+        'a fondat statul Moldova',
+        'a respins oastea lui Ludovic',
+        'a înfrânt oastea Ungariei',
+        'a înfrânt oastea regelui Ungariei',
+        'a respins oastea trimisă de Ludovic I',
+      ]) {
+        expect(score(item(2, 3), { type: 'multi_answer', texts: ['Bogdan', action] }), action).toBe(6);
+      }
       // Two actions are one answer group: only the leader + an action earns both units.
       expect(score(item(2, 3), { type: 'multi_answer', texts: ['l-a îndepărtat pe Balc de la putere', 'a înfrânt oastea trimisă de Ludovic I'] })).toBe(3);
     });
