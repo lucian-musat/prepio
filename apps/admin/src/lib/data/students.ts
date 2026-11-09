@@ -368,6 +368,7 @@ export function eventLabel(e: EventInput): string {
     case 'consolidation_started': return `A început consolidarea ${lesson}`;
     case 'consolidation_finished': return `A terminat consolidarea ${lesson}`;
     case 'check': {
+      if (typeof d.target === 'string' && d.target.startsWith('bac:')) return `Corectare subiect BAC · −${num('cost')}`;
       const type = e.exerciseType ? (CONSOLIDATION_TYPE_LABELS[e.exerciseType as ConsolidationType] ?? e.exerciseType) : null;
       return ['Verificare cu profesorul digital', type, `−${num('cost')}`].filter((x) => x != null).join(' · ');
     }

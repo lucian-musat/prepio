@@ -135,6 +135,8 @@ describe('eventLabel', () => {
     expect(ev('bac_graded', { ...t, details: { subject_id: 's', points: 74, grade: 8.4 } })).toBe('Lucrare corectată · Subiect 2025 · nota 8,40');
     expect(ev('bac_grading_failed', t)).toBe('Corectare nereușită · returnat');
     expect(ev('bac_started')).toBe('Subiect BAC început · (subiect șters)');
+    // The spend of a paper is a `check` with a `bac:` target: not a digital-teacher check.
+    expect(ev('check', { details: { cost: 10, target: 'bac:s' } })).toBe('Corectare subiect BAC · −10');
     expect(eventIcon('bac_started', null)).toBe('📝');
     expect(eventIcon('bac_submitted', null)).toBe('📤');
     expect(eventIcon('bac_graded', null)).toBe('🎓');
