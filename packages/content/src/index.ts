@@ -5,7 +5,8 @@ import type { SeedLesson } from './types';
 
 export type * from './types';
 export { tree } from './tree';
-export { aiDefaults, welcomeMessage } from './defaults';
+export { aiDefaults, DEFAULT_BAC_RULES, welcomeMessage } from './defaults';
+export { BAC_SUBJECTS } from './bacSubjects';
 export { TEMPLATES } from './templates';
 export { AI_TEMPLATES } from './aiTemplates';
 

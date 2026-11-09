@@ -10,6 +10,7 @@ import {
   type Source,
   type SourceLabel,
 } from '@prepio/shared';
+import { BAC_SUBJECTS } from './bacSubjects';
 import { ensureAiTemplates, essayFromWriting, writeConsolidation } from './consolidation';
 import { seed } from './seed';
 import { TEMPLATES } from './templates';
@@ -123,6 +124,16 @@ export async function toMigratedState(client: SupabaseClient, lessons: SeedLesso
     if (src.error) throw src.error;
     await writeConsolidation(client, data.id, [], MIGRATED_ESSAYS[l.key] ?? [], new Map(), aiIds, randomUUID);
   }
+  // Production had no BAC subjects then; the seed subject's items would also keep the templates (restrict).
+  const bac = await client.from('bac_subjects').select('id').in('title', BAC_SUBJECTS.map((s) => s.title));
+  if (bac.error) throw bac.error;
+  const bacIds = bac.data.map((r) => r.id as string);
+  const bacAttempts = await client.from('bac_attempts').delete().in('subject_id', bacIds);
+  if (bacAttempts.error) throw bacAttempts.error;
+  const bacItems = await client.from('bac_items').delete().in('subject_id', bacIds);
+  if (bacItems.error) throw bacItems.error;
+  const bacSubjects = await client.from('bac_subjects').delete().in('id', bacIds);
+  if (bacSubjects.error) throw bacSubjects.error;
   const tpl = await client.from('solution_templates').delete().in('title', TEMPLATES.map((t) => t.title));
   if (tpl.error) throw tpl.error;
 }

@@ -5,7 +5,9 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cardImagePaths, cardToRow } from '@prepio/shared';
+import { writeBacSubjects } from './bacSubjects';
 import { check, ensureAiTemplates, ensureTemplates, writeConsolidation } from './consolidation';
+import { DEFAULT_BAC_RULES } from './defaults';
 import { aiDefaults, lessons, tree, welcomeMessage } from './index';
 import type { SeedCard, SeedNode } from './types';
 
@@ -103,6 +105,7 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
     ),
     'ai_settings',
   );
+  check(await client.from('ai_settings').update({ bac_rules: DEFAULT_BAC_RULES }).eq('id', 1).eq('bac_rules', ''), 'ai_settings bac_rules');
 
   if (opts.adminEmail && opts.adminPassword) await ensureAdmin(client, opts.adminEmail, opts.adminPassword);
 
@@ -159,6 +162,8 @@ async function replaceContent(client: SupabaseClient): Promise<{ nodes: number; 
     }
     await writeConsolidation(client, lessonId, lesson.sources, lesson.consolidation, templateIds, aiTemplateIds, randomUUID);
   }
+  // BAC subjects are not lesson content: a reset keeps them (they may have students' attempts); missing ones are added by title.
+  await writeBacSubjects(client, templateIds, randomUUID);
 
   return { nodes: nodeRows.length, lessons: lessons.length };
 }

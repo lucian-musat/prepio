@@ -1,4 +1,4 @@
-import type { AiContext, AiTemplateType, Card, ConsolidationType, DistributiveOmit, Question, SourceLabel } from '@prepio/shared';
+import type { AiContext, AiTemplateType, BacSection, Card, ConsolidationType, DistributiveOmit, Question, SourceLabel } from '@prepio/shared';
 
 /** The AI context text an exercise is authored with (facts only); its AI template comes from the exercise type. */
 export type SeedAiContext = Pick<AiContext, 'main' | 'requirements'>;
@@ -74,3 +74,32 @@ export type SeedLesson = {
 };
 
 export type AiDefaults = { rules: string; model: 'gpt-5-mini' };
+
+/** A source of a BAC subject: the first source of a section is its letter A, the second B. */
+export type SeedBacSource = SeedSource & { section: BacSection };
+
+/** One barem portion: `steps` null = every integer 0..points (as `BacStepRule`). */
+export type SeedBacRule = { text: string; points: number; steps: number[] | null };
+
+/**
+ * A BAC requirement: a consolidation exercise (no AI context) with its points and barem. Its sources are keys of the
+ * subject's sources in the same section; the link labels are their section letters. Items are numbered in order
+ * within their section. An essay's barem has one rule per requirement id; the style points are the default 2/1/2/1.
+ */
+export type SeedBacItem = DistributiveOmit<SeedConsolidation, 'ai'> & {
+  section: BacSection;
+  points: number;
+  barem: { text: string; steps: number[] | null; requirements?: Record<string, SeedBacRule> };
+};
+
+export type SeedBacSubject = {
+  title: string;
+  year: number;
+  variant: string;
+  creditCost: number;
+  published: boolean;
+  /** In position order within each section. */
+  sources: SeedBacSource[];
+  /** In display order within each section. */
+  items: SeedBacItem[];
+};

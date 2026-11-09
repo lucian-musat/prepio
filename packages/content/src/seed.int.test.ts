@@ -1,10 +1,25 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AI_TYPES, aiTemplateTypeFor, cardFromRow, cardImagePaths, validateExercise, type CardRow } from '@prepio/shared';
+import {
+  AI_TYPES,
+  aiTemplateTypeFor,
+  bacItemFromRow,
+  cardFromRow,
+  cardImagePaths,
+  sourceFromRow,
+  validateBacItem,
+  validateExercise,
+  type BacBarem,
+  type CardRow,
+  type ConsolidationType,
+  type SourceLabel,
+} from '@prepio/shared';
 import { AI_TEMPLATES } from './aiTemplates';
+import { ISTORIE_2026_V3 } from './bacSubjects';
+import { DEFAULT_BAC_RULES } from './defaults';
 import { aiTemplateTypes, loadConsolidation } from './consolidation.testutil';
 import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
-import { seed } from './seed';
+import { check as checkResult, seed } from './seed';
 import { TEMPLATES } from './templates';
 
 /** The source card as it should be stored: every image file name prefixed with `seed/`. */
@@ -28,6 +43,8 @@ function withSeedPaths(card: SeedCard): SeedCard {
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_ANON_KEY;
+
+const check = <T,>(res: { data: T; error: { message: string } | null }): NonNullable<T> => checkResult(res, 'query') as NonNullable<T>;
 
 const countNodes = (nodes: typeof tree): number =>
   nodes.reduce((n, node) => n + 1 + countNodes(node.children ?? []), 0);
@@ -287,6 +304,71 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       if (costErr) throw costErr;
       expect(costs.length).toBe(l.consolidation.length);
       for (const c of costs) expect(c.credit_cost, c.type as string).toBe(c.type === 'comparison' || c.type === 'argument' ? 2 : 1);
+    }
+  });
+
+  it('seeds the BAC subject once (by title), with valid items, source links and barems', async () => {
+    await seed(client, { reset: true });
+    await seed(client, { reset: true });
+    const subjects = check(
+      await client.from('bac_subjects').select('id,title,year,variant,credit_cost,published').eq('title', ISTORIE_2026_V3.title),
+    );
+    expect(subjects).toHaveLength(1);
+    expect(subjects[0]).toMatchObject({ year: 2026, variant: 'Varianta 3', credit_cost: 10, published: true });
+    const subjectId = subjects[0]!.id as string;
+    expect(check(await client.from('bac_subjects').select('id').eq('published', true).not('title', 'like', '[test]%'))).toHaveLength(1);
+
+    const sources = check(
+      await client.from('bac_sources').select('id,section,position,title,author,work,body').eq('subject_id', subjectId).order('section').order('position'),
+    ) as Array<Record<string, unknown> & { section: number }>;
+    expect(sources.map((s) => [s.section, s.author, s.body])).toEqual(ISTORIE_2026_V3.sources.map((s) => [s.section, s.author, s.body]));
+
+    const rows = check(
+      await client.from('bac_items').select('id,section,position,type,prompt,content,template_id,points').eq('subject_id', subjectId).order('section').order('position'),
+    ) as Array<{ id: string; section: number; position: number; type: ConsolidationType; prompt: string; content: Record<string, unknown>; template_id: string | null; points: number }>;
+    expect(rows).toHaveLength(14);
+    expect(rows.reduce((t, r) => t + r.points, 0)).toBe(90);
+    const ids = rows.map((r) => r.id);
+    const links = check(await client.from('bac_item_sources').select('item_id,label,source_id').in('item_id', ids).order('position')) as Array<{
+      item_id: string; label: SourceLabel; source_id: string;
+    }>;
+    expect(links).toHaveLength(ISTORIE_2026_V3.items.reduce((t, i) => t + i.sources.length, 0));
+    const barems = new Map(
+      (check(await client.from('bac_item_barem').select('item_id,barem').in('item_id', ids)) as Array<{ item_id: string; barem: BacBarem }>).map((b) => [b.item_id, b.barem]),
+    );
+    expect(barems.size).toBe(14);
+
+    const { data: tpl } = await client.from('solution_templates').select('id,title');
+    const templateKey = new Map((tpl ?? []).map((r) => [r.id as string, TEMPLATES.find((t) => t.title === r.title)?.key ?? null]));
+    const numbers = new Map<number, number>();
+    for (const row of rows) {
+      const number = (numbers.get(row.section) ?? 0) + 1;
+      numbers.set(row.section, number);
+      const refs = links.filter((l) => l.item_id === row.id).map((l) => ({ sourceId: l.source_id, label: l.label }));
+      const item = bacItemFromRow(row, number, refs);
+      const own = sources.filter((s) => s.section === row.section).map(sourceFromRow);
+      expect(validateBacItem(item, own, barems.get(row.id) ?? null), `${row.section}.${number}`).toEqual([]);
+      expect(templateKey.get(row.template_id!), `${row.section}.${number}`).toBe(row.type);
+    }
+  });
+
+  it('writes the default BAC grading rules only when they are empty', async () => {
+    const { data: ai } = await client.from('ai_settings').select('bac_rules').eq('id', 1).single();
+    expect(ai?.bac_rules).toBe(DEFAULT_BAC_RULES);
+    expect(DEFAULT_BAC_RULES.trim()).not.toBe('');
+
+    await client.from('ai_settings').update({ bac_rules: 'Reguli editate' }).eq('id', 1);
+    try {
+      await seed(client);
+      const { data: kept } = await client.from('ai_settings').select('bac_rules').eq('id', 1).single();
+      expect(kept?.bac_rules).toBe('Reguli editate');
+
+      await client.from('ai_settings').update({ bac_rules: '' }).eq('id', 1);
+      await seed(client);
+      const { data: filled } = await client.from('ai_settings').select('bac_rules').eq('id', 1).single();
+      expect(filled?.bac_rules).toBe(DEFAULT_BAC_RULES);
+    } finally {
+      await client.from('ai_settings').update({ bac_rules: DEFAULT_BAC_RULES }).eq('id', 1);
     }
   });
 

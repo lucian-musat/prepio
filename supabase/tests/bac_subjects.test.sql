@@ -54,7 +54,7 @@ select throws_ok($$ delete from bac_sources where id = '00000000-0000-0000-0000-
 -- ---------------------------------------------------------------- trial student
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-000000000c01","role":"authenticated"}';
-select is((select count(*)::int from bac_subjects), 1, 'trial: sees the published subject only');
+select is((select count(*)::int from bac_subjects where title like '[test]%'), 1, 'trial: sees the published subject only');
 select is((select count(*)::int from bac_items), 0, 'trial: sees no items');
 select is((select count(*)::int from bac_sources), 0, 'trial: sees no sources');
 select is((select count(*)::int from bac_item_sources), 0, 'trial: sees no item sources');
@@ -65,10 +65,10 @@ reset role;
 -- ---------------------------------------------------------------- full access student
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-000000000c02","role":"authenticated"}';
-select is((select count(*)::int from bac_subjects), 1, 'full: sees only the published subject');
-select is((select count(*)::int from bac_items), 1, 'full: sees the published items');
-select is((select count(*)::int from bac_sources), 1, 'full: sees the published sources');
-select is((select count(*)::int from bac_item_sources), 1, 'full: sees the item sources');
+select is((select count(*)::int from bac_subjects where title like '[test]%'), 1, 'full: sees only the published subject');
+select is((select count(*)::int from bac_items where subject_id in ('00000000-0000-0000-0000-00000000ca01', '00000000-0000-0000-0000-00000000ca02')), 1, 'full: sees the published items');
+select is((select count(*)::int from bac_sources where subject_id in ('00000000-0000-0000-0000-00000000ca01', '00000000-0000-0000-0000-00000000ca02')), 1, 'full: sees the published sources');
+select is((select count(*)::int from bac_item_sources where item_id in ('00000000-0000-0000-0000-00000000cc01', '00000000-0000-0000-0000-00000000cc02')), 1, 'full: sees the item sources');
 select is((select count(*)::int from bac_item_barem), 0, 'full: sees no barem');
 create temp table d1 on commit drop as
   select public.save_bac_draft('00000000-0000-0000-0000-00000000ca01', '{"a": 1}', '{"section": 1, "index": 0}') as id;
@@ -104,8 +104,8 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-000000000c03","role":"authenticated"}';
 select is((select count(*)::int from bac_subjects where title like '[test]%'), 2, 'admin: sees every subject');
-select is((select count(*)::int from bac_item_barem), 2, 'admin: sees every barem');
-select is((select count(*)::int from bac_items), 2, 'admin: sees every item');
+select is((select count(*)::int from bac_item_barem where item_id in ('00000000-0000-0000-0000-00000000cc01', '00000000-0000-0000-0000-00000000cc02')), 2, 'admin: sees every barem');
+select is((select count(*)::int from bac_items where subject_id in ('00000000-0000-0000-0000-00000000ca01', '00000000-0000-0000-0000-00000000ca02')), 2, 'admin: sees every item');
 select is((select count(*)::int from bac_attempts), 1, 'admin: sees every attempt');
 select lives_ok($$ update bac_subjects set title = '[test] Draft 2' where id = '00000000-0000-0000-0000-00000000ca02' $$,
   'admin: edits a subject');
