@@ -39,6 +39,7 @@ import { useBacDraft } from './useBacDraft';
 /** While a paper is being graded elsewhere (reopened, or already submitted), its state is read this often. */
 export const GRADING_POLL_MS = 5000;
 const GRADING_FAILED = 'Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
+const LAST_ITEM_HINT = 'Ai ajuns la ultima cerință. Verifică ce mai ai de completat și predă lucrarea.';
 const SECTIONS: BacSection[] = [1, 2, 3];
 
 type Mode = 'paper' | 'submit' | 'grading' | 'result';
@@ -347,6 +348,7 @@ export default function BacPaperScreen() {
   );
 
   const wide = width >= SPLIT_MIN_WIDTH && sources.some((s) => !isShortSource(s.source.body));
+  const isLast = flat >= items.length - 1;
   const sheetTemplate = sheet ? paper.templates[sheet] ?? null : null;
   const hint = item?.templateId ? paper.templates[item.templateId]?.body ?? null : null;
   return (
@@ -368,9 +370,21 @@ export default function BacPaperScreen() {
           </View>
         }
         actions={
-          <View style={styles.row}>
-            <Button flex label="← Înapoi" variant="secondary" disabled={flat <= 0} onPress={() => step(-1)} />
-            <Button flex label="Următorul →" disabled={flat >= items.length - 1} onPress={() => step(1)} />
+          <View style={styles.actions}>
+            {/* The last item has nowhere to go but the hand-in: say so instead of a dead „Următorul”. */}
+            {isLast ? (
+              <AppText role="small" color="textMuted" style={styles.lastHint} accessibilityLiveRegion="polite">
+                {LAST_ITEM_HINT}
+              </AppText>
+            ) : null}
+            <View style={styles.row}>
+              <Button flex label="← Înapoi" variant="secondary" disabled={flat <= 0} onPress={() => step(-1)} />
+              {isLast ? (
+                <Button flex label="Predă lucrarea" onPress={() => setMode('submit')} />
+              ) : (
+                <Button flex label="Următorul →" onPress={() => step(1)} />
+              )}
+            </View>
           </View>
         }
         contentKey={item?.id}
@@ -410,7 +424,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   gap: { gap: space[3] },
   loader: { marginTop: space[12], alignItems: 'center' },
-  row: { flex: 1, flexDirection: 'row', gap: space[2.5] },
+  actions: { flex: 1, gap: space[2] },
+  lastHint: { textAlign: 'center' },
+  row: { flexDirection: 'row', gap: space[2.5] },
   submit: { minHeight: layout.minTouch, justifyContent: 'center', paddingHorizontal: space[1] },
   sub: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', gap: space[1], paddingHorizontal: space[4] },
   tabs: { flexDirection: 'row', backgroundColor: color.surfaceMuted, borderRadius: radius.pill, padding: space[1] },

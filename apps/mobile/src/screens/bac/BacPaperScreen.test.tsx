@@ -150,6 +150,27 @@ it('next moves from I.7 to II.1', async () => {
   await waitFor(() => expect(mockedSave).toHaveBeenCalledWith('s1', {}, { section: 2, index: 0 }));
 });
 
+it('at the last item the primary action says what to do next and opens the submit summary', async () => {
+  mockedOpen.mockResolvedValue(attempt({ answers: MOST, position: { section: 3, index: 0 } }));
+  await mount();
+  expect(await screen.findByText('Elaborați un eseu despre statul român modern.')).toBeTruthy();
+  expect(screen.getByText('Ai ajuns la ultima cerință. Verifică ce mai ai de completat și predă lucrarea.')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Următorul →' })).toBeNull();
+  // The action bar's button (the header link has the same name).
+  const handIn = screen.getAllByRole('button', { name: 'Predă lucrarea' });
+  expect(handIn).toHaveLength(2);
+  await act(async () => void fireEvent.press(handIn[handIn.length - 1]!));
+  expect(screen.getByText('Ai răspuns la 8 din 10 cerințe')).toBeTruthy();
+  expect(screen.getByText('Necompletate: I.6, III (cerința 2)')).toBeTruthy();
+});
+
+it('before the last item there is no last-item hint', async () => {
+  await mount();
+  expect(await screen.findByText('Cerința I.1')).toBeTruthy();
+  expect(screen.queryByText(/Ai ajuns la ultima cerință/)).toBeNull();
+  expect(screen.getByRole('button', { name: 'Următorul →' })).toBeTruthy();
+});
+
 it('submit shows the answered count and the empty list', async () => {
   mockedOpen.mockResolvedValue(attempt({ answers: MOST }));
   await mount();
