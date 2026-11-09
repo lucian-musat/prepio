@@ -8,6 +8,7 @@ import { deleteItem } from './lesson';
 import { saveConsolidationExercise } from './consolidation';
 import { deleteTemplate, listTemplates, saveTemplate } from './templates';
 import { saveAiTemplate } from './aiTemplates';
+import { createBacSubject } from './bac';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -82,5 +83,37 @@ describe.skipIf(!url || !anon)('template data functions (local Supabase)', () =>
     await expect(deleteTemplate(db, id)).rejects.toThrow('Șablonul este folosit de un exercițiu.');
     await deleteItem(db, 'consolidation_exercises', b.id);
     await deleteTemplate(db, id);
+  });
+
+  it('counts BAC items (item template and essay requirement templates) and the delete refusal names them', async () => {
+    const id = await mk('[test] bac used');
+    const subjectId = await createBacSubject(db, { title: '[test] tpl subject', year: 2026, variant: '', creditCost: 1 });
+    try {
+      const ins = async (position: number, fields: Record<string, unknown>) => {
+        const r = await db.from('bac_items').insert({ subject_id: subjectId, section: 1, position, prompt: 'P', points: 2, ...fields }).select('id').single();
+        if (r.error) throw r.error;
+        return r.data.id as string;
+      };
+      const a = await ins(0, { type: 'short_answer', content: {}, template_id: id });
+      const b = await ins(1, { type: 'essay', content: { requirements: [{ id: 'r1', templateId: id }, { id: 'r2', templateId: id }] }, template_id: null });
+      expect(await usage(id)).toBe(2);
+      await expect(deleteTemplate(db, id)).rejects.toThrow('Șablonul este folosit de 2 cerințe BAC.');
+      await db.from('bac_items').delete().eq('id', b);
+      await expect(deleteTemplate(db, id)).rejects.toThrow('Șablonul este folosit de o cerință BAC.');
+      // consolidation and BAC together
+      const { id: aid } = await saveAiTemplate(db, { title: '[test] ai bac mix', type: 'argument', criteria: 'c', keywords: '', responseFormat: '' });
+      aiCreated.push(aid);
+      const ex = await saveConsolidationExercise(db, lessonId, {
+        prompt: 'P', modelAnswer: null, explanation: null, sources: [], creditCost: 1, type: 'argument', templateId: id,
+        ai: { main: 'c', requirements: {}, templateId: aid, requirementTemplates: {} },
+      });
+      await expect(deleteTemplate(db, id)).rejects.toThrow('Șablonul este folosit de un exercițiu și o cerință BAC.');
+      await deleteItem(db, 'consolidation_exercises', ex.id);
+      await db.from('bac_items').delete().eq('id', a);
+      await deleteTemplate(db, id);
+    } finally {
+      await db.from('bac_items').delete().eq('subject_id', subjectId);
+      await db.from('bac_subjects').delete().eq('id', subjectId);
+    }
   });
 });

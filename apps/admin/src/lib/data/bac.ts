@@ -42,6 +42,40 @@ const subjectFromRow = (r: SubjectRow) => ({
   id: r.id, title: r.title, year: r.year, variant: r.variant, creditCost: r.credit_cost, published: r.published,
 });
 
+export type StudentBacAttempt = {
+  id: string;
+  subjectTitle: string;
+  status: 'graded' | 'failed';
+  /** When it was graded (graded) or submitted (failed). */
+  date: string;
+  points: number | null;
+  grade: number | null;
+};
+
+/** A student's graded and failed BAC papers, newest first (drafts and papers being graded are not listed). */
+export async function listStudentBacAttempts(db: SupabaseClient, userId: string): Promise<StudentBacAttempt[]> {
+  const rows = check(
+    await db
+      .from('bac_attempts')
+      .select('id,status,submitted_at,graded_at,updated_at,points,grade,bac_subjects(title)')
+      .eq('user_id', userId)
+      .in('status', ['graded', 'failed'])
+      .order('updated_at', { ascending: false })
+      .order('id'),
+  ) as unknown as Array<{
+    id: string; status: 'graded' | 'failed'; submitted_at: string | null; graded_at: string | null; updated_at: string;
+    points: number | null; grade: number | string | null; bac_subjects: { title: string } | null;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    subjectTitle: r.bac_subjects?.title ?? '(subiect șters)',
+    status: r.status,
+    date: (r.status === 'graded' ? r.graded_at : r.submitted_at) ?? r.updated_at,
+    points: r.points,
+    grade: r.grade == null ? null : Number(r.grade),
+  }));
+}
+
 // ---------------------------------------------------------------- barem (untrusted JSON / input)
 
 function stepsFrom(v: unknown): number[] | null {

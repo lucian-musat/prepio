@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { LEDGER_KIND_LABELS } from './studentLabels';
 import {
-  eventIcon, eventLabel, grantAccess, mergeOrders, orderLabel, orderStatusLabel, progressWhere, revokeAccess, type EventInput,
+  eventIcon, eventLabel, grantAccess, ledgerDetails, mergeOrders, orderLabel, orderStatusLabel, progressWhere, revokeAccess, type EventInput,
 } from './students';
 
 describe('orderStatusLabel', () => {
@@ -127,6 +127,25 @@ describe('eventLabel', () => {
     expect(ev('purchase', { details: { credits: 20 } })).toBe('A cumpărat 20 de credite');
     expect(ev('credits_adjusted', { details: { delta: 5, reason: 'bonus' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: credite +5 · bonus');
     expect(ev('credits_adjusted', { details: { delta: -3, reason: 'r' }, adminEmail: 'a@x.ro' })).toBe('a@x.ro: credite −3 · r');
+  });
+  it('BAC events', () => {
+    const t = { subjectTitle: 'Subiect 2025' };
+    expect(ev('bac_started', t)).toBe('Subiect BAC început · Subiect 2025');
+    expect(ev('bac_submitted', { ...t, details: { subject_id: 's', cost: 10 } })).toBe('Lucrare trimisă la corectat · Subiect 2025 · 🪙 10');
+    expect(ev('bac_graded', { ...t, details: { subject_id: 's', points: 74, grade: 8.4 } })).toBe('Lucrare corectată · Subiect 2025 · nota 8,40');
+    expect(ev('bac_grading_failed', t)).toBe('Corectare nereușită · returnat');
+    expect(ev('bac_started')).toBe('Subiect BAC început · (subiect șters)');
+    expect(eventIcon('bac_started', null)).toBe('📝');
+    expect(eventIcon('bac_submitted', null)).toBe('📤');
+    expect(eventIcon('bac_graded', null)).toBe('🎓');
+    expect(eventIcon('bac_grading_failed', null)).toBe('⚠️');
+  });
+  it('ledger rows of a BAC target name the subject', () => {
+    const row = { kind: 'check', target: 'bac:5b3a1d0e-4c7f-4a55-9d3e-0f1a2b3c4d5e', reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: 'Subiect 2025' };
+    expect(ledgerDetails(row)).toBe('Corectare subiect · Subiect 2025');
+    expect(ledgerDetails({ ...row, kind: 'refund' })).toBe('Corectare subiect · Subiect 2025');
+    expect(ledgerDetails({ ...row, bacSubjectTitle: null })).toBe('Corectare subiect · (subiect șters)');
+    expect(ledgerDetails({ ...row, target: null, bacSubjectTitle: null })).toBe('');
   });
   it('access events', () => {
     expect(ev('access_purchased', { details: { months: 3, until: 'x', price_bani: 15000, credits: 100 } })).toBe('Acces cumpărat · 3 luni · 150,00 lei');

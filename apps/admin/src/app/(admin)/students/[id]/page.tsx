@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CONSOLIDATION_TYPE_LABELS, type ConsolidationType } from '@prepio/shared';
+import { listStudentBacAttempts } from '@/lib/data/bac';
 import { LEDGER_KIND_LABELS } from '@/lib/data/studentLabels';
 import {
-  EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, orderLabel, orderPrice, orderStatusLabel,
+  EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, ledgerDetails, orderLabel, orderPrice, orderStatusLabel,
   type AdminLedgerEntry, type AdminOrder,
 } from '@/lib/data/students';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
+import BacTab from './BacTab';
 import ProgressTab from './ProgressTab';
 import { NoticeProvider } from './Notice';
 import StudentHeader from './StudentHeader';
@@ -18,20 +19,9 @@ export const dynamic = 'force-dynamic';
 const dateTimeFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Bucharest' });
 const fmt = (iso: string) => dateTimeFmt.format(new Date(iso));
 
-function details(e: AdminLedgerEntry): string {
-  if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
-  const parts: string[] = [];
-  if (e.exerciseType) {
-    const label = CONSOLIDATION_TYPE_LABELS[e.exerciseType as ConsolidationType] ?? e.exerciseType;
-    const prompt = e.exercisePrompt ? (e.exercisePrompt.length > 60 ? `${e.exercisePrompt.slice(0, 60)}…` : e.exercisePrompt) : '';
-    parts.push(prompt ? `${label}: ${prompt}` : label);
-  }
-  if (e.reason) parts.push(e.reason);
-  return parts.join(' · ');
-}
-
 const TABS = [
   { key: 'parcurs', label: 'Parcurs' },
+  { key: 'bac', label: 'Subiecte BAC' },
   { key: 'cronologie', label: 'Cronologie' },
   { key: 'credite', label: 'Credite' },
   { key: 'comenzi', label: 'Comenzi' },
@@ -49,7 +39,7 @@ function LedgerTable({ ledger }: { ledger: AdminLedgerEntry[] }) {
             <tr key={e.id}>
               <td className="text-nowrap">{fmt(e.createdAt)}</td>
               <td>{LEDGER_KIND_LABELS[e.kind] ?? e.kind}</td>
-              <td>{details(e)}</td>
+              <td>{ledgerDetails(e)}</td>
               <td className={e.delta > 0 ? 'text-success' : 'text-danger'}>{e.delta > 0 ? `+${e.delta}` : e.delta}</td>
               <td>{e.balanceAfter}</td>
             </tr>
@@ -96,10 +86,11 @@ export default async function StudentPage({
   if (!data) notFound();
   const { student, ledger, orders } = data;
   // getStudent succeeded through the session client (admin_students refuses non-admins), so the caller is an admin.
-  const [progress, account, events] = await Promise.all([
+  const [progress, account, events, bacAttempts] = await Promise.all([
     getStudentProgress(db, id),
     getStudentAccount(createAdminClient(), id),
     tab === 'cronologie' ? getStudentEvents(db, id) : Promise.resolve([]),
+    tab === 'bac' ? listStudentBacAttempts(db, id) : Promise.resolve([]),
   ]);
 
   return (
@@ -125,6 +116,7 @@ export default async function StudentPage({
         </div>
         <div className="card-body">
           {tab === 'parcurs' && <ProgressTab userId={id} rows={progress} />}
+          {tab === 'bac' && <BacTab attempts={bacAttempts} />}
           {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
           {tab === 'credite' && <LedgerTable ledger={ledger} />}
           {tab === 'comenzi' && <OrdersTable orders={orders} />}

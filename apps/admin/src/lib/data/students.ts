@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CONSOLIDATION_TYPE_LABELS, creditsLabel, formatLei, type ConsolidationType } from '@prepio/shared';
+import { CONSOLIDATION_TYPE_LABELS, creditsLabel, formatGrade, formatLei, type ConsolidationType } from '@prepio/shared';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { check, isUuid, UserError } from './db';
 import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from './studentLabels';
@@ -41,7 +41,39 @@ export type AdminLedgerEntry = {
   exerciseType: string | null;
   exercisePrompt: string | null;
   adminEmail: string | null;
+  /** Set when `target` is `bac:<subject id>`: the subject's title (null when the subject no longer exists). */
+  bacSubjectTitle: string | null;
 };
+
+/** `bac:<uuid>` ledger target -> the subject id. */
+const bacSubjectOf = (target: string | null): string | null => {
+  const id = target?.startsWith('bac:') ? target.slice(4) : null;
+  return id && isUuid(id) ? id : null;
+};
+
+/** Subject id -> title, for the ids that still exist (admins can read every subject). */
+async function subjectTitles(db: SupabaseClient, ids: Iterable<string | null>): Promise<Map<string, string>> {
+  const unique = [...new Set([...ids].filter((x): x is string => !!x && isUuid(x)))];
+  if (unique.length === 0) return new Map();
+  const rows = check(await db.from('bac_subjects').select('id,title').in('id', unique)) as { id: string; title: string }[];
+  return new Map(rows.map((r) => [r.id, r.title]));
+}
+
+/** Detail text of a ledger row: a BAC grading names the subject; otherwise the exercise and the reason. */
+export function ledgerDetails(
+  e: Pick<AdminLedgerEntry, 'kind' | 'target' | 'reason' | 'adminEmail' | 'exerciseType' | 'exercisePrompt' | 'bacSubjectTitle'>,
+): string {
+  if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
+  const parts: string[] = [];
+  if (bacSubjectOf(e.target)) parts.push(`Corectare subiect · ${e.bacSubjectTitle ?? '(subiect șters)'}`);
+  if (e.exerciseType) {
+    const label = CONSOLIDATION_TYPE_LABELS[e.exerciseType as ConsolidationType] ?? e.exerciseType;
+    const prompt = e.exercisePrompt ? (e.exercisePrompt.length > 60 ? `${e.exercisePrompt.slice(0, 60)}…` : e.exercisePrompt) : '';
+    parts.push(prompt ? `${label}: ${prompt}` : label);
+  }
+  if (e.reason) parts.push(e.reason);
+  return parts.join(' · ');
+}
 
 /**
  * A credit order (`kind: 'credits'`, has `credits`) or an access order (`kind: 'access'`, has `durationMonths` and
@@ -139,9 +171,11 @@ export async function getStudent(
   const accessRows = check(await db.rpc('admin_access_orders', { p_user: id })) as {
     id: string; price_bani: number; bonus_credits: number; duration_months: number; status: string; provider: string; created_at: string;
   }[];
+  const titles = await subjectTitles(db, ledgerRows.map((r) => bacSubjectOf(r.target)));
   return {
     student: toStudent(found[0]),
     ledger: ledgerRows.map((r) => ({
+      bacSubjectTitle: titles.get(bacSubjectOf(r.target) ?? '') ?? null,
       id: r.id,
       delta: r.delta,
       balanceAfter: r.balance_after,
@@ -304,6 +338,8 @@ export type EventInput = {
   lessonTitle: string | null;
   exerciseType: string | null;
   adminEmail: string | null;
+  /** Title of the BAC subject of a `bac_*` event, when it still exists. */
+  subjectTitle?: string | null;
 };
 
 
@@ -313,6 +349,7 @@ export function eventLabel(e: EventInput): string {
   const num = (k: string) => Number(d[k] ?? 0);
   const lesson = e.lessonTitle != null ? `„${e.lessonTitle}”` : '(lecție ștearsă)';
   const admin = e.adminEmail ?? 'Admin';
+  const subject = e.subjectTitle ?? '(subiect șters)';
   switch (e.kind) {
     case 'registered': {
       const prov = typeof d.provider === 'string' ? d.provider : 'email';
@@ -350,11 +387,17 @@ export function eventLabel(e: EventInput): string {
     case 'access_granted': return `${admin}: acces acordat · ${monthsLabel(num('months'))} · Motiv: „${d.reason ?? ''}”`;
     case 'access_revoked': return `${admin}: acces retras · Motiv: „${d.reason ?? ''}”`;
     case 'access_expired': return 'Accesul a expirat';
+    case 'bac_started': return `Subiect BAC început · ${subject}`;
+    case 'bac_submitted': return `Lucrare trimisă la corectat · ${subject} · 🪙 ${num('cost')}`;
+    case 'bac_graded': return `Lucrare corectată · ${subject} · nota ${formatGrade(num('grade'))}`;
+    case 'bac_grading_failed': return 'Corectare nereușită · returnat';
     default: return e.kind;
   }
 }
 
-const EVENT_ICONS: Record<string, string> = { access_purchased: '⭐', access_granted: '🎟️', access_revoked: '⛔', access_expired: '⌛' };
+const EVENT_ICONS: Record<string, string> = { access_purchased: '⭐', access_granted: '🎟️', access_revoked: '⛔', access_expired: '⌛',
+  bac_started: '📝', bac_submitted: '📤', bac_graded: '🎓', bac_grading_failed: '⚠️',
+};
 
 /** Icon that overrides the tab's default for the event, or undefined to use the default. */
 export function eventIcon(kind: string, details: Record<string, unknown> | null): string | undefined {
@@ -371,12 +414,16 @@ type EventDb = {
 export async function getStudentEvents(db: SupabaseClient, userId: string, before?: number): Promise<StudentEvent[]> {
   const res = await db.rpc('admin_student_events', { p_user: userId, p_limit: EVENTS_PAGE_SIZE, p_before: before ?? null });
   if (res.error) throw rpcError(res.error);
-  return (res.data as EventDb[]).map((r) => ({
+  const rows = res.data as EventDb[];
+  const subjectId = (r: EventDb) => (r.kind.startsWith('bac_') && typeof r.details?.subject_id === 'string' ? r.details.subject_id : null);
+  const titles = await subjectTitles(db, rows.map(subjectId));
+  return rows.map((r) => ({
     id: Number(r.id),
     kind: r.kind,
     createdAt: r.created_at,
     label: eventLabel({
       kind: r.kind, details: r.details, lessonTitle: r.lesson_title, exerciseType: r.exercise_type, adminEmail: r.admin_email,
+      subjectTitle: titles.get(subjectId(r) ?? '') ?? null,
     }),
     details: r.kind === 'check' ? r.exercise_prompt : null,
     icon: eventIcon(r.kind, r.details),

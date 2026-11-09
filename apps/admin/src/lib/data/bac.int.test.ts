@@ -6,9 +6,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_ESSAY_STYLE, type BacBarem } from '@prepio/shared';
 import {
   createBacSubject, deleteBacItem, deleteBacSource, deleteBacSubject, getBacSubject, listBacSubjects, moveBacItem, moveBacSource,
-  saveBacItem, saveBacSource, setBacPublished, updateBacSubject, type BacItemInput,
+  listStudentBacAttempts, saveBacItem, saveBacSource, setBacPublished, updateBacSubject, type BacItemInput,
 } from './bac';
 import { saveTemplate } from './templates';
+import { getStudent, getStudentEvents, ledgerDetails } from './students';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -193,5 +194,43 @@ describe.skipIf(!url || !anon || !serviceKey)('BAC subject data functions (local
     await deleteBacSubject(db, subjectId);
     expect(await getBacSubject(db, subjectId)).toBeNull();
     subjectId = '';
+  });
+
+  it('student page data: attempts list, timeline labels and ledger label carry the subject title', async () => {
+    const sid = await createBacSubject(db, { title: '[test] Subiect elev', year: 2026, variant: '', creditCost: 3 });
+    const u = await service.auth.admin.createUser({ email: `test-bac-admin-${randomUUID()}@prepio.local`, password: 'test-password-123', email_confirm: true });
+    if (u.error) throw u.error;
+    userId = u.data.user.id;
+    try {
+      const rows = await service.from('bac_attempts').insert([
+        { user_id: userId, subject_id: sid, status: 'graded', points: 74, grade: 8.4, submitted_at: '2026-11-01T10:00:00Z', graded_at: '2026-11-01T10:02:00Z' },
+      ]);
+      if (rows.error) throw rows.error;
+      expect(await listStudentBacAttempts(db, userId)).toEqual([
+        { id: expect.any(String), subjectTitle: '[test] Subiect elev', status: 'graded', date: '2026-11-01T10:02:00+00:00', points: 74, grade: 8.4 },
+      ]);
+      // a draft is not listed
+      await service.from('bac_attempts').update({ status: 'graded' }).eq('user_id', userId); // keep the graded row
+      const other = await createBacSubject(db, { title: '[test] Subiect draft', year: 2026, variant: '', creditCost: 3 });
+      await service.from('bac_attempts').insert({ user_id: userId, subject_id: other });
+      expect(await listStudentBacAttempts(db, userId)).toHaveLength(1);
+
+      const ev = await service.rpc('log_student_event_service', { p_user: userId, p_kind: 'bac_graded', p_exercise: null, p_details: { subject_id: sid, points: 74, grade: 8.4 } });
+      if (ev.error) throw ev.error;
+      expect((await getStudentEvents(db, userId))[0]).toMatchObject({ kind: 'bac_graded', label: 'Lucrare corectată · [test] Subiect elev · nota 8,40', icon: '🎓' });
+
+      const spent = await service.rpc('spend_credits', { p_user: userId, p_amount: 3, p_exercise: null, p_target: `bac:${sid}` });
+      if (spent.error) throw spent.error;
+      const ledger = (await getStudent(db, userId))!.ledger;
+      expect(ledger[0]).toMatchObject({ kind: 'check', target: `bac:${sid}`, bacSubjectTitle: '[test] Subiect elev' });
+      expect(ledgerDetails(ledger[0]!)).toBe('Corectare subiect · [test] Subiect elev');
+
+      await service.auth.admin.deleteUser(userId); // attempts go with it
+      userId = null;
+      await service.from('bac_subjects').delete().eq('id', other);
+    } finally {
+      if (userId) { await service.auth.admin.deleteUser(userId); userId = null; }
+      await service.from('bac_subjects').delete().eq('id', sid);
+    }
   });
 });

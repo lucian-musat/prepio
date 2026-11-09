@@ -6,20 +6,37 @@ export type TemplateWithUsage = SolutionTemplate & { usage: number };
 
 const COLUMNS = 'id,title,exercise_type,points,body';
 
-/** Template id -> number of distinct exercises that use it (as the exercise template or an essay requirement's). */
-async function usageCounts(db: SupabaseClient): Promise<Map<string, number>> {
-  const rows = check(
-    await db.from('consolidation_exercises').select('type,template_id,content').or('template_id.not.is.null,type.eq.essay'),
-  ) as unknown as Array<{ type: string; template_id: string | null; content: { requirements?: Array<{ templateId?: unknown }> } }>;
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    const ids = new Set<string>();
-    if (r.template_id) ids.add(r.template_id);
-    if (r.type === 'essay' && Array.isArray(r.content?.requirements)) {
-      for (const q of r.content.requirements) if (typeof q?.templateId === 'string') ids.add(q.templateId);
-    }
-    for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+type Usage = { exercises: number; bac: number };
+
+/** Template ids an exercise row uses: its own and, for an essay, its requirements'. */
+function templateIdsOf(r: { type: string; template_id: string | null; content: { requirements?: Array<{ templateId?: unknown }> } }): Set<string> {
+  const ids = new Set<string>();
+  if (r.template_id) ids.add(r.template_id);
+  if (r.type === 'essay' && Array.isArray(r.content?.requirements)) {
+    for (const q of r.content.requirements) if (typeof q?.templateId === 'string') ids.add(q.templateId);
   }
+  return ids;
+}
+
+/** Template id -> number of distinct consolidation exercises and BAC items that use it (as their template or an essay requirement's). */
+async function usageCounts(db: SupabaseClient): Promise<Map<string, Usage>> {
+  const [exercises, bac] = await Promise.all([
+    db.from('consolidation_exercises').select('type,template_id,content').or('template_id.not.is.null,type.eq.essay'),
+    db.from('bac_items').select('type,template_id,content').or('template_id.not.is.null,type.eq.essay'),
+  ]);
+  type Row = Parameters<typeof templateIdsOf>[0];
+  const counts = new Map<string, Usage>();
+  const add = (rows: Row[], key: keyof Usage) => {
+    for (const r of rows) {
+      for (const id of templateIdsOf(r)) {
+        const u = counts.get(id) ?? { exercises: 0, bac: 0 };
+        u[key] += 1;
+        counts.set(id, u);
+      }
+    }
+  };
+  add(check(exercises) as unknown as Row[], 'exercises');
+  add(check(bac) as unknown as Row[], 'bac');
   return counts;
 }
 
@@ -30,7 +47,8 @@ export async function listTemplates(db: SupabaseClient): Promise<TemplateWithUsa
   ]);
   return (check(rows) as Record<string, unknown>[]).map((r) => {
     const t = templateFromRow(r);
-    return { ...t, usage: counts.get(t.id) ?? 0 };
+    const u = counts.get(t.id);
+    return { ...t, usage: (u?.exercises ?? 0) + (u?.bac ?? 0) };
   });
 }
 
@@ -57,7 +75,13 @@ export async function saveTemplate(db: SupabaseClient, input: Omit<SolutionTempl
 }
 
 export async function deleteTemplate(db: SupabaseClient, id: string): Promise<void> {
-  const n = (await usageCounts(db)).get(id) ?? 0;
-  if (n > 0) throw new UserError(`Șablonul este folosit de ${n === 1 ? 'un exercițiu' : `${n} exerciții`}.`);
+  const u = (await usageCounts(db)).get(id);
+  if (u && u.exercises + u.bac > 0) {
+    const parts = [
+      u.exercises > 0 ? (u.exercises === 1 ? 'un exercițiu' : `${u.exercises} exerciții`) : null,
+      u.bac > 0 ? (u.bac === 1 ? 'o cerință BAC' : `${u.bac} cerințe BAC`) : null,
+    ].filter(Boolean);
+    throw new UserError(`Șablonul este folosit de ${parts.join(' și ')}.`);
+  }
   checkAffected(await db.from('solution_templates').delete().eq('id', id).select('id'));
 }
