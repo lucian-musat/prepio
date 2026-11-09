@@ -8,7 +8,7 @@ import { EmptyNote, ItemControls, useRunner } from '@/components/editor/common';
 import SourceForm from '@/components/editor/consolidation/SourceForm';
 import { sourceName } from '@/components/editor/consolidation/exerciseModel';
 import { plural } from '@/components/editor/consolidation/plural';
-import type { BacSource } from '@/lib/data/bac';
+import { MAX_SECTION_SOURCES, type BacSource } from '@/lib/data/bac';
 import { sectionLetter } from './BacItemForm';
 
 /** One section's sources (A, B, … in order): list, add, edit, delete (a source used by an item can't be deleted). */
@@ -69,6 +69,8 @@ export default function BacSourcesEditor({ subjectId, section, sources, items }:
       })}
       {editing === 'new' ? (
         <Card className="mb-3"><Card.Body>{form()}</Card.Body></Card>
+      ) : sources.length >= MAX_SECTION_SOURCES ? (
+        <p className="small text-secondary mb-0">O secțiune poate avea cel mult 2 surse.</p>
       ) : (
         <Button variant="outline-primary" onClick={() => setEditing('new')}>Adaugă sursă</Button>
       )}

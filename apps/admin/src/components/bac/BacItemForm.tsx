@@ -54,21 +54,19 @@ export default function BacItemForm({ subjectId, section, sources, templates, in
     else applyType(type);
   };
 
-  const sourceAt = (i: number) => draft.sources[i]?.sourceId ?? '';
-  const setSourceAt = (i: number, id: string) => {
-    const ids = [sourceAt(0), sourceAt(1)];
-    ids[i] = id;
-    const refs: SourceRef[] = ids.filter((x) => x !== '').map((sourceId, j) => ({ sourceId, label: j === 0 ? 'A' : 'B' }));
+  // A link's label is the source's letter in the section (A, B by position), as the transcribed prompt names it.
+  const linked = new Set(draft.sources.map((r) => r.sourceId));
+  const toggleSource = (id: string, on: boolean) => {
+    const ids = new Set(linked);
+    if (on) ids.add(id);
+    else ids.delete(id);
+    const refs: SourceRef[] = sources.flatMap((s, i) => (ids.has(s.id) ? [{ sourceId: s.id, label: sectionLetter(i) as SourceLabel }] : []));
     setDraft((d) => ({ ...d, sources: refs }));
   };
   const resolved = draft.sources.flatMap((r) => {
     const source = sources.find((s) => s.id === r.sourceId);
     return source ? [{ label: r.label as SourceLabel, source }] : [];
   });
-  const optionName = (id: string) => {
-    const i = sources.findIndex((s) => s.id === id);
-    return `${sectionLetter(i)}. ${sourceName(sources[i]!)}`;
-  };
 
   const suggested = templates.filter((t) => t.exerciseType === draft.type);
   const others = templates.filter((t) => t.exerciseType !== draft.type);
@@ -124,20 +122,20 @@ export default function BacItemForm({ subjectId, section, sources, templates, in
         <Form.Control as="textarea" rows={2} value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} />
       </Form.Group>
 
-      <div className="d-flex flex-wrap gap-3 mb-3">
-        {[0, 1].map((i) => (
-          <Form.Group key={i} controlId={`${idPrefix}-source-${i}`} style={{ minWidth: 220, flex: '1 1 220px' }}>
-            <Form.Label>Sursa {i === 0 ? 'A' : 'B'} a cerinței</Form.Label>
-            <Form.Select value={sourceAt(i)} disabled={i === 1 && sourceAt(0) === ''} onChange={(e) => setSourceAt(i, e.target.value)}>
-              <option value="">Fără sursă</option>
-              {sources
-                .filter((s) => s.id !== sourceAt(1 - i))
-                .map((s) => <option key={s.id} value={s.id}>{optionName(s.id)}</option>)}
-            </Form.Select>
-          </Form.Group>
+      <fieldset className="mb-3">
+        <legend className="form-label fs-6 mb-1">Sursele cerinței</legend>
+        {sources.map((s, i) => (
+          <Form.Check
+            key={s.id}
+            id={`${idPrefix}-source-${s.id}`}
+            type="checkbox"
+            label={`Sursa ${sectionLetter(i)} · ${sourceName(s)}`}
+            checked={linked.has(s.id)}
+            onChange={(e) => toggleSource(s.id, e.target.checked)}
+          />
         ))}
-      </div>
-      {sources.length === 0 && <p className="small text-secondary">Secțiunea nu are surse încă. Adaugă-le mai sus.</p>}
+        {sources.length === 0 && <p className="small text-secondary mb-0">Secțiunea nu are surse încă. Adaugă-le mai sus.</p>}
+      </fieldset>
 
       <Fields key={draft.type} idPrefix={idPrefix} draft={draft} onChange={(next) => setDraft(next)} sources={resolved} templates={templates} aiTemplates={[]} bac />
 

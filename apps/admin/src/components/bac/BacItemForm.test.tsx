@@ -47,7 +47,7 @@ describe('BacItemForm', () => {
     actions.saveBacItem.mockResolvedValue({ ok: true, data: { id: 'i1' } });
     const { user, onDone } = renderForm('short_answer');
     await user.type(screen.getByLabelText('Enunț'), 'Numiți domnitorul.');
-    await user.selectOptions(screen.getByLabelText('Sursa A a cerinței'), 's1');
+    await user.click(screen.getByLabelText('Sursa A · Despre Carol'));
     await user.type(screen.getByLabelText('Variante acceptate (una pe rând)'), 'Carol I');
     await user.type(screen.getByLabelText('Punctaj'), '2');
     await user.selectOptions(screen.getByLabelText('Cum rezolv'), 't1');
@@ -60,6 +60,19 @@ describe('BacItemForm', () => {
     expect(item).not.toHaveProperty('ai');
     expect(barem).toEqual({ text: 'Carol I', points: 2, steps: [0, 2], essay: null });
     expect(onDone).toHaveBeenCalled();
+  });
+
+  it('links carry the section letters: only the second source is linked as B', async () => {
+    actions.saveBacItem.mockResolvedValue({ ok: true, data: { id: 'i1' } });
+    const two: BacSource[] = [...SOURCES, { id: 's2', section: 1, position: 1, title: 'Despre Cuza', author: '', work: '', body: 'Cuza.' }];
+    render(
+      <BacItemForm subjectId="sub" section={1} sources={two} templates={TEMPLATES} initial={draftFor('short_answer', () => 'x')}
+        initialPoints={2} onDone={() => {}} onCancel={() => {}} />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Sursa B · Despre Cuza'));
+    await user.click(screen.getByRole('button', { name: 'Salvează' }));
+    expect(actions.saveBacItem.mock.calls[0]![2]).toMatchObject({ sources: [{ sourceId: 's2', label: 'B' }] });
   });
 
   it('bad steps are reported without calling the server', async () => {

@@ -134,6 +134,42 @@ async function loadItems(db: SupabaseClient, subjectId: string): Promise<{ items
 
 const sectionSources = (sources: BacSource[], section: number) => sources.filter((s) => s.section === section);
 
+/** A section holds at most two sources; their letters (A, B by position) are also the labels of the item links. */
+export const MAX_SECTION_SOURCES = 2;
+const TOO_MANY_SOURCES = 'O secțiune poate avea cel mult 2 surse.';
+const LETTERS: SourceLabel[] = ['A', 'B'];
+
+/** Source id -> its letter within the section (`sources` = the section's, in position order). */
+const sectionLetters = (sources: BacSource[]) => new Map(sources.slice(0, MAX_SECTION_SOURCES).map((s, i) => [s.id, LETTERS[i]!]));
+
+/**
+ * Rewrites the item links of the section so each label equals its source's section letter (after a move or a delete).
+ * A `source_letter` item's correct letter follows its source.
+ */
+async function relabelSection(db: SupabaseClient, subjectId: string, section: BacSection): Promise<void> {
+  const sources = sectionSources(await loadSources(db, subjectId), section);
+  if (sources.length === 0) return;
+  const letters = sectionLetters(sources);
+  const links = check(
+    await db.from('bac_item_sources').select('item_id,label,source_id').in('source_id', sources.map((s) => s.id)),
+  ) as unknown as Array<{ item_id: string; label: string; source_id: string }>;
+  const byItem = new Map<string, typeof links>();
+  for (const l of links) byItem.set(l.item_id, [...(byItem.get(l.item_id) ?? []), l]);
+  for (const [itemId, own] of byItem) {
+    if (own.every((l) => letters.get(l.source_id) === l.label)) continue;
+    const renamed = new Map(own.map((l) => [l.label, letters.get(l.source_id)!]));
+    const next = own.map((l) => ({ source_id: l.source_id, label: letters.get(l.source_id)! })).sort((a, b) => a.label.localeCompare(b.label));
+    // delete + insert: swapping two labels in place would collide on the (item_id, label) key
+    check(await db.from('bac_item_sources').delete().eq('item_id', itemId));
+    check(await db.from('bac_item_sources').insert(next.map((l, position) => ({ item_id: itemId, ...l, position }))));
+    const row = check(await db.from('bac_items').select('type,content').eq('id', itemId).single()) as { type: string; content: Record<string, unknown> };
+    const correct = row.content?.correct;
+    if (row.type === 'source_letter' && typeof correct === 'string' && renamed.has(correct) && renamed.get(correct) !== correct) {
+      checkAffected(await db.from('bac_items').update({ content: { ...row.content, correct: renamed.get(correct) } }).eq('id', itemId).select('id'));
+    }
+  }
+}
+
 export async function getBacSubject(db: SupabaseClient, id: string): Promise<BacSubjectForEdit | null> {
   const subject = check(await db.from('bac_subjects').select(SUBJECT_COLUMNS).eq('id', id).maybeSingle()) as SubjectRow | null;
   if (!subject) return null;
@@ -243,6 +279,7 @@ export async function saveBacSource(db: SupabaseClient, subjectId: string, secti
     body: input.body.trim(),
   };
   if (!input.id) {
+    if ((await sectionRows(db, 'bac_sources', subjectId, section)).length >= MAX_SECTION_SOURCES) throw new UserError(TOO_MANY_SOURCES);
     const position = await nextPosition(db, 'bac_sources', subjectId, section);
     const row = check(
       await db.from('bac_sources').insert({ ...fields, subject_id: subjectId, section, position }).select('id').single(),
@@ -272,11 +309,13 @@ export async function deleteBacSource(db: SupabaseClient, id: string): Promise<v
   checkAffected(await db.from('bac_sources').delete().eq('id', id).select('id'));
   const rows = await sectionRows(db, 'bac_sources', subject_id, section);
   await renumber(db, 'bac_sources', rows.map((r) => r.id), rows);
+  await relabelSection(db, subject_id, section);
 }
 
 export async function moveBacSource(db: SupabaseClient, id: string, dir: -1 | 1): Promise<void> {
   const { subject_id, section } = await sourceRow(db, id);
   await swapInGroup(db, 'bac_sources', await sectionRows(db, 'bac_sources', subject_id, section), id, dir === -1 ? 'up' : 'down');
+  await relabelSection(db, subject_id, section);
 }
 
 // ---------------------------------------------------------------- items
@@ -310,6 +349,11 @@ export async function saveBacItem(
   if (linked.some((id) => !own.has(id)) || new Set(linked).size !== linked.length) {
     return { id: null, errors: ['Sursele cerinței trebuie să fie din aceeași secțiune și diferite.'] };
   }
+  // The link label is the source's letter in the section (the prompt says „sursa B”), not its slot in the item.
+  const letters = sectionLetters(sources);
+  item.sources = item.sources
+    .map((s) => ({ sourceId: s.sourceId, label: letters.get(s.sourceId)! }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const templateIds = new Set<string>();
   if (item.templateId) templateIds.add(item.templateId);
   if (item.type === 'essay') for (const r of item.requirements) if (r.templateId) templateIds.add(r.templateId);

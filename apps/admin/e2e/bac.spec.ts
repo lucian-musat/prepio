@@ -83,7 +83,7 @@ test('BAC subject: create, source and item in Subiectul I, live total, publish r
   await page.getByRole('radiogroup').getByText('Răspuns scurt', { exact: true }).click();
   const item = page.getByTestId('bac-item-form');
   await item.getByLabel('Enunț', { exact: true }).fill('Numiți domnitorul precizat în sursa A.');
-  await item.getByLabel('Sursa A a cerinței', { exact: true }).selectOption({ index: 1 });
+  await item.getByLabel(/^Sursa A · /).check();
   await item.getByLabel('Variante acceptate (una pe rând)', { exact: true }).fill('Carol I');
   await item.getByLabel('Punctaj', { exact: true }).fill('2');
   await item.getByLabel('Cum rezolv', { exact: true }).selectOption({ label: TEMPLATE });

@@ -5,7 +5,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_ESSAY_STYLE, type BacBarem } from '@prepio/shared';
 import {
-  createBacSubject, deleteBacItem, deleteBacSource, deleteBacSubject, getBacSubject, listBacSubjects, moveBacItem,
+  createBacSubject, deleteBacItem, deleteBacSource, deleteBacSubject, getBacSubject, listBacSubjects, moveBacItem, moveBacSource,
   saveBacItem, saveBacSource, setBacPublished, updateBacSubject, type BacItemInput,
 } from './bac';
 import { saveTemplate } from './templates';
@@ -84,6 +84,51 @@ describe.skipIf(!url || !anon || !serviceKey)('BAC subject data functions (local
     expect(res.id).toBeNull();
     expect(res.errors.join(' ')).toContain('Sursele cerinței');
     await deleteBacSource(db, other);
+  });
+
+  it('a third source in a section is refused', async () => {
+    await expect(saveBacSource(db, subjectId, 1, { title: null, author: '', work: '', body: 'A treia.' })).rejects.toThrow(
+      'O secțiune poate avea cel mult 2 surse.',
+    );
+    expect((await getBacSubject(db, subjectId))!.sources.filter((s) => s.section === 1)).toHaveLength(2);
+  });
+
+  it('an item linking only the section source B keeps the label B', async () => {
+    const res = await saveBacItem(db, subjectId, 1, { ...shortItem(templateId, srcB), prompt: '[test] Din sursa B' }, barem('X', 2));
+    expect(res.errors).toEqual([]);
+    const item = (await getBacSubject(db, subjectId))!.items.find((i) => i.id === res.id)!;
+    expect(item.sources).toEqual([{ sourceId: srcB, label: 'B' }]);
+    await deleteBacItem(db, res.id!);
+  });
+
+  it('moving the sources relabels the links and a source_letter answer follows its source', async () => {
+    const onlyB = await saveBacItem(db, subjectId, 1, { ...shortItem(templateId, srcB), prompt: '[test] Din sursa B' }, barem('X', 2));
+    const letter = await saveBacItem(db, subjectId, 1, {
+      type: 'source_letter', prompt: '[test] Care sursă?', templateId, modelAnswer: null, explanation: null, creditCost: 1,
+      sources: [{ sourceId: srcA, label: 'A' }, { sourceId: srcB, label: 'B' }], correct: 'B', evidence: null, points: 3,
+    }, barem('B', 3));
+    expect([onlyB.errors, letter.errors]).toEqual([[], []]);
+    const read = async () => {
+      const items = (await getBacSubject(db, subjectId))!.items;
+      const b = items.find((i) => i.id === onlyB.id)!;
+      const l = items.find((i) => i.id === letter.id)! as Extract<typeof items[number], { type: 'source_letter' }>;
+      return { b: b.sources, l: l.sources, correct: l.correct };
+    };
+
+    await moveBacSource(db, srcB, -1); // srcB is now the section's source A
+    expect(await read()).toEqual({
+      b: [{ sourceId: srcB, label: 'A' }],
+      l: [{ sourceId: srcB, label: 'A' }, { sourceId: srcA, label: 'B' }],
+      correct: 'A',
+    });
+    await moveBacSource(db, srcB, 1);
+    expect(await read()).toEqual({
+      b: [{ sourceId: srcB, label: 'B' }],
+      l: [{ sourceId: srcA, label: 'A' }, { sourceId: srcB, label: 'B' }],
+      correct: 'B',
+    });
+    await deleteBacItem(db, onlyB.id!);
+    await deleteBacItem(db, letter.id!);
   });
 
   it('an essay saves its per-requirement barem and style', async () => {
