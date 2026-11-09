@@ -7,17 +7,18 @@
 # or refreshes the demo lesson (src/demoLesson.ts; add --remove to delete it), `update-ai-settings` replaces the welcome message and the AI rules with the grade-free defaults
 # (src/updateAiSettings.ts), `ai-templates` adds the seed AI templates, replaces the AI contexts of the seed exercises
 # with the fact-only seed ones and links every AI exercise without a template link to the seed template of its type
-# (src/syncAiTemplates.ts).
+# (src/syncAiTemplates.ts), `bac-subjects` adds the seed BAC subjects missing by title and fills an empty
+# „Reguli de notare BAC” with the default (src/syncBacSubjects.ts).
 # Dry run by default; pass --apply to write. Reads SUPABASE_ACCESS_TOKEN from the credentials file
 # (see scripts/lib/cloud-credentials.sh), fetches the project's service key with the Supabase CLI and hands
 # it to the content script through the environment only. Never prints a secret; never passes one as an argument.
-# Usage: bash scripts/content-cloud.sh [add-cards|add-consolidation|sync-consolidation|remove-test-lessons|demo|update-ai-settings|ai-templates]
+# Usage: bash scripts/content-cloud.sh [add-cards|add-consolidation|sync-consolidation|remove-test-lessons|demo|update-ai-settings|ai-templates|bac-subjects]
 #        [--apply] [--remove]
 set -euo pipefail
 
 command="add-cards"
 case "${1:-}" in
-  add-cards | add-consolidation | sync-consolidation | remove-test-lessons | demo | update-ai-settings | ai-templates) command="$1"; shift ;;
+  add-cards | add-consolidation | sync-consolidation | remove-test-lessons | demo | update-ai-settings | ai-templates | bac-subjects) command="$1"; shift ;;
   "" | --*) ;;
   *) echo "Unknown content command: $1" >&2; exit 1 ;;
 esac

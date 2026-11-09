@@ -27,7 +27,8 @@
     "content:demo": "pnpm --filter @prepio/content demo",
     "content:cloud:demo": "bash scripts/content-cloud.sh demo",
     "content:cloud:update-ai-settings": "bash scripts/content-cloud.sh update-ai-settings",
-    "content:cloud:ai-templates": "bash scripts/content-cloud.sh ai-templates"
+    "content:cloud:ai-templates": "bash scripts/content-cloud.sh ai-templates",
+    "content:cloud:bac-subjects": "bash scripts/content-cloud.sh bac-subjects"
   },
   "devDependencies": {
     "supabase": "^2.122.0"
