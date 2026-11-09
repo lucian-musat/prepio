@@ -53,7 +53,7 @@ const short = (section: 1 | 2, number: number): BacItem =>
     mistakes: [],
     section,
     number,
-    points: section === 1 ? 4 : 7,
+    points: section === 2 ? 7 : number === 1 ? 1 : 4,
   }) as unknown as BacItem;
 const ESSAY = {
   ...base,
@@ -125,13 +125,15 @@ const openSubmit = async () => {
 };
 const send = () => screen.getByRole('button', { name: 'Trimite la corectat, costă 15 credite' });
 
-it('renders the „Cum rezolv” body without a tap at every item', async () => {
+const TAILS: Record<number, string> = { 1: '· 1 punct', 4: '· 4 puncte', 7: '· 7 puncte', 30: '· 30 de puncte' };
+
+it('renders the „Cum rezolv” body and the pluralised points at every item', async () => {
   await mount();
   for (let i = 0; i < ITEMS.length; i++) {
     const it = ITEMS[i]!;
     expect(await screen.findByText(it.prompt)).toBeTruthy();
     expect(screen.getByText(HINT)).toBeTruthy();
-    expect(screen.getByText(`· ${it.points} puncte`)).toBeTruthy();
+    expect(screen.getByText(TAILS[it.points]!)).toBeTruthy();
     if (i < ITEMS.length - 1) await act(async () => void next());
   }
 });

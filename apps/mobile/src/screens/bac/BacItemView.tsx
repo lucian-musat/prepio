@@ -1,6 +1,6 @@
 import { useMemo, useReducer, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { space, type BacItem, type ExerciseAnswer } from '@prepio/shared';
+import { plural, space, type BacItem, type ExerciseAnswer } from '@prepio/shared';
 import ExerciseInput from '../../components/consolidation/ExerciseInput';
 import { initialMarker, markerReducer, type MarkerConfig } from '../../components/marker/markerReducer';
 import SourcePanel from '../../components/marker/SourcePanel';
@@ -25,7 +25,7 @@ type Props = {
 };
 
 /**
- * One item of a BAC paper, written without checks: „{number}.” + prompt + „· {points} puncte”, the section's sources
+ * One item of a BAC paper, written without checks: „{number}.” + prompt + „· 1 punct / 4 puncte / 30 de puncte”, the section's sources
  * (marked in place for the marking types), „💡 Cum rezolv” open, and the type's input. Mount it keyed by the item:
  * the marker starts from the stored answer's marks.
  */
@@ -43,7 +43,7 @@ export default function BacItemView({ item, sources, value, onChange, hint, temp
       sources={sources}
       prompt={item.prompt}
       promptLead={`${item.number}.`}
-      promptTail={`· ${item.points} puncte`}
+      promptTail={`· ${plural(item.points, 'punct', 'puncte')}`}
       marker={marker}
     >
       <View style={styles.answer}>
