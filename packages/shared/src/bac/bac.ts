@@ -110,7 +110,7 @@ export function essayLengthPoints(parts: Record<string, string>, style: BacEssay
   return words >= BAC_ESSAY_WORDS.min && words <= BAC_ESSAY_WORDS.max ? style.length : 0;
 }
 
-const firstSentence = (s: string): string => {
+export const firstSentence = (s: string): string => {
   const t = s.trim();
   return /^.*?[.!?](?=\s|$)/.exec(t)?.[0] ?? t;
 };

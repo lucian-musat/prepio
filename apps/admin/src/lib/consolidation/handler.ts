@@ -191,7 +191,7 @@ function validate(ex: ConsolidationExercise, target: Target, answer: ExerciseAns
 }
 
 /** Marks the deterministic check accepted, with their texts from the source (those are the only ones the AI sees). */
-function acceptedSupport(
+export function acceptedSupport(
   ex: Extract<ConsolidationExercise, { type: 'viewpoint' }>,
   sources: Source[],
   answer: Extract<ExerciseAnswer, { type: 'viewpoint' }>,

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type Credits = {
   /** Debits `amount`; `entryId` null (and nothing debited) when the balance is too low. */
-  spend(userId: string, amount: number, exerciseId: string, target: string): Promise<{ entryId: number | null; balance: number }>;
+  spend(userId: string, amount: number, exerciseId: string | null, target: string): Promise<{ entryId: number | null; balance: number }>;
   /** Puts a check's credits back (idempotent); returns the new balance. */
   refund(entryId: number): Promise<number>;
 };

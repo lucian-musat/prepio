@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { studentTextDelimiters } from '@/lib/evaluate/delimit';
 import type { AiContext, AiTemplate, ConsolidationEvaluateRequest, ConsolidationExercise, ExerciseAnswer, Source } from '@prepio/shared';
 
 type Connectors = { causal: boolean; conclusion: boolean };
@@ -58,21 +58,8 @@ function templateBlock(t: AiTemplate): string[] {
 }
 
 export function buildConsolidationPrompt(a: PromptArgs): { instructions: string; input: string } {
-  const nonce = a.nonce ?? randomUUID().replace(/-/g, '');
-  const OPEN = `<<<TEXT_ELEV_${nonce}`;
-  const CLOSE = `TEXT_ELEV_${nonce}>>>`;
-
   // The student must not be able to close the block early by typing the markers.
-  // The markers carry a per-request nonce the student cannot know; as defence in depth, also strip
-  // them repeatedly (a single pass could rebuild a marker from nested fragments).
-  const wrap = (text: string): string => {
-    let safe = text;
-    for (let prev = ''; prev !== safe; ) {
-      prev = safe;
-      safe = safe.split(OPEN).join('').split(CLOSE).join('');
-    }
-    return [OPEN, safe, CLOSE].join('\n');
-  };
+  const { open: OPEN, close: CLOSE, wrap } = studentTextDelimiters(a.nonce);
 
   const keys = expectedKeys(a.exercise, a.target, a.deterministic);
   // Editable parts first (general rules, then the type's template); the fixed output contract comes last so
