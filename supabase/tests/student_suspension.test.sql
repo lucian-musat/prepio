@@ -28,7 +28,8 @@ select is((select count(*)::int from pg_policies where schemaname = 'public' and
 select is(
   (select array_agg(tablename::text order by tablename) from pg_policies
     where schemaname = 'public' and permissive = 'RESTRICTIVE' and policyname like '%not_suspended'),
-  array['cards', 'consolidation_attempts', 'consolidation_exercise_sources', 'consolidation_exercises',
+  array['bac_attempts', 'bac_item_sources', 'bac_items', 'bac_sources', 'bac_subjects',
+        'cards', 'consolidation_attempts', 'consolidation_exercise_sources', 'consolidation_exercises',
         'consolidation_runs', 'credit_packages', 'lesson_progress', 'lessons', 'nodes', 'questions', 'settings',
         'solution_templates', 'sources'],
   'every student-facing content table has a restrictive not-suspended policy');
