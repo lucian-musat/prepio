@@ -235,6 +235,30 @@ it('a lost connection on submit with nothing being graded shows the error inline
   expect(send()).toBeTruthy();
 });
 
+it('a refunded grading failure keeps the refund message on the paper after „Mai lucrez”', async () => {
+  const REFUND = 'Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
+  mockedOpen.mockResolvedValueOnce(attempt({ answers: MOST })).mockResolvedValue(attempt({ status: 'failed', answers: MOST }));
+  mockedSubmit.mockRejectedValue(new BacApiError('grading_failed', REFUND));
+  await mount();
+  await openSubmit();
+  await act(async () => void fireEvent.press(send()));
+  expect(await screen.findByText(REFUND)).toBeTruthy();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Mai lucrez' })));
+  expect(screen.getByText('Cerința I.1')).toBeTruthy();
+  expect(screen.getByText(REFUND)).toBeTruthy();
+});
+
+it('a lost connection with nothing stored shows no refund message on the paper', async () => {
+  mockedOpen.mockResolvedValue(attempt({ answers: MOST }));
+  mockedSubmit.mockRejectedValue(new BacApiError('grading_failed', OFFLINE));
+  await mount();
+  await openSubmit();
+  await act(async () => void fireEvent.press(send()));
+  expect(await screen.findByText(OFFLINE)).toBeTruthy();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Mai lucrez' })));
+  expect(screen.queryByText('Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.')).toBeNull();
+});
+
 it('resumes a grading attempt', async () => {
   jest.useFakeTimers();
   mockedOpen.mockResolvedValueOnce(attempt({ status: 'grading', answers: MOST })).mockResolvedValueOnce(attempt({ status: 'grading', answers: MOST })).mockResolvedValue(null);

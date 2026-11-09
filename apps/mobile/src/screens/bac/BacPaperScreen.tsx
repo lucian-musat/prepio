@@ -205,6 +205,8 @@ export default function BacPaperScreen() {
           setMode('grading');
           return;
         }
+        // Refunded and stored as failed: the paper keeps the refund message after „Mai lucrez”, as on reopening.
+        if (open?.status === 'failed') setFailed(true);
       }
       setMode('submit');
       if (gate.onError(e, () => void send())) return;
