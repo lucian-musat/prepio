@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cauză-efect: variante</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500&family=Nunito:wght@800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3FAF7; --surface:#FFFFFF; --muted:#E6F4EF; --border:#D8EAE3; --text:#0F2E28; --text2:#4C6A63;
+  --primary:#0F766E; --primarySub:#E0F5F1; --paper:#FFFDF8;
+  --cause:#99F6E4; --causeInk:#0A5C55; --effect:#FFD0A8; --effectInk:#8A4B12;
+  --good:#1A7C49;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Nunito Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+header{padding:20px 16px 8px;max-width:1180px;margin:0 auto}
+h1{font-family:Nunito,sans-serif;font-weight:900;font-size:26px;margin:0 0 4px}
+.sub{color:var(--text2);margin:0}
+nav{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;max-width:1180px;margin:0 auto;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--border)}
+nav button{font:inherit;font-weight:700;border:1.5px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 14px;cursor:pointer;color:var(--text)}
+nav button[aria-selected=true]{border-color:var(--primary);background:var(--primarySub);color:var(--primary)}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px;display:grid;grid-template-columns:380px 1fr;gap:32px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.phone{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:10px;box-shadow:0 10px 30px rgba(15,46,40,.08)}
+.screen{background:var(--bg);border-radius:20px;padding:14px 12px 18px;min-height:640px;position:relative}
+.reset{float:right;font:inherit;font-size:12px;border:none;background:none;color:var(--primary);cursor:pointer;font-weight:700}
+.q{font-weight:700;font-size:15.5px;margin:4px 0 10px}
+.q b{color:var(--primary)}
+.q small{font-weight:400;color:var(--text2)}
+.src{background:var(--paper);border:1px solid var(--border);border-radius:16px;padding:12px 12px 10px;position:relative}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.txt{font-family:Literata,serif;font-size:14.5px;line-height:1.85;user-select:none;-webkit-user-select:none;touch-action:pan-y;cursor:text}
+.w{border-radius:3px;padding:1px 0}
+.w:hover{background:rgba(15,118,110,.08)}
+.w.cause{background:var(--cause)} .w.effect{background:var(--effect)}
+.w.sel-cause{background:var(--cause);outline:2px dashed var(--causeInk);outline-offset:-1px}
+.w.sel-effect{background:var(--effect);outline:2px dashed var(--effectInk);outline-offset:-1px}
+.w.sel-none{background:#FFF1B8;outline:2px dashed #8A6A00;outline-offset:-1px}
+.w.anchor{box-shadow:0 0 0 2px var(--text)}
+.w.dim{opacity:.4}
+.tag{display:inline-block;font-family:"Nunito Sans",sans-serif;font-size:10px;font-weight:800;letter-spacing:.06em;border-radius:6px;padding:0 5px;margin-right:3px;vertical-align:2px;line-height:16px}
+.tag.cause{background:var(--causeInk);color:#fff} .tag.effect{background:var(--effectInk);color:#fff}
+.cite{font-size:12px;color:var(--text2);font-style:italic;text-align:right;margin-top:6px}
+.hint{font-size:12.5px;color:var(--text2);min-height:18px;margin:6px 2px}
+.pens{display:flex;gap:8px;margin-top:10px}
+.pen{flex:1;display:flex;align-items:center;gap:8px;border:2px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 10px;font:inherit;font-weight:700;cursor:pointer;color:var(--text)}
+.pen.on{border-color:var(--text);box-shadow:0 2px 0 var(--text)}
+.sw{width:20px;height:12px;border-radius:4px;transform:skewX(-12deg)}
+.pen .ok{margin-left:auto;color:var(--good)}
+.slots{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.slot{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px}
+.slot.empty{border-style:dashed;background:transparent;color:var(--text2);font-size:13.5px}
+.slot .bar{width:6px;align-self:stretch;border-radius:3px}
+.slot .t{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text2)}
+.slot .x{margin-left:auto;border:none;background:var(--muted);border-radius:8px;width:26px;height:26px;cursor:pointer;flex:none}
+.arrow{align-self:center;color:var(--text2);font-weight:700;font-size:13px}
+.chipbtn{align-self:center;font:inherit;font-weight:700;color:var(--primary);border:1.5px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 12px;cursor:pointer}
+
+/* A: step banner */
+.step{border-radius:14px;padding:10px 12px;margin-bottom:10px;border:2px solid;transition:background .25s,border-color .25s}
+.step.cause{background:#E6FCF7;border-color:var(--causeInk)} .step.effect{background:#FFF3E8;border-color:var(--effectInk)} .step.done{background:var(--surface);border-color:var(--good)}
+.step .k{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.step.cause .k{color:var(--causeInk)} .step.effect .k{color:var(--effectInk)} .step.done .k{color:var(--good)}
+.step .big{font-family:Nunito,sans-serif;font-weight:900;font-size:19px;margin:2px 0}
+.step .help{font-size:13px;color:var(--text2)}
+.step .clue{display:inline-block;background:rgba(255,255,255,.8);border:1px solid var(--border);border-radius:6px;padding:0 5px;font-size:12px;margin:2px 2px 0 0;font-weight:700}
+.dots{display:flex;gap:6px;margin-top:8px}
+.dot{flex:1;height:5px;border-radius:3px;background:var(--border)}
+.dot.c{background:var(--causeInk)} .dot.e{background:var(--effectInk)}
+.mine{font-size:12.5px;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.75);border-radius:8px}
+.mine a{color:var(--primary);font-weight:700;cursor:pointer;text-decoration:underline}
+
+/* C: sentence builder */
+.sent{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.sent .lead{font-size:12px;color:var(--text2);margin-bottom:6px}
+.sent .row{display:flex;flex-direction:column;gap:6px}
+.blank{border:2px dashed var(--border);border-radius:10px;padding:7px 10px;cursor:pointer;font-size:13.5px;text-align:left;font-family:inherit;background:transparent;color:var(--text2);width:100%}
+.blank.c{border-color:var(--causeInk)} .blank.e{border-color:var(--effectInk)}
+.blank.active{border-style:solid;box-shadow:0 0 0 3px rgba(15,118,110,.15);color:var(--text)}
+.blank.filled{border-style:solid;color:var(--text)}
+.blank.filled.c{background:#E6FCF7} .blank.filled.e{background:#FFF3E8}
+.blank .lbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.blank.c .lbl{color:var(--causeInk)} .blank.e .lbl{color:var(--effectInk)}
+.joiner{font-family:Nunito,sans-serif;font-weight:800;color:var(--primary);font-size:14px;padding-left:4px}
+.check{margin-top:8px;font-size:13px;background:var(--primarySub);border-radius:10px;padding:8px 10px}
+.check q{font-family:Literata,serif}
+
+/* D: popover */
+.pop{position:absolute;z-index:3;left:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(15,46,40,.18)}
+.pop p{margin:0 0 8px;font-weight:700;font-size:13.5px}
+.pop .opts{display:flex;gap:8px}
+.pop .opt{flex:1;border:2px solid;border-radius:10px;padding:8px;text-align:left;cursor:pointer;font:inherit;background:var(--surface)}
+.pop .opt.c{border-color:var(--causeInk)} .pop .opt.e{border-color:var(--effectInk)}
+.pop .opt b{display:block;font-size:14px}
+.pop .opt span{font-size:12px;color:var(--text2)}
+.pop .cancel{margin-top:6px;font:inherit;font-size:12px;border:none;background:none;color:var(--text2);cursor:pointer}
+
+/* phone reader + web split */
+main.wide{grid-template-columns:1fr}
+.phone.browser{max-width:1100px;border-radius:14px}
+.phone.browser .screen{min-height:560px}
+.card-src{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--border);border-radius:16px;padding:12px;cursor:pointer;margin-bottom:10px}
+.card-src .p{flex:1;font-family:Literata,serif;font-size:13.5px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-src .go{color:var(--primary);font-weight:800;font-size:13px;white-space:nowrap}
+.reader{position:absolute;inset:0;background:var(--paper);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;z-index:4}
+.r-top{display:flex;align-items:center;gap:10px;padding:12px 14px 8px;border-bottom:1px solid var(--border)}
+.r-top button{border:none;background:var(--muted);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:15px}
+.r-top b{font-family:Nunito,sans-serif;font-size:17px}
+.r-task{margin:0 14px;padding:6px 10px;background:var(--primarySub);border-radius:0 0 10px 10px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-body{flex:1;overflow:auto;padding:12px 18px 12px}
+.r-body .src{border:none;padding:0;background:transparent}
+.tray{margin:8px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 -6px 20px rgba(15,46,40,.1);display:flex;flex-direction:column;gap:8px}
+.tray .stepline{border-radius:10px;padding:6px 10px;border:2px solid}
+.tray .stepline.cause{background:#E6FCF7;border-color:var(--causeInk)} .tray .stepline.effect{background:#FFF3E8;border-color:var(--effectInk)} .tray .stepline.done{border-color:var(--good)}
+.tray .stepline .k{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.tray .stepline.cause .k{color:var(--causeInk)} .tray .stepline.effect .k{color:var(--effectInk)} .tray .stepline.done .k{color:var(--good)}
+.tray .stepline .big{font-family:Nunito,sans-serif;font-weight:900;font-size:15.5px}
+.minis{display:flex;align-items:stretch;gap:6px}
+.mini{flex:1;min-width:0;border:2px dashed var(--border);border-radius:10px;padding:5px 8px;font:inherit;font-size:12px;text-align:left;cursor:pointer;background:transparent;color:var(--text2)}
+.mini.c{border-color:var(--causeInk)} .mini.e{border-color:var(--effectInk)}
+.mini.on{border-style:solid;box-shadow:0 0 0 3px rgba(15,118,110,.15)}
+.mini.filled{border-style:solid;color:var(--text)} .mini.filled.c{background:#E6FCF7} .mini.filled.e{background:#FFF3E8}
+.mini b{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.mini.c b{color:var(--causeInk)} .mini.e b{color:var(--effectInk)}
+.mini span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.minis .to{align-self:center;color:var(--primary);font-weight:800}
+.gata{border:none;background:var(--primary);color:#fff;font:inherit;font-weight:800;border-radius:12px;padding:11px;cursor:pointer}
+@media (max-width:860px){.reader{position:fixed;border-radius:0;z-index:20}}
+.split{display:grid;grid-template-columns:1.05fr 1fr;gap:20px;align-items:start}
+.split .left{position:sticky;top:60px}
+.split .left .src{max-height:520px;overflow:auto}
+@media (max-width:860px){.split{grid-template-columns:1fr}}
+
+/* notes */
+.notes h2{font-family:Nunito,sans-serif;font-weight:900;font-size:22px;margin:0 0 6px}
+.notes h3{font-family:Nunito,sans-serif;font-weight:800;font-size:16px;margin:18px 0 6px}
+.notes ul{margin:0;padding-left:20px} .notes li{margin:4px 0}
+.notes .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px}
+.pill{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--primarySub);color:var(--primary);letter-spacing:.04em;text-transform:uppercase}
+.try{background:#FFF6D9;border-radius:12px;padding:10px 12px;margin-top:14px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cauză-efect: cum știe elevul ce marchează?</h1>
+  <p class="sub">Prototip de aruncat. Cerința 5 din „Istorie 2026 · Varianta 3”, Sursa B reală. Marchezi trăgând peste text sau atingând primul și ultimul cuvânt.</p>
+</header>
+<nav id="tabs"></nav>
+<main>
+  <div class="phone"><div class="screen" id="screen"></div></div>
+  <section class="notes" id="notes"></section>
+</main>
+
+<script>
+const PROMPT = 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B, precizând rolul fiecăreia dintre aceste informații (cauză, respectiv efect).';
+const SRC = 'Începuturile domniei lui Al. I. Cuza au fost anevoioase fiindcă domnul era obligat să colaboreze cu două guverne, unul la Iași și celălalt la București. Abia la sfârșitul anului 1861, Imperiul Otoman a recunoscut unirea politico-administrativă a Moldovei cu Țara Românească pe timpul domniei lui Cuza [...]. Unirea, odată realizată, neînțelegerile politice au reapărut cu puteri sporite de însemnătatea problemelor de rezolvat, între care cea mai dificilă era, desigur, elaborarea Legii rurale [...]. O altă problemă a estompat temporar confruntarea în jurul Legii rurale: secularizarea averilor mănăstirești [...]. Prin legea din [...] 1863 au fost trecute în proprietatea statului „toate averile mănăstirești”. Ca urmare, aproximativ un sfert din teritoriul țării a devenit patrimoniu al statului, ceea ce a mărit suprafața de care dispuneau autoritățile pentru viitoarea împroprietărire. Cu scopul de a elimina obstacolele din calea împroprietăririi, ca și a altor reforme, Cuza [...] a promulgat o nouă constituție (Statutul Dezvoltător), care întărea puterea domnului în detrimentul legislativului.';
+const WORDS = SRC.split(/\s+/);
+const NAME = {cause:'Cauza', effect:'Efectul'};
+
+const VARIANTS = [
+  {id:'now', tab:'Acum'},
+  {id:'A', tab:'A · Pas cu pas'},
+  {id:'B', tab:'B · Etichete în text'},
+  {id:'C', tab:'C · Propoziția'},
+  {id:'D', tab:'D · Întâi selectezi'},
+  {id:'R', tab:'★ Recomandat (A+B+C)'},
+  {id:'RP', tab:'★ Telefon · sursă lungă'},
+  {id:'RW', tab:'★ Web · desktop'},
+];
+
+let V = 'now';
+let S;
+function fresh(){ S = {pen:'cause', marks:{cause:null, effect:null}, anchor:null, drag:null, pending:null, touched:false, reader:false}; }
+fresh();
+
+const text = (m) => WORDS.slice(m.from, m.to+1).join(' ');
+const short = (m, n=9) => { const w = WORDS.slice(m.from, m.to+1); return w.length > n ? w.slice(0,n).join(' ') + ' …' : w.join(' '); };
+const both = () => S.marks.cause && S.marks.effect;
+
+// ---------- marking engine (same rules as markerReducer: overlap removes the other mark, cause → effect auto-switch)
+function commit(a, b){
+  const r = {from:Math.min(a,b), to:Math.max(a,b)};
+  S.anchor = null; S.drag = null; S.touched = true;
+  if (V === 'D') { S.pending = r; return; }
+  place(S.pen, r);
+}
+function place(pen, r){
+  const other = pen === 'cause' ? 'effect' : 'cause';
+  const o = S.marks[other];
+  if (o && !(o.to < r.from || o.from > r.to)) S.marks[other] = null;
+  S.marks[pen] = r;
+  if (pen === 'cause' && !S.marks.effect) S.pen = 'effect';
+  else if (pen === 'effect' && !S.marks.cause) S.pen = 'cause';
+}
+function swap(){ const c = S.marks.cause; S.marks.cause = S.marks.effect; S.marks.effect = c; }
+
+function wordClass(i){
+  let cls = 'w';
+  for (const p of ['cause','effect']) { const m = S.marks[p]; if (m && i >= m.from && i <= m.to) cls += ' ' + p; }
+  const sel = S.drag ? {from:Math.min(S.drag.a,S.drag.b), to:Math.max(S.drag.a,S.drag.b)} : S.pending;
+  if (sel && i >= sel.from && i <= sel.to) cls += V === 'D' ? ' sel-none' : ' sel-' + S.pen;
+  if (S.anchor === i) cls += ' anchor';
+  return cls;
+}
+function sourceHTML(labels){
+  let h = '';
+  WORDS.forEach((w, i) => {
+    if (labels) for (const p of ['cause','effect']) {
+      const m = S.marks[p];
+      if (m && m.from === i) h += `<span class="tag ${p}">${p === 'cause' ? 'CAUZĂ' : 'EFECT'}</span>`;
+    }
+    h += `<span class="${wordClass(i)}" data-i="${i}">${w}</span> `;
+  });
+  return `<div class="src"><div class="eyebrow">Sursa B</div><div class="txt" id="txt">${h}</div><div class="cite">(F. Constantiniu, O istorie sinceră a poporului român)</div></div>`;
+}
+
+// ---------- pieces
+const promptHTML = `<div class="q"><b>5.</b> ${PROMPT} <small>· 7 puncte</small></div>`;
+function penBar(){
+  return `<div class="pens">${['cause','effect'].map(p =>
+    `<button class="pen ${S.pen===p?'on':''}" data-pen="${p}"><span class="sw" style="background:var(--${p})"></span>${p==='cause'?'Cauză':'Efect'}<span class="ok">${S.marks[p]?'✓':''}</span></button>`).join('')}</div>`;
+}
+function nowHint(){
+  if (S.anchor !== null) return 'Atinge ultimul cuvânt al informației.';
+  if (both()) return 'Ambele marcate. Apasă „Gata” sau ajustează capetele.';
+  if (S.marks.cause) return 'Cauza e marcată. Acum marchează efectul.';
+  if (S.marks.effect) return 'Acum marchează cauza.';
+  return 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.';
+}
+function slot(p, label){
+  const m = S.marks[p];
+  return m
+    ? `<div class="slot"><span class="bar" style="background:var(--${p})"></span><div><div class="t">${label}</div>„${short(m,14)}”</div><button class="x" data-rm="${p}" aria-label="Șterge">✕</button></div>`
+    : `<div class="slot empty" data-pen="${p}"><span class="bar" style="background:var(--${p})"></span>${p==='cause'?'Cauză':'Efect'}: marchează în text <span style="margin-left:auto;color:var(--primary)">›</span></div>`;
+}
+function nowSlots(){
+  return `<div class="slots">${slot('cause','Cauza')}<div class="arrow">↓ a dus la</div>${slot('effect','Efectul')}${both()?'<button class="chipbtn" data-swap>⇅ Inversează rolurile</button>':''}</div>`;
+}
+
+const CLUE = {
+  cause: {q:'De ce s-a întâmplat ceva?', help:'Caută <b>motivul</b> din text. Stă de obicei după:', clues:['fiindcă','deoarece','pentru că','cu scopul de a']},
+  effect:{q:'Ce s-a întâmplat din cauza asta?', help:'Caută <b>urmarea</b> cauzei tale. Stă de obicei după:', clues:['ca urmare','astfel','ceea ce','de aceea']},
+};
+function stepBanner(compact){
+  if (both()) return `<div class="step done"><div class="k">✓ Gata, ambele roluri marcate</div>
+    ${compact ? '' : `<div class="mine"><b>Cauza:</b> „${short(S.marks.cause)}” <a data-pen="cause">schimbă</a><br><b>Efectul:</b> „${short(S.marks.effect)}” <a data-pen="effect">schimbă</a></div>`}
+    <div class="dots"><span class="dot c"></span><span class="dot e"></span></div></div>`;
+  const p = S.pen, c = CLUE[p], n = p === 'cause' ? 1 : 2, other = p === 'cause' ? 'effect' : 'cause';
+  const om = S.marks[other];
+  return `<div class="step ${p}">
+    <div class="k">Pasul ${n} din 2 · marchezi ${p==='cause'?'cauza':'efectul'}</div>
+    <div class="big">${c.q}</div>
+    <div class="help">${c.help} ${c.clues.map(x=>`<span class="clue">${x}</span>`).join('')}</div>
+    ${om ? `<div class="mine">✓ ${NAME[other]}: „${short(om)}” <a data-pen="${other}">schimbă</a></div>` : ''}
+    <div class="dots"><span class="dot ${S.marks.cause?'c':''}"></span><span class="dot ${S.marks.effect?'e':''}"></span></div>
+  </div>`;
+}
+function blank(p, active){
+  const m = S.marks[p], k = p==='cause'?'c':'e';
+  const lbl = p==='cause' ? 'Cauza · de ce?' : 'Efectul · ce a urmat?';
+  return `<button class="blank ${k} ${m?'filled':''} ${active?'active':''}" data-pen="${p}"><span class="lbl">${lbl}${active && !m ? ' · marchează acum în text' : ''}</span>${m ? '„'+short(m,12)+'”' : (active ? 'Selectează în sursă…' : 'Atinge ca să marchezi')}</button>`;
+}
+function sentence(){
+  const ok = both();
+  const part = (m) => { const t = text(m).replace(/[.,;:]$/, ''); return t.charAt(0).toLowerCase() + t.slice(1); };
+  return `<div class="sent"><div class="lead">Răspunsul tău se construiește aici:</div>
+    <div class="row">${blank('cause', S.pen==='cause')}<div class="joiner">↓ a dus la</div>${blank('effect', S.pen==='effect')}</div>
+    ${ok ? `<div class="check">Citește-o cu voce tare: <q>Pentru că ${part(S.marks.cause)}, ${part(S.marks.effect)}.</q><br><b>Are sens?</b> Dacă nu, <button class="chipbtn" data-swap style="padding:1px 10px">⇅ inversează</button></div>` : ''}
+  </div>`;
+}
+function popover(){
+  if (!S.pending) return '';
+  const r = S.pending;
+  const taken = (p) => S.marks[p] ? ` <span>(înlocuiește „${short(S.marks[p],4)}”)</span>` : '';
+  return `<div class="pop" id="pop"><p>„${short(r,8)}” este…</p><div class="opts">
+    <button class="opt c" data-role="cause"><b>Cauza</b><span>motivul: de ce s-a întâmplat</span>${taken('cause')}</button>
+    <button class="opt e" data-role="effect"><b>Efectul</b><span>urmarea: ce a rezultat</span>${taken('effect')}</button></div>
+    <button class="cancel" data-cancel>Renunță la selecție</button></div>`;
+}
+function dHint(){
+  if (S.anchor !== null) return 'Atinge ultimul cuvânt al fragmentului.';
+  if (both()) return '';
+  if (!S.marks.cause && !S.marks.effect) return 'Selectează în text un fragment. După ce îl selectezi, te întrebăm ce rol are.';
+  return S.marks.cause ? 'Mai ai de selectat efectul.' : 'Mai ai de selectat cauza.';
+}
+
+// Phone, long source: the exercise shows a source card + the relation; the reader carries a compact step + the two mini slots.
+function trayR(){
+  const p = S.pen, done = both();
+  const line = done
+    ? `<div class="stepline done"><div class="k">✓ Ambele roluri marcate</div><div class="big">Apasă „Gata” și citește relația.</div></div>`
+    : `<div class="stepline ${p}"><div class="k">Pasul ${p==='cause'?1:2} din 2 · marchezi ${p==='cause'?'cauza':'efectul'}</div><div class="big">${CLUE[p].q}</div></div>`;
+  const mini = (q) => { const m = S.marks[q], k = q==='cause'?'c':'e';
+    return `<button class="mini ${k} ${m?'filled':''} ${!done && S.pen===q?'on':''}" data-pen="${q}"><b>${q==='cause'?'Cauza':'Efectul'}</b><span>${m?'„'+short(m,5)+'”':'nemarcat'}</span></button>`; };
+  return `<div class="tray">${line}<div class="minis">${mini('cause')}<span class="to">→</span>${mini('effect')}</div>
+    <div class="hint" style="margin:0 2px">${S.anchor!==null?'Atinge ultimul cuvânt.':''}</div><button class="gata" data-close>Gata</button></div>`;
+}
+function readerR(){
+  return `<div class="reader"><div class="r-top"><button data-close aria-label="Închide">✕</button><div><b>Sursa B</b><div style="font-size:12px;color:var(--text2)">F. Constantiniu, O istorie sinceră…</div></div></div>
+    <div class="r-task"><b>Cerința:</b> ${PROMPT}</div>
+    <div class="r-body">${sourceHTML(true)}</div>${trayR()}</div>`;
+}
+function phoneR(){
+  return '<button class="reset" data-reset>↺ de la capăt</button>' + promptHTML + stepBanner(true)
+    + `<div class="card-src" data-open><div style="flex:1"><div class="eyebrow">Sursa B · ${S.marks.cause||S.marks.effect?'marcaje: '+[S.marks.cause&&'cauză',S.marks.effect&&'efect'].filter(Boolean).join(', '):'de marcat'}</div><div class="p">${SRC}</div></div><span class="go">Deschide ›</span></div>`
+    + sentence() + (S.reader ? readerR() : '');
+}
+function webR(){
+  return `<div class="split"><div class="left">${sourceHTML(true)}</div><div>
+    <button class="reset" data-reset>↺ de la capăt</button>${promptHTML}${stepBanner(true)}${sentence()}
+    <div class="hint">${S.anchor!==null?'Atinge ultimul cuvânt.':''}</div></div></div>`;
+}
+
+// ---------- screens
+function screenHTML(){
+  const reset = '<button class="reset" data-reset>↺ de la capăt</button>';
+  switch (V) {
+    case 'now': return reset + promptHTML + sourceHTML(false) + penBar() + `<div class="hint">${nowHint()}</div>` + nowSlots();
+    case 'A': return reset + promptHTML + stepBanner(false) + sourceHTML(false) + `<div class="hint">${S.anchor!==null?'Atinge ultimul cuvânt.':''}</div>`;
+    case 'B': return reset + promptHTML + sourceHTML(true) + penBar() + `<div class="hint">${nowHint()}</div>` + nowSlots();
+    case 'C': return reset + promptHTML + sentence() + sourceHTML(false) + `<div class="hint">${S.anchor!==null?'Atinge ultimul cuvânt.':''}</div>`;
+    case 'D': return reset + promptHTML + sourceHTML(true) + `<div class="hint">${dHint()}</div>` + (both()?nowSlots():'') + popover();
+    case 'R': return reset + promptHTML + stepBanner(true) + sourceHTML(true) + `<div class="hint">${S.anchor!==null?'Atinge ultimul cuvânt.':''}</div>` + sentence();
+    case 'RP': return phoneR();
+    case 'RW': return webR();
+  }
+}
+
+const NOTES = {
+  now: `<h2>Acum <span class="pill">ce are elevul azi</span></h2>
+  <div class="card">Reconstruit din <code>MarkSlots</code>, <code>SourceReader</code> și <code>markerReducer</code> (aceleași texte și culori). Pe telefon, cu sursă lungă, textul e în cititorul pe tot ecranul, iar sloturile „↓ a dus la” nu se văd în timp ce marchezi.
+  <h3>De ce e ambiguu</h3>
+  <ul>
+    <li><b>Modul e ascuns.</b> Marker-ul „Cauză” e activ din start, semnalat doar de o bordură. Elevul începe să tragă fără să știe că marchează <i>cauza</i>.</li>
+    <li><b>Indiciul nu spune ce marchezi.</b> „Trage peste text…” explică gestul, nu rolul.</li>
+    <li><b>Comutarea e tăcută.</b> După cauză, marker-ul trece singur pe „Efect”. Singurul semn e un rând gri de text.</li>
+    <li><b>În text, rolul e doar o culoare.</b> Turcoaz vs. piersică, fără legendă lângă text. După ce s-a marcat, nu se vede care e care.</li>
+    <li><b>„Cauză”/„Efect” sunt etichete, nu întrebări.</b> Elevul nu primește criteriul („de ce?” / „ce a urmat?”), deși cerința îi cere exact să decidă rolul.</li>
+    <li><b>Ordinea e fixă.</b> Mulți elevi găsesc întâi efectul (propoziția principală) și abia apoi cauza; dacă marchează așa, primul fragment devine „cauză”.</li>
+  </ul></div>
+  <div class="try">Încearcă: trage peste „Începuturile domniei … anevoioase”. Devine <i>cauză</i>, deși e efectul.</div>`,
+  A: `<h2>A · Pas cu pas</h2>
+  <div class="card">Un banner mare, în culoarea rolului, spune <b>ce marchezi acum</b>, sub forma unei întrebări, cu cuvintele-semnal după care să cauți. Bara de progres arată 1 din 2. După cauză, bannerul se schimbă vizibil pe efect și păstrează ce a marcat elevul, cu „schimbă”.
+  <h3>Plusuri</h3><ul><li>Imposibil să nu știi ce rol marchezi.</li><li>Învață criteriul („de ce?” / „ce a urmat?”), nu doar gestul.</li><li>Merge și în cititorul pe tot ecranul (bannerul înlocuiește tava cu marker-e).</li></ul>
+  <h3>Minusuri</h3><ul><li>Ordinea rămâne impusă (întâi cauza), deși se poate reveni cu „schimbă”.</li><li>Cuvintele-semnal ajută mult. Pentru simularea de BAC poate fi prea mult ajutor (le putem ascunde acolo).</li></ul></div>`,
+  B: `<h2>B · Etichete în text</h2>
+  <div class="card">Interfața de azi, cu o singură schimbare: fiecare fragment marcat primește în text o etichetă <span class="tag cause">CAUZĂ</span> / <span class="tag effect">EFECT</span>. Selecția în curs se vede punctat în culoarea rolului.
+  <h3>Plusuri</h3><ul><li>Cea mai mică schimbare. Rezolvă problema „care e care” după marcare.</li><li>Etichetele rămân și la corectare.</li></ul>
+  <h3>Minusuri</h3><ul><li>Nu rezolvă problema principală: elevul tot nu știe <i>înainte</i> de a marca ce rol are marker-ul.</li></ul></div>`,
+  C: `<h2>C · Propoziția</h2>
+  <div class="card">Răspunsul apare ca o relație cu două goluri: <b>Cauza · de ce?</b> ↓ a dus la ↓ <b>Efectul · ce a urmat?</b>. Elevul atinge golul pe care vrea să-l umple, deci alege el ordinea și rolul. Când ambele sunt pline, i se cere să citească propoziția „Pentru că X, Y.” și să decidă dacă are sens.
+  <h3>Plusuri</h3><ul><li>Rolul se alege explicit, înainte de marcare.</li><li>Verificarea „are sens?” e exact gândirea pe care o cere baremul (rolul fiecărei informații).</li><li>Poți începe cu efectul.</li></ul>
+  <h3>Minusuri</h3><ul><li>Pe telefon, cu sursă lungă, golurile trebuie repetate în cititor (sus, compact).</li></ul></div>
+  <div class="try">Încearcă: marchează invers și citește propoziția. „Pentru că începuturile au fost anevoioase, domnul era obligat…” sună greșit, iar ⇅ repară imediat.</div>`,
+  D: `<h2>D · Întâi selectezi, apoi alegi</h2>
+  <div class="card">Fără marker-e. Elevul selectează un fragment și apare întrebarea „Fragmentul acesta este… <b>Cauza</b> (motivul) sau <b>Efectul</b> (urmarea)?”.
+  <h3>Plusuri</h3><ul><li>Nu există niciun mod ascuns. Fiecare marcaj e o decizie conștientă.</li><li>Ordinea e liberă.</li></ul>
+  <h3>Minusuri</h3><ul><li>Un pas în plus la fiecare marcaj.</li><li>Pe telefon fereastra acoperă o parte din text.</li><li>Folosește alt model decât „Informația” și „Informația-suport” (acolo marker-ul unic nu e ambiguu), deci aplicația devine mai puțin unitară.</li></ul></div>`,
+  R: `<h2>★ Recomandat: A + B + C</h2>
+  <div class="card">Bannerul de pas (A, compact) spune <b>ce marchezi acum și după ce te uiți</b>. Etichetele din text (B) arată <b>ce ai marcat</b>. Propoziția de jos (C) arată <b>relația</b>: poți atinge golul cu care vrei să începi, iar la final citești „Pentru că X, Y.” și decizi dacă are sens.
+  <h3>De ce așa</h3><ul>
+    <li>Fiecare piesă acoperă un alt moment: înainte de marcare (A), în timpul ei (B), după (C).</li>
+    <li>Păstrează modelul cu marker-e și sloturi, deci schimbarea e în <code>MarkSlots</code>, <code>SourceReader</code> (tava) și <code>MarkableText</code> (etichete). Corectarea, datele și <code>markerReducer</code> rămân la fel.</li>
+    <li>Etichetele se pot refolosi la „Informația 1 / 2” și „Informația-suport”.</li>
+  </ul>
+  <h3>De decis</h3><ul>
+    <li>Cuvintele-semnal în bannerul de BAC: le arătăm, sau doar la consolidare?</li>
+    <li>Pe telefon, cu sursă lungă: în cititor intră bannerul compact. Propoziția rămâne sub sursă sau trece și ea în tavă?</li>
+  </ul></div>`,
+  RP: `<h2>★ Pe telefon, sursă lungă</h2>
+  <div class="card">Așa arată aplicația pe telefon când sursa e lungă (Sursa B are ~190 de cuvinte): în exercițiu e un card al sursei, iar marcarea se face în cititorul pe tot ecranul.
+  <h3>În exercițiu</h3><ul>
+    <li>Bannerul compact spune unde ai rămas (pasul 1 sau 2).</li>
+    <li>Relația „Cauza ↓ a dus la ↓ Efectul”: atingi un gol și se deschide cititorul cu rolul acela ales.</li>
+    <li>După „Gata”, relația e plină și apare „Pentru că X, Y. Are sens?”.</li></ul>
+  <h3>În cititor (tava de jos)</h3><ul>
+    <li>Marker-ele „Cauză / Efect” de azi sunt înlocuite de pasul curent, formulat ca întrebare: „De ce s-a întâmplat ceva?”.</li>
+    <li>Două mini-goluri, <b>Cauza → Efectul</b>, cu începutul fragmentului marcat. Atingi unul ca să marchezi sau să schimbi rolul acela.</li>
+    <li>Etichetele <span class="tag cause">CAUZĂ</span> / <span class="tag effect">EFECT</span> apar în text.</li>
+    <li>Fără cuvinte-semnal în tavă (nu încap). Ele rămân în bannerul din exercițiu și în „💡 Cum rezolv”.</li></ul></div>
+  <div class="try">Încearcă: atinge golul „Efectul” din exercițiu și se deschide cititorul direct pe pasul 2.</div>`,
+  RW: `<h2>★ Web, desktop (≥ 900 px)</h2>
+  <div class="card">Ca în aplicație: sursa în coloana din stânga, cerința și răspunsul în dreapta. Totul se vede deodată, deci nu e nevoie de cititor.
+  <ul>
+    <li>Sus în dreapta, bannerul compact: pasul și întrebarea.</li>
+    <li>Sub el, relația cu cele două goluri. Golul activ e conturat, iar atingerea altui gol schimbă rolul.</li>
+    <li>În stânga, etichetele din text arată ce ai marcat.</li>
+    <li>Pe web mobil (360 px) arată ca pe telefon.</li>
+  </ul></div>`,
+};
+
+// ---------- render + input
+const tabs = document.getElementById('tabs'), screen = document.getElementById('screen'), notes = document.getElementById('notes');
+function render(){
+  tabs.innerHTML = VARIANTS.map(v => `<button role="tab" aria-selected="${v.id===V}" data-v="${v.id}">${v.tab}</button>`).join('');
+  document.querySelector('main').classList.toggle('wide', V === 'RW');
+  document.querySelector('.phone').classList.toggle('browser', V === 'RW');
+  screen.innerHTML = screenHTML();
+  notes.innerHTML = NOTES[V];
+  const pop = document.getElementById('pop');
+  if (pop && S.pending) {
+    const last = screen.querySelector(`[data-i="${S.pending.to}"]`);
+    const sr = screen.getBoundingClientRect(), lr = last.getBoundingClientRect();
+    pop.style.top = (lr.bottom - sr.top + 8) + 'px';
+  }
+}
+tabs.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; V = b.dataset.v; fresh(); render(); });
+
+screen.addEventListener('click', e => {
+  const t = e.target.closest('[data-pen],[data-rm],[data-swap],[data-reset],[data-role],[data-cancel],[data-open],[data-close]');
+  if (!t) return;
+  if (t.dataset.reset !== undefined) fresh();
+  else if (t.dataset.open !== undefined) { S.reader = true; if (both()) S.pen = 'cause'; }
+  else if (t.dataset.close !== undefined) { S.reader = false; S.anchor = null; }
+  else if (t.dataset.pen) { S.pen = t.dataset.pen; S.anchor = null; if (V === 'RP') S.reader = true; }
+  else if (t.dataset.rm) { S.marks[t.dataset.rm] = null; S.pen = t.dataset.rm; }
+  else if (t.dataset.swap !== undefined) swap();
+  else if (t.dataset.role) { place(t.dataset.role, S.pending); S.pending = null; }
+  else if (t.dataset.cancel !== undefined) S.pending = null;
+  render();
+});
+
+// Drag over words (mouse/pen) or tap first + last word, like the app.
+let down = null;
+const wordAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.dataset && el.dataset.i !== undefined && el.closest('#txt') ? +el.dataset.i : null; };
+screen.addEventListener('pointerdown', e => {
+  if (V === 'D' && S.pending) return;
+  const i = wordAt(e.clientX, e.clientY); if (i === null) return;
+  down = {i, moved:false, type:e.pointerType};
+});
+window.addEventListener('pointermove', e => {
+  if (!down || down.type === 'touch') return;
+  const i = wordAt(e.clientX, e.clientY); if (i === null) return;
+  if (i !== down.i || down.moved) {
+    if (!down.moved) { down.moved = true; S.anchor = null; }
+    S.drag = {a:down.i, b:i}; render();
+  }
+});
+window.addEventListener('pointerup', () => {
+  if (!down) return;
+  const d = down; down = null;
+  if (d.moved && S.drag) { commit(S.drag.a, S.drag.b); render(); return; }
+  if (S.anchor === null) S.anchor = d.i; else commit(S.anchor, d.i);
+  render();
+});
+render();
+</script>
+</body>
+</html>
