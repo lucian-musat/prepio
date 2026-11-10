@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -9,8 +9,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { color } from '@prepio/shared';
 import { fontFiles } from '../src/theme/fonts';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
+import ErrorScreen from '../src/screens/ErrorScreen';
 
 SplashScreen.preventAutoHideAsync();
+
+/** Root error boundary: renders above the providers, so ErrorScreen uses no auth. */
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  return <ErrorScreen {...props} />;
+}
 
 /**
  * Keeps the splash up until the fonts and the stored session are resolved, then shows exactly one route group:
