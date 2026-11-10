@@ -12,7 +12,7 @@ import type { TreeLesson, TreeNode } from '@/lib/data/tree';
 
 type Dialog =
   | { kind: 'title'; heading: string; initial: string; submit: string; onSubmit: (title: string) => Promise<ActionResult<unknown>> }
-  | { kind: 'confirm'; heading: string; body: string; onConfirm: () => Promise<ActionResult<unknown>> }
+  | { kind: 'confirm'; heading: string; body: string; confirmLabel?: string; onConfirm: () => Promise<ActionResult<unknown>> }
   | null;
 
 type Ask = (d: NonNullable<Dialog>) => void;
@@ -29,6 +29,11 @@ function countDescendants(node: TreeNode): { nodes: number; lessons: number } {
   return { nodes, lessons };
 }
 
+/** Published lessons in a node's subtree, from the tree already loaded. */
+export function publishedLessonCount(node: TreeNode): number {
+  return node.lessons.filter((l) => l.status === 'published').length + node.children.reduce((sum, c) => sum + publishedLessonCount(c), 0);
+}
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; first: boolean; last: boolean; run: Run; ask: Ask }) {
@@ -41,7 +46,20 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
         <Badge bg={published ? 'success' : 'secondary'} data-testid="lesson-status">{published ? 'Publicată' : 'Ciornă'}</Badge>
       </span>
       <ButtonGroup size="sm" className="flex-wrap mw-100">
-        <Button variant="outline-secondary" onClick={() => run(() => setLessonStatus(lesson.id, next))}>
+        <Button
+          variant="outline-secondary"
+          onClick={() =>
+            published
+              ? ask({
+                  kind: 'confirm',
+                  heading: 'Retragi lecția din publicare? Elevii nu o vor mai vedea.',
+                  body: `Lecția „${lesson.title}” va redeveni ciornă.`,
+                  confirmLabel: 'Retrage',
+                  onConfirm: () => setLessonStatus(lesson.id, next),
+                })
+              : run(() => setLessonStatus(lesson.id, next))
+          }
+        >
           {published ? 'Retrage' : 'Publică'}
         </Button>
         <Button variant="outline-secondary" aria-label={`Mută sus lecția ${lesson.title}`} disabled={first} onClick={() => run(() => moveLesson(lesson.id, 'up'))}>↑</Button>
@@ -49,11 +67,13 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
         <Link href={`/lessons/${lesson.id}`} className="btn btn-outline-primary">Editează</Link>
         <Button
           variant="outline-danger"
+          disabled={published}
+          title={published ? 'Depublică lecția întâi' : undefined}
           onClick={() =>
             ask({
               kind: 'confirm',
               heading: 'Ștergi lecția?',
-              body: `Lecția „${lesson.title}” și tot conținutul ei vor fi șterse definitiv.`,
+              body: `Lecția „${lesson.title}” și tot conținutul ei vor fi șterse definitiv. Se șterg și progresul, încercările și consolidarea elevilor pe această lecție.`,
               onConfirm: () => deleteLesson(lesson.id),
             })
           }
@@ -67,6 +87,7 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
 
 function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: boolean; last: boolean; run: Run; ask: Ask }) {
   const counts = countDescendants(node);
+  const publishedCount = publishedLessonCount(node);
   return (
     <ListGroup.Item data-testid="node-row" className="p-0 border-0 bg-transparent">
       <div className="card mb-2">
@@ -102,6 +123,8 @@ function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: bool
               <Button variant="outline-secondary" aria-label={`Mută jos ${node.title}`} disabled={last} onClick={() => run(() => moveNode(node.id, 'down'))}>↓</Button>
               <Button
                 variant="outline-danger"
+                disabled={publishedCount > 0}
+                title={publishedCount > 0 ? `Conține lecții publicate (${publishedCount}). Depublică-le întâi` : undefined}
                 onClick={() =>
                   ask({
                     kind: 'confirm',
@@ -212,7 +235,7 @@ export default function TreeEditor({ tree }: { tree: TreeNode[] }) {
             {dialog?.kind === 'title' ? (
               <Button type="submit" variant="primary" disabled={!title.trim()}>{dialog.submit}</Button>
             ) : (
-              <Button type="submit" variant="danger">Șterge</Button>
+              <Button type="submit" variant="danger">{dialog?.kind === 'confirm' && dialog.confirmLabel ? dialog.confirmLabel : 'Șterge'}</Button>
             )}
           </Modal.Footer>
         </Form>
