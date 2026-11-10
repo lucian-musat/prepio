@@ -10,10 +10,24 @@ type ScrubbableEvent = {
   request?: { headers?: Record<string, unknown>; data?: unknown; [k: string]: unknown };
   user?: { id?: unknown; [k: string]: unknown };
   exception?: { values?: Array<{ value?: string; [k: string]: unknown }> };
-  breadcrumbs?: Array<{ message?: string; [k: string]: unknown }>;
+  breadcrumbs?: Array<{
+    message?: string;
+    data?: Record<string, unknown>;
+    [k: string]: unknown;
+  }>;
 };
 
 const scrubText = (s: string): string => s.replace(EMAIL_RE, EMAIL_TOKEN);
+
+// In URLs an email ends at the next delimiter, so `?email=a@b.ro&next=/home` keeps `next`.
+const URL_EMAIL_RE = /(?:[^\s@&#?=/%]|%(?!40))+(?:@|%40)[^\s@&#?=/]+\.[^\s@&#?=/]+/gi;
+const SECRET_PARAM_RE = /(^|[?&#;])(access_token|refresh_token|token|code|password)=[^&#\s]*/gi;
+
+// Redacts auth params (query and fragment) and emails; everything else stays intact.
+const scrubUrl = (s: string): string =>
+  s.replace(SECRET_PARAM_RE, '$1$2=[redacted]').replace(URL_EMAIL_RE, EMAIL_TOKEN);
+
+const BREADCRUMB_URL_KEYS = ['url', 'to', 'from'];
 
 export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
   const out: ScrubbableEvent = { ...event };
@@ -21,8 +35,12 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
   if (typeof out.message === 'string') out.message = scrubText(out.message);
 
   if (out.request) {
-    const { data: _data, headers, ...rest } = out.request;
-    const next: NonNullable<ScrubbableEvent['request']> = { ...rest };
+    const next: NonNullable<ScrubbableEvent['request']> = { ...out.request };
+    delete next.data;
+    const { headers, url, query_string: qs } = out.request;
+    if (typeof url === 'string') next.url = scrubUrl(url);
+    if (typeof qs === 'string') next.query_string = scrubUrl(qs);
+    else delete next.query_string;
     if (headers) {
       next.headers = Object.fromEntries(
         Object.entries(headers).filter(([k]) => !SENSITIVE_HEADERS.has(k.toLowerCase())),
@@ -43,9 +61,19 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
   }
 
   if (out.breadcrumbs) {
-    out.breadcrumbs = out.breadcrumbs.map((b) =>
-      typeof b.message === 'string' ? { ...b, message: scrubText(b.message) } : b,
-    );
+    out.breadcrumbs = out.breadcrumbs.map((b) => {
+      const nb = { ...b };
+      if (typeof nb.message === 'string') nb.message = scrubText(nb.message);
+      if (nb.data) {
+        const data = { ...nb.data };
+        for (const k of BREADCRUMB_URL_KEYS) {
+          const v = data[k];
+          if (typeof v === 'string') data[k] = scrubUrl(v);
+        }
+        nb.data = data;
+      }
+      return nb;
+    });
   }
 
   return out as E;
