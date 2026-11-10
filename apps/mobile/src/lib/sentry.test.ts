@@ -15,6 +15,7 @@ const init = Sentry.init as jest.Mock;
 afterEach(() => {
   delete process.env.EXPO_PUBLIC_SENTRY_DSN;
   delete process.env.EXPO_PUBLIC_SENTRY_ENV;
+  delete process.env.EXPO_PUBLIC_SENTRY_RELEASE;
   jest.clearAllMocks();
 });
 
@@ -46,6 +47,61 @@ describe('with a DSN', () => {
     const opts = init.mock.calls[0][0];
     expect(opts).toMatchObject({ dsn: DSN, sendDefaultPii: false, tracesSampleRate: 0.1 });
     expect(opts.beforeSend).toBe(scrubEvent);
+    expect(opts.beforeSendTransaction).toBe(scrubEvent);
+  });
+
+  it('sends no trace headers to any host (admin API CORS, third-party Supabase)', () => {
+    initSentry();
+    expect(init.mock.calls[0][0].tracePropagationTargets).toEqual([]);
+  });
+
+  it('uses EXPO_PUBLIC_SENTRY_RELEASE when set and leaves the SDK default otherwise', () => {
+    initSentry();
+    expect('release' in init.mock.calls[0][0]).toBe(false);
+    process.env.EXPO_PUBLIC_SENTRY_RELEASE = 'prepio-web@abc123';
+    initSentry();
+    expect(init.mock.calls[1][0].release).toBe('prepio-web@abc123');
+  });
+
+  it('scrubs OAuth codes and tokens from span URLs and descriptions', () => {
+    initSentry();
+    const { beforeSendSpan } = init.mock.calls[0][0];
+    const out = beforeSendSpan({
+      span_id: 's',
+      trace_id: 't',
+      start_timestamp: 0,
+      description: 'https://prepio.ro/?code=secret',
+      data: {
+        url: 'https://prepio.ro/#access_token=tok&type=bearer',
+        'http.url': 'https://x.supabase.co/auth/v1/token?refresh_token=r',
+        'http.method': 'GET',
+      },
+    });
+    expect(out.description).toBe('https://prepio.ro/?code=[redacted]');
+    expect(out.data).toEqual({
+      url: 'https://prepio.ro/#access_token=[redacted]&type=bearer',
+      'http.url': 'https://x.supabase.co/auth/v1/token?refresh_token=[redacted]',
+      'http.method': 'GET',
+    });
+  });
+
+  it('keeps spans without data or description', () => {
+    initSentry();
+    const { beforeSendSpan } = init.mock.calls[0][0];
+    const span = { span_id: 's', trace_id: 't', start_timestamp: 0 };
+    expect(beforeSendSpan(span)).toEqual(span);
+  });
+
+  it('drops logged console arguments from breadcrumbs', () => {
+    initSentry();
+    const { beforeBreadcrumb } = init.mock.calls[0][0];
+    const out = beforeBreadcrumb({
+      category: 'console',
+      message: 'profile ana@example.ro',
+      data: { arguments: [{ email: 'ana@example.ro' }], logger: 'console' },
+    });
+    expect(out.data).toEqual({ logger: 'console' });
+    expect(out.message).toBe('profile [email]');
   });
 
   it('defaults the environment to development', () => {
@@ -80,6 +136,12 @@ describe('with a DSN', () => {
   it('captures errors', () => {
     const e = new Error('boom');
     captureError(e);
-    expect(Sentry.captureException).toHaveBeenCalledWith(e);
+    expect(Sentry.captureException).toHaveBeenCalledWith(e, undefined);
+  });
+
+  it('captures errors that reached the error boundary as unhandled', () => {
+    const e = new Error('boom');
+    captureError(e, { handled: false });
+    expect(Sentry.captureException).toHaveBeenCalledWith(e, { mechanism: { handled: false } });
   });
 });

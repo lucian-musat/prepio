@@ -6,6 +6,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Inlined into the bundle (src/lib/sentry.ts). Source maps are matched by Debug ID, not by release, so the upload
+# below needs no release name.
+export EXPO_PUBLIC_SENTRY_RELEASE="prepio-web@${VERCEL_GIT_COMMIT_SHA:-local}"
+
 if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
   echo "SENTRY_AUTH_TOKEN is not set: exporting without source maps, nothing is uploaded to Sentry."
   pnpm exec expo export -p web

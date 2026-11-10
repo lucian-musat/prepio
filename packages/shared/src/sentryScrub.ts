@@ -25,7 +25,7 @@ const URL_EMAIL_RE = /(?:[^\s@&#?=/%]|%(?!40))+(?:@|%40)[^\s@&#?=/]+\.[^\s@&#?=/
 const SECRET_PARAM_RE = /(^|[?&#;])(access_token|refresh_token|token|code|password)=[^&#\s]*/gi;
 
 // Redacts auth params (query and fragment) and emails; everything else stays intact.
-const scrubUrl = (s: string): string =>
+export const scrubUrl = (s: string): string =>
   s.replace(SECRET_PARAM_RE, '$1$2=[redacted]').replace(URL_EMAIL_RE, EMAIL_TOKEN);
 
 const BREADCRUMB_URL_KEYS = ['url', 'to', 'from'];

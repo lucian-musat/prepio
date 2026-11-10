@@ -41,7 +41,7 @@ it('goes to the start', async () => {
 it('reports the error once on mount', async () => {
   await renderScreen();
   expect(captureError).toHaveBeenCalledTimes(1);
-  expect(captureError).toHaveBeenCalledWith(new Error('secret internal detail'));
+  expect(captureError).toHaveBeenCalledWith(new Error('secret internal detail'), { handled: false });
   await fireEvent.press(screen.getByText('Mergi la început'));
   expect(captureError).toHaveBeenCalledTimes(1);
 });

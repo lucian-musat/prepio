@@ -12,7 +12,7 @@ import { captureError } from '../lib/sentry';
 export default function ErrorScreen({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   // Reported once per error (a retry that fails again mounts the screen with the new error).
   useEffect(() => {
-    captureError(error);
+    captureError(error, { handled: false });
   }, [error]);
 
   return (

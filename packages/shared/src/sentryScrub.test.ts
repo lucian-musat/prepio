@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scrubEvent } from './sentryScrub';
+import { scrubEvent, scrubUrl } from './sentryScrub';
 
 describe('scrubEvent', () => {
   const make = () => ({
@@ -92,5 +92,15 @@ describe('scrubEvent', () => {
 
   it('handles events with none of the fields', () => {
     expect(scrubEvent({})).toEqual({});
+  });
+});
+
+describe('scrubUrl', () => {
+  it('redacts OAuth codes and tokens in the query and the fragment, keeping the rest', () => {
+    expect(scrubUrl('https://prepio.ro/?code=abc&next=/home')).toBe('https://prepio.ro/?code=[redacted]&next=/home');
+    expect(scrubUrl('https://prepio.ro/#access_token=t1&refresh_token=t2&type=bearer')).toBe(
+      'https://prepio.ro/#access_token=[redacted]&refresh_token=[redacted]&type=bearer',
+    );
+    expect(scrubUrl('/lectii/3')).toBe('/lectii/3');
   });
 });
