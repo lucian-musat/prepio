@@ -1,5 +1,5 @@
 begin;
-select plan(7);
+select plan(8);
 
 insert into auth.users (id, email, aud, role, raw_app_meta_data, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000b1', 'dp-admin@test.local', 'authenticated', 'authenticated', '{}', '{}');
@@ -42,6 +42,14 @@ select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-00000
 set local request.jwt.claims = '';
 select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-0000000000b6' $$,
   'service_role without a JWT claim can delete a published lesson (current_user fallback)');
+
+-- Plain postgres (SQL editor, migrations) is not an authenticated session.
+reset role;
+set local request.jwt.claims = '';
+insert into lessons (id, node_id, title, status) values
+  ('00000000-0000-0000-0000-0000000000ba', '00000000-0000-0000-0000-0000000000b5', 'DP Postgres', 'published');
+select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-0000000000ba' $$,
+  'plain postgres without claims can delete a published lesson');
 
 select * from finish();
 rollback;

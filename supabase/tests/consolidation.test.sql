@@ -160,7 +160,7 @@ select lives_ok($$ delete from solution_templates where id = '00000000-0000-0000
 
 -- ---------------------------------------------------------------- cascade (as postgres)
 reset role;
-set local request.jwt.claims = '{"role":"service_role"}'; -- published lessons are only deletable by the service role
+reset request.jwt.claims; -- back to plain postgres: reset role keeps the previous JWT claims
 delete from lessons where id = '00000000-0000-0000-0000-0000000000e1';
 select is(
   (select (select count(*) from sources where lesson_id = '00000000-0000-0000-0000-0000000000e1')
