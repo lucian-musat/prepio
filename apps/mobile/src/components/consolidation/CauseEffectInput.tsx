@@ -1,8 +1,8 @@
 import type { ExerciseAnswer } from '@prepio/shared';
-import MarkSlots from '../marker/MarkSlots';
+import CauseEffectRelation from '../marker/CauseEffectRelation';
 import { slotVerdict, useMarkText, useMarksAnswer, type MarkerInputProps } from './inputKit';
 
-/** Cauză-efect: „Cauza ↓ a dus la ↓ Efectul”, with „⇅ Inversează rolurile” once both are marked. */
+/** Cauză-efect: „Cauza · de ce?” ↓ a dus la ↓ „Efectul · ce a urmat?”, then „Pentru că X, Y. Are sens?” with ⇅. */
 export default function CauseEffectInput({ sources, value, onChange, feedback, disabled, marker }: MarkerInputProps<'cause_effect'>) {
   const textOf = useMarkText(sources);
   const marks = marker.state.marks;
@@ -13,12 +13,9 @@ export default function CauseEffectInput({ sources, value, onChange, feedback, d
     onChange,
   );
   return (
-    <MarkSlots
-      kind="cause_effect"
-      count={2}
+    <CauseEffectRelation
       state={marker.state}
       textOf={textOf}
-      onOpen={() => {}}
       onRemove={(index) => marker.dispatch({ type: 'remove', index })}
       onSwap={() => marker.dispatch({ type: 'swapRoles' })}
       disabled={disabled}

@@ -7,16 +7,15 @@ import type { MarkerMark, MarkerState, Pen } from './markerReducer';
 import { useSourcePanel } from './SourcePanel';
 
 type Props = {
-  kind: 'info' | 'support' | 'cause_effect';
-  /** Number of slots for info / support (cause-effect always has two). */
+  kind: 'info' | 'support';
+  /** Number of slots. */
   count: number;
   state: MarkerState;
   textOf: (m: MarkerMark) => string;
   /** A slot was pressed: its pen, and the index in `state.marks` of its mark (null when the slot is empty). */
   onOpen: (pen: Pen, markIndex: number | null) => void;
   onRemove: (index: number) => void;
-  onSwap?: () => void;
-  /** After checking: no ✕ and no swap (the slots still open the source). */
+  /** After checking: no ✕ (the slots still open the source). */
   disabled?: boolean;
   /** The verdict of the mark at this index in `state.marks`, shown on its slot after checking. */
   verdictOf?: (markIndex: number) => Verdict | null;
@@ -33,7 +32,7 @@ const REMOVE_SLOP = (layout.minTouch - REMOVE) / 2;
  * next to a bar in the pen's colour, with ✕; an empty one invites to mark. Pressing a slot opens the source
  * (inside a SourcePanel: the reader on the phone, the left column on desktop) with that pen.
  */
-export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove, onSwap, disabled = false, verdictOf }: Props) {
+export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove, disabled = false, verdictOf }: Props) {
   const panel = useSourcePanel();
   const open = (pen: Pen, index: number | null) => {
     onOpen(pen, index);
@@ -58,25 +57,6 @@ export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove
     );
   };
 
-  if (kind === 'cause_effect') {
-    const both = state.marks.some((m) => m.pen === 'cause') && state.marks.some((m) => m.pen === 'effect');
-    return (
-      <View style={styles.list}>
-        {slot('cause', 0, false)}
-        <AppText role="label" color="textMuted" style={styles.arrow}>
-          ↓ a dus la
-        </AppText>
-        {slot('effect', 0, false)}
-        {both && onSwap && !disabled ? (
-          <Pressable accessibilityRole="button" onPress={onSwap} style={styles.swap}>
-            <AppText role="label" color="primary">
-              ⇅ Inversează rolurile
-            </AppText>
-          </Pressable>
-        ) : null}
-      </View>
-    );
-  }
   const pen: Pen = kind === 'info' ? 'info' : 'support';
   return <View style={styles.list}>{Array.from({ length: count }, (_, k) => slot(pen, k, count > 1))}</View>;
 }
@@ -160,15 +140,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  arrow: { alignSelf: 'center' },
-  swap: {
-    alignSelf: 'center',
-    borderWidth: 1.5,
-    borderColor: color.border,
-    backgroundColor: color.surface,
-    borderRadius: radius.pill,
-    paddingVertical: space[1],
-    paddingHorizontal: space[3],
   },
 });

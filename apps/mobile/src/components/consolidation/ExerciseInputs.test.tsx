@@ -108,7 +108,7 @@ describe('CauseEffectInput', () => {
     await wrap(<CauseEffectInput exercise={e} sources={sources} value={{ type: 'cause_effect', cause: null, effect: null }} onChange={onChange} feedback={null} disabled={false} marker={mk} />);
     expect(onChange).toHaveBeenCalledWith({ type: 'cause_effect', cause: { sourceId: 's1', from: 0, to: 1 }, effect: { sourceId: 's1', from: 4, to: 6 } });
     expect(screen.getByText('↓ a dus la')).toBeTruthy();
-    await fireEvent.press(screen.getByText('⇅ Inversează rolurile'));
+    await fireEvent.press(screen.getByText('⇅ Inversează'));
     expect(mk.dispatch).toHaveBeenCalledWith({ type: 'swapRoles' });
   });
 });

@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { consolidationColor, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
 import { initialMarker, markerReducer, type MarkerAction, type MarkerConfig, type MarkerMark, type MarkerState } from './markerReducer';
+import CauseEffectRelation from './CauseEffectRelation';
 import MarkSlots from './MarkSlots';
 import SourcePanel from './SourcePanel';
 
@@ -52,15 +53,23 @@ function Harness({
   return (
     <SafeAreaProvider initialMetrics={metrics}>
     <SourcePanel sources={sources} prompt={PROMPT} marker={noMarker ? undefined : { cfg, state, dispatch }}>
-      <MarkSlots
-        kind={kind}
-        count={kind === 'info' ? 2 : 2}
-        state={state}
-        textOf={textOf(sources.map((s) => s.source))}
-        onOpen={() => {}}
-        onRemove={(index) => dispatch({ type: 'remove', index })}
-        onSwap={() => dispatch({ type: 'swapRoles' })}
-      />
+      {kind === 'info' ? (
+        <MarkSlots
+          kind="info"
+          count={2}
+          state={state}
+          textOf={textOf(sources.map((s) => s.source))}
+          onOpen={() => {}}
+          onRemove={(index) => dispatch({ type: 'remove', index })}
+        />
+      ) : (
+        <CauseEffectRelation
+          state={state}
+          textOf={textOf(sources.map((s) => s.source))}
+          onRemove={(index) => dispatch({ type: 'remove', index })}
+          onSwap={() => dispatch({ type: 'swapRoles' })}
+        />
+      )}
       <Text>answer-area</Text>
     </SourcePanel>
     </SafeAreaProvider>
@@ -126,11 +135,10 @@ it('„Gata” closes the reader and cancels an unfinished selection', async () 
   expect(spy).toHaveBeenCalledWith({ type: 'cancel' });
 });
 
-it('pressing the effect slot opens the reader with the effect pen selected', async () => {
+it('pressing the effect gap opens the reader with the effect pen selected', async () => {
   const spy = jest.fn();
   await render(<Harness sources={[{ source: long('b'), label: 'B' }]} spy={spy} />);
-  expect(screen.getByText('Efect: marchează în text')).toBeTruthy();
-  await press(screen.getByText('Efect: marchează în text'));
+  await press(screen.getByTestId('ce-gap-effect'));
   expect(screen.getByTestId('source-reader')).toBeTruthy();
   expect(spy).toHaveBeenCalledWith({ type: 'setPen', pen: 'effect' });
   expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
@@ -184,7 +192,7 @@ it('at 1000 px wide it renders the split, with no card and no reader', async () 
   expect(screen.getByText(PROMPT)).toBeTruthy();
   expect(screen.getByTestId('pen-cause')).toBeTruthy();
   expect(screen.getByText('answer-area')).toBeTruthy();
-  await press(screen.getByText('Efect: marchează în text'));
+  await press(screen.getByTestId('ce-gap-effect'));
   expect(screen.queryByTestId('source-reader')).toBeNull();
   expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
 });
@@ -235,22 +243,21 @@ describe('MarkSlots', () => {
   const src = long('b');
   const base = (patch: Partial<MarkerState>): MarkerState => ({ ...initialMarker(info), ...patch });
 
-  it('disabled: no ✕ and no swap; a verdict shows on its slot; ✕ reaches 48 px', async () => {
+  it('disabled: no ✕; a verdict shows on its slot; ✕ reaches 48 px', async () => {
     const both = base({
       marks: [
-        { sourceId: 'b', from: 0, to: 1, pen: 'cause' },
-        { sourceId: 'b', from: 5, to: 6, pen: 'effect' },
+        { sourceId: 'b', from: 0, to: 1, pen: 'info' },
+        { sourceId: 'b', from: 5, to: 6, pen: 'info' },
       ],
     });
     const r = await render(
-      <MarkSlots kind="cause_effect" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} onSwap={jest.fn()} disabled verdictOf={(i) => (i === 0 ? 'ok' : 'no')} />,
+      <MarkSlots kind="info" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} disabled verdictOf={(i) => (i === 0 ? 'ok' : 'no')} />,
     );
-    expect(screen.queryByLabelText('Șterge cauza')).toBeNull();
-    expect(screen.queryByText('⇅ Inversează rolurile')).toBeNull();
+    expect(screen.queryByLabelText('Șterge informația 1')).toBeNull();
     expect(screen.getByLabelText('Verdict: Corect')).toBeTruthy();
     expect(screen.getByLabelText('Verdict: Mai lucrează')).toBeTruthy();
-    await r.rerender(<MarkSlots kind="cause_effect" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} />);
-    const x = screen.getByLabelText('Șterge cauza');
+    await r.rerender(<MarkSlots kind="info" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} />);
+    const x = screen.getByLabelText('Șterge informația 1');
     expect(28 + x.props.hitSlop.top + x.props.hitSlop.bottom).toBeGreaterThanOrEqual(48);
   });
 
@@ -269,20 +276,4 @@ describe('MarkSlots', () => {
     expect(onOpen).toHaveBeenCalledWith('info', null);
   });
 
-  it('cause-effect: the arrow, and „Inversează rolurile” only when both are set', async () => {
-    const onSwap = jest.fn();
-    const one = base({ marks: [{ sourceId: 'b', from: 0, to: 1, pen: 'cause' }] });
-    await render(<MarkSlots kind="cause_effect" count={2} state={one} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} onSwap={onSwap} />);
-    expect(screen.getByText('↓ a dus la')).toBeTruthy();
-    expect(screen.queryByText('⇅ Inversează rolurile')).toBeNull();
-    const both = base({
-      marks: [
-        { sourceId: 'b', from: 0, to: 1, pen: 'cause' },
-        { sourceId: 'b', from: 5, to: 6, pen: 'effect' },
-      ],
-    });
-    await render(<MarkSlots kind="cause_effect" count={2} state={both} textOf={textOf([src])} onOpen={jest.fn()} onRemove={jest.fn()} onSwap={onSwap} />);
-    await press(screen.getByText('⇅ Inversează rolurile'));
-    expect(onSwap).toHaveBeenCalled();
-  });
 });
