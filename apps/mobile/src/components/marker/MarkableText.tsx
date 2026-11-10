@@ -11,8 +11,9 @@ import {
   type TapGestureConfig,
 } from 'react-native-gesture-handler';
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
-import { color, markerPen, tokenizeSource, typeScale, type ExerciseFeedback, type Source, type Verdict } from '@prepio/shared';
+import { color, markerInk, markerPen, tokenizeSource, typeScale, type ExerciseFeedback, type Source, type Verdict } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
+import { ROLE, type Role } from './causeEffect';
 import type { MarkerAction, MarkerState, Pen } from './markerReducer';
 import { wordAt, type WordBox } from './wordHit';
 
@@ -315,6 +316,7 @@ export default function MarkableText({
     let pen: Pen | null = null;
     let from = -1;
     let to = -1;
+    let label: Role | null = null;
     if (drag && i >= Math.min(drag.a, drag.b) && i <= Math.max(drag.a, drag.b)) {
       pen = drag.pen;
       from = Math.min(drag.a, drag.b);
@@ -322,10 +324,12 @@ export default function MarkableText({
     } else {
       const m = state.marks.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
       if (m) ({ pen, from, to } = m);
+      if (m && i === m.from && (m.pen === 'cause' || m.pen === 'effect')) label = m.pen;
     }
     const v = verdicts?.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
     return {
       pen,
+      label,
       first: i === from,
       last: i === to,
       cont: pen !== null && i < to && sameParagraphNext,
@@ -375,6 +379,8 @@ type WordProps = {
   text: string;
   omission: boolean;
   pen: Pen | null;
+  /** A cause/effect mark starts here: its CAUZĂ / EFECT pill goes before the word. */
+  label: Role | null;
   first: boolean;
   last: boolean;
   cont: boolean;
@@ -404,6 +410,18 @@ const Word = memo(function Word(p: WordProps) {
       accessibilityActions={p.interactive ? [{ name: 'activate' }] : undefined}
       onAccessibilityAction={p.interactive ? (e) => e.nativeEvent.actionName === 'activate' && p.onA11yTap(p.i) : undefined}
     >
+      {/* Outside the inner word box, so handles keep measuring the word itself; screen readers already hear „marcat Cauză”. */}
+      {p.label ? (
+        <View
+          testID={`role-label-${p.i}`}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          aria-hidden
+          style={[styles.roleLabel, { backgroundColor: markerInk[p.label] }]}
+        >
+          <Text style={styles.roleLabelText}>{ROLE[p.label].label}</Text>
+        </View>
+      ) : null}
       <View
         testID={`word-${p.i}`}
         onLayout={(e) => p.onInnerLayout(p.i, e)}
@@ -491,6 +509,8 @@ const styles = StyleSheet.create({
   markStart: { borderTopLeftRadius: END_RADIUS, borderBottomLeftRadius: END_RADIUS, paddingLeft: 2, marginLeft: -2 },
   markEnd: { borderTopRightRadius: END_RADIUS, borderBottomRightRadius: END_RADIUS, paddingRight: 2, marginRight: -2 },
   underline: { position: 'absolute', left: 0, right: 0, bottom: 0, height: UNDERLINE },
+  roleLabel: { alignSelf: 'center', borderRadius: 6, paddingHorizontal: 5, marginRight: 4 },
+  roleLabelText: { fontFamily: fontFamily.bodyBold, fontSize: 10, lineHeight: 16, letterSpacing: 0.6, color: color.surface },
   anchor: {
     position: 'absolute',
     top: -3,

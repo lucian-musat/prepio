@@ -318,3 +318,29 @@ it('reading mode uses the reading typeface', async () => {
   await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
   expect(StyleSheet.flatten(screen.getByText('Unu').props.style).fontFamily).toBe('NunitoSans');
 });
+
+describe('cause / effect labels', () => {
+  const roles = [mark(0, 1, 'cause'), mark(4, 6, 'effect')];
+
+  it('a CAUZĂ / EFECT pill sits before the first word of each role mark', async () => {
+    await render(<MarkableText source={source} state={state({ marks: roles })} dispatch={jest.fn()} />);
+    expect(screen.getByTestId('role-label-0', { includeHiddenElements: true })).toHaveTextContent('CAUZĂ');
+    expect(screen.getByTestId('role-label-4', { includeHiddenElements: true })).toHaveTextContent('EFECT');
+    expect(screen.queryByTestId('role-label-1', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('no pill for an information mark', async () => {
+    await render(<MarkableText source={source} state={state({ marks: [mark(2, 3)] })} dispatch={jest.fn()} />);
+    expect(screen.queryByTestId('role-label-2', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('read-only keeps the pills', async () => {
+    await render(<MarkableText source={source} state={state({ marks: roles })} dispatch={jest.fn()} readOnly />);
+    expect(screen.getByTestId('role-label-0', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('no pill on a selection still being dragged', async () => {
+    await render(<MarkableText source={source} state={state({ drag: { sourceId: 's1', pen: 'cause', a: 7, b: 9 } })} dispatch={jest.fn()} />);
+    expect(screen.queryByTestId('role-label-7', { includeHiddenElements: true })).toBeNull();
+  });
+});
