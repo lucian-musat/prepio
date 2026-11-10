@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm --filter @prepio/admin lint
+
+      - run: pnpm test
+
+      - name: Start local Supabase
+        run: pnpm exec supabase start -x studio,imgproxy,vector,logflare,edge-runtime
+
+      - name: Write env files from the local stack
+        run: |
+          set -euo pipefail
+          pnpm exec supabase status -o env 2>/dev/null > "$RUNNER_TEMP/supabase.env"
+          # shellcheck disable=SC1090
+          set -a; source "$RUNNER_TEMP/supabase.env"; set +a
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          echo "::add-mask::$ANON_KEY"
+          ADMIN_EMAIL="$(grep '^ADMIN_EMAIL=' apps/admin/.env.example | cut -d= -f2-)"
+          ADMIN_PASSWORD="$(grep '^ADMIN_PASSWORD=' apps/admin/.env.example | cut -d= -f2-)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "ADMIN_EMAIL=$ADMIN_EMAIL"
+            echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
+          } > .env
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "STUDENT_WEB_ORIGINS=http://localhost:8081"
+            echo "NEXT_PUBLIC_STUDENT_WEB_URL=http://localhost:8081"
+            echo "ADMIN_EMAIL=$ADMIN_EMAIL"
+            echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
+          } > apps/admin/.env.local
+          rm "$RUNNER_TEMP/supabase.env"
+
+      - run: pnpm db:reset
+
+      - run: pnpm seed
+
+      - run: pnpm db:test
+
+      - run: pnpm --filter @prepio/admin test:int
+
+      - run: pnpm --filter @prepio/content test:int
