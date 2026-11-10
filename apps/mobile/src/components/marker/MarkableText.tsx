@@ -32,6 +32,7 @@ const BODY_TEXT = { size: typeScale.body.size, lineHeight: 23, lineGap: 2 };
 const HINT = 'Atinge primul și ultimul cuvânt al informației ca s-o marchezi.';
 
 export const PEN_LABEL: Record<Pen, string> = { info: 'Informație', cause: 'Cauză', effect: 'Efect', support: 'Informație-suport' };
+const isRole = (pen: Pen | null): pen is Role => pen === 'cause' || pen === 'effect';
 const VERDICT_COLOR: Record<Verdict, string> = { ok: color.success, almost: color.accent, no: color.danger };
 
 type Props = {
@@ -321,10 +322,12 @@ export default function MarkableText({
       pen = drag.pen;
       from = Math.min(drag.a, drag.b);
       to = Math.max(drag.a, drag.b);
+      // A mark lifted by its handle keeps its pill (the text would jump under the finger otherwise).
+      if (drag.lifted && i === from && isRole(pen)) label = pen;
     } else {
       const m = state.marks.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
       if (m) ({ pen, from, to } = m);
-      if (m && i === m.from && (m.pen === 'cause' || m.pen === 'effect')) label = m.pen;
+      if (m && i === m.from && isRole(m.pen)) label = m.pen;
     }
     const v = verdicts?.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
     return {
@@ -339,15 +342,22 @@ export default function MarkableText({
     };
   };
 
+  // A role pill moves the words after it, and web onLayout only fires on resize: remounting the paragraphs whenever
+  // the pills move re-measures every word, so hit-testing and handles never use stale positions.
+  const pills = words.filter((w) => paintOf(w.i).label).map((w) => w.i).join(',');
+
   return (
     <GestureDetector gesture={gesture} touchAction="pan-y" userSelect="none">
       <View ref={rootRef} onLayout={onRootLayout} style={styles.root}>
         {paragraphs.map((ws, p) => (
           <View
-            key={p}
+            key={`${p}:${pills}`}
             testID={`paragraph-${p}`}
             style={[styles.paragraph, p > 0 && styles.paragraphGap]}
-            onLayout={(e) => void layout.current.paragraphs.set(p, e.nativeEvent.layout)}
+            onLayout={(e) => {
+              layout.current.paragraphs.set(p, e.nativeEvent.layout);
+              onRootLayout(); // a remounted paragraph: draw the handles at the new word positions
+            }}
           >
             {ws.map((w) => (
               <Word

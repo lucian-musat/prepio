@@ -344,3 +344,18 @@ describe('cause / effect labels', () => {
     expect(screen.queryByTestId('role-label-7', { includeHiddenElements: true })).toBeNull();
   });
 });
+
+it('a new role label re-measures the words it shifts (web onLayout only fires on resize): the paragraphs remount', async () => {
+  const r = await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
+  const before = screen.getByTestId('paragraph-0');
+  await r.rerender(<MarkableText source={source} state={state({ marks: [mark(2, 3)] })} dispatch={jest.fn()} />);
+  expect(screen.getByTestId('paragraph-0')).toBe(before); // an info mark adds no pill: nothing moves
+  await r.rerender(<MarkableText source={source} state={state({ marks: [mark(2, 3, 'cause')] })} dispatch={jest.fn()} />);
+  expect(screen.getByTestId('paragraph-0')).not.toBe(before);
+});
+
+it('a cause mark lifted by its handle keeps its pill while it is dragged', async () => {
+  const lifted = { index: 0, mark: mark(2, 3, 'cause') };
+  await render(<MarkableText source={source} state={state({ drag: { sourceId: 's1', pen: 'cause', a: 2, b: 5, lifted } })} dispatch={jest.fn()} />);
+  expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toHaveTextContent('CAUZĂ');
+});
