@@ -10,6 +10,7 @@ import {
 } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
+import { ownUserId } from './ownUser';
 import { apiUrl, getSupabase } from './supabase';
 
 export class CreditsApiError extends Error {
@@ -63,9 +64,11 @@ export async function fetchLedger(
   opts: { before?: number; limit?: number } = {},
   client: SupabaseClient = getSupabase(),
 ): Promise<StudentLedgerEntry[]> {
+  const userId = await ownUserId(client);
   let q = client
     .from('credit_ledger')
     .select('id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content,lessons(title))')
+    .eq('user_id', userId)
     .order('id', { ascending: false })
     .limit(opts.limit ?? DEFAULT_LEDGER_LIMIT);
   if (opts.before !== undefined) q = q.lt('id', opts.before);

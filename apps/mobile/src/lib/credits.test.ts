@@ -191,7 +191,8 @@ function fakeClient(result: { data: unknown; error: unknown }) {
   }
   builder.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
     Promise.resolve(result).then(resolve, reject);
-  return { client: { from: jest.fn(() => builder) } as unknown as SupabaseClient, calls };
+  const auth = { getSession: () => Promise.resolve({ data: { session: { user: { id: 'me' } } }, error: null }) };
+  return { client: { from: jest.fn(() => builder), auth } as unknown as SupabaseClient, calls };
 }
 
 describe('queries', () => {
@@ -259,6 +260,8 @@ describe('queries', () => {
     expect(calls).toContainEqual(['limit', [30]]);
     expect(calls).toContainEqual(['lt', ['id', 10]]);
     expect(calls).toContainEqual(['order', ['id', { ascending: false }]]);
+    // An admin's RLS reads every student's ledger: the app must ask for its own rows only.
+    expect(calls).toContainEqual(['eq', ['user_id', 'me']]);
   });
 
   it('fetchCreditBalance reads profiles.credit_balance', async () => {

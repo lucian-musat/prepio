@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BacItem } from '@prepio/shared';
-import { answeredCount, BacApiError, BacDraftLocked, fetchBacList, saveBacDraft, submitBac } from './bac';
+import { answeredCount, BacApiError, BacDraftLocked, fetchBacList, fetchLatestGraded, fetchOpenAttempt, saveBacDraft, submitBac } from './bac';
 import { getAccessToken, signOut } from './supabase';
 import { registerProfileRefresh } from './profileRefresh';
 
@@ -36,12 +36,18 @@ afterEach(() => {
 });
 
 type Result = { data: unknown; error: unknown };
-function mockClient(results: Record<string, Result>, rpcResult: Result = { data: null, error: null }) {
+function mockClient(results: Record<string, Result>, rpcResult: Result = { data: null, error: null }, userId: string | null = 'me') {
   const rpcCalls: Array<{ fn: string; args: unknown }> = [];
+  /** Every `.eq(column, value)` per table, to prove the queries are scoped to the signed-in user. */
+  const eqCalls: Array<{ table: string; column: string; value: unknown }> = [];
   const from = (table: string) => {
     const result = results[table] ?? { data: null, error: null };
     const chain: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'in', 'order', 'limit', 'maybeSingle']) chain[m] = () => (m === 'maybeSingle' ? Promise.resolve(result) : chain);
+    for (const m of ['select', 'in', 'order', 'limit', 'maybeSingle']) chain[m] = () => (m === 'maybeSingle' ? Promise.resolve(result) : chain);
+    chain.eq = (column: string, value: unknown) => {
+      eqCalls.push({ table, column, value });
+      return chain;
+    };
     chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(result).then(res, rej);
     return chain;
   };
@@ -49,8 +55,41 @@ function mockClient(results: Record<string, Result>, rpcResult: Result = { data:
     rpcCalls.push({ fn, args });
     return Promise.resolve(rpcResult);
   };
-  return { client: { from, rpc } as unknown as SupabaseClient, rpcCalls };
+  const auth = {
+    getSession: () => Promise.resolve({ data: { session: userId ? { user: { id: userId } } : null }, error: null }),
+  };
+  return { client: { from, rpc, auth } as unknown as SupabaseClient, rpcCalls, eqCalls };
 }
+
+// An admin's RLS lets them read every student's attempts (the admin student page needs that), so the app must ask
+// only for the signed-in user's own rows: otherwise an admin sees another student's grade as their own.
+describe('attempt queries are scoped to the signed-in user', () => {
+  const ownOnly = (eqCalls: Array<{ table: string; column: string; value: unknown }>) =>
+    eqCalls.some((c) => c.table === 'bac_attempts' && c.column === 'user_id' && c.value === 'me');
+
+  it('fetchBacList', async () => {
+    const { client, eqCalls } = mockClient({ bac_subjects: { data: [], error: null }, bac_attempts: { data: [], error: null } });
+    await fetchBacList(client);
+    expect(ownOnly(eqCalls)).toBe(true);
+  });
+
+  it('fetchOpenAttempt', async () => {
+    const { client, eqCalls } = mockClient({ bac_attempts: { data: null, error: null } });
+    await fetchOpenAttempt('s1', client);
+    expect(ownOnly(eqCalls)).toBe(true);
+  });
+
+  it('fetchLatestGraded', async () => {
+    const { client, eqCalls } = mockClient({ bac_attempts: { data: null, error: null } });
+    await fetchLatestGraded('s1', client);
+    expect(ownOnly(eqCalls)).toBe(true);
+  });
+
+  it('without a session nothing is read as „mine”', async () => {
+    const { client } = mockClient({ bac_attempts: { data: null, error: null } }, undefined, null);
+    await expect(fetchOpenAttempt('s1', client)).rejects.toThrow();
+  });
+});
 
 const subject = (id: string, year: number, position = 0) => ({ id, title: `T-${id}`, year, variant: '1', credit_cost: 10, position });
 

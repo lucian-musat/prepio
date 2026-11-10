@@ -28,6 +28,7 @@ import {
   SESSION_EXPIRED,
   sessionExpired,
 } from './api';
+import { ownUserId } from './ownUser';
 import { refreshRegisteredAccess } from './profileRefresh';
 import { apiUrl, getSupabase } from './supabase';
 
@@ -40,12 +41,12 @@ export type BacListRow = BacSubjectSummary & {
 };
 
 const byPosition = <T extends { position: number }>(a: T, b: T) => a.position - b.position;
-
 /**
  * Published subjects (year desc, then the admin's order) with the student's state on each. Trial students have no
  * readable attempts (RLS), so every subject is `new` for them. An open attempt wins over history.
  */
 export async function fetchBacList(client: SupabaseClient = getSupabase()): Promise<BacListRow[]> {
+  const userId = await ownUserId(client);
   const [subRes, attRes] = await Promise.all([
     client
       .from('bac_subjects')
@@ -53,7 +54,7 @@ export async function fetchBacList(client: SupabaseClient = getSupabase()): Prom
       .eq('published', true)
       .order('year', { ascending: false })
       .order('position'),
-    client.from('bac_attempts').select('subject_id,status,grade,position,graded_at'),
+    client.from('bac_attempts').select('subject_id,status,grade,position,graded_at').eq('user_id', userId),
   ]);
   if (subRes.error) throw subRes.error;
   if (attRes.error) throw attRes.error;
@@ -174,9 +175,11 @@ function attemptView(r: any): BacAttemptView {
 
 /** The student's draft / grading / failed attempt of a subject, if any (at most one exists). */
 export async function fetchOpenAttempt(subjectId: string, client: SupabaseClient = getSupabase()): Promise<BacAttemptView | null> {
+  const userId = await ownUserId(client);
   const { data, error } = await client
     .from('bac_attempts')
     .select(ATTEMPT_COLUMNS)
+    .eq('user_id', userId)
     .eq('subject_id', subjectId)
     .in('status', ['draft', 'grading', 'failed'])
     .maybeSingle();
@@ -186,9 +189,11 @@ export async function fetchOpenAttempt(subjectId: string, client: SupabaseClient
 
 /** The most recent graded attempt of a subject, if any. */
 export async function fetchLatestGraded(subjectId: string, client: SupabaseClient = getSupabase()): Promise<BacAttemptView | null> {
+  const userId = await ownUserId(client);
   const { data, error } = await client
     .from('bac_attempts')
     .select(ATTEMPT_COLUMNS)
+    .eq('user_id', userId)
     .eq('subject_id', subjectId)
     .eq('status', 'graded')
     .order('graded_at', { ascending: false })
