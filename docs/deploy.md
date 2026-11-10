@@ -187,6 +187,14 @@ The block fingerprint reuses the welcome-grant pepper, so there is no env var or
    - signed in as admin: Elevi shows the „Stare” / „Ultima activitate” columns and the filter chips; a student page shows Parcurs and the backfilled Cronologie;
    - the owner's phone checks (STATUS "Test student administration on the phone").
 
+## Local APK builds
+
+EAS cloud builds are limited on the Free plan (the Android quota ran out on 2026-11-10, resets on the 1st). `eas build --local` builds on this machine with no quota and the same signing keystore (downloaded from the EAS credentials; the CLI must be logged in as `lucian.m91`).
+
+- One-time setup in WSL, no sudo (done 2026-11-10): Temurin JDK 17 in `~/.local/jdk-17` (`https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`), Android command-line tools in `~/Android/Sdk/cmdline-tools/latest` (`commandlinetools-linux-11076708_latest.zip` from `dl.google.com/android/repository`), then `sdkmanager --sdk_root=$HOME/Android/Sdk --licenses` and `--install platform-tools`. Gradle downloads the platform, build-tools and NDK it needs on the first build.
+- Build: `bash scripts/build-apk-local.sh` (profile `preview` → APK; `production` → AAB). The artifact lands in `~/prepio-builds/prepio-<profile>-<date>-<sha>.<ext>`; copy it to Windows (e.g. `cp ~/prepio-builds/<file> /mnt/c/Users/lucia/Downloads/`) to install or share it. A local build has no expo.dev install page.
+- The machine is small (2 cores, ~8 GB): the script caps Gradle at a 3 GB heap and 2 workers; the first build takes long (downloads), later ones reuse the Gradle cache.
+
 ## Schema and content
 
 - Schema: migrations in `supabase/migrations/`, applied with `pnpm db:cloud:push` — full workflow, credentials setup and the one-time history repair in [database-migrations.md](database-migrations.md).
