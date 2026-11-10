@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 import { Alert, Button, ButtonGroup, Card, Form } from 'react-bootstrap';
 import { createBacSubject, setBacPublished, updateBacSubject } from '@/app/(admin)/bac/actions';
+import ConfirmModal from '@/components/ConfirmModal';
 import { useRunner } from '@/components/editor/common';
 import { MAX_BAC_CREDIT_COST, MIN_BAC_CREDIT_COST, type BacSubjectForEdit } from '@/lib/data/bac';
 
@@ -28,6 +29,7 @@ export default function BacDetailsForm({ subject, onCancel }: {
   const { run, pending, alert } = useRunner();
   const [publishErrors, setPublishErrors] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
+  const [confirmingOff, setConfirmingOff] = useState(false);
 
   const input = () => ({ title, year: int(year), variant, creditCost: int(cost) });
   const touch = (set: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => { set(e.target.value); setSaved(false); };
@@ -101,7 +103,7 @@ export default function BacDetailsForm({ subject, onCancel }: {
               label="Publicat"
               checked={subject.published}
               disabled={publishing}
-              onChange={(e) => void togglePublished(e.target.checked)}
+              onChange={(e) => (e.target.checked ? void togglePublished(true) : setConfirmingOff(true))}
             />
             <Form.Text>Elevii văd doar subiectele publicate. Publicarea cere totalul de 90 de puncte și cerințe valide.</Form.Text>
             {publishErrors.length > 0 && (
@@ -112,6 +114,14 @@ export default function BacDetailsForm({ subject, onCancel }: {
           </Card.Body>
         </Card>
       )}
+      <ConfirmModal
+        show={confirmingOff}
+        heading="Retragi subiectul din publicare?"
+        body="Elevii nu îl vor mai vedea."
+        confirmLabel="Retrage"
+        onConfirm={() => { setConfirmingOff(false); void togglePublished(false); }}
+        onCancel={() => setConfirmingOff(false)}
+      />
     </>
   );
 }

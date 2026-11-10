@@ -74,6 +74,7 @@ select throws_ok($$ delete from lesson_progress $$, '42501', null, 'student cann
 reset role;
 select ok((select finished_at is null from lesson_progress where user_id = '00000000-0000-0000-0000-0000000000d3'),
   'update of another student''s row affected nothing');
+reset request.jwt.claims; -- back to plain postgres: reset role keeps the previous JWT claims
 delete from lessons where id = '00000000-0000-0000-0000-0000000000e2';
 select is((select count(*)::int from lesson_progress where lesson_id = '00000000-0000-0000-0000-0000000000e2'),
   0, 'deleting a lesson removes its progress');

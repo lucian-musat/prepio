@@ -40,7 +40,18 @@ test('tree: create nodes and a lesson, publish it, rename, confirm-delete with c
 
   await lesson.getByRole('button', { name: 'Publică' }).click();
   await expect(lesson.getByTestId('lesson-status')).toHaveText('Publicată');
+  // Published: delete is disabled with a visible hint; unpublishing asks first.
+  const del = lesson.getByRole('button', { name: 'Șterge lecția' });
+  await expect(del).toBeDisabled();
+  await expect(lesson.getByText('Depublică lecția întâi')).toBeVisible();
   await lesson.getByRole('button', { name: 'Retrage' }).click();
+  const confirm = page.getByRole('dialog');
+  await expect(confirm.getByText('Retragi lecția din publicare? Elevii nu o vor mai vedea.')).toBeVisible();
+  await confirm.getByRole('button', { name: 'Anulează' }).click();
+  await expect(confirm).toBeHidden();
+  await expect(lesson.getByTestId('lesson-status')).toHaveText('Publicată');
+  await lesson.getByRole('button', { name: 'Retrage' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Retrage' }).click();
   await expect(lesson.getByTestId('lesson-status')).toHaveText('Ciornă');
 
   await row(page, '[test] Capitol').getByRole('button', { name: 'Redenumește' }).first().click();

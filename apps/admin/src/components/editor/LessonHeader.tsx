@@ -6,11 +6,13 @@ import { Badge, Button, Form, InputGroup } from 'react-bootstrap';
 import type { LessonStatus } from '@prepio/shared';
 import { updateLesson } from '@/app/(admin)/lessons/[id]/actions';
 import { setLessonStatus } from '@/app/(admin)/actions/tree';
+import ConfirmModal from '@/components/ConfirmModal';
 import { useRunner } from './common';
 
 export default function LessonHeader({ id, title: initialTitle, status }: { id: string; title: string; status: LessonStatus }) {
   const [title, setTitle] = useState(initialTitle);
   const [saved, setSaved] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const { run, pending, alert } = useRunner();
   const published = status === 'published';
 
@@ -36,13 +38,21 @@ export default function LessonHeader({ id, title: initialTitle, status }: { id: 
           <Button
             variant={published ? 'outline-secondary' : 'outline-success'}
             disabled={pending}
-            onClick={() => run(() => setLessonStatus(id, published ? 'draft' : 'published'))}
+            onClick={() => (published ? setConfirming(true) : run(() => setLessonStatus(id, 'published')))}
           >
             {published ? 'Retrage' : 'Publică'}
           </Button>
         </InputGroup>
         {saved && <Form.Text className="text-success" role="status">Titlul a fost salvat.</Form.Text>}
       </Form>
+      <ConfirmModal
+        show={confirming}
+        heading="Retragi lecția din publicare? Elevii nu o vor mai vedea."
+        body="Lecția va redeveni ciornă."
+        confirmLabel="Retrage"
+        onConfirm={() => { setConfirming(false); run(() => setLessonStatus(id, 'draft')); }}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   );
 }

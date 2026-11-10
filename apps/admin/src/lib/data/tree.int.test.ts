@@ -132,6 +132,21 @@ describe.skipIf(!url || !anon)('tree data functions (local Supabase)', () => {
     await deleteNode(db, n.id);
   });
 
+  it('refuses to delete a published lesson or a node holding one, with Romanian messages', async () => {
+    const n = await createNode(db, rootId, 'P-node');
+    const l = await createLesson(db, n.id, 'P-lesson');
+    await setLessonStatus(db, l.id, 'published');
+    const lessonErr = await deleteLesson(db, l.id).then(() => null, (e: unknown) => e);
+    expect(lessonErr).toBeInstanceOf(UserError);
+    expect((lessonErr as Error).message).toBe('Depublică lecția întâi.');
+    const nodeErr = await deleteNode(db, n.id).then(() => null, (e: unknown) => e);
+    expect(nodeErr).toBeInstanceOf(UserError);
+    expect((nodeErr as Error).message).toBe('Nodul conține lecții publicate. Depublică-le întâi.');
+    expect((await db.from('lessons').select('id').eq('id', l.id)).data).toHaveLength(1);
+    await setLessonStatus(db, l.id, 'draft');
+    await deleteNode(db, n.id);
+  });
+
   it('rejects an empty title with a Romanian message', async () => {
     await expect(createNode(db, rootId, '   ')).rejects.toThrow('Titlul nu poate fi gol');
   });

@@ -48,9 +48,18 @@ async function move(db: SupabaseClient, table: Table, id: string, direction: Dir
   await swapInGroup(db, table, rows, id, direction);
 }
 
+// the DB trigger refuses deleting a published lesson (also through a node cascade) with this message
+const PUBLISHED_DELETE = 'published_lesson_delete';
+const PUBLISHED_DELETE_MESSAGE = {
+  lessons: 'Depublică lecția întâi.',
+  nodes: 'Nodul conține lecții publicate. Depublică-le întâi.',
+} as const;
+
 async function remove(db: SupabaseClient, table: Table, id: string) {
   const group = await groupOf(db, table, id);
-  checkAffected(await db.from(table).delete().eq('id', id).select('id'));
+  const res = await db.from(table).delete().eq('id', id).select('id');
+  if (res.error?.message === PUBLISHED_DELETE) throw new UserError(PUBLISHED_DELETE_MESSAGE[table]);
+  checkAffected(res);
   const rows = await siblings(db, table, group);
   await renumber(db, table, rows.map((r) => r.id), rows);
 }
