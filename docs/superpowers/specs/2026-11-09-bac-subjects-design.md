@@ -185,7 +185,7 @@ The **grade** is (10 + Σ points) / 10, rounded to 2 decimals, shown as „8,40�
   - In trial, rows show 🔒 and open the PaywallSheet. Locked deep links behave like locked lessons.
 - **Paper:**
   - Subiectul I / II / III tabs, sources (inline when short; reader or split when long, as in consolidation), and the requirement text with „· n puncte”.
-  - The hint is visible at every requirement: the template body inline in a collapsible „💡 Cum rezolv” block, open by default. Claude's call; the mockup showed it inline.
+  - The hint is available at every requirement: the template body inline in a collapsible „💡 Cum rezolv” block, collapsed by default (owner, 2026-11-10: open it took most of the page; first built open by default).
   - The existing per-type inputs, with no check buttons.
   - Previous / next and a map of requirements.
   - Answers autosave to the draft (debounced, plus on leave).

@@ -5,11 +5,11 @@ import RichText from '../../components/cards/RichText';
 import { AppText } from '../../ui';
 
 /**
- * „💡 Cum rezolv” on a BAC item: the solution template's body in a collapsible block, open by default (the paper has
- * no checks, so the method stays in view while the student writes).
+ * „💡 Cum rezolv” on a BAC item: the solution template's body in a collapsible block, collapsed by default (owner,
+ * 2026-11-10: open it took most of the screen). Each item mounts its own block, so every item starts collapsed.
  */
 export default function BacHint({ body }: { body: string }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   return (
     <View style={styles.box} testID="bac-hint">
       <Pressable

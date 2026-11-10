@@ -127,15 +127,29 @@ const send = () => screen.getByRole('button', { name: 'Trimite la corectat, cost
 
 const TAILS: Record<number, string> = { 1: '· 1 punct', 4: '· 4 puncte', 7: '· 7 puncte', 30: '· 30 de puncte' };
 
-it('renders the „Cum rezolv” body and the pluralised points at every item', async () => {
+it('shows a collapsed „Cum rezolv” and the pluralised points at every item; a tap opens the hint', async () => {
   await mount();
   for (let i = 0; i < ITEMS.length; i++) {
     const it = ITEMS[i]!;
     expect(await screen.findByText(it.prompt)).toBeTruthy();
-    expect(screen.getByText(HINT)).toBeTruthy();
+    expect(screen.getByText('💡 Cum rezolv')).toBeTruthy();
+    expect(screen.queryByText(HINT)).toBeNull();
     expect(screen.getByText(TAILS[it.points]!)).toBeTruthy();
     if (i < ITEMS.length - 1) await act(async () => void next());
   }
+});
+
+it('the hint opens on tap and is collapsed again on the next item', async () => {
+  await mount();
+  expect(await screen.findByText('Cerința I.1')).toBeTruthy();
+  const toggle = screen.getByRole('button', { name: /Cum rezolv/ });
+  expect(toggle.props.accessibilityState).toMatchObject({ expanded: false });
+  await act(async () => void fireEvent.press(toggle));
+  expect(screen.getByText(HINT)).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Cum rezolv/ }).props.accessibilityState).toMatchObject({ expanded: true });
+  await act(async () => void next());
+  expect(screen.getByText('Cerința I.2')).toBeTruthy();
+  expect(screen.queryByText(HINT)).toBeNull();
 });
 
 it('next moves from I.7 to II.1', async () => {
