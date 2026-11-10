@@ -9,7 +9,9 @@ import {
   feedbackText,
   gradient,
   layout,
+  markerInk,
   markerPen,
+  markerTint,
   motion,
   opacity,
   palette,
@@ -26,6 +28,16 @@ describe('design tokens', () => {
   it('marker pens are the approved mockup colours, and text stays AA on each', () => {
     expect(markerPen).toEqual({ info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' });
     for (const bg of Object.values(markerPen)) expect(contrastRatio(color.text, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('cause/effect ink and tint: white on ink and ink/text on tint stay AA', () => {
+    expect(markerInk).toEqual({ cause: '#0A5C55', effect: '#8A4B12' });
+    expect(markerTint).toEqual({ cause: '#E6FCF7', effect: '#FFF3E8' });
+    for (const role of ['cause', 'effect'] as const) {
+      expect(contrastRatio('#FFFFFF', markerInk[role])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(markerInk[role], markerTint[role])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color.text, markerTint[role])).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it('consolidation colours are the approved mockup paper and lilac; text stays AA on both', () => {

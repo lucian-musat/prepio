@@ -57,6 +57,9 @@ export const feedbackText = { good: palette.green[600], almost: palette.yellow[7
 // Marker pens (highlighter backgrounds behind source text), from the approved consolidation mockups.
 // A documented exception (docs/design-system.md): fixed highlighter colours, not palette steps.
 export const markerPen = { info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8', support: '#C9D7FF' } as const;
+// Cause/effect role ink (labels, borders) and tints (banner, filled gaps); AA-checked.
+export const markerInk = { cause: '#0A5C55', effect: '#8A4B12' } as const;
+export const markerTint = { cause: '#E6FCF7', effect: '#FFF3E8' } as const;
 
 // Consolidation surfaces from the approved mockups (documented exception, like the pens): `paper` behind source
 // texts (card, reader, desktop split), `tint` the lilac of the consolidation zone and its cards.
