@@ -287,8 +287,11 @@ test('lesson editor: card with image, three question types, consolidation exerci
   await expect(page.getByTestId('exercise-item')).toHaveCount(2);
 });
 
-test('lesson editor: unknown lesson id is a 404', async ({ page }) => {
+test('lesson editor: unknown lesson id shows the not-found page', async ({ page }) => {
   await login(page);
-  const res = await page.goto('/lessons/00000000-0000-0000-0000-000000000000');
-  expect(res?.status()).toBe(404);
+  // The HTTP status is 200 here: the (admin) loading boundary streams before notFound() runs, so assert what the admin sees.
+  await page.goto('/lessons/00000000-0000-0000-0000-000000000000');
+  await expect(page.getByRole('heading', { name: 'Pagina nu există' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Înapoi la start' })).toBeVisible();
+  await expect(page.getByText('Editează lecția')).toHaveCount(0);
 });
