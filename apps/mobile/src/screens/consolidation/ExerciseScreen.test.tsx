@@ -169,3 +169,10 @@ it('a refunded failure shows the server message and leaves the balance as it was
   expect(chip(7)).toBeTruthy();
   expect(screen.queryByText(/Îți mai trebuie/)).toBeNull();
 });
+
+it('a cause-effect exercise shows the step banner with the signal words (consolidation only)', async () => {
+  const causeEffect = { ...base, type: 'cause_effect', pairs: [], creditCost: 0 } as unknown as ConsolidationExercise;
+  await mount(causeEffect);
+  expect(screen.getByTestId('ce-banner')).toBeTruthy();
+  expect(screen.getByText('fiindcă')).toBeTruthy();
+});

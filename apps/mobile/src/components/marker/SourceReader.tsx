@@ -19,6 +19,7 @@ import {
 import { fontFamily } from '../../theme/fonts';
 import { AppText, Button, IconButton } from '../../ui';
 import { raisedShadow } from '../../ui/elevation';
+import { CauseEffectTrayStep } from './CauseEffectBanner';
 import MarkableText, { PEN_LABEL, type DragGesture } from './MarkableText';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
 
@@ -30,9 +31,13 @@ export type PanelMarker = {
   dispatch: (a: MarkerAction) => void;
   verdicts?: ExerciseFeedback['marks'];
   readOnly?: boolean;
+  /** Cause-effect: the banner lists the signal words (consolidation; never in BAC papers). */
+  clues?: boolean;
 };
 /** The marker can mark (present and not read-only). */
 export const canMark = (m?: PanelMarker): m is PanelMarker => !!m && !m.readOnly;
+/** A cause-effect marker: the step banner replaces the pen buttons. */
+export const isCauseEffect = (cfg: MarkerConfig) => cfg.pens.includes('cause') && cfg.pens.includes('effect');
 
 export const HINT = {
   start: 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.',
@@ -281,7 +286,16 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
             </View>
           </View>
           <View style={[styles.tray, { bottom: trayBottom }]} onLayout={(e) => setTray(e.nativeEvent.layout.height)}>
-            {canMark(marker) ? (
+            {canMark(marker) && isCauseEffect(marker.cfg) ? (
+              <>
+                <CauseEffectTrayStep state={marker.state} sources={sources.map((s) => s.source)} dispatch={marker.dispatch} />
+                {marker.state.anchor || marker.state.pen === null ? (
+                  <AppText role="caption" color="textMuted" style={styles.hint} accessibilityLiveRegion="polite">
+                    {hintFor(marker.cfg, marker.state)}
+                  </AppText>
+                ) : null}
+              </>
+            ) : canMark(marker) ? (
               <>
                 <PenBar marker={marker} />
                 <AppText role="caption" color="textMuted" style={styles.hint} accessibilityLiveRegion="polite">

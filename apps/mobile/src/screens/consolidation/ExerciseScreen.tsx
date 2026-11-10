@@ -194,7 +194,7 @@ export default function ExerciseScreen({
   };
 
   const marker: PanelMarker | undefined = cfg
-    ? { cfg, state: markState, dispatch, verdicts: feedback?.marks, readOnly: disabled }
+    ? { cfg, state: markState, dispatch, verdicts: feedback?.marks, readOnly: disabled, clues: true }
     : feedback && exercise.type === 'source_letter'
       ? { cfg: NO_PENS, state: NO_MARKS, dispatch: noop, verdicts: evidenceVerdicts(exercise, sources), readOnly: true }
       : undefined;

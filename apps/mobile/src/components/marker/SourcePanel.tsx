@@ -5,7 +5,8 @@ import { AppText, Surface } from '../../ui';
 import MarkableText from './MarkableText';
 import type { Pen } from './markerReducer';
 import SourceCard from './SourceCard';
-import SourceReader, { canMark, citation, hintFor, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
+import CauseEffectBanner from './CauseEffectBanner';
+import SourceReader, { canMark, citation, hintFor, isCauseEffect, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
 import SourceSplit from './SourceSplit';
 
 /** From this window width the source sits beside the answer instead of behind a card and a reader. */
@@ -75,14 +76,17 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
     },
   };
 
+  const causeEffect = canMark(marker) && isCauseEffect(marker.cfg);
+  // Cause-effect: the role is in the banner under the prompt, so only the gesture hint stays here.
   const pens = canMark(marker) ? (
     <View style={styles.pens}>
-      <PenBar marker={marker} />
+      {causeEffect ? null : <PenBar marker={marker} />}
       <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
         {hintFor(marker.cfg, marker.state)}
       </AppText>
     </View>
   ) : null;
+  const banner = causeEffect ? <CauseEffectBanner state={marker!.state} clues={!!marker!.clues} /> : null;
   const promptText =
     promptLead || promptTail ? (
       <AppText role="question">
@@ -111,6 +115,7 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
         <SourceSplit sources={longSources} label={label} onLabel={(l) => showSource(l, null)} marker={marker} scrollTo={scrollTo}>
           {header}
           {promptText}
+          {banner}
           {sources.filter((s) => !isLong.get(s.label)).map((s) => (
             <InlineSource key={s.label} item={s} marker={marker} />
           ))}
@@ -127,6 +132,7 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
       <View style={styles.column}>
         {header}
         {promptText}
+        {banner}
         {sources.map((s) =>
           isLong.get(s.label) ? (
             <SourceCard key={s.label} source={s.source} label={s.label} marking={canMark(marker)} onPress={() => openReader(s.label)} />

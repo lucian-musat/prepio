@@ -37,6 +37,7 @@ function Harness({
   spy,
   kind = 'cause_effect',
   noMarker = false,
+  clues,
 }: {
   sources: Array<{ source: Source; label: SourceLabel }>;
   cfg?: MarkerConfig;
@@ -44,6 +45,7 @@ function Harness({
   spy?: (a: MarkerAction) => void;
   kind?: 'info' | 'cause_effect';
   noMarker?: boolean;
+  clues?: boolean;
 }) {
   const [state, rawDispatch] = useReducer(markerReducer(cfg), undefined, () => initialMarker(cfg, marks));
   const dispatch = (a: MarkerAction) => {
@@ -52,7 +54,7 @@ function Harness({
   };
   return (
     <SafeAreaProvider initialMetrics={metrics}>
-    <SourcePanel sources={sources} prompt={PROMPT} marker={noMarker ? undefined : { cfg, state, dispatch }}>
+    <SourcePanel sources={sources} prompt={PROMPT} marker={noMarker ? undefined : { cfg, state, dispatch, clues }}>
       {kind === 'info' ? (
         <MarkSlots
           kind="info"
@@ -106,7 +108,7 @@ it('a long source renders the card; pressing it opens the reader with the requir
   expect(screen.getByTestId('source-reader')).toBeTruthy();
   expect(screen.getByTestId('reader-task-text')).toHaveTextContent(`Cerința: ${PROMPT}`);
   expect(screen.getByText('F. Constantiniu, O istorie sinceră a poporului român')).toBeTruthy();
-  expect(screen.getByText('Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.')).toBeTruthy();
+  expect(within(screen.getByTestId('ce-tray')).getByText('De ce s-a întâmplat ceva?')).toBeTruthy();
 });
 
 it('without a marker the card only invites to read and the reader has no pens', async () => {
@@ -141,17 +143,16 @@ it('pressing the effect gap opens the reader with the effect pen selected', asyn
   await press(screen.getByTestId('ce-gap-effect'));
   expect(screen.getByTestId('source-reader')).toBeTruthy();
   expect(spy).toHaveBeenCalledWith({ type: 'setPen', pen: 'effect' });
-  expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
-  expect(screen.getByTestId('pen-cause').props.accessibilityState).toMatchObject({ selected: false });
+  expect(screen.getByTestId('ce-mini-effect').props.accessibilityState).toMatchObject({ selected: true });
+  expect(screen.getByTestId('ce-mini-cause').props.accessibilityState).toMatchObject({ selected: false });
 });
 
-it('the tray shows ✓ on used pens and the gesture hint', async () => {
+it('the tray mini gaps show the marked text; the minimap shows the mark', async () => {
   const marks: MarkerMark[] = [{ sourceId: 'b', from: 2, to: 4, pen: 'cause' }];
   await render(<Harness sources={[{ source: long('b'), label: 'B' }]} marks={marks} />);
   await press(screen.getByTestId('source-card-B'));
-  expect(screen.getByText('Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.')).toBeTruthy();
-  expect(screen.getByTestId('pen-cause')).toHaveTextContent(/✓/);
-  expect(screen.getByTestId('pen-effect')).not.toHaveTextContent(/✓/);
+  expect(screen.getByTestId('ce-mini-cause')).toHaveTextContent(/„cuvânt2 cuvânt3 cuvânt4”/);
+  expect(screen.getByTestId('ce-mini-effect')).toHaveTextContent(/nemarcat/);
   // The minimap bar sits at the mark's word position (word 2 of 90).
   expect(screen.getByTestId('minimap-0', { includeHiddenElements: true }).props.style).toEqual(expect.arrayContaining([expect.objectContaining({ top: `${(2 / 90) * 100}%` })]));
 });
@@ -190,11 +191,11 @@ it('at 1000 px wide it renders the split, with no card and no reader', async () 
   expect(screen.getByTestId('source-split')).toBeTruthy();
   expect(screen.queryByTestId('source-card-B')).toBeNull();
   expect(screen.getByText(PROMPT)).toBeTruthy();
-  expect(screen.getByTestId('pen-cause')).toBeTruthy();
+  expect(screen.queryByTestId('pen-cause')).toBeNull();
   expect(screen.getByText('answer-area')).toBeTruthy();
   await press(screen.getByTestId('ce-gap-effect'));
   expect(screen.queryByTestId('source-reader')).toBeNull();
-  expect(screen.getByTestId('pen-effect').props.accessibilityState).toMatchObject({ selected: true });
+  expect(screen.getByText('Pasul 2 din 2 · marchezi efectul')).toBeTruthy();
 });
 
 it('the split names a single long source („Sursa B”) and shows tabs only for two', async () => {
@@ -276,4 +277,58 @@ describe('MarkSlots', () => {
     expect(onOpen).toHaveBeenCalledWith('info', null);
   });
 
+});
+
+describe('cause-effect banner', () => {
+  const ceMarks: MarkerMark[] = [{ sourceId: 'short', from: 0, to: 1, pen: 'cause' }];
+
+  it('consolidation (clues): the banner follows the prompt, with signal words, and replaces the pens', async () => {
+    await render(<Harness sources={[{ source: short, label: 'A' }]} clues />);
+    expect(screen.getByTestId('ce-banner')).toBeTruthy();
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf(PROMPT)).toBeLessThan(tree.indexOf('"ce-banner"'));
+    expect(screen.getByText('fiindcă')).toBeTruthy();
+    expect(screen.queryByTestId('pen-cause')).toBeNull();
+    expect(screen.getByText('Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.')).toBeTruthy();
+  });
+
+  it('BAC (no clues): the banner without signal words', async () => {
+    await render(<Harness sources={[{ source: short, label: 'A' }]} />);
+    expect(screen.getByText('De ce s-a întâmplat ceva?')).toBeTruthy();
+    expect(screen.queryByText('fiindcă')).toBeNull();
+  });
+
+  it('read-only (after checking): no banner, the in-text labels stay', async () => {
+    const state = initialMarker(ce, ceMarks);
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <SourcePanel sources={[{ source: short, label: 'A' }]} prompt={PROMPT} marker={{ cfg: ce, state, dispatch: jest.fn(), readOnly: true, clues: true }}>
+          <Text>answer-area</Text>
+        </SourcePanel>
+      </SafeAreaProvider>,
+    );
+    expect(screen.queryByTestId('ce-banner')).toBeNull();
+    expect(screen.getByTestId('role-label-0', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('the reader tray shows the compact step and mini gaps, never the signal words', async () => {
+    await render(<Harness sources={[{ source: long('b'), label: 'B' }]} clues />);
+    await press(screen.getByTestId('source-card-B'));
+    expect(screen.getByTestId('ce-tray')).toBeTruthy();
+    expect(screen.queryByTestId('pen-cause')).toBeNull();
+    expect(within(screen.getByTestId('source-reader')).queryByText('fiindcă')).toBeNull();
+  });
+
+  it('at 1000 px the banner sits in the right column', async () => {
+    width = 1000;
+    await render(<Harness sources={[{ source: long('b'), label: 'B' }]} />);
+    expect(screen.getByTestId('ce-banner')).toBeTruthy();
+    expect(within(screen.getByTestId('split-left')).queryByTestId('ce-banner')).toBeNull();
+  });
+
+  it('an information exercise keeps its pen and gets no banner', async () => {
+    await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={info} kind="info" />);
+    expect(screen.getByTestId('pen-info')).toBeTruthy();
+    expect(screen.queryByTestId('ce-banner')).toBeNull();
+  });
 });
