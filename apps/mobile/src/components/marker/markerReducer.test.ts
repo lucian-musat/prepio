@@ -3,7 +3,12 @@ import { initialMarker, markerReducer, type MarkerAction, type MarkerConfig, typ
 const A = 'src-a';
 const B = 'src-b';
 const info: MarkerConfig = { pens: ['info'], limits: { info: 1 } };
-const ce: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } };
+const ce: MarkerConfig = {
+  pens: ['cause', 'effect'],
+  limits: { cause: 1, effect: 1 },
+  autoNext: { cause: 'effect', effect: 'cause' },
+  idleWhenDone: true,
+};
 const support: MarkerConfig = { pens: ['support'], limits: { support: 2 } };
 
 const run = (cfg: MarkerConfig, actions: MarkerAction[], from: MarkerState = initialMarker(cfg)) =>
@@ -112,7 +117,8 @@ describe('committing', () => {
   });
 
   it('autoNext does not switch when an effect already exists', () => {
-    const s = run(ce, [{ type: 'setPen', pen: 'effect' }, tap(4), tap(5), { type: 'setPen', pen: 'cause' }, tap(0), tap(1)]);
+    const oneWay: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } };
+    const s = run(oneWay, [{ type: 'setPen', pen: 'effect' }, tap(4), tap(5), { type: 'setPen', pen: 'cause' }, tap(0), tap(1)]);
     expect(s.pen).toBe('cause');
   });
 
@@ -219,5 +225,77 @@ describe('other actions', () => {
     const c = run(support, [{ type: 'cancel' }], lifted);
     expect(c.marks).toEqual(s.marks);
     expect(c).toMatchObject({ drag: null, anchor: null, active: null });
+  });
+});
+
+describe('cause-effect roles', () => {
+  const both = () => run(ce, [tap(0), tap(1), tap(5), tap(6)]);
+  const drag = (a: number, b: number): MarkerAction[] => [
+    { type: 'dragStart', sourceId: A, i: a },
+    { type: 'dragMove', i: b },
+    { type: 'dragEnd' },
+  ];
+
+  it('effect first, then auto-switches to cause', () => {
+    const s = run(ce, [{ type: 'setPen', pen: 'effect' }, tap(0), tap(3)]);
+    expect(s.pen).toBe('cause');
+    expect(s.marks).toEqual([{ sourceId: A, from: 0, to: 3, pen: 'effect' }]);
+  });
+
+  it('idle once both are marked', () => {
+    expect(both().pen).toBeNull();
+  });
+
+  it('idle: a new drag or a tap outside the marks is ignored', () => {
+    const s = both();
+    const dragged = run(ce, drag(9, 10), s);
+    expect(dragged.marks).toEqual(s.marks);
+    expect(dragged.drag).toBeNull();
+    expect(run(ce, [tap(9)], s).anchor).toBeNull();
+  });
+
+  it('idle: tapping a mark still selects it for handles', () => {
+    const s = run(ce, [{ type: 'cancel' }], both());
+    expect(run(ce, [tap(0)], s).active).toBe(0);
+  });
+
+  it('setPen from idle, then the next selection replaces that role', () => {
+    const s = run(ce, [{ type: 'setPen', pen: 'cause' }, tap(9), tap(10)], both());
+    expect(s.marks).toEqual([
+      { sourceId: A, from: 5, to: 6, pen: 'effect' },
+      { sourceId: A, from: 9, to: 10, pen: 'cause' },
+    ]);
+    expect(s.pen).toBeNull();
+  });
+
+  it('remove makes that role current', () => {
+    const s = both();
+    const cause = s.marks.findIndex((m) => m.pen === 'cause');
+    expect(run(ce, [{ type: 'remove', index: cause }], s).pen).toBe('cause');
+  });
+
+  it('overlap: marking over the other role deletes it and switches to it', () => {
+    const s = run(ce, [tap(0), tap(3), ...drag(2, 5)]);
+    expect(s.marks).toEqual([{ sourceId: A, from: 2, to: 5, pen: 'effect' }]);
+    expect(s.pen).toBe('cause');
+  });
+
+  it('swapRoles while idle stays idle', () => {
+    const s = run(ce, [{ type: 'swapRoles' }], both());
+    expect(s.pen).toBeNull();
+    expect(s.marks.map((m) => m.pen)).toEqual(['effect', 'cause']);
+  });
+
+  it('a handle drag while idle stays idle', () => {
+    const s = run(ce, [{ type: 'cancel' }, tap(0), { type: 'handleStart', end: 'end' }, { type: 'dragMove', i: 2 }, { type: 'dragEnd' }], both());
+    expect(s.marks).toContainEqual({ sourceId: A, from: 0, to: 2, pen: 'cause' });
+    expect(s.pen).toBeNull();
+  });
+
+  it('initialMarker restores idle when both roles are marked', () => {
+    const cause = { sourceId: A, from: 0, to: 1, pen: 'cause' as const };
+    const effect = { sourceId: A, from: 5, to: 6, pen: 'effect' as const };
+    expect(initialMarker(ce, [cause, effect]).pen).toBeNull();
+    expect(initialMarker(ce, [cause]).pen).toBe('cause');
   });
 });

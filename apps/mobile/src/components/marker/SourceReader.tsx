@@ -37,21 +37,13 @@ export const canMark = (m?: PanelMarker): m is PanelMarker => !!m && !m.readOnly
 export const HINT = {
   start: 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.',
   anchored: 'Atinge ultimul cuvânt al informației.',
-  causeDone: 'Cauza e marcată. Acum marchează efectul.',
-  effectDone: 'Acum marchează cauza.',
-  bothDone: 'Ambele marcate. Apasă „Gata” sau ajustează capetele.',
+  pickGap: 'Atinge golul pe care vrei să-l schimbi.',
 } as const;
 
-/** The one-line next step under the pens (long-sources mockup `#msg`). */
-export function hintFor(cfg: MarkerConfig, s: MarkerState): string {
+/** The one-line gesture hint under the pens (long-sources mockup `#msg`); the role itself is in the cause-effect banner. */
+export function hintFor(_cfg: MarkerConfig, s: MarkerState): string {
   if (s.anchor) return HINT.anchored;
-  if (cfg.pens.includes('cause') && cfg.pens.includes('effect')) {
-    const c = s.marks.some((m) => m.pen === 'cause');
-    const e = s.marks.some((m) => m.pen === 'effect');
-    if (c && e) return HINT.bothDone;
-    if (c) return HINT.causeDone;
-    if (e) return HINT.effectDone;
-  }
+  if (s.pen === null) return HINT.pickGap;
   return HINT.start;
 }
 

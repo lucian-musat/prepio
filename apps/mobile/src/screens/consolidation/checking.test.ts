@@ -68,7 +68,7 @@ describe('markerConfig', () => {
   it('limits each pen to what the exercise asks for', () => {
     expect(markerConfig(info)).toEqual({ pens: ['info'], limits: { info: 2 } });
     expect(markerConfig(viewpoint)).toEqual({ pens: ['support'], limits: { support: 2 } });
-    expect(markerConfig(ce)).toEqual({ pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } });
+    expect(markerConfig(ce)).toEqual({ pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true });
     expect(markerConfig(short)).toBeNull();
   });
 });

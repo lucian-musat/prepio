@@ -3,7 +3,8 @@ import type { Mark } from '@prepio/shared';
 export type Pen = 'info' | 'cause' | 'effect' | 'support';
 export type MarkerMark = Mark & { pen: Pen };
 export type MarkerState = {
-  pen: Pen;
+  /** The pen a new selection uses; null when no role is current (`idleWhenDone`, every pen marked). */
+  pen: Pen | null;
   marks: MarkerMark[];
   /** First word of a tap-tap selection, waiting for the last one. */
   anchor: { sourceId: string; i: number } | null;
@@ -15,8 +16,16 @@ export type MarkerState = {
   /** Index in `marks` of the selected mark (it shows the handles). */
   active: number | null;
 };
-/** `limits` defaults to 1 per pen; `autoNext` switches the pen after a commit while the next pen has no mark. */
-export type MarkerConfig = { pens: Pen[]; limits: Partial<Record<Pen, number>>; autoNext?: Partial<Record<Pen, Pen>> };
+/**
+ * `limits` defaults to 1 per pen; `autoNext` switches the pen after a commit while the next pen has no mark;
+ * `idleWhenDone`: once every pen has a mark no pen is current, and a new selection waits for `setPen`.
+ */
+export type MarkerConfig = {
+  pens: Pen[];
+  limits: Partial<Record<Pen, number>>;
+  autoNext?: Partial<Record<Pen, Pen>>;
+  idleWhenDone?: boolean;
+};
 export type MarkerAction =
   | { type: 'tap'; sourceId: string; i: number } // tap on word i
   | { type: 'dragStart'; sourceId: string; i: number } // after long-press (touch) or immediately (mouse)
@@ -29,10 +38,12 @@ export type MarkerAction =
   | { type: 'cancel' }; // drop the anchor, the selection and an unfinished drag; a lifted mark goes back (e.g. the reader closes)
 
 export function initialMarker(cfg: MarkerConfig, marks: MarkerMark[] = []): MarkerState {
-  return { pen: cfg.pens[0] ?? 'info', marks, anchor: null, drag: null, active: null };
+  return { pen: done(cfg, marks) ? null : cfg.pens[0] ?? 'info', marks, anchor: null, drag: null, active: null };
 }
 
 const covers = (m: MarkerMark, sourceId: string, i: number) => m.sourceId === sourceId && i >= m.from && i <= m.to;
+/** With `idleWhenDone`: every pen has a mark, so no pen stays current. */
+const done = (cfg: MarkerConfig, marks: MarkerMark[]) => !!cfg.idleWhenDone && cfg.pens.every((p) => marks.some((m) => m.pen === p));
 
 /** Adds the mark [min(a,b), max(a,b)]: overlapping marks go, then the pen's oldest marks while it is at its limit. */
 function commit(cfg: MarkerConfig, s: MarkerState, pen: Pen, sourceId: string, a: number, b: number): MarkerState {
@@ -44,7 +55,7 @@ function commit(cfg: MarkerConfig, s: MarkerState, pen: Pen, sourceId: string, a
   marks.push({ sourceId, from, to, pen });
   const next = cfg.autoNext?.[pen];
   const switchPen = next !== undefined && !marks.some((m) => m.pen === next);
-  return { ...s, marks, anchor: null, drag: null, active: marks.length - 1, pen: switchPen ? next : s.pen };
+  return { ...s, marks, anchor: null, drag: null, active: marks.length - 1, pen: done(cfg, marks) ? null : switchPen ? next : s.pen };
 }
 
 export function markerReducer(cfg: MarkerConfig): (s: MarkerState, a: MarkerAction) => MarkerState {
@@ -54,10 +65,12 @@ export function markerReducer(cfg: MarkerConfig): (s: MarkerState, a: MarkerActi
         if (s.drag) return s;
         const hit = s.marks.findIndex((m) => covers(m, a.sourceId, a.i));
         if (hit >= 0 && !s.anchor) return { ...s, active: s.active === hit ? null : hit };
+        if (s.pen === null) return s;
         if (!s.anchor || s.anchor.sourceId !== a.sourceId) return { ...s, anchor: { sourceId: a.sourceId, i: a.i }, active: null };
         return commit(cfg, s, s.pen, a.sourceId, s.anchor.i, a.i);
       }
       case 'dragStart':
+        if (s.pen === null) return s;
         return { ...s, drag: { sourceId: a.sourceId, pen: s.pen, a: a.i, b: a.i }, anchor: null, active: null };
       case 'dragMove':
         if (!s.drag || s.drag.b === a.i) return s;
@@ -80,9 +93,11 @@ export function markerReducer(cfg: MarkerConfig): (s: MarkerState, a: MarkerActi
       case 'setPen':
         return { ...s, pen: a.pen, anchor: null };
       case 'remove': {
-        if (!s.marks[a.index]) return s;
+        const gone = s.marks[a.index];
+        if (!gone) return s;
         const active = s.active === null || s.active === a.index ? null : s.active > a.index ? s.active - 1 : s.active;
-        return { ...s, marks: s.marks.filter((_, k) => k !== a.index), active };
+        // The removed mark's role becomes current: its gap is the one to fill again.
+        return { ...s, marks: s.marks.filter((_, k) => k !== a.index), active, pen: gone.pen };
       }
       case 'swapRoles': {
         const swap = (p: Pen): Pen => (p === 'cause' ? 'effect' : p === 'effect' ? 'cause' : p);

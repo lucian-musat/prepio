@@ -63,7 +63,7 @@ export function markerConfig(ex: ConsolidationExercise): MarkerConfig | null {
     case 'viewpoint':
       return { pens: ['support'], limits: { support: ex.count } };
     case 'cause_effect':
-      return { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } };
+      return { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true };
     default:
       return null;
   }

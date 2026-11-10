@@ -19,7 +19,7 @@ const long = (id: string): Source => ({
 const short: Source = { id: 'short', position: 0, title: null, author: 'Autor', work: 'Lucrare', body: 'Unirea a fost recunoscută în 1861.' };
 const PROMPT = 'Scrieți o relație cauză-efect stabilită între două informații selectate din sursa B.';
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
-const ce: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } };
+const ce: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true };
 const info: MarkerConfig = { pens: ['info'], limits: { info: 2 } };
 
 function textOf(sources: Source[]) {
@@ -137,25 +137,25 @@ it('pressing the effect slot opens the reader with the effect pen selected', asy
   expect(screen.getByTestId('pen-cause').props.accessibilityState).toMatchObject({ selected: false });
 });
 
-it('the tray shows ✓ on used pens and the next-step hint', async () => {
+it('the tray shows ✓ on used pens and the gesture hint', async () => {
   const marks: MarkerMark[] = [{ sourceId: 'b', from: 2, to: 4, pen: 'cause' }];
   await render(<Harness sources={[{ source: long('b'), label: 'B' }]} marks={marks} />);
   await press(screen.getByTestId('source-card-B'));
-  expect(screen.getByText('Cauza e marcată. Acum marchează efectul.')).toBeTruthy();
+  expect(screen.getByText('Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.')).toBeTruthy();
   expect(screen.getByTestId('pen-cause')).toHaveTextContent(/✓/);
   expect(screen.getByTestId('pen-effect')).not.toHaveTextContent(/✓/);
   // The minimap bar sits at the mark's word position (word 2 of 90).
   expect(screen.getByTestId('minimap-0', { includeHiddenElements: true }).props.style).toEqual(expect.arrayContaining([expect.objectContaining({ top: `${(2 / 90) * 100}%` })]));
 });
 
-it('the both-marked hint', async () => {
+it('both marked: the hint asks to tap the gap to change', async () => {
   const marks: MarkerMark[] = [
     { sourceId: 'b', from: 2, to: 4, pen: 'cause' },
     { sourceId: 'b', from: 40, to: 44, pen: 'effect' },
   ];
   await render(<Harness sources={[{ source: long('b'), label: 'B' }]} marks={marks} />);
   await press(screen.getByTestId('source-card-B'));
-  expect(screen.getByText('Ambele marcate. Apasă „Gata” sau ajustează capetele.')).toBeTruthy();
+  expect(screen.getByText('Atinge golul pe care vrei să-l schimbi.')).toBeTruthy();
 });
 
 it('two long sources: two cards, and A / B tabs in the reader', async () => {

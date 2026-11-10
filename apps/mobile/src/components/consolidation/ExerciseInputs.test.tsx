@@ -98,7 +98,7 @@ describe('SourceInfoInput', () => {
 
 describe('CauseEffectInput', () => {
   const e = ex({ type: 'cause_effect', pairs: [] });
-  const cfg: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect' } };
+  const cfg: MarkerConfig = { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true };
   it('emits cause and effect and swaps the roles', async () => {
     const onChange = jest.fn();
     const mk = marker(cfg, [
