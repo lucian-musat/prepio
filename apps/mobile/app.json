@@ -39,7 +39,15 @@
         }
       ],
       "@react-native-google-signin/google-signin",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "sc-expertpower-webluc-srl",
+          "project": "prepio-mobile",
+          "url": "https://de.sentry.io/"
+        }
+      ]
     ]
   }
 }

@@ -1,13 +1,20 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout } from '../ui';
+import { captureError } from '../lib/sentry';
 
 /**
  * Root error boundary screen. It renders above AuthProvider, so it must not use auth hooks, and the error
- * text is never shown to the student.
+ * text is never shown to the student (it goes to Sentry when that is configured).
  */
-export default function ErrorScreen({ retry }: { error: Error; retry: () => Promise<void> }) {
+export default function ErrorScreen({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  // Reported once per error (a retry that fails again mounts the screen with the new error).
+  useEffect(() => {
+    captureError(error);
+  }, [error]);
+
   return (
     <ScreenLayout logo>
       <View style={styles.stack}>

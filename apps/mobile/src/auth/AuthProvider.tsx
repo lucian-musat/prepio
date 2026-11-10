@@ -6,6 +6,7 @@ import { getSupabase, isAuthRejection, signOut as signOutSession, withTimeout } 
 import { signOutGoogle } from './google';
 import { localDay, logAppOpen } from '../lib/activity';
 import { registerProfileRefresh } from '../lib/profileRefresh';
+import { setSentryUser } from '../lib/sentry';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'suspended' | 'needsName' | 'needsMode' | 'ready';
 
@@ -62,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const apply = useCallback((next: AuthState) => {
     generation.current += 1;
     userId.current = next.session?.user.id ?? null;
+    // Error reports carry the Supabase user id only (no email or name).
+    setSentryUser(userId.current);
     stateRef.current = next;
     setState(next);
   }, []);
