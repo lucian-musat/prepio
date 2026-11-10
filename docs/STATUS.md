@@ -6,8 +6,10 @@ Last updated: 2026-11-10
 
 **Launch readiness (2026-11-10 →) — in progress, five PRs, each on its own branch (see CLAUDE.md "Branches and PRs").** Spec `docs/superpowers/specs/2026-11-10-launch-readiness-design.md`, plan `docs/superpowers/plans/2026-11-10-launch-readiness.md`, audit `docs/audits/2026-11-10-production-readiness.md`.
 
-- PR 1 — CI (GitHub Actions) + standing branch/PR rule + docs (`ci/github-actions`): in progress.
-- PR 2 — Error pages (`feat/error-pages`): not started.
+- PR 1 — CI (GitHub Actions) + standing branch/PR rule + docs (`ci/github-actions`): **merged** (#1, `bbe7dc0`). The first Actions run was green in 4m24s: every step ran, including Supabase in the runner, seed, pgTAP and both integration suites.
+- PR 2 — Error pages (`feat/error-pages`): implemented and reviewed. Student app: a root `ErrorBoundary` („Ceva n-a mers bine”, „Încearcă din nou”, „Mergi la început”) and `+not-found` („Pagina nu există”). Admin: `global-error`, `(admin)/error` (with the digest „Cod: …”), `not-found` and `loading`. Mobile 1006 and admin 422 unit tests pass.
+  - Browser walk in headless Playwright Chromium, because the connected Claude in Chrome browser runs on a different machine (macOS) and can't reach localhost. 26/26 passed: the student web at 360 touch and 1280 (404 signed out, a forced render error, recovery with „Încearcă din nou”, no horizontal scroll, no safe-area crash, console clean); the admin 404 signed out (→ login) and signed in; a forced page error inside the shell; the error text never shown.
+  - Native: the error screen on the phone stays with the owner.
 - PR 3 — Delete protection and confirms (`feat/delete-protection`): not started.
 - PR 4 — Sentry (`feat/sentry`): not started.
 - PR 5 — Terms and the 16+ confirmation (`feat/terms-age`): not started.
