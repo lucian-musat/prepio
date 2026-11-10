@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-// v11 moved the build-time wrapper out of the runtime entry point.
+// The build-time wrapper: its `@sentry/nextjs` root export is deprecated in 10.x and removed in v11.
 import { withSentryConfig } from '@sentry/nextjs/config';
 
 const nextConfig: NextConfig = {

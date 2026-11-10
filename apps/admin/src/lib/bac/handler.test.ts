@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BacItemResult, BacSubmitResponse } from '@prepio/shared';
 import type { Grader } from '@/lib/evaluate/openai';
+import { captureFailure } from '@/lib/sentry';
 import type { BacCharge } from './charge';
 import { BAC_RATE_KEY, BAC_RATE_LIMIT, BAC_USER_RATE_LIMIT, bacUserRateKey, handleBacSubmit, type BacDeps } from './handler';
+
+vi.mock('@/lib/sentry', () => ({ captureFailure: vi.fn() }));
+const failure = vi.mocked(captureFailure);
+beforeEach(() => failure.mockClear());
+const ROUTE = 'bac/submit';
 
 const USER = 'u1';
 const SUBJ = '10000000-0000-4000-8000-000000000001';
@@ -571,5 +577,67 @@ describe('handleBacSubmit', () => {
       );
     }
     expect(s.events.at(-1)).toEqual({ kind: 'bac_graded', details: { subject_id: SUBJ, points: 74, grade: 8.4 } });
+  });
+});
+
+describe('handleBacSubmit: Sentry', () => {
+  const quiet = () => vi.spyOn(console, 'error').mockImplementation(() => {});
+  const okGrade = (a: Parameters<Grader>[0]) =>
+    a.kind === 'style' ? { language: 0, structure: 0, order: 0, feedback: '' } : { points: 0, feedback: '' };
+
+  it('reports nothing for a graded paper', async () => {
+    const r = await handleBacSubmit(body(), USER, setup().deps);
+    expect(r.status).toBe(200);
+    expect(failure).not.toHaveBeenCalled();
+  });
+
+  it('a throwing grader is reported as grade, never with its message', async () => {
+    quiet();
+    const s = setup({
+      grade: vi.fn<Grader>(async (a) => {
+        if (a.input.includes('ENUNȚ-COMP')) throw new Error('model quoted the answer');
+        return okGrade(a);
+      }),
+    });
+    await handleBacSubmit(body(), USER, s.deps);
+    expect(failure.mock.calls).toEqual([[ROUTE, 'grade', expect.any(Error), 502]]);
+  });
+
+  it('a failing refund is reported as refund', async () => {
+    quiet();
+    const s = setup({ grade: vi.fn<Grader>(async () => { throw new Error('timeout'); }) });
+    s.credits.refund.mockImplementation(async () => {
+      throw new Error('refund down');
+    });
+    await handleBacSubmit(body(), USER, s.deps);
+    expect(failure.mock.calls).toEqual([
+      [ROUTE, 'grade', expect.any(Error), 502],
+      [ROUTE, 'refund', expect.objectContaining({ message: 'refund down' }), 502],
+    ]);
+  });
+
+  it('an attempt the stale sweep failed meanwhile is reported as stuck_grading, with no error', async () => {
+    quiet();
+    const s = setup();
+    s.deps.grade = vi.fn<Grader>(async (a) => {
+      s.tables.bac_attempts![0]!.status = 'failed';
+      return okGrade(a);
+    });
+    await handleBacSubmit(body(), USER, s.deps);
+    expect(failure.mock.calls).toEqual([[ROUTE, 'stuck_grading', undefined, 502]]);
+  });
+
+  it('a failing timeline log is reported as log_event', async () => {
+    quiet();
+    const s = setup();
+    const db = s.db as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> };
+    const rpc = db.rpc;
+    db.rpc = async (fn, args) => (fn === 'log_student_event_service' ? { data: null, error: { message: 'down' } } : rpc(fn, args));
+    const r = await handleBacSubmit(body(), USER, s.deps);
+    expect(r.status).toBe(200);
+    expect(failure.mock.calls).toEqual([
+      [ROUTE, 'log_event', expect.any(Error)],
+      [ROUTE, 'log_event', expect.any(Error)],
+    ]);
   });
 });

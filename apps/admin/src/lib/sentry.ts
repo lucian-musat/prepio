@@ -45,6 +45,28 @@ export function captureError(e: unknown, tags?: Record<string, string>): void {
   Sentry.captureException(e, tags ? { tags } : undefined);
 }
 
+const CLASS_NAME_RE = /^[A-Za-z_$][\w$.]{0,63}$/;
+
+/** The error's class name (`APIConnectionTimeoutError`, `PostgrestError`), never its message. */
+function causeName(e: unknown): string {
+  if (e === undefined || e === null) return 'none';
+  if (!(e instanceof Error)) return typeof e;
+  const candidates = [e.constructor?.name, e.name];
+  return candidates.find((n) => typeof n === 'string' && n !== 'Error' && CLASS_NAME_RE.test(n)) ?? 'Error';
+}
+
+/**
+ * Reports a failure that was handled (logged and answered with an error) as `route:stage`, sanitized: the original
+ * error contributes its class name only. Its message can quote model output about a student's answer, or a database
+ * error with row data, so neither the message, the error itself nor its `cause` is ever sent.
+ */
+export function captureFailure(route: string, stage: string, e?: unknown, status?: number): void {
+  if (!dsn()) return;
+  const tags: Record<string, string> = { route, stage, cause: causeName(e) };
+  if (status !== undefined) tags.status = String(status);
+  Sentry.captureException(new Error(`${route}:${stage}`), { tags });
+}
+
 /** Reports an error that reached an error boundary (it crashed the page): `mechanism.handled = false`. */
 export function captureBoundaryError(e: unknown): void {
   if (!dsn()) return;

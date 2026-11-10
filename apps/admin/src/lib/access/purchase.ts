@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AccessOffer, AccessPurchaseError, AccessPurchaseErrorCode, AccessPurchaseResponse } from '@prepio/shared';
 import { isSuspended } from '@/lib/account/suspended';
+import { captureFailure } from '@/lib/sentry';
 
 export type PurchaseResult = { status: number; json: AccessPurchaseResponse | AccessPurchaseError };
 
@@ -17,6 +18,13 @@ export function purchaseError(code: AccessPurchaseErrorCode, offer?: AccessOffer
   return { status, json: offer ? { error: code, message, offer } : { error: code, message } };
 }
 
+/** A server_error answer, reported to Sentry (sanitized) under `stage`. */
+function serverError(stage: string, e?: unknown): PurchaseResult {
+  const r = purchaseError('server_error');
+  captureFailure('access/purchase', stage, e, r.status);
+  return r;
+}
+
 /** Postgres `int` maximum: larger values would make the RPC fail instead of answering bad_request. */
 const PG_INT_MAX = 2147483647;
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= PG_INT_MAX;
@@ -31,7 +39,7 @@ export async function handleAccessPurchase(body: unknown, userId: string, db: Su
     if (await isSuspended(db, userId)) return purchaseError('suspended');
   } catch (e) {
     console.error('[access/purchase] suspension lookup failed:', e);
-    return purchaseError('server_error');
+    return serverError('suspension_lookup', e);
   }
 
   const { data, error } = await db.rpc('purchase_access', { p_user: userId, p_price_bani: price, p_bonus: bonus, p_months: months });
@@ -41,12 +49,12 @@ export async function handleAccessPurchase(body: unknown, userId: string, db: Su
       const row = s as { price_bani: number; bonus_credits: number; duration_months: number } | null;
       if (sErr || !row) {
         console.error('[access/purchase] reading the current offer failed:', sErr?.message);
-        return purchaseError('server_error');
+        return serverError('offer_read', sErr ?? undefined);
       }
       return purchaseError('offer_changed', { priceBani: row.price_bani, bonusCredits: row.bonus_credits, durationMonths: row.duration_months });
     }
     console.error('[access/purchase] RPC failed:', error.message);
-    return purchaseError('server_error');
+    return serverError('rpc', error);
   }
   // A table-returning RPC comes back as an array of rows.
   const row = (Array.isArray(data) ? data[0] : data) as
@@ -54,7 +62,7 @@ export async function handleAccessPurchase(body: unknown, userId: string, db: Su
     | undefined;
   if (!row || typeof row.order_id !== 'string' || typeof row.access_until !== 'string' || typeof row.bonus !== 'number' || typeof row.balance !== 'number') {
     console.error('[access/purchase] RPC returned no row');
-    return purchaseError('server_error');
+    return serverError('rpc_empty');
   }
   return { status: 200, json: { orderId: row.order_id, accessUntil: row.access_until, bonus: row.bonus, balance: row.balance } };
 }

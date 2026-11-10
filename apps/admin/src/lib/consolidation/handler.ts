@@ -14,10 +14,14 @@ import type { Evaluator } from '@/lib/evaluate/openai';
 import {
   GLOBAL_RATE_KEY, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_SECONDS, type RateLimit,
 } from '@/lib/evaluate/rateLimit';
+import { captureFailure } from '@/lib/sentry';
 import { buildConsolidationPrompt, expectedKeys, type Deterministic } from './prompt';
 import { aiOutputSchema, normalizeAiOutput } from './schema';
 
 export type Deps = { db: SupabaseClient; evaluate: Evaluator; rateLimit: RateLimit; credits: Credits };
+
+/** The Sentry route tag of this handler's failures. */
+const ROUTE = 'consolidation/evaluate';
 export type HandlerResult = { status: number; json: ConsolidationEvaluateResponse | ConsolidationEvaluateError };
 
 const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: string }> = {
@@ -232,6 +236,7 @@ async function logCheckBlocked(db: SupabaseClient, userId: string, exerciseId: s
     if (error) throw new Error(error.message);
   } catch (e) {
     console.error('[consolidation/evaluate] logging check_blocked failed:', e);
+    captureFailure(ROUTE, 'log_check_blocked', e);
   }
 }
 
@@ -251,6 +256,7 @@ async function logAccessBlocked(db: SupabaseClient, userId: string, exerciseId: 
     if (error) throw new Error(error.message);
   } catch (e) {
     console.error('[consolidation/evaluate] logging check_blocked (access_required) failed:', e);
+    captureFailure(ROUTE, 'log_check_blocked', e);
   }
 }
 
@@ -310,12 +316,15 @@ export async function handleConsolidationEvaluate(body: unknown, userId: string,
     return { status: 200, json: { items, credits: { spent: cost, balance: spend.balance } } };
   } catch (e) {
     console.error('[consolidation/evaluate] failed:', e);
+    // Every outcome below is a 502 ai_failed.
+    captureFailure(ROUTE, 'evaluate', e, 502);
     if (entryId === null) return errorResult('ai_failed');
     try {
       const balance = await deps.credits.refund(entryId);
       return { status: 502, json: { error: 'ai_failed', message: REFUNDED_MESSAGE, credits: { spent: 0, balance } } };
     } catch (refundError) {
       console.error(`[consolidation/evaluate] refund of ledger entry ${entryId} failed:`, refundError);
+      captureFailure(ROUTE, 'refund', refundError, 502);
       return errorResult('ai_failed');
     }
   }

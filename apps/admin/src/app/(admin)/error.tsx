@@ -6,7 +6,8 @@ import { captureBoundaryError } from '@/lib/sentry';
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    captureBoundaryError(error);
+    // A digest means a server error, already reported by `onRequestError`.
+    if (!error.digest) captureBoundaryError(error);
   }, [error]);
 
   return (

@@ -5,7 +5,7 @@ import { errorResult, handleConsolidationEvaluate, type Deps } from '@/lib/conso
 import { createOpenAIEvaluator } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 import { createCredits } from '@/lib/credits/credits';
-import { captureError } from '@/lib/sentry';
+import { captureFailure } from '@/lib/sentry';
 
 export const dynamic = 'force-dynamic';
 /** Vercel's default (10 s on Hobby) would kill the function before the 50 s OpenAI timeout. */
@@ -69,8 +69,9 @@ export async function POST(request: Request) {
     return reply(r.status, r.json, request);
   } catch (e) {
     console.error('[consolidation/evaluate] unexpected failure:', e);
-    captureError(e, { route: 'consolidation/evaluate' });
     const r = errorResult('ai_failed');
+    // Sanitized: the error's message can quote model output about the student's answer.
+    captureFailure('consolidation/evaluate', 'unhandled', e, r.status);
     return reply(r.status, r.json, request);
   }
 }

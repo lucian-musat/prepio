@@ -86,6 +86,29 @@ describe('scrubEvent', () => {
     expect(out.request?.headers).toEqual({ Accept: 'x' });
   });
 
+  it('removes client IP headers in any case', () => {
+    const out = scrubEvent({
+      request: {
+        headers: {
+          'X-Forwarded-For': '1.2.3.4',
+          'x-real-ip': '1.2.3.4',
+          'CF-Connecting-IP': '1.2.3.4',
+          'True-Client-IP': '1.2.3.4',
+          Forwarded: 'for=1.2.3.4',
+          'X-VERCEL-FORWARDED-FOR': '1.2.3.4',
+          'x-vercel-id': 'lhr1::abc',
+        },
+      },
+    });
+    expect(out.request?.headers).toEqual({ 'x-vercel-id': 'lhr1::abc' });
+  });
+
+  it('drops user.ip_address, keeping only the id', () => {
+    const user = { id: 'u1', ip_address: '1.2.3.4' } as { id: string };
+    expect(scrubEvent({ user }).user).toEqual({ id: 'u1' });
+    expect(scrubEvent({ user: { ip_address: '{{auto}}' } as { id?: string } }).user).toEqual({});
+  });
+
   it('replaces two emails in one message', () => {
     expect(scrubEvent({ message: 'a@b.ro and c@d.io failed' }).message).toBe('[email] and [email] failed');
   });

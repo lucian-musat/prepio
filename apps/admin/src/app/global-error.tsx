@@ -6,7 +6,8 @@ import { captureBoundaryError } from '@/lib/sentry';
 /** Last-resort boundary: replaces the root layout, so no Bootstrap or theme is available (inline styles only). */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    captureBoundaryError(error);
+    // A digest means a server error, already reported by `onRequestError`.
+    if (!error.digest) captureBoundaryError(error);
   }, [error]);
 
   return (

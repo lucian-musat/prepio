@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { captureFailure } from '@/lib/sentry';
 import { handleConsolidationEvaluate, type Deps } from './handler';
+
+vi.mock('@/lib/sentry', () => ({ captureFailure: vi.fn() }));
+const failure = vi.mocked(captureFailure);
+beforeEach(() => failure.mockClear());
+const ROUTE = 'consolidation/evaluate';
 
 const FACTS = '11111111-1111-4111-8111-111111111111';
 const DRAFT = '22222222-2222-4222-8222-222222222222';
@@ -463,6 +469,10 @@ describe('handleConsolidationEvaluate: credits', () => {
       expect(r.json).toMatchObject({ error: 'insufficient_credits', required: 2, balance: 1 });
     }
     expect(error).toHaveBeenCalledTimes(2);
+    expect(failure.mock.calls).toEqual([
+      [ROUTE, 'log_check_blocked', expect.any(Error)],
+      [ROUTE, 'log_check_blocked', expect.any(Error)],
+    ]);
   });
 
   it('a successful check does not log check_blocked', async () => {
@@ -493,6 +503,14 @@ describe('handleConsolidationEvaluate: credits', () => {
       expect(credits.refund).toHaveBeenCalledTimes(1);
       expect(credits.refund).toHaveBeenCalledWith(1);
     }
+    expect(failure).toHaveBeenCalledTimes(3);
+    for (const call of failure.mock.calls) expect(call).toEqual([ROUTE, 'evaluate', expect.any(Error), 502]);
+  });
+
+  it('reports nothing to Sentry for a successful check or a refused one', async () => {
+    await handleConsolidationEvaluate(compReq, 'u1', deps({ credits: fakeCredits(7), evaluate: compOk() }));
+    await handleConsolidationEvaluate(compReq, 'u1', deps({ credits: fakeCredits(1), evaluate: compOk() }));
+    expect(failure).not.toHaveBeenCalled();
   });
 
   it('never spends on validation errors, not_found or rate limits', async () => {
@@ -528,6 +546,10 @@ describe('handleConsolidationEvaluate: credits', () => {
     expect(r.status).toBe(502);
     expect(r.json).toEqual({ error: 'ai_failed', message: 'Evaluarea nu a reușit. Încearcă din nou.' });
     expect(error.mock.calls.some((c) => String(c.join(' ')).includes('refund'))).toBe(true);
+    expect(failure.mock.calls).toEqual([
+      [ROUTE, 'evaluate', expect.any(Error), 502],
+      [ROUTE, 'refund', expect.objectContaining({ message: 'refund down' }), 502],
+    ]);
   });
 
   it('a failing spend is an ai_failed without calling the evaluator', async () => {
@@ -594,6 +616,7 @@ describe('handleConsolidationEvaluate: access gate', () => {
     const r = await handleConsolidationEvaluate(compReq, 'u1', deps({ db: fakeDb({ access: false, rpc }) }));
     expect(r.status).toBe(403);
     expect(error).toHaveBeenCalledTimes(1);
+    expect(failure.mock.calls).toEqual([[ROUTE, 'log_check_blocked', expect.any(Error)]]);
   });
 
   it('a suspended student is refused as suspended before the access check', async () => {

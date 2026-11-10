@@ -3,7 +3,18 @@
 
 const EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
 const EMAIL_TOKEN = '[email]';
-const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie']);
+// Credentials, plus the client IP (PII) as proxies and Vercel forward it.
+const SENSITIVE_HEADERS = new Set([
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'x-forwarded-for',
+  'x-real-ip',
+  'cf-connecting-ip',
+  'true-client-ip',
+  'forwarded',
+  'x-vercel-forwarded-for',
+]);
 
 // No index signatures: Sentry's event types are interfaces, which TypeScript does not treat as having one, so an
 // index signature here would make `scrubEvent` unusable as `beforeSend`.
@@ -47,6 +58,7 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
     out.request = next;
   }
 
+  // The id only: drops email, username and `ip_address`.
   if (out.user) out.user = out.user.id === undefined ? {} : { id: out.user.id };
 
   if (out.exception?.values) {
