@@ -23,26 +23,33 @@ const node = (lessons: ReturnType<typeof lesson>[], children: TreeNode[] = []): 
   id: 'n1', parent_id: null, title: 'Tema', position: 0, children, lessons,
 });
 
+const hintOf = (btn: HTMLElement) => {
+  const id = btn.getAttribute('aria-describedby');
+  return id ? document.getElementById(id) : null;
+};
+
 describe('TreeEditor delete protection', () => {
-  it('disables delete for a published lesson with a hint', () => {
+  it('disables delete for a published lesson and shows the hint as visible text', () => {
     render(<TreeEditor tree={[node([lesson('p', 'published')])]} />);
-    const btn = screen.getByTitle('Depublică lecția întâi');
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
-    expect(btn.textContent).toBe('Șterge lecția');
+    const btn = screen.getByRole('button', { name: 'Șterge lecția' }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(hintOf(btn)?.textContent).toBe('Depublică lecția întâi');
   });
 
   it('keeps delete enabled for a draft lesson', () => {
     render(<TreeEditor tree={[node([lesson('d', 'draft')])]} />);
-    expect((screen.getByRole('button', { name: 'Șterge lecția' }) as HTMLButtonElement).disabled).toBe(false);
+    const btn = screen.getByRole('button', { name: 'Șterge lecția' }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    expect(btn.getAttribute('aria-describedby')).toBeNull();
   });
 
   it('disables node delete when its subtree holds published lessons, counting nested ones', () => {
     const child: TreeNode = { id: 'n2', parent_id: 'n1', title: 'Sub', position: 0, children: [], lessons: [{ ...lesson('c', 'published'), node_id: 'n2' }] };
     render(<TreeEditor tree={[node([lesson('p', 'published'), lesson('d', 'draft')], [child])]} />);
-    const hinted = screen.getAllByTitle(/Conține lecții publicate/);
-    expect(hinted[0].getAttribute('title')).toBe('Conține lecții publicate (2). Depublică-le întâi');
-    expect((hinted[0] as HTMLButtonElement).disabled).toBe(true);
-    expect(hinted[1].getAttribute('title')).toBe('Conține lecții publicate (1). Depublică-le întâi');
+    const [outer, inner] = screen.getAllByRole('button', { name: 'Șterge' }) as HTMLButtonElement[];
+    expect(outer.disabled).toBe(true);
+    expect(hintOf(outer)?.textContent).toBe('Conține lecții publicate (2). Depublică-le întâi');
+    expect(hintOf(inner)?.textContent).toBe('Conține lecții publicate (1). Depublică-le întâi');
   });
 
   it('asks before unpublishing and calls setLessonStatus only after confirming', async () => {

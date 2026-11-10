@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { Alert, Badge, Button, ButtonGroup, Form, ListGroup, Modal } from 'react-bootstrap';
 import type { LessonStatus } from '@prepio/shared';
 import {
@@ -38,6 +38,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; first: boolean; last: boolean; run: Run; ask: Ask }) {
   const published = lesson.status === 'published';
+  const hintId = useId();
   const next: LessonStatus = published ? 'draft' : 'published';
   return (
     <ListGroup.Item className="d-flex flex-wrap align-items-center gap-2 py-2" data-testid="lesson-row">
@@ -68,6 +69,7 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
         <Button
           variant="outline-danger"
           disabled={published}
+          aria-describedby={published ? hintId : undefined}
           title={published ? 'Depublică lecția întâi' : undefined}
           onClick={() =>
             ask({
@@ -81,6 +83,7 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
           Șterge lecția
         </Button>
       </ButtonGroup>
+      {published && <small id={hintId} className="text-muted w-100 text-end">Depublică lecția întâi</small>}
     </ListGroup.Item>
   );
 }
@@ -88,6 +91,7 @@ function LessonRow({ lesson, first, last, run, ask }: { lesson: TreeLesson; firs
 function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: boolean; last: boolean; run: Run; ask: Ask }) {
   const counts = countDescendants(node);
   const publishedCount = publishedLessonCount(node);
+  const hintId = useId();
   return (
     <ListGroup.Item data-testid="node-row" className="p-0 border-0 bg-transparent">
       <div className="card mb-2">
@@ -124,6 +128,7 @@ function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: bool
               <Button
                 variant="outline-danger"
                 disabled={publishedCount > 0}
+                aria-describedby={publishedCount > 0 ? hintId : undefined}
                 title={publishedCount > 0 ? `Conține lecții publicate (${publishedCount}). Depublică-le întâi` : undefined}
                 onClick={() =>
                   ask({
@@ -137,6 +142,7 @@ function NodeItem({ node, first, last, run, ask }: { node: TreeNode; first: bool
                 Șterge
               </Button>
             </ButtonGroup>
+            {publishedCount > 0 && <small id={hintId} className="text-muted w-100 text-end">Conține lecții publicate ({publishedCount}). Depublică-le întâi</small>}
           </div>
           {node.lessons.length > 0 && (
             <ListGroup className="mt-2">
