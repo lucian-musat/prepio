@@ -10,7 +10,7 @@ Prepio is a multi-platform product made of three apps:
 
 1. Read `docs/STATUS.md` — where the project is, decisions taken, and the prioritised backlog. Update it whenever work changes the status or completes/adds backlog items.
 2. The POC spec and plan in `docs/superpowers/` are **done** — don't re-execute that plan. New work gets its own spec and plan (see "Workflow — Superpowers" below), saved as `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`.
-3. Before implementing, ask the owner whether to work on a branch or directly on `main` (the POC was built on `main` by the owner's choice; that was a one-off answer).
+3. Implementation always happens on a new branch (see "Branches and PRs"); don't ask.
 
 Stack, layout and commands: see `README.md`. Deploy: `docs/deploy.md`. Database changes: `docs/database-migrations.md`.
 
@@ -27,6 +27,17 @@ Production DB credentials live in `~/.config/prepio/supabase.env` (chmod 600, ou
 
 - Remote: `git@github.com:lucian-musat/prepio.git`
 - Default branch: `main`
+
+## Branches and PRs
+
+Standing workflow rule (owner decision, replaces asking about a branch):
+
+- All implementation happens on a new branch named `feat/<topic>` or `fix/<topic>`, never directly on `main`; use a worktree for feature work.
+- At the end, push the branch, open a PR to `main` with `gh pr create` and watch its checks with `gh pr checks --watch`.
+- If CI fails, fix the cause on the branch and repeat until it is green.
+- When CI is green and the local verification (tests plus the browser walk from the testing rule) is done and reported, merge with `gh pr merge --squash --delete-branch`, then sync local `main`.
+- Merging to `main` deploys prepio-admin and prepio-web through Vercel. When a release needs an ordered rollout (see `docs/deploy.md`), do the steps in the documented order; a migration the code needs is pushed with `pnpm db:cloud:push` **before** the merge.
+- Never push to `main` directly. Never merge on red or pending CI.
 
 ## Workflow — Superpowers
 
