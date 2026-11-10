@@ -345,17 +345,59 @@ describe('cause / effect labels', () => {
   });
 });
 
-it('a new role label re-measures the words it shifts (web onLayout only fires on resize): the paragraphs remount', async () => {
-  const r = await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
-  const before = screen.getByTestId('paragraph-0');
-  await r.rerender(<MarkableText source={source} state={state({ marks: [mark(2, 3)] })} dispatch={jest.fn()} />);
-  expect(screen.getByTestId('paragraph-0')).toBe(before); // an info mark adds no pill: nothing moves
-  await r.rerender(<MarkableText source={source} state={state({ marks: [mark(2, 3, 'cause')] })} dispatch={jest.fn()} />);
-  expect(screen.getByTestId('paragraph-0')).not.toBe(before);
+describe('pill layout (web onLayout only fires on resize: moved pills remount the paragraphs)', () => {
+  const { Platform } = require('react-native');
+  let os: string;
+  beforeEach(() => {
+    os = Platform.OS;
+    Platform.OS = 'web';
+  });
+  afterEach(() => {
+    Platform.OS = os;
+  });
+  const view = (s: Partial<MarkerState>) => <MarkableText source={source} state={state(s)} dispatch={jest.fn()} />;
+
+  it('a new role pill remounts the paragraphs; an info mark does not', async () => {
+    const r = await render(view({}));
+    const before = screen.getByTestId('paragraph-0');
+    await r.rerender(view({ marks: [mark(2, 3)] }));
+    expect(screen.getByTestId('paragraph-0')).toBe(before);
+    await r.rerender(view({ marks: [mark(2, 3, 'cause')] }));
+    expect(screen.getByTestId('paragraph-0')).not.toBe(before);
+  });
+
+  it('swapping the roles remounts (CAUZĂ and EFECT have different widths)', async () => {
+    const r = await render(view({ marks: [mark(0, 1, 'cause'), mark(4, 5, 'effect')] }));
+    const before = screen.getByTestId('paragraph-0');
+    await r.rerender(view({ marks: [mark(0, 1, 'effect'), mark(4, 5, 'cause')] }));
+    expect(screen.getByTestId('paragraph-0')).not.toBe(before);
+  });
+
+  it('a fresh drag over the other role keeps its pill: nothing reflows under the finger', async () => {
+    const marks = [mark(2, 3, 'cause')];
+    const r = await render(view({ marks }));
+    const before = screen.getByTestId('paragraph-0');
+    await r.rerender(view({ marks, drag: { sourceId: 's1', pen: 'effect', a: 1, b: 4 } }));
+    expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toHaveTextContent('CAUZĂ');
+    expect(screen.getByTestId('paragraph-0')).toBe(before);
+  });
+
+  it('a start-handle drag keeps the pill where the mark started until it is dropped', async () => {
+    const lifted = { index: 0, mark: mark(2, 5, 'cause') };
+    const r = await render(view({ marks: [lifted.mark] }));
+    const before = screen.getByTestId('paragraph-0');
+    await r.rerender(view({ drag: { sourceId: 's1', pen: 'cause', a: 5, b: 1, lifted } }));
+    await r.rerender(view({ drag: { sourceId: 's1', pen: 'cause', a: 5, b: 0, lifted } }));
+    expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toHaveTextContent('CAUZĂ');
+    expect(screen.queryByTestId('role-label-0', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByTestId('paragraph-0')).toBe(before);
+  });
 });
 
-it('a cause mark lifted by its handle keeps its pill while it is dragged', async () => {
-  const lifted = { index: 0, mark: mark(2, 3, 'cause') };
-  await render(<MarkableText source={source} state={state({ drag: { sourceId: 's1', pen: 'cause', a: 2, b: 5, lifted } })} dispatch={jest.fn()} />);
-  expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toHaveTextContent('CAUZĂ');
+it('native: a new role pill does not remount the paragraphs (onLayout follows position changes there)', async () => {
+  const r = await render(<MarkableText source={source} state={state()} dispatch={jest.fn()} />);
+  const before = screen.getByTestId('paragraph-0');
+  await r.rerender(<MarkableText source={source} state={state({ marks: [mark(2, 3, 'cause')] })} dispatch={jest.fn()} />);
+  expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getByTestId('paragraph-0')).toBe(before);
 });

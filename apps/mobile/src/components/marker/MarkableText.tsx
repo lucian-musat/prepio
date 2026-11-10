@@ -311,28 +311,31 @@ export default function MarkableText({
   const onInnerLayout = useCallback((i: number, e: LayoutChangeEvent) => void layout.current.inner.set(i, e.nativeEvent.layout), []);
   const onA11yTap = useCallback((i: number) => live.current.dispatch({ type: 'tap', sourceId: live.current.sourceId, i }), []);
 
+  // CAUZĂ / EFECT pills by word: from the committed marks only, plus a mark lifted by its handle at its original
+  // start, so nothing reflows under the finger during a drag (they move when the drag is dropped).
+  const pills = new Map<number, Role>();
+  for (const m of drag?.lifted ? [...state.marks, drag.lifted.mark] : state.marks) {
+    if (m.sourceId === source.id && isRole(m.pen)) pills.set(m.from, m.pen);
+  }
+
   const paintOf = (i: number) => {
     const w = words[i]!;
     const sameParagraphNext = words[i + 1]?.paragraph === w.paragraph;
     let pen: Pen | null = null;
     let from = -1;
     let to = -1;
-    let label: Role | null = null;
     if (drag && i >= Math.min(drag.a, drag.b) && i <= Math.max(drag.a, drag.b)) {
       pen = drag.pen;
       from = Math.min(drag.a, drag.b);
       to = Math.max(drag.a, drag.b);
-      // A mark lifted by its handle keeps its pill (the text would jump under the finger otherwise).
-      if (drag.lifted && i === from && isRole(pen)) label = pen;
     } else {
       const m = state.marks.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
       if (m) ({ pen, from, to } = m);
-      if (m && i === m.from && isRole(m.pen)) label = m.pen;
     }
     const v = verdicts?.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
     return {
       pen,
-      label,
+      label: pills.get(i) ?? null,
       first: i === from,
       last: i === to,
       cont: pen !== null && i < to && sameParagraphNext,
@@ -343,15 +346,16 @@ export default function MarkableText({
   };
 
   // A role pill moves the words after it, and web onLayout only fires on resize: remounting the paragraphs whenever
-  // the pills move re-measures every word, so hit-testing and handles never use stale positions.
-  const pills = words.filter((w) => paintOf(w.i).label).map((w) => w.i).join(',');
+  // the pills change re-measures every word, so hit-testing and handles never use stale positions. Native onLayout
+  // follows position changes, so the key only changes on web. The pills stay put during a drag (see `pills`).
+  const pillKey = web ? [...pills].map(([i, role]) => `${i}${role}`).join(',') : '';
 
   return (
     <GestureDetector gesture={gesture} touchAction="pan-y" userSelect="none">
       <View ref={rootRef} onLayout={onRootLayout} style={styles.root}>
         {paragraphs.map((ws, p) => (
           <View
-            key={`${p}:${pills}`}
+            key={`${p}:${pillKey}`}
             testID={`paragraph-${p}`}
             style={[styles.paragraph, p > 0 && styles.paragraphGap]}
             onLayout={(e) => {
