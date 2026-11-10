@@ -58,7 +58,7 @@ async function removeTestLesson(t: TestLesson) {
     }
   }
   if (t.rootId) {
-    const { error } = await db.from('nodes').delete().eq('id', t.rootId);
+    const { error } = await service.from('nodes').delete().eq('id', t.rootId);
     if (error) failures.push(`node ${t.rootId}: ${error.message}`);
   }
   if (failures.length) throw new Error(`[test] cleanup failed: ${failures.join('; ')}`);

@@ -38,10 +38,10 @@ set local request.jwt.claims = '{"role":"service_role"}';
 select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-0000000000b9' $$,
   'service_role can delete a published lesson (JWT role claim)');
 
--- A bare service_role connection without a JWT claim (current_user fallback).
+-- A bare service_role connection without a JWT claim: auth.role() is not 'authenticated', so the delete is allowed.
 set local request.jwt.claims = '';
 select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-0000000000b6' $$,
-  'service_role without a JWT claim can delete a published lesson (current_user fallback)');
+  'service_role without a JWT claim can delete a published lesson (auth.role() is not authenticated)');
 
 -- Plain postgres (SQL editor, migrations) is not an authenticated session.
 reset role;

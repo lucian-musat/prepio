@@ -84,7 +84,7 @@ test.afterAll(async () => {
       return service.storage.from('images').remove(listed.data.map((f) => `${folder}/${f.name}`));
     });
   }
-  if (rootId) await step(`node ${rootId}`, async () => db.from('nodes').delete().eq('id', rootId)); // cascades
+  if (rootId) await step(`node ${rootId}`, async () => service.from('nodes').delete().eq('id', rootId)); // cascades
   // after the node: its exercises reference the template
   if (templateId) await step(`template ${templateId}`, async () => service.from('solution_templates').delete().eq('id', templateId!));
   if (studentId) await step(`user ${studentId}`, async () => service.auth.admin.deleteUser(studentId!));
