@@ -5,15 +5,16 @@ const EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
 const EMAIL_TOKEN = '[email]';
 const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie']);
 
+// No index signatures: Sentry's event types are interfaces, which TypeScript does not treat as having one, so an
+// index signature here would make `scrubEvent` unusable as `beforeSend`.
 type ScrubbableEvent = {
   message?: string;
-  request?: { headers?: Record<string, unknown>; data?: unknown; [k: string]: unknown };
-  user?: { id?: unknown; [k: string]: unknown };
-  exception?: { values?: Array<{ value?: string; [k: string]: unknown }> };
+  request?: { headers?: Record<string, unknown>; data?: unknown; url?: string; query_string?: unknown };
+  user?: { id?: unknown };
+  exception?: { values?: Array<{ value?: string }> };
   breadcrumbs?: Array<{
     message?: string;
     data?: Record<string, unknown>;
-    [k: string]: unknown;
   }>;
 };
 
