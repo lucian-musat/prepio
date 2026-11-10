@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scrubEvent, scrubUrl } from './sentryScrub';
+import { scrubBreadcrumb, scrubEvent, scrubSpan, scrubUrl } from './sentryScrub';
 
 describe('scrubEvent', () => {
   const make = () => ({
@@ -102,5 +102,79 @@ describe('scrubUrl', () => {
       'https://prepio.ro/#access_token=[redacted]&refresh_token=[redacted]&type=bearer',
     );
     expect(scrubUrl('/lectii/3')).toBe('/lectii/3');
+  });
+});
+
+describe('scrubBreadcrumb', () => {
+  it('scrubs the message and url/to/from', () => {
+    const out = scrubBreadcrumb({
+      category: 'navigation',
+      message: 'signed in as ana@example.ro',
+      data: { url: 'https://x.ro/cb?code=secret&next=/home', to: '/b#access_token=t', other: 1 },
+    });
+    expect(out.message).toBe('signed in as [email]');
+    expect(out.data).toEqual({ url: 'https://x.ro/cb?code=[redacted]&next=/home', to: '/b#access_token=[redacted]', other: 1 });
+  });
+
+  it('drops the logged arguments of console breadcrumbs, keeping the message', () => {
+    const out = scrubBreadcrumb({
+      category: 'console',
+      message: 'profile ana@example.ro',
+      data: { arguments: [{ email: 'ana@example.ro' }], logger: 'console' },
+    });
+    expect(out.data).toEqual({ logger: 'console' });
+    expect(out.message).toBe('profile [email]');
+  });
+
+  it('keeps `arguments` outside console breadcrumbs and handles empty ones', () => {
+    expect(scrubBreadcrumb({ category: 'ui', data: { arguments: 1 } }).data).toEqual({ arguments: 1 });
+    expect(scrubBreadcrumb({})).toEqual({});
+  });
+});
+
+describe('scrubSpan', () => {
+  it('scrubs the description, data.url and data["http.url"], keeping the rest', () => {
+    const out = scrubSpan({
+      span_id: 's',
+      description: 'GET https://prepio.ro/?code=secret',
+      data: {
+        url: 'https://prepio.ro/#access_token=tok&type=bearer',
+        'http.url': 'https://x.supabase.co/auth/v1/token?refresh_token=r',
+        'http.method': 'GET',
+      },
+    });
+    expect(out).toEqual({
+      span_id: 's',
+      description: 'GET https://prepio.ro/?code=[redacted]',
+      data: {
+        url: 'https://prepio.ro/#access_token=[redacted]&type=bearer',
+        'http.url': 'https://x.supabase.co/auth/v1/token?refresh_token=[redacted]',
+        'http.method': 'GET',
+      },
+    });
+  });
+
+  it('scrubs the OpenTelemetry URL attributes of server spans', () => {
+    const out = scrubSpan({
+      data: {
+        'url.full': 'https://admin.prepio.ro/auth/callback?code=c1',
+        'http.target': '/auth/callback?code=c1',
+        'url.query': 'code=c1&next=/',
+        'http.query': '?token=t1',
+        'http.fragment': '#access_token=a1',
+      },
+    });
+    expect(out.data).toEqual({
+      'url.full': 'https://admin.prepio.ro/auth/callback?code=[redacted]',
+      'http.target': '/auth/callback?code=[redacted]',
+      'url.query': 'code=[redacted]&next=/',
+      'http.query': '?token=[redacted]',
+      'http.fragment': '#access_token=[redacted]',
+    });
+  });
+
+  it('returns spans without data or description unchanged (never null)', () => {
+    const span: { span_id: string; description?: string } = { span_id: 's' };
+    expect(scrubSpan(span)).toEqual(span);
   });
 });

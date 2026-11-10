@@ -12,10 +12,7 @@ type ScrubbableEvent = {
   request?: { headers?: Record<string, unknown>; data?: unknown; url?: string; query_string?: unknown };
   user?: { id?: unknown };
   exception?: { values?: Array<{ value?: string }> };
-  breadcrumbs?: Array<{
-    message?: string;
-    data?: Record<string, unknown>;
-  }>;
+  breadcrumbs?: Array<ScrubbableBreadcrumb>;
 };
 
 const scrubText = (s: string): string => s.replace(EMAIL_RE, EMAIL_TOKEN);
@@ -61,21 +58,45 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
     };
   }
 
-  if (out.breadcrumbs) {
-    out.breadcrumbs = out.breadcrumbs.map((b) => {
-      const nb = { ...b };
-      if (typeof nb.message === 'string') nb.message = scrubText(nb.message);
-      if (nb.data) {
-        const data = { ...nb.data };
-        for (const k of BREADCRUMB_URL_KEYS) {
-          const v = data[k];
-          if (typeof v === 'string') data[k] = scrubUrl(v);
-        }
-        nb.data = data;
-      }
-      return nb;
-    });
-  }
+  if (out.breadcrumbs) out.breadcrumbs = out.breadcrumbs.map(scrubBreadcrumb);
 
   return out as E;
+}
+
+type ScrubbableBreadcrumb = { category?: string; message?: string; data?: Record<string, unknown> };
+
+/** `beforeBreadcrumb`: emails in the message, auth params in url/to/from; console breadcrumbs lose their arguments. */
+export function scrubBreadcrumb<B extends ScrubbableBreadcrumb>(breadcrumb: B): B {
+  const out: ScrubbableBreadcrumb = { ...breadcrumb };
+  if (typeof out.message === 'string') out.message = scrubText(out.message);
+  if (out.data) {
+    const data = { ...out.data };
+    for (const k of BREADCRUMB_URL_KEYS) {
+      const v = data[k];
+      if (typeof v === 'string') data[k] = scrubUrl(v);
+    }
+    // Logged objects (profiles, API errors) can carry emails anywhere inside: keep the message, drop the arguments.
+    if (out.category === 'console') delete data.arguments;
+    out.data = data;
+  }
+  return out as B;
+}
+
+type ScrubbableSpan = { description?: string; data?: Record<string, unknown> };
+// Browser fetch/navigation spans use `url` / `http.url`; Node (OpenTelemetry) server spans the `url.*` / `http.*` ones.
+const SPAN_URL_KEYS = ['url', 'http.url', 'url.full', 'http.target', 'url.query', 'http.query', 'http.fragment'];
+
+/** `beforeSendSpan`: page-load / navigation / fetch spans carry URLs (e.g. the OAuth return with `?code=`). Never null. */
+export function scrubSpan<S extends ScrubbableSpan>(span: S): S {
+  const out: ScrubbableSpan = { ...span };
+  if (typeof out.description === 'string') out.description = scrubUrl(out.description);
+  if (out.data) {
+    const data = { ...out.data };
+    for (const k of SPAN_URL_KEYS) {
+      const v = data[k];
+      if (typeof v === 'string') data[k] = scrubUrl(v);
+    }
+    out.data = data;
+  }
+  return out as S;
 }

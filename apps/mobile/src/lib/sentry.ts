@@ -1,40 +1,9 @@
 import * as Sentry from '@sentry/react-native';
-import { scrubEvent, scrubUrl } from '@prepio/shared';
+import { scrubBreadcrumb, scrubEvent, scrubSpan } from '@prepio/shared';
 
 // Expo inlines `process.env.EXPO_PUBLIC_*` literals at bundle time, so these must stay plain property reads.
 // No DSN (local dev, tests, CI) means Sentry is never initialised and every helper here is a no-op.
 const dsn = (): string => process.env.EXPO_PUBLIC_SENTRY_DSN || '';
-
-type Breadcrumb = Parameters<NonNullable<Sentry.ReactNativeOptions['beforeBreadcrumb']>>[0];
-type SpanJSON = Parameters<NonNullable<Sentry.ReactNativeOptions['beforeSendSpan']>>[0];
-
-const SPAN_URL_KEYS = ['url', 'http.url'];
-
-/** Breadcrumbs are synced to the native layer too (native crash reports skip `beforeSend`): scrub on record. */
-function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
-  const out = scrubEvent({ breadcrumbs: [breadcrumb] }).breadcrumbs?.[0] ?? breadcrumb;
-  // Logged objects (profiles, API errors) can carry emails anywhere inside: keep the message, drop the arguments.
-  if (out.category === 'console' && out.data && 'arguments' in out.data) {
-    const { arguments: _dropped, ...data } = out.data;
-    return { ...out, data };
-  }
-  return out;
-}
-
-/** Page-load / navigation / fetch spans carry URLs, e.g. the OAuth return with `?code=` or `#access_token=`. */
-function scrubSpan(span: SpanJSON): SpanJSON {
-  const out = { ...span };
-  if (typeof out.description === 'string') out.description = scrubUrl(out.description);
-  if (out.data) {
-    const data = { ...out.data };
-    for (const k of SPAN_URL_KEYS) {
-      const v = data[k];
-      if (typeof v === 'string') data[k] = scrubUrl(v);
-    }
-    out.data = data;
-  }
-  return out;
-}
 
 /** Initialises Sentry when the build has a DSN. Returns whether it is on. */
 export function initSentry(): boolean {
@@ -54,7 +23,9 @@ export function initSentry(): boolean {
     tracePropagationTargets: [],
     beforeSend: scrubEvent,
     beforeSendTransaction: scrubEvent,
+    // Page-load / navigation / fetch spans carry URLs (the OAuth return with `?code=` or `#access_token=`).
     beforeSendSpan: scrubSpan,
+    // Breadcrumbs are synced to the native layer too (native crash reports skip `beforeSend`): scrub on record.
     beforeBreadcrumb: scrubBreadcrumb,
   });
   return true;
