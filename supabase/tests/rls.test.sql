@@ -80,6 +80,7 @@ select throws_ok(
   $$ update ai_settings set grade_max = grade_min $$,
   '23514', null, 'ai_settings rejects grade_max <= grade_min');
 
+set local request.jwt.claims = '{"role":"service_role"}'; -- published lessons are only deletable by the service role
 delete from nodes where id = '00000000-0000-0000-0000-0000000000a1';
 select is(
   (select (select count(*) from nodes
