@@ -6,6 +6,7 @@ import { GENERIC_ERROR, UserError } from '@/lib/data/db';
 import * as students from '@/lib/data/students';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
+import { captureError } from '@/lib/sentry';
 
 export async function adjustCreditsAction(userId: string, delta: number, reason: string): Promise<ActionResult<number>> {
   try {
@@ -16,6 +17,7 @@ export async function adjustCreditsAction(userId: string, delta: number, reason:
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[students action] unexpected error:', e);
+    captureError(e, { route: 'students action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
@@ -30,6 +32,7 @@ async function run<T>(fn: (db: Awaited<ReturnType<typeof createServerClient>>) =
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[students action] unexpected error:', e);
+    captureError(e, { route: 'students action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
@@ -73,6 +76,7 @@ export async function deleteStudentAction(
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[students action] unexpected error:', e);
+    captureError(e, { route: 'students action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }

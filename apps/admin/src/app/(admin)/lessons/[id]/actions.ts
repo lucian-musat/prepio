@@ -9,6 +9,7 @@ import * as lesson from '@/lib/data/lesson';
 import { fetchLinkPreview, type LinkMetadata } from '@/lib/linkPreview';
 import type { CardInput, ItemTable, QuestionInput } from '@/lib/data/lesson';
 import { createServerClient } from '@/lib/supabase/server';
+import { captureError } from '@/lib/sentry';
 
 const TABLES: readonly string[] = ['cards', 'questions', 'consolidation_exercises', 'sources'];
 
@@ -27,6 +28,7 @@ async function run<T = void>(
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[lesson action] unexpected error:', e);
+    captureError(e, { route: 'lesson action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }

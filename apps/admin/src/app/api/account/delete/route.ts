@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { authenticateBearer } from '@/lib/auth/bearer';
 import { allowedOrigins, corsHeaders } from '@/lib/evaluate/cors';
+import { captureError } from '@/lib/sentry';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     return new Response(null, { status: 204, headers: headers(request) });
   } catch (e) {
     console.error('[account/delete] unexpected failure:', e);
+    captureError(e, { route: 'account/delete' });
     return reply(500, { error: 'server_error', message: 'Contul nu a putut fi șters. Încearcă din nou.' }, request);
   }
 }

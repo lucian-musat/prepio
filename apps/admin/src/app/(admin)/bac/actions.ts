@@ -8,6 +8,7 @@ import type { BacItemInput, BacSubjectInput } from '@/lib/data/bac';
 import type { SourceImpact, SourceInput } from '@/lib/data/consolidation';
 import { GENERIC_ERROR, UserError } from '@/lib/data/db';
 import { createServerClient } from '@/lib/supabase/server';
+import { captureError } from '@/lib/sentry';
 
 async function run<T = void>(
   fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<T>,
@@ -24,6 +25,7 @@ async function run<T = void>(
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[bac action] unexpected error:', e);
+    captureError(e, { route: 'bac action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
