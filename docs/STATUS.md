@@ -70,7 +70,13 @@ Last updated: 2026-11-11
 - Optional: add `SENTRY_AUTH_TOKEN` to `prepio-admin` Preview, so preview builds upload source maps too.
 - Build a new APK, which carries the Sentry native module and the consent flow, and run the phone checks listed under PRs 2, 4 and 5.
 
-**Numbered marks in their own colours (2026-11-11, owner request: on requirements with several marks students could not tell which mark was which) — branch `feat/multi-mark-colors`.** Spec `docs/superpowers/specs/2026-11-11-multi-mark-colors-design.md`, plan `docs/superpowers/plans/2026-11-11-multi-mark-colors.md`, mockup `docs/design/2026-11-11-multi-mark-colors-mockup.html` (owner chose variant B, „INFO 1” pills).
+**Owner actions waiting on the PFA (owner's list, 2026-11-11):**
+- Dedicated `@prepio.ro` email addresses, plus an email server for sending email from the app. Blocked until the PFA exists.
+- Developer accounts on Google Play and the Apple App Store. They need the PFA's details.
+- An account with a payment processor, so payments can happen in the app (today purchases are `provider='none'`). Needs the PFA with a bank account.
+- Upgrade hosting (Vercel, Supabase) and the APK builder (EAS, `https://expo.dev/accounts/lucianm91s-team/settings/billing`) to production plans, after the app is in the stores. Until then, APKs are built locally (`scripts/build-apk-local.sh`).
+
+**Numbered marks in their own colours (2026-11-11, owner request: on requirements with several marks students could not tell which mark was which) — released 2026-11-11: `main` `5936968` (PR #6), prepio-web and prepio-admin Ready (no migration), the production web bundle carries the new copy.** Phone check before the release: headless Chromium with real touch events (tap-tap, long-press drag, handles, the tray's mini pills, ✕) at 360×780 and 412×915, 16/16 each, console clean. Spec `docs/superpowers/specs/2026-11-11-multi-mark-colors-design.md`, plan `docs/superpowers/plans/2026-11-11-multi-mark-colors.md`, mockup `docs/design/2026-11-11-multi-mark-colors-mockup.html` (owner chose variant B, „INFO 1” pills).
 - Applies to `source_info` and `viewpoint` with `count` > 1, in BAC papers and consolidation; `count` = 1 and cause-effect are unchanged. Grading, the stored answer and the API are unchanged; no migration, no new native module.
 - Each mark has its slot's colour (`markerSlot`: 1 yellow, 2 blue, 3 pink; AA-checked) and a pill before it in the text („INFO 2” / „SUPORT 2”), kept after checking; the slot under the source has the same bar colour and pill.
 - A step banner under the prompt replaces the pen button: „Informația 1 din 2” + „Marchezi prima informație” and a progress bar per slot; „ · o refaci” when redoing a filled slot; „✓ Gata, toate informațiile marcate” + „Atinge un slot sau un marcaj ca să-l schimbi.” once all are filled. The phone reader's tray has a compact step and one mini pill per slot.
