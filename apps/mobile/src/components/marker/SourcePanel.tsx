@@ -6,6 +6,7 @@ import MarkableText from './MarkableText';
 import type { Pen } from './markerReducer';
 import SourceCard from './SourceCard';
 import CauseEffectBanner from './CauseEffectBanner';
+import NumberedBanner from './NumberedBanner';
 import SourceReader, { canMark, citation, hintFor, isCauseEffect, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
 import SourceSplit from './SourceSplit';
 
@@ -77,16 +78,21 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
   };
 
   const causeEffect = canMark(marker) && isCauseEffect(marker.cfg);
-  // Cause-effect: the role is in the banner under the prompt, so only the gesture hint stays here.
+  const numbered = canMark(marker) && !!marker.cfg.numbered;
+  // Cause-effect and numbered: the role / slot is in the banner under the prompt, so only the gesture hint stays here.
   const pens = canMark(marker) ? (
     <View style={styles.pens}>
-      {causeEffect ? null : <PenBar marker={marker} />}
+      {causeEffect || numbered ? null : <PenBar marker={marker} />}
       <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
         {hintFor(marker.cfg, marker.state)}
       </AppText>
     </View>
   ) : null;
-  const banner = causeEffect ? <CauseEffectBanner state={marker!.state} clues={!!marker!.clues} /> : null;
+  const banner = causeEffect ? (
+    <CauseEffectBanner state={marker!.state} clues={!!marker!.clues} />
+  ) : numbered ? (
+    <NumberedBanner cfg={marker!.cfg} state={marker!.state} />
+  ) : null;
   const promptText =
     promptLead || promptTail ? (
       <AppText role="question">

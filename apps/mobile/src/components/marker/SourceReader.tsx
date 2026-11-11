@@ -21,6 +21,7 @@ import { AppText, Button, IconButton } from '../../ui';
 import { raisedShadow } from '../../ui/elevation';
 import { CauseEffectTrayStep } from './CauseEffectBanner';
 import { markBg } from './numbered';
+import { NumberedTrayStep } from './NumberedBanner';
 import MarkableText, { PEN_LABEL, type DragGesture } from './MarkableText';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
 
@@ -44,12 +45,13 @@ export const HINT = {
   start: 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.',
   anchored: 'Atinge ultimul cuvânt al informației.',
   pickGap: 'Atinge golul pe care vrei să-l schimbi.',
+  pickSlot: 'Atinge informația pe care vrei s-o schimbi.',
 } as const;
 
-/** The one-line gesture hint under the pens (long-sources mockup `#msg`); the role itself is in the cause-effect banner. */
-export function hintFor(_cfg: MarkerConfig, s: MarkerState): string {
+/** The one-line gesture hint under the pens (long-sources mockup `#msg`); the role / slot itself is in the banner. */
+export function hintFor(cfg: MarkerConfig, s: MarkerState): string {
   if (s.anchor) return HINT.anchored;
-  if (s.pen === null) return HINT.pickGap;
+  if (s.pen === null) return cfg.numbered ? HINT.pickSlot : HINT.pickGap;
   return HINT.start;
 }
 
@@ -290,6 +292,15 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
             {canMark(marker) && isCauseEffect(marker.cfg) ? (
               <>
                 <CauseEffectTrayStep state={marker.state} sources={sources.map((s) => s.source)} dispatch={marker.dispatch} />
+                {marker.state.anchor || marker.state.pen === null ? (
+                  <AppText role="caption" color="textMuted" style={styles.hint} accessibilityLiveRegion="polite">
+                    {hintFor(marker.cfg, marker.state)}
+                  </AppText>
+                ) : null}
+              </>
+            ) : canMark(marker) && marker.cfg.numbered ? (
+              <>
+                <NumberedTrayStep cfg={marker.cfg} state={marker.state} dispatch={marker.dispatch} />
                 {marker.state.anchor || marker.state.pen === null ? (
                   <AppText role="caption" color="textMuted" style={styles.hint} accessibilityLiveRegion="polite">
                     {hintFor(marker.cfg, marker.state)}

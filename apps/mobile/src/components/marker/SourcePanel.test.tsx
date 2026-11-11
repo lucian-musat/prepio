@@ -332,3 +332,31 @@ describe('cause-effect banner', () => {
     expect(screen.queryByTestId('ce-banner')).toBeNull();
   });
 });
+
+describe('numbered banner', () => {
+  const numbered: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+
+  it('a two-information exercise: the step banner after the prompt replaces the pen', async () => {
+    await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" />);
+    expect(screen.getByTestId('num-banner')).toBeTruthy();
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf(PROMPT)).toBeLessThan(tree.indexOf('"num-banner"'));
+    expect(screen.queryByTestId('pen-info')).toBeNull();
+  });
+
+  it('every slot filled: the hint asks which information to change', async () => {
+    const marks: MarkerMark[] = [
+      { sourceId: 'short', from: 0, to: 1, pen: 'info' },
+      { sourceId: 'short', from: 3, to: 4, pen: 'info' },
+    ];
+    await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" marks={marks} />);
+    expect(screen.getByText('Atinge informația pe care vrei s-o schimbi.')).toBeTruthy();
+  });
+
+  it('the reader tray shows the compact numbered step instead of the pen', async () => {
+    await render(<Harness sources={[{ source: long('b'), label: 'B' }]} cfg={numbered} kind="info" />);
+    await press(screen.getByTestId('source-card-B'));
+    expect(screen.getByTestId('num-tray')).toBeTruthy();
+    expect(within(screen.getByTestId('source-reader')).queryByTestId('pen-info')).toBeNull();
+  });
+});
