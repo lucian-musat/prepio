@@ -15,7 +15,8 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "937265826350-m2821ldcll6s563875sq2m479dl955s3.apps.googleusercontent.com",
         "EXPO_PUBLIC_AUTH_EMAIL_ENABLED": "false",
         "EXPO_PUBLIC_SENTRY_DSN": "https://0dbd509867052fd3377cdef695dd6342@o4512407669309440.ingest.de.sentry.io/4512407702601808",
-        "EXPO_PUBLIC_SENTRY_ENV": "preview"
+        "EXPO_PUBLIC_SENTRY_ENV": "preview",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "production": {
@@ -28,7 +29,8 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "937265826350-m2821ldcll6s563875sq2m479dl955s3.apps.googleusercontent.com",
         "EXPO_PUBLIC_AUTH_EMAIL_ENABLED": "false",
         "EXPO_PUBLIC_SENTRY_DSN": "https://0dbd509867052fd3377cdef695dd6342@o4512407669309440.ingest.de.sentry.io/4512407702601808",
-        "EXPO_PUBLIC_SENTRY_ENV": "production"
+        "EXPO_PUBLIC_SENTRY_ENV": "production",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   }

@@ -20,8 +20,10 @@ const SENSITIVE_HEADERS = new Set([
 // index signature here would make `scrubEvent` unusable as `beforeSend`.
 type ScrubbableEvent = {
   message?: string;
-  request?: { headers?: Record<string, unknown>; data?: unknown; url?: string; query_string?: unknown };
+  request?: { headers?: Record<string, unknown>; data?: unknown; cookies?: unknown; url?: string; query_string?: unknown };
   user?: { id?: unknown };
+  // `object`: Sentry's `Contexts` interface fits no narrower structural type; `nextjs` is narrowed at runtime.
+  contexts?: object;
   exception?: { values?: Array<{ value?: string }> };
   breadcrumbs?: Array<ScrubbableBreadcrumb>;
 };
@@ -31,10 +33,15 @@ const scrubText = (s: string): string => s.replace(EMAIL_RE, EMAIL_TOKEN);
 // In URLs an email ends at the next delimiter, so `?email=a@b.ro&next=/home` keeps `next`.
 const URL_EMAIL_RE = /(?:[^\s@&#?=/%]|%(?!40))+(?:@|%40)[^\s@&#?=/]+\.[^\s@&#?=/]+/gi;
 const SECRET_PARAM_RE = /(^|[?&#;])(access_token|refresh_token|token|code|password)=[^&#\s]*/gi;
+// Admin search terms can be student names; a decoded path keeps the space (`?q=Ana Popescu`), so take it all.
+const SEARCH_PARAM_RE = /(^|[?&#;])(q|search)=[^&#]*/gi;
 
-// Redacts auth params (query and fragment) and emails; everything else stays intact.
+// Redacts auth params and search terms (query and fragment) and emails; everything else stays intact.
 export const scrubUrl = (s: string): string =>
-  s.replace(SECRET_PARAM_RE, '$1$2=[redacted]').replace(URL_EMAIL_RE, EMAIL_TOKEN);
+  s
+    .replace(SECRET_PARAM_RE, '$1$2=[redacted]')
+    .replace(SEARCH_PARAM_RE, '$1$2=[redacted]')
+    .replace(URL_EMAIL_RE, EMAIL_TOKEN);
 
 const BREADCRUMB_URL_KEYS = ['url', 'to', 'from'];
 
@@ -46,6 +53,8 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
   if (out.request) {
     const next: NonNullable<ScrubbableEvent['request']> = { ...out.request };
     delete next.data;
+    // `captureRequestError` sets the parsed cookies even without PII: the Supabase auth cookie holds tokens and the email.
+    delete next.cookies;
     const { headers, url, query_string: qs } = out.request;
     if (typeof url === 'string') next.url = scrubUrl(url);
     if (typeof qs === 'string') next.query_string = scrubUrl(qs);
@@ -56,6 +65,11 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
       );
     }
     out.request = next;
+  }
+
+  const nextjs = (out.contexts as { nextjs?: unknown } | undefined)?.nextjs as { request_path?: unknown } | undefined;
+  if (nextjs && typeof nextjs === 'object' && typeof nextjs.request_path === 'string') {
+    out.contexts = { ...out.contexts, nextjs: { ...nextjs, request_path: scrubUrl(nextjs.request_path) } };
   }
 
   // The id only: drops email, username and `ip_address`.
@@ -77,10 +91,28 @@ export function scrubEvent<E extends ScrubbableEvent>(event: E): E {
 
 type ScrubbableBreadcrumb = { category?: string; message?: string; data?: Record<string, unknown> };
 
-/** `beforeBreadcrumb`: emails in the message, auth params in url/to/from; console breadcrumbs lose their arguments. */
+const CONSOLE_MESSAGE_MAX = 80;
+
+/**
+ * A console breadcrumb's message joins every logged argument, an Error as `${name}: ${message}`, and that text can
+ * quote model output about a student's answer: keep the leading tag (`[bac/submit] failed`) up to the first `:`, or
+ * at most 80 characters when there is none.
+ */
+function consoleMessage(message: string): string {
+  const colon = message.indexOf(':');
+  const lead = colon >= 0 ? message.slice(0, colon) : message;
+  return scrubText(lead).slice(0, CONSOLE_MESSAGE_MAX);
+}
+
+/**
+ * `beforeBreadcrumb`: emails in the message, auth params in url/to/from; console breadcrumbs keep only their leading
+ * tag and lose their arguments.
+ */
 export function scrubBreadcrumb<B extends ScrubbableBreadcrumb>(breadcrumb: B): B {
   const out: ScrubbableBreadcrumb = { ...breadcrumb };
-  if (typeof out.message === 'string') out.message = scrubText(out.message);
+  if (typeof out.message === 'string') {
+    out.message = out.category === 'console' ? consoleMessage(out.message) : scrubText(out.message);
+  }
   if (out.data) {
     const data = { ...out.data };
     for (const k of BREADCRUMB_URL_KEYS) {

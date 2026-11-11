@@ -103,6 +103,22 @@ describe('scrubEvent', () => {
     expect(out.request?.headers).toEqual({ 'x-vercel-id': 'lhr1::abc' });
   });
 
+  it('drops request.cookies (the Supabase auth cookie holds tokens and the email)', () => {
+    const out = scrubEvent({ request: { url: '/x', cookies: { 'sb-abc-auth-token': 'base64-token' } } });
+    expect(out.request).toEqual({ url: '/x' });
+  });
+
+  it('scrubs the Next.js request path in contexts, leaving other contexts alone', () => {
+    const out = scrubEvent({
+      contexts: { nextjs: { request_path: '/students?q=Ana Popescu&page=2', router_kind: 'app' }, os: { name: 'linux' } },
+    });
+    expect(out.contexts).toEqual({
+      nextjs: { request_path: '/students?q=[redacted]&page=2', router_kind: 'app' },
+      os: { name: 'linux' },
+    });
+    expect(scrubEvent({ contexts: { nextjs: { request_path: 5 } } }).contexts).toEqual({ nextjs: { request_path: 5 } });
+  });
+
   it('drops user.ip_address, keeping only the id', () => {
     const user = { id: 'u1', ip_address: '1.2.3.4' } as { id: string };
     expect(scrubEvent({ user }).user).toEqual({ id: 'u1' });
@@ -126,6 +142,12 @@ describe('scrubUrl', () => {
     );
     expect(scrubUrl('/lectii/3')).toBe('/lectii/3');
   });
+
+  it('redacts admin search terms (q, search), which can be student names', () => {
+    expect(scrubUrl('/students?q=Ana Popescu&page=2')).toBe('/students?q=[redacted]&page=2');
+    expect(scrubUrl('/students?page=2&search=Ana%20Popescu')).toBe('/students?page=2&search=[redacted]');
+    expect(scrubUrl('/x?quality=high&seq=1')).toBe('/x?quality=high&seq=1');
+  });
 });
 
 describe('scrubBreadcrumb', () => {
@@ -147,6 +169,27 @@ describe('scrubBreadcrumb', () => {
     });
     expect(out.data).toEqual({ logger: 'console' });
     expect(out.message).toBe('profile [email]');
+  });
+
+  it('keeps only the tag of an Error-style console message (the error text can quote a student answer)', () => {
+    const out = scrubBreadcrumb({
+      category: 'console',
+      level: 'error',
+      message: '[bac/submit] failed: Error: model output: "elevul ana@x.ro a scris: Unirea din 1859"',
+      data: { arguments: ['[bac/submit] failed:', {}], logger: 'console' },
+    });
+    expect(out.message).toBe('[bac/submit] failed');
+    expect(out.data).toEqual({ logger: 'console' });
+  });
+
+  it('scrubs a console message without a colon and keeps at most 80 characters', () => {
+    expect(scrubBreadcrumb({ category: 'console', message: 'hello ana@x.ro' }).message).toBe('hello [email]');
+    expect(scrubBreadcrumb({ category: 'console', message: 'x'.repeat(200) }).message).toBe('x'.repeat(80));
+    expect(scrubBreadcrumb({ category: 'console', message: 'ana@example.ro:' }).message).toBe('[email]');
+  });
+
+  it('leaves non-console messages whole apart from emails', () => {
+    expect(scrubBreadcrumb({ category: 'ui.click', message: 'a: b ana@x.ro' }).message).toBe('a: b [email]');
   });
 
   it('keeps `arguments` outside console breadcrumbs and handles empty ones', () => {
