@@ -1,45 +1,31 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { space } from '@prepio/shared';
+import { View } from 'react-native';
 import { AppText, ScreenLayout, goBackOrHome } from '../ui';
 import { CONTACT_EMAIL, POLICY_DATE } from '../lib/legal';
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <AppText role="section" accessibilityRole="header">
-        {title}
-      </AppText>
-      {children}
-    </View>
-  );
-}
-
-function Item({ children }: { children: string }) {
-  return (
-    <View style={styles.item}>
-      <AppText role="body" color="textMuted">
-        •
-      </AppText>
-      <AppText role="body" style={styles.itemText}>
-        {children}
-      </AppText>
-    </View>
-  );
-}
+import { Item, LegalLink, OperatorDetails, Section, legalStyles } from './legal/LegalSection';
 
 /** Public privacy policy (reachable signed out). Static text only: it never queries Supabase. */
 export default function PrivacyScreen() {
   return (
     <ScreenLayout title="Politica de confidențialitate" onBack={goBackOrHome}>
-      <View style={styles.stack}>
+      <View style={legalStyles.stack}>
         <AppText role="lead" color="textMuted">
           {`Prepio este o aplicație de pregătire pentru BAC. Aici explicăm ce date folosim, de ce, cine le prelucrează și cum le poți șterge.`}
         </AppText>
         <AppText role="small" color="textMuted">
           {`Ultima actualizare: ${POLICY_DATE}.`}
         </AppText>
+
+        <Section title="Cine răspunde de datele tale">
+          <AppText role="body">Operatorul datelor tale, adică cel care decide cum sunt folosite, este:</AppText>
+          <OperatorDetails />
+          <Item>{`Email: ${CONTACT_EMAIL}`}</Item>
+        </Section>
+
+        <Section title="Vârsta minimă">
+          <Item>Prepio este pentru elevii de clasa a 12-a care au cel puțin 16 ani.</Item>
+          <Item>Nu colectăm cu bună știință date de la persoane mai mici de 16 ani.</Item>
+          <Item>Dacă aflăm că un cont aparține unei persoane sub 16 ani, contul este șters, împreună cu datele lui.</Item>
+        </Section>
 
         <Section title="Ce date colectăm">
           <Item>Numele tău, așa cum îl introduci în aplicație sau cum apare în contul Google.</Item>
@@ -50,7 +36,15 @@ export default function PrivacyScreen() {
 
         <Section title="De ce le folosim">
           <Item>Pentru a-ți crea și păstra contul și a te recunoaște la fiecare intrare.</Item>
-          <Item>Mai târziu, pentru a-ți salva progresul în lecții.</Item>
+          <Item>Pentru a-ți salva progresul în lecții.</Item>
+          <Item>
+            Temeiul legal pentru cont, progres și verificări este contractul dintre noi, adică termenii de utilizare pe care
+            îi accepți (art. 6 alin. (1) lit. b din GDPR).
+          </Item>
+          <Item>
+            Pentru siguranța aplicației și pentru găsirea și repararea erorilor, temeiul legal este interesul nostru legitim
+            (art. 6 alin. (1) lit. f din GDPR).
+          </Item>
         </Section>
 
         <Section title="Cine prelucrează datele">
@@ -62,6 +56,10 @@ export default function PrivacyScreen() {
           <Item>
             OpenAI evaluează eseurile scrise în lecții: textul eseului tău este trimis către OpenAI pentru evaluare și
             poate fi prelucrat în afara UE (în SUA).
+          </Item>
+          <Item>
+            Sentry ne anunță când apare o eroare în aplicație. Datele sunt stocate în UE. Sentry nu primește numele, adresa
+            de email sau răspunsurile tale, ci doar un identificator tehnic al contului.
           </Item>
         </Section>
 
@@ -81,24 +79,16 @@ export default function PrivacyScreen() {
         <Section title="Drepturile tale">
           <Item>Poți cere să vezi, să corectezi sau să ștergi datele tale.</Item>
           <Item>Îți poți șterge contul singur, urmând pașii din pagina de ștergere a contului.</Item>
-          <AppText role="body" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/sterge-cont')} style={styles.link}>
-            Cum îți ștergi contul
-          </AppText>
+          <LegalLink href="/sterge-cont">Cum îți ștergi contul</LegalLink>
           <Item>{`Pentru orice cerere, scrie-ne la ${CONTACT_EMAIL}.`}</Item>
         </Section>
 
         <Section title="Contact">
           <AppText role="body">{`Pentru întrebări despre datele tale: ${CONTACT_EMAIL}.`}</AppText>
+          <AppText role="body">Regulile de folosire a aplicației sunt în termenii de utilizare.</AppText>
+          <LegalLink href="/termeni">Termeni de utilizare</LegalLink>
         </Section>
       </View>
     </ScreenLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  stack: { gap: space[5] },
-  section: { gap: space[2] },
-  item: { flexDirection: 'row', gap: space[2] },
-  itemText: { flex: 1 },
-  link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
-});

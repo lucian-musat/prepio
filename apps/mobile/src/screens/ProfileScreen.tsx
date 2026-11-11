@@ -164,6 +164,16 @@ export default function ProfileScreen() {
         >
           Politica de confidențialitate
         </AppText>
+
+        <AppText
+          role="small"
+          color="primaryStrong"
+          accessibilityRole="link"
+          onPress={() => router.push('/termeni')}
+          style={styles.link}
+        >
+          Termeni de utilizare
+        </AppText>
       </View>
     </ScreenLayout>
   );

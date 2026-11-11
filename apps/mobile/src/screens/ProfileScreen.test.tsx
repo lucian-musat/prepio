@@ -184,6 +184,18 @@ it('shows the subscription row with the plan label above the credits row', async
   expect(require('expo-router').router.push).toHaveBeenCalledWith('/abonament');
 });
 
+it('has a „Termeni de utilizare” row that opens the terms', async () => {
+  await renderScreen();
+  fireEvent.press(screen.getByText('Termeni de utilizare'));
+  expect(require('expo-router').router.push).toHaveBeenCalledWith('/termeni');
+});
+
+it('has a „Politica de confidențialitate” row that opens the policy', async () => {
+  await renderScreen();
+  fireEvent.press(screen.getByText('Politica de confidențialitate'));
+  expect(require('expo-router').router.push).toHaveBeenCalledWith('/confidentialitate');
+});
+
 it('labels full and expired plans', async () => {
   const d = new Date(Date.now() + 40 * 86400000);
   mockResetAccess({ accessUntil: d.toISOString() });

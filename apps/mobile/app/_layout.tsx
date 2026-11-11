@@ -67,6 +67,7 @@ function RootNavigator() {
         </Stack.Protected>
         {/* Public pages (Google Play needs them reachable signed out): outside every guard. */}
         <Stack.Screen name="confidentialitate" options={{ title: 'Politica de confidențialitate' }} />
+        <Stack.Screen name="termeni" options={{ title: 'Termeni de utilizare' }} />
         <Stack.Screen name="sterge-cont" options={{ title: 'Ștergerea contului' }} />
         {/* Admin card preview (iframe): needs no session and reads no data, the card arrives by postMessage. */}
         <Stack.Screen name="preview" options={{ title: 'Previzualizare' }} />
