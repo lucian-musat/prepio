@@ -55,7 +55,7 @@ const degraded = (s: AuthState) => s.status === 'ready' && (!s.session || !s.pro
 const SETTLED: AuthStatus[] = ['ready', 'suspended', 'needsTerms', 'needsName', 'needsMode'];
 
 /**
- * After a sign-in, the 16+/terms consent ticked on Welcome (stored on this device) is recorded through
+ * After a sign-in, the 14+/terms consent ticked on Welcome (stored on this device) is recorded through
  * `accept_terms` before the status settles, so the gate does not flash. Only a loaded, unsuspended profile that
  * hasn't accepted the current terms, and only a consent for the current version. Returns the profile as it now
  * is: with the current terms on success (the stored consent is then cleared), unchanged on failure (the gate shows).

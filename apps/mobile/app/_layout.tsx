@@ -57,7 +57,7 @@ function RootNavigator() {
         <Stack.Protected guard={status === 'suspended'}>
           <Stack.Screen name="(suspended)" />
         </Stack.Protected>
-        {/* Terms gate (16+ and the current terms), before the name and mode. */}
+        {/* Terms gate (14+ and parental consent, the current terms), before the name and mode. */}
         <Stack.Protected guard={status === 'needsTerms'}>
           <Stack.Screen name="(onboarding)/terms" options={{ title: 'Înainte să continui' }} />
         </Stack.Protected>
