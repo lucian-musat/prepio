@@ -68,7 +68,9 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
       if (!marker) return;
       if (!marker.readOnly) marker.dispatch({ type: 'setPen', pen });
       const marks = marker.state.marks;
-      const mark = (markIndex !== null ? marks[markIndex] : undefined) ?? marks.find((m) => m.pen === pen) ?? null;
+      // Numbered: an empty slot has no mark of its own; another slot's mark is not where it should open.
+      const fallback = marker.cfg.numbered ? undefined : marks.find((m) => m.pen === pen);
+      const mark = (markIndex !== null ? marks[markIndex] : undefined) ?? fallback ?? null;
       const target = (mark && sources.find((s) => s.source.id === mark.sourceId)) || longSources.find((s) => s.label === label) || longSources[0];
       // A mark in a short source is already on screen: choosing the pen is enough.
       if (!target || !isLong.get(target.label)) return;

@@ -94,6 +94,25 @@ describe('SourceInfoInput', () => {
     expect(screen.queryByLabelText('Șterge informația')).toBeNull();
     expect(screen.getByLabelText('Verdict: Aproape')).toBeTruthy();
   });
+
+  it('numbered: the answer lists the marks in slot order, not in the order they were made', async () => {
+    const two = ex({ type: 'source_info', count: 2, spans: [] });
+    const numbered: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+    const onChange = jest.fn();
+    // Slot 1 was redone after slot 2, so it comes last in the marker.
+    const mk = marker(numbered, [
+      { sourceId: 's1', from: 5, to: 7, pen: 'info', slot: 1 },
+      { sourceId: 's1', from: 0, to: 3, pen: 'info', slot: 0 },
+    ]);
+    await wrap(<SourceInfoInput exercise={two} sources={sources} value={{ type: 'source_info', marks: [] }} onChange={onChange} feedback={null} disabled={false} marker={mk} />);
+    expect(onChange).toHaveBeenCalledWith({
+      type: 'source_info',
+      marks: [
+        { sourceId: 's1', from: 0, to: 3 },
+        { sourceId: 's1', from: 5, to: 7 },
+      ],
+    });
+  });
 });
 
 describe('CauseEffectInput', () => {

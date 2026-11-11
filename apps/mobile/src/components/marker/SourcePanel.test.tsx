@@ -59,6 +59,7 @@ function Harness({
         <MarkSlots
           kind="info"
           count={2}
+          numbered={!!cfg.numbered}
           state={state}
           textOf={textOf(sources.map((s) => s.source))}
           onOpen={() => {}}
@@ -360,4 +361,12 @@ describe('numbered banner', () => {
     expect(screen.getByTestId('num-tray')).toBeTruthy();
     expect(within(screen.getByTestId('source-reader')).queryByTestId('pen-info')).toBeNull();
   });
+});
+
+it('numbered: pressing an empty slot does not jump to another slot’s mark in the other source', async () => {
+  const numbered: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+  const marks: MarkerMark[] = [{ sourceId: 'b', from: 2, to: 4, pen: 'info' }];
+  await render(<Harness sources={[{ source: long('a'), label: 'A' }, { source: long('b'), label: 'B' }]} cfg={numbered} kind="info" marks={marks} />);
+  await press(screen.getByText('Informația 2: marchează în text'));
+  expect(screen.getByTestId('reader-tab-A').props.accessibilityState).toMatchObject({ selected: true });
 });
