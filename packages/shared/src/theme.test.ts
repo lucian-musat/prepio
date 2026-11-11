@@ -11,6 +11,7 @@ import {
   layout,
   markerInk,
   markerPen,
+  markerSlot,
   markerTint,
   motion,
   opacity,
@@ -37,6 +38,20 @@ describe('design tokens', () => {
       expect(contrastRatio('#FFFFFF', markerInk[role])).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(markerInk[role], markerTint[role])).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(color.text, markerTint[role])).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('markerSlot: three AA-checked numbered colours', () => {
+    expect(markerSlot).toEqual([
+      { bg: '#FFE38A', ink: '#7A5A00', tint: '#FFF8DC' },
+      { bg: '#C9D7FF', ink: '#2F4BA8', tint: '#EEF2FF' },
+      { bg: '#FBCFE8', ink: '#9D1F63', tint: '#FDF0F7' },
+    ]);
+    for (const s of markerSlot) {
+      expect(contrastRatio(color.text, s.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color.text, s.tint)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio('#FFFFFF', s.ink)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(s.ink, s.tint)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
