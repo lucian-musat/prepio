@@ -36,7 +36,7 @@ const SECTIONS = [
 beforeEach(() => jest.clearAllMocks());
 
 it('uses the terms version the server expects (current_terms_version())', () => {
-  expect(TERMS_VERSION).toBe('2026-11-10');
+  expect(TERMS_VERSION).toBe('2026-11-11');
 });
 
 it('renders the terms without querying Supabase (public page, no session needed)', async () => {
@@ -60,10 +60,28 @@ it('shows the operator, the contact address and the terms date', async () => {
   expect(screen.getByText(`Ultima actualizare: ${TERMS_DATE}.`, { exact: false })).toBeTruthy();
 });
 
-it('states the minimum age', async () => {
+it('states the minimum age: 14', async () => {
   await renderScreen();
-  expect(screen.getAllByText('cel puțin 16 ani', { exact: false }).length).toBeGreaterThan(0);
-  expect(screen.getByText('Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.')).toBeTruthy();
+  expect(screen.queryByText('16 ani', { exact: false })).toBeNull();
+  expect(screen.getByText('Prepio este pentru elevii de liceu care au cel puțin 14 ani.')).toBeTruthy();
+  expect(screen.getByText(/sub 14 ani.*șters/)).toBeTruthy();
+});
+
+it('requires a parent or guardian consent under 18, for using the app and for payments', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'Dacă ai sub 18 ani, ai nevoie de acordul unui părinte sau al tutorelui ca să folosești Prepio și ca să cumperi credite sau acces complet.',
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      'Când îți creezi contul, confirmi că ai cel puțin 14 ani și, dacă ai sub 18 ani, că ai acordul părintelui sau al tutorelui.',
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText('Dacă ai sub 18 ani, cumperi credite sau acces complet doar cu acordul părintelui sau al tutorelui.')).toBeTruthy();
+  expect(screen.getByText(/părintele sau tutorele poate cere oricând închiderea contului/i)).toBeTruthy();
+  expect(screen.getByText(/fără acordul părintelui.*șters.*rambursăm/)).toBeTruthy();
 });
 
 it('does not promise welcome credits', async () => {

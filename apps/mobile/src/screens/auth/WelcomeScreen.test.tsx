@@ -17,7 +17,8 @@ jest.mock('../../lib/termsConsent', () => ({
   clearConsent: jest.fn(),
 }));
 
-const CONSENT = 'Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.';
+const CONSENT =
+  'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. Dacă am sub 18 ani, am acordul părintelui sau tutorelui pentru a folosi Prepio și pentru plăți.';
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const renderWelcome = async () =>

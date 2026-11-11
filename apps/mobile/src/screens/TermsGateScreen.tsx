@@ -60,7 +60,7 @@ export default function TermsGateScreen() {
           Înainte să continui
         </AppText>
         <AppText color="textMuted">
-          Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani. Ca să folosești aplicația, confirmă
+          Prepio este pentru elevii de liceu care au cel puțin 14 ani. Ca să folosești aplicația, confirmă
           vârsta și acceptă termenii.
         </AppText>
         <AgeTermsCheckbox

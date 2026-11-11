@@ -21,9 +21,13 @@ export default function PrivacyScreen() {
         </Section>
 
         <Section title="Vârsta minimă">
-          <Item>Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.</Item>
-          <Item>Nu colectăm cu bună știință date de la persoane mai mici de 16 ani.</Item>
-          <Item>Dacă aflăm că un cont aparține unei persoane sub 16 ani, contul este șters, împreună cu datele lui.</Item>
+          <Item>Prepio este pentru elevii de liceu care au cel puțin 14 ani.</Item>
+          <Item>Dacă ai sub 18 ani, folosești Prepio cu acordul părintelui sau al tutorelui.</Item>
+          <Item>
+            {`Părintele sau tutorele poate cere oricând, la ${CONTACT_EMAIL}, informații despre datele contului sau ștergerea contului.`}
+          </Item>
+          <Item>Nu colectăm cu bună știință date de la persoane mai mici de 14 ani.</Item>
+          <Item>Dacă aflăm că un cont aparține unei persoane sub 14 ani, contul este șters, împreună cu datele lui.</Item>
         </Section>
 
         <Section title="Ce date colectăm">
@@ -38,7 +42,10 @@ export default function PrivacyScreen() {
             Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție),
             folosit pentru suport și pentru siguranța contului.
           </Item>
-          <Item>Data la care ai confirmat că ai cel puțin 16 ani și versiunea termenilor acceptată.</Item>
+          <Item>
+            Data la care ai confirmat că ai cel puțin 14 ani (și, dacă ai sub 18 ani, că ai acordul părintelui sau al
+            tutorelui) și versiunea termenilor acceptată.
+          </Item>
         </Section>
 
         <Section title="De ce le folosim">
