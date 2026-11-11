@@ -115,7 +115,7 @@ export default async function StudentPage({
           </nav>
         </div>
         <div className="card-body">
-          {tab === 'parcurs' && <ProgressTab userId={id} rows={progress} />}
+          {tab === 'parcurs' && <ProgressTab userId={id} rows={progress} readOnly={student.isAdmin} />}
           {tab === 'bac' && <BacTab attempts={bacAttempts} />}
           {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
           {tab === 'credite' && <LedgerTable ledger={ledger} />}

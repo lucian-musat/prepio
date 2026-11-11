@@ -12,12 +12,14 @@ const STATUS: Record<LessonProgressRow['status'], { label: string; bg: string; t
   finished: { label: 'Terminată', bg: 'success' },
 };
 
-export default function ProgressTab({ userId, rows }: { userId: string; rows: LessonProgressRow[] }) {
+/** `readOnly` (an admin's account) hides the reset buttons. */
+export default function ProgressTab({ userId, rows, readOnly = false }: { userId: string; rows: LessonProgressRow[]; readOnly?: boolean }) {
   const [resetting, setResetting] = useState<{ id: string; title: string } | null>(null);
   if (rows.length === 0) return <p className="text-muted">Nu există lecții publicate.</p>;
   return (
     <>
-      <div className="table-responsive">
+      {/* position-relative keeps the visually-hidden header (absolute) inside the scroll box at phone width. */}
+      <div className="table-responsive position-relative">
         <Table size="sm" className="align-middle mb-0">
           <thead>
             <tr><th>Lecție</th><th>Stare</th><th>Unde a rămas</th><th>Ultima activitate</th><th><span className="visually-hidden">Acțiuni</span></th></tr>
@@ -32,7 +34,7 @@ export default function ProgressTab({ userId, rows }: { userId: string; rows: Le
                   <td>{r.where}</td>
                   <td className="text-nowrap">{r.lastActivityAt ? formatRelative(r.lastActivityAt) : '—'}</td>
                   <td className="text-end">
-                    {r.status !== 'not_started' && (
+                    {!readOnly && r.status !== 'not_started' && (
                       <Button size="sm" variant="outline-secondary" onClick={() => setResetting({ id: r.lessonId, title: r.title })}>
                         Resetează
                       </Button>

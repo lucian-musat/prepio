@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { UserError } from './db';
+import { check, UserError } from './db';
 import {
   adjustCredits, deleteStudent, getStudent, getStudentEvents, getStudentProgress, listStudents, orderStatusLabel,
   reactivateStudent, resetProgress, suspendStudent,
@@ -154,6 +154,22 @@ describe.skipIf(!url || !anon || !serviceKey)('student administration data funct
     await expect(suspendStudent(db, adminId, 'x')).rejects.toThrow(
       new UserError('Conturile de administrator nu pot fi modificate aici.'),
     );
+  });
+
+  it('lists an admin who started a lesson, flagged, with readable progress', async () => {
+    const a = await mk('admin');
+    const search = `test-adm-admin-${tag}`;
+    check(await service.from('admins').insert({ user_id: a.id }));
+    expect((await listStudents(db, { search, page: 1 })).total).toBe(0);
+    const [lessonId] = flatten(await getTree(db));
+    check(await service.from('lesson_progress').insert({ user_id: a.id, lesson_id: lessonId }));
+    const all = await listStudents(db, { search, page: 1 });
+    expect(all.rows.map((r) => [r.id, r.isAdmin])).toEqual([[a.id, true]]);
+    expect((await listStudents(db, { search, page: 1, filter: 'trial' })).total).toBe(0);
+    expect((await listStudents(db, { search, page: 1, filter: 'full' })).total).toBe(1);
+    expect((await getStudent(db, a.id))!.student.isAdmin).toBe(true);
+    const progress = await getStudentProgress(db, a.id);
+    expect(progress.find((r) => r.lessonId === lessonId)!.status).toBe('in_progress');
   });
 
   it('progress lists published lessons in tree order with statuses; reset one and all', async () => {

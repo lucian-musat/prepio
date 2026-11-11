@@ -176,7 +176,7 @@ select is((select credits from credit_packages where featured and active), 20, '
 select is((select welcome_credits from credit_settings where id = 1), 15, 'the welcome credits were saved');
 
 select is((select count(*)::int from public.admin_students(null, 1000, 0) where id = '00000000-0000-0000-0000-0000000000f3'), 0,
-  'admin_students does not list admins');
+  'admin_students does not list admins who never used the student app');
 select results_eq(
   $$ select id, display_name, credit_balance, total from public.admin_students('student1@test', 10, 0) $$,
   $$ values ('00000000-0000-0000-0000-0000000000f1'::uuid, 'Credit Student'::text, 55, 1::bigint) $$,

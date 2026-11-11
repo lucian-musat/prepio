@@ -36,6 +36,12 @@ describe('ProgressTab', () => {
     expect(within(row('Marea Unire')).queryByRole('button', { name: 'Resetează' })).toBeNull();
   });
 
+  it('read-only (an admin) shows the statuses without reset buttons', () => {
+    render(<ProgressTab userId="s1" rows={ROWS} readOnly />);
+    expect(within(row('Unirea Principatelor')).getByText('Terminată')).toBeTruthy();
+    expect(screen.queryAllByRole('button', { name: 'Resetează' })).toHaveLength(0);
+  });
+
   it('confirms and resets one lesson', async () => {
     actions.resetProgressAction.mockResolvedValue({ ok: true });
     const user = userEvent.setup();
