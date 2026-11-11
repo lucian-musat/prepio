@@ -29,9 +29,46 @@ Last updated: 2026-11-10
     - by the owner: `SENTRY_AUTH_TOKEN` on both projects
   - **Native: new module, so a new APK is needed.** On the phone, check that the app starts, that a forced error arrives in Sentry, and that Google sign-in and video still work.
   - Owner action: in Sentry, go to Settings → Security & Privacy and turn on "Prevent Storing of IP Addresses" for the organization. Sentry derives `user.geo` from the sender's IP on its own side.
-- PR 5 — Terms and the 16+ confirmation (`feat/terms-age`): not started.
+- PR 5 — Terms and the 16+ confirmation (`feat/terms-age`): implemented and reviewed, including a whole-branch final review. Migration `20261111080454_terms_acceptance` was pushed to production before the merge.
+  - **DB:** `profiles.age_confirmed_at`, `profiles.terms_version`, `current_terms_version()` = `2026-11-10`, and `accept_terms(p_version)`. The RPC is SECURITY DEFINER and acts on `auth.uid()` only. Students have no column grant. Any other version gets `terms_version_mismatch`.
+  - **Pages:**
+    - A public `/termeni` page with 13 sections; the operator data are placeholders.
+    - The privacy policy now also covers: the minimum age, the legal basis (art. 6 (1) b/f), Sentry, the full list of stored data, and OpenAI for consolidation and BAC papers (processed in the USA).
+    - Profile has a „Termeni de utilizare” row.
+  - **Welcome:** a required checkbox „Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.” gates the Google and email buttons. The links sit outside the checkbox. The consent is stored locally as `{version, at}`, is valid for 15 minutes, and is cleared on a cancelled or failed sign-in and on sign-out.
+  - **After sign-in:** the stored consent is recorded through `accept_terms` before the status settles, so there is no gate flash.
+  - **The gate** „Înainte să continui” (with „Continuă” and „Ieși din cont”):
+    - Shown to any signed-in student whose `terms_version` isn't current.
+    - It comes after the suspended screen and before name/mode.
+    - A version mismatch says „Actualizează aplicația (sau reîncarcă pagina)…”.
+  - **Tests:** pgTAP 659, mobile 1095+, admin int 124, content int 47.
+  - **Browser walk (headless Chromium), 62/62 at 360 touch and 1280:**
+    - Welcome gating, and the public pages signed out.
+    - A new student with a fresh consent goes straight to the name screen, with no gate flash; the consent is recorded and the local copy cleared.
+    - An existing student sees the gate: Continuă is disabled until ticked, then Home; the Profile row works; „Ieși din cont” leads to an unticked Welcome.
+    - A suspended student sees the suspended screen.
+    - A stale consent leads to the gate.
+    - Console clean, cleanup done.
+  - **Native:** the next APK must be checked on the phone:
+    - checkbox and gate
+    - no gate flash after native Google sign-in
+    - TalkBack reaching the box and both links
+    - the Android back button on the gate
+  - An old APK skips the consent until it is updated.
+  - A terms version bump has to follow `docs/deploy.md` "Terms version bump".
 
-Owner actions: lawyer review of the legal texts; fill the operator placeholders in `apps/mobile/src/lib/legal.ts`; phone checks after the Sentry APK.
+**Launch readiness, batch 1 is done (2026-11-11): PRs 1–5 merged.** Next is batch 2 (spec "Later batches"): admin MFA, a per-user AI limit, server-side verdicts, JSON size limits, grant revokes and OpenAI hardening.
+
+**Owner actions (launch blockers):**
+- Lawyer review of `/termeni` and `/confidentialitate`. Items to flag:
+  - art. 6 (1) b for 16–17-year-olds
+  - how long `student_events` and BAC attempts are kept
+  - IP addresses at Vercel and Sentry
+  - content ownership, liability, „no payments today”, and losing credits/access on deletion
+- Fill in the operator placeholders in `apps/mobile/src/lib/legal.ts`: `OPERATOR_NAME`, `OPERATOR_CUI`, `OPERATOR_ADDRESS`, and the company `CONTACT_EMAIL`. Today the placeholders show publicly on prepio.ro. This blocks the Google Play submission, because Play reviews `/confidentialitate`.
+- In Sentry: turn on Settings → Security & Privacy → "Prevent Storing of IP Addresses".
+- Optional: add `SENTRY_AUTH_TOKEN` to `prepio-admin` Preview, so preview builds upload source maps too.
+- Build a new APK, which carries the Sentry native module and the consent flow, and run the phone checks listed under PRs 2, 4 and 5.
 
 **Cause-effect marking clarity (2026-11-10, owner feedback: in BAC papers students could not tell whether they were marking the cause or the effect) — released 2026-11-10: `main` `4c778b2` pushed, prepio-web and prepio-admin Ready (no migration), the production web bundle carries the new copy; APK local build `prepio-preview-20261110-1434-4c778b2.apk` (copied to the owner's Downloads).** Spec `docs/superpowers/specs/2026-11-10-cause-effect-marking-clarity-design.md`, plan `docs/superpowers/plans/2026-11-10-cause-effect-marking-clarity.md`, mockup `docs/design/2026-11-10-cause-effect-marking-mockup.html`. On every cause-effect requirement (BAC papers and consolidation): a step banner under the prompt replaces the „Cauză / Efect” pen buttons („Pasul 1 din 2 · marchezi cauza” + „De ce s-a întâmplat ceva?”, step 2 „Ce s-a întâmplat din cauza asta?”, a two-step progress, „✓ Gata, ambele roluri marcate”); the signal words („fiindcă, deoarece…” / „ca urmare, astfel…”) only in consolidation, never in BAC; CAUZĂ / EFECT pills before the marked text (source, reader, split; kept after checking); the answer is a relation „Cauza · de ce?” ↓ a dus la ↓ „Efectul · ce a urmat?” whose gaps choose the role (the student may start with the effect; the role switches both ways), and with both filled „Pentru că X, Y. Are sens? Dacă nu, ⇅ Inversează”; once both are marked no role is current and a new selection is ignored („Atinge golul pe care vrei să-l schimbi.”); the reader tray shows the compact step and two mini gaps „Cauza → Efectul”. Grading, the stored answer and source-info / viewpoint exercises are unchanged. Checked in headless Chromium at 360 and 1280 with a local `[test]` student (BAC Varianta 3 requirement 5 via the reader and the split; consolidation cause-effect with „Verifică”; source-info and viewpoint unchanged): 2 × 18 checks passed, console clean; the walk found (and `cadfb6f` + `2887694` closed) stale word positions on web after a pill shifts the text. Mobile suite 1001/1001, shared 363/363, typecheck clean. Native-only checks are in the backlog.
 

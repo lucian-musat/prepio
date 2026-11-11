@@ -14,6 +14,8 @@ type Props = {
   label?: string;
   /** Accessible name when the visible label is ambiguous on its screen (defaults to label). */
   accessibilityLabel?: string;
+  /** Screen-reader hint, e.g. why a disabled button is disabled. */
+  accessibilityHint?: string;
   /** A glyph in the label's colour, before the label. */
   icon?: IconName;
   /** Narrower side padding, for a secondary action sharing a row on a phone (icon-only buttons always are). */
@@ -52,6 +54,7 @@ const BRIGHTEN: ViewStyle = { filter: 'brightness(1.05)' };
 export default function Button({
   label,
   accessibilityLabel,
+  accessibilityHint,
   icon,
   compact = false,
   onPress,
@@ -91,6 +94,7 @@ export default function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={name}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: blocked, busy: loading }}
       disabled={blocked}
       onPress={() => {

@@ -7,8 +7,10 @@ import { signOutGoogle } from './google';
 import { localDay, logAppOpen } from '../lib/activity';
 import { registerProfileRefresh } from '../lib/profileRefresh';
 import { setSentryUser } from '../lib/sentry';
+import { TERMS_VERSION } from '../lib/legal';
+import { acceptTerms, clearConsent, getStoredConsent } from '../lib/termsConsent';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'suspended' | 'needsName' | 'needsMode' | 'ready';
+export type AuthStatus = 'loading' | 'signedOut' | 'suspended' | 'needsTerms' | 'needsName' | 'needsMode' | 'ready';
 
 export type AuthContextValue = {
   status: AuthStatus;
@@ -37,10 +39,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /**
  * A profile that could not be loaded (offline, outage, timeout) lets the student in rather than asking a
  * returning student for their name again; it is retried on the next foreground / auth event.
- * A suspended account comes first: it only sees the suspended screen, whatever else is missing.
+ * A suspended account comes first: it only sees the suspended screen, whatever else is missing. Then the terms
+ * gate (never accepted, or an older version), before the name and mode onboarding.
  */
 export function statusFor(profile: Profile | null, loadFailed: boolean): AuthStatus {
   if (profile?.suspendedReason) return 'suspended';
+  if (profile && profile.termsVersion !== TERMS_VERSION) return 'needsTerms';
   if (!profile?.displayName) return loadFailed ? 'ready' : 'needsName';
   return profile.learningMode ? 'ready' : 'needsMode';
 }
@@ -48,7 +52,26 @@ export function statusFor(profile: Profile | null, loadFailed: boolean): AuthSta
 /** `ready` without a profile or session: something failed to load and is worth retrying. */
 const degraded = (s: AuthState) => s.status === 'ready' && (!s.session || !s.profile);
 /** Signed in with the profile settled: an auth event for the same student needs no reload. */
-const SETTLED: AuthStatus[] = ['ready', 'suspended', 'needsName', 'needsMode'];
+const SETTLED: AuthStatus[] = ['ready', 'suspended', 'needsTerms', 'needsName', 'needsMode'];
+
+/**
+ * After a sign-in, the 16+/terms consent ticked on Welcome (stored on this device) is recorded through
+ * `accept_terms` before the status settles, so the gate does not flash. Only a loaded, unsuspended profile that
+ * hasn't accepted the current terms, and only a consent for the current version. Returns the profile as it now
+ * is: with the current terms on success (the stored consent is then cleared), unchanged on failure (the gate shows).
+ */
+async function autoAccept(profile: Profile | null): Promise<Profile | null> {
+  if (!profile || profile.suspendedReason || profile.termsVersion === TERMS_VERSION) return profile;
+  if ((await getStoredConsent()) !== TERMS_VERSION) return profile;
+  try {
+    await withTimeout(acceptTerms());
+  } catch (e) {
+    console.warn('[auth] terms could not be accepted automatically:', e);
+    return profile;
+  }
+  await clearConsent();
+  return { ...profile, termsVersion: TERMS_VERSION };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading', session: null, profile: null });
@@ -68,7 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     stateRef.current = next;
     setState(next);
   }, []);
-  const setSignedOut = useCallback(() => apply(SIGNED_OUT), [apply]);
+  const setSignedOut = useCallback(() => {
+    // Leaving a signed-in state (sign-out, or a session ended elsewhere): the consent stored on this device was
+    // given for that sign-in, so the next person here has to tick it themselves. A consent ticked on Welcome
+    // (already signed out, or the start-up) is kept: it is the one the coming sign-in records.
+    const was = stateRef.current.status;
+    if (was !== 'signedOut' && was !== 'loading') void clearConsent();
+    apply(SIGNED_OUT);
+  }, [apply]);
 
   /** Loads the profile for `session` and settles the status, unless a newer auth change arrived meanwhile. */
   const settle = useCallback(
@@ -85,6 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         failed = true;
       }
       if (mine !== generation.current) return;
+      if (!failed) {
+        profile = await autoAccept(profile);
+        if (mine !== generation.current) return;
+      }
       const prev = stateRef.current;
       const kept = failed && prev.profile?.id === session.user.id ? prev.profile : profile;
       const next = { status: statusFor(kept, failed && !kept), session, profile: kept };
@@ -148,12 +182,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Back in the foreground: re-reads the profile of a loaded student, so a suspension (or a reactivation) made by
-   * an admin while the app was open takes effect. Only a changed suspension moves the status; a failed read
-   * changes nothing.
+   * an admin while the app was open takes effect, and a student whose accepted terms no longer match goes to the gate.
+   * Only a changed suspension, access or terms acceptance moves the status; a failed read changes nothing.
    */
   const recheckSuspension = useCallback(async () => {
     const { status, session, profile } = stateRef.current;
-    if ((status !== 'ready' && status !== 'suspended') || !session || !profile) return;
+    if ((status !== 'ready' && status !== 'suspended' && status !== 'needsTerms') || !session || !profile) return;
     const start = generation.current;
     let fresh: Profile | null;
     try {
@@ -164,8 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (start !== generation.current || !fresh || stateRef.current.session?.user.id !== fresh.id) return;
     const cur = stateRef.current.profile;
-    if ((fresh.suspendedReason ?? null) === (cur?.suspendedReason ?? null) && (fresh.accessUntil ?? null) === (cur?.accessUntil ?? null)) return;
-    const next = { ...stateRef.current, status: statusFor(fresh, false), profile: fresh };
+    const got: Profile = fresh;
+    const same = (k: 'suspendedReason' | 'accessUntil' | 'termsVersion') => (got[k] ?? null) === (cur?.[k] ?? null);
+    const derived = statusFor(got, false);
+    // The accepted terms count too: a student on the gate can be suspended, and one whose acceptance no longer
+    // matches (reset, or a version bump) goes back to the gate.
+    if (same('suspendedReason') && same('accessUntil') && same('termsVersion') && derived === stateRef.current.status) return;
+    const next = { ...stateRef.current, status: derived, profile: got };
     stateRef.current = next;
     setState(next);
   }, []);
@@ -240,6 +279,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => registerProfileRefresh(refreshProfile), [refreshProfile]);
 
   const signOut = useCallback(async () => {
+    // Before Welcome shows again: the next person on this device must give their own consent (never throws).
+    await clearConsent();
     // Forget the Google account too (native), so the next sign-in shows the account picker. Best-effort.
     await signOutGoogle().catch((e) => console.warn('[auth] Google sign-out failed:', e));
     await signOutSession();

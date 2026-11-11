@@ -302,6 +302,22 @@ The student web build is `apps/mobile/scripts/build-web.sh`. It runs `expo expor
 
 The handled failure paths in the API (OpenAI, refunds, ledger, purchases) report a synthetic `route:stage` error, never the original message. Trace headers are never sent (`tracePropagationTargets: []`). No replay.
 
+## Terms version bump
+
+Whenever the terms of use change:
+
+1. Bump both together, in one PR:
+   - `TERMS_VERSION` (and `TERMS_DATE`) in `apps/mobile/src/lib/legal.ts`
+   - `current_terms_version()` in a new migration (`pnpm db:new`, `create or replace function`; never edit an applied one)
+2. Ship a new APK first, before pushing the migration and deploying the web.
+3. Then, right after, run `pnpm db:cloud:push` and merge, which deploys the web. Keep the gap short.
+
+`accept_terms` refuses any version other than the database's (`terms_version_mismatch`). In that case the gate asks the student to update the app or reload the page:
+- a client still on the old version after the push
+- the new APK before the push
+
+Every existing student sees the terms gate once (their `terms_version` no longer matches) and accepts the new terms there.
+
 ## Redeploy
 
 - Admin / student web: push to `main` (Vercel auto-deploys), or "Redeploy" in the Vercel dashboard after changing env vars.

@@ -25,7 +25,8 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
 
 /**
  * Keeps the splash up until the fonts and the stored session are resolved, then shows exactly one route group:
- * signed out → (auth), suspended → (suspended), signed in without a name or mode → (onboarding), otherwise → (app). A guarded route that becomes
+ * signed out → (auth), suspended → (suspended), signed in without the current terms, a name or a mode → (onboarding),
+ * otherwise → (app). A guarded route that becomes
  * unavailable redirects to the first available one, so nothing in (app) is reachable without a session.
  */
 function RootNavigator() {
@@ -56,6 +57,10 @@ function RootNavigator() {
         <Stack.Protected guard={status === 'suspended'}>
           <Stack.Screen name="(suspended)" />
         </Stack.Protected>
+        {/* Terms gate (16+ and the current terms), before the name and mode. */}
+        <Stack.Protected guard={status === 'needsTerms'}>
+          <Stack.Screen name="(onboarding)/terms" options={{ title: 'Înainte să continui' }} />
+        </Stack.Protected>
         <Stack.Protected guard={status === 'needsName'}>
           <Stack.Screen name="(onboarding)/name" options={{ title: 'Cum te numești?' }} />
         </Stack.Protected>
@@ -67,6 +72,7 @@ function RootNavigator() {
         </Stack.Protected>
         {/* Public pages (Google Play needs them reachable signed out): outside every guard. */}
         <Stack.Screen name="confidentialitate" options={{ title: 'Politica de confidențialitate' }} />
+        <Stack.Screen name="termeni" options={{ title: 'Termeni de utilizare' }} />
         <Stack.Screen name="sterge-cont" options={{ title: 'Ștergerea contului' }} />
         {/* Admin card preview (iframe): needs no session and reads no data, the card arrives by postMessage. */}
         <Stack.Screen name="preview" options={{ title: 'Previzualizare' }} />

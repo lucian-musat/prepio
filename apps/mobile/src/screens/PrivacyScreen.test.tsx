@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import PrivacyScreen from './PrivacyScreen';
-import { CONTACT_EMAIL, POLICY_DATE } from '../lib/legal';
+import { CONTACT_EMAIL, OPERATOR_NAME, POLICY_DATE } from '../lib/legal';
 import { getSupabase } from '../lib/supabase';
 
 jest.mock('../lib/supabase', () => ({ getSupabase: jest.fn() }));
@@ -46,6 +46,61 @@ it('states where data is stored and processed: Supabase in London (UK adequacy),
   expect(screen.getByText(/Comisia Europeană recunoaște un nivel adecvat de protecție a datelor pentru Regatul Unit/)).toBeTruthy();
   expect(screen.queryByText(/Uniunea Europeană/)).toBeNull();
   expect(screen.getByText(/OpenAI.*în afara UE \(în SUA\)/)).toBeTruthy();
+});
+
+it('states the minimum age: 16, and accounts of younger users are deleted', async () => {
+  await renderScreen();
+  expect(screen.getByText('Vârsta minimă')).toBeTruthy();
+  expect(screen.getByText('Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.')).toBeTruthy();
+  expect(screen.getByText(/sub 16 ani.*șters/)).toBeTruthy();
+});
+
+it('gives the legal basis: contract and legitimate interest', async () => {
+  await renderScreen();
+  expect(screen.getByText(/art\. 6 alin\. \(1\) lit\. b/)).toBeTruthy();
+  expect(screen.getByText(/art\. 6 alin\. \(1\) lit\. f/)).toBeTruthy();
+});
+
+it('lists Sentry as a processor that receives no names, emails or answers', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'Sentry ne ajută să aflăm de erorile din aplicație. Datele sunt stocate în UE. Sentry primește detaliile erorii, date despre dispozitiv sau browser și un identificator tehnic al contului, dar nu numele, adresa de email sau răspunsurile tale.',
+    ),
+  ).toBeTruthy();
+});
+
+it('says OpenAI checks consolidation answers and BAC papers, possibly in the USA', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'OpenAI verifică răspunsurile la exercițiile de consolidare și lucrările BAC, inclusiv eseurile: textul răspunsului tău este trimis către OpenAI pentru evaluare și poate fi prelucrat în afara UE (în SUA).',
+    ),
+  ).toBeTruthy();
+});
+
+it('declares everything the app stores about the student', async () => {
+  await renderScreen();
+  for (const item of [
+    'Progresul tău în lecții și răspunsurile la exercițiile de consolidare.',
+    'Lucrările BAC: răspunsurile, eseurile și notele primite.',
+    'Accesul complet: perioadele și istoricul obținerii lui.',
+    'Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție), folosit pentru suport și pentru siguranța contului.',
+    'Data la care ai confirmat că ai cel puțin 16 ani și versiunea termenilor acceptată.',
+  ]) {
+    expect(screen.getByText(item)).toBeTruthy();
+  }
+});
+
+it('names the operator', async () => {
+  await renderScreen();
+  expect(screen.getAllByText(OPERATOR_NAME, { exact: false }).length).toBeGreaterThan(0);
+});
+
+it('links to the terms of use', async () => {
+  await renderScreen();
+  fireEvent.press(screen.getByText('Termeni de utilizare'));
+  expect(router.push).toHaveBeenCalledWith('/termeni');
 });
 
 it('links to the account deletion page', async () => {
