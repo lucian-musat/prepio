@@ -24,7 +24,7 @@ export default function WelcomeScreen() {
   const [consented, setConsented] = useState(false);
   const touched = useRef(false);
 
-  // Back on Welcome with a consent already given on this device (e.g. the web OAuth redirect without a session).
+  // Back on Welcome with a consent given on this device minutes ago (getStoredConsent drops a stale one).
   useEffect(() => {
     let live = true;
     void getStoredConsent().then((v) => {
@@ -48,9 +48,11 @@ export default function WelcomeScreen() {
     try {
       // Written before leaving the page (web redirect), whatever happened to the earlier write.
       await storeConsent(TERMS_VERSION);
-      // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent.
-      await signInWithGoogle();
+      // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent, but the consent
+      // stored for it goes (a later sign-in, maybe by someone else, must not inherit it); the next press stores it again.
+      if ((await signInWithGoogle()) === 'cancelled') await clearConsent();
     } catch (e) {
+      await clearConsent();
       setError(e instanceof Error ? e.message : 'Nu am putut face autentificarea. Încearcă din nou.');
     } finally {
       setPending(false);

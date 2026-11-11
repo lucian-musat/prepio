@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import TermsGateScreen from './TermsGateScreen';
-import { acceptTerms } from '../lib/termsConsent';
+import { acceptTerms, clearConsent } from '../lib/termsConsent';
 import { TERMS_VERSION } from '../lib/legal';
 
 const mockRefresh = jest.fn();
@@ -11,7 +11,7 @@ jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ refreshProfile: mockRefresh, signOut: mockSignOut }),
 }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
-jest.mock('../lib/termsConsent', () => ({ acceptTerms: jest.fn() }));
+jest.mock('../lib/termsConsent', () => ({ acceptTerms: jest.fn(), clearConsent: jest.fn() }));
 
 const CONSENT = 'Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.';
 const SAVE_FAILED = 'Nu am putut salva. Încearcă din nou.';
@@ -29,6 +29,7 @@ const cont = () => screen.getByRole('button', { name: 'Continuă' });
 beforeEach(() => {
   jest.clearAllMocks();
   (acceptTerms as jest.Mock).mockResolvedValue(undefined);
+  (clearConsent as jest.Mock).mockResolvedValue(undefined);
   mockRefresh.mockResolvedValue({ id: 'u1', termsVersion: TERMS_VERSION });
   mockSignOut.mockResolvedValue(undefined);
 });
@@ -47,6 +48,7 @@ it('once checked, „Continuă” accepts the terms and refreshes the profile', 
   expect(cont().props.accessibilityState.disabled).toBe(false);
   await fireEvent.press(cont());
   expect(acceptTerms).toHaveBeenCalledTimes(1);
+  expect(clearConsent).toHaveBeenCalledTimes(1);
   expect(mockRefresh).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('alert')).toBeNull();
 });
@@ -59,6 +61,7 @@ it('an RPC error shows the save error and does not refresh', async () => {
   await fireEvent.press(cont());
   expect(await screen.findByRole('alert')).toHaveTextContent(SAVE_FAILED);
   expect(mockRefresh).not.toHaveBeenCalled();
+  expect(clearConsent).not.toHaveBeenCalled();
   warn.mockRestore();
 });
 
@@ -76,10 +79,11 @@ it('„Ieși din cont” signs out', async () => {
   expect(mockSignOut).toHaveBeenCalledTimes(1);
 });
 
-it('the links open the terms and the privacy policy', async () => {
+it('the links sit outside the checkbox and open the terms and the privacy policy', async () => {
   await renderGate();
-  await fireEvent.press(screen.getByText('Termenii de utilizare'));
+  expect(within(screen.getByRole('checkbox', { name: CONSENT })).queryAllByRole('link')).toHaveLength(0);
+  await fireEvent.press(screen.getByRole('link', { name: 'Termenii de utilizare' }));
   expect(router.push).toHaveBeenCalledWith('/termeni');
-  await fireEvent.press(screen.getByText('Politica de confidențialitate'));
+  await fireEvent.press(screen.getByRole('link', { name: 'Politica de confidențialitate' }));
   expect(router.push).toHaveBeenCalledWith('/confidentialitate');
 });

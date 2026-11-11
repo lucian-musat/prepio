@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { acceptTerms, clearConsent, getStoredConsent, storeConsent, TERMS_CONSENT_KEY } from './termsConsent';
+import { acceptTerms, clearConsent, CONSENT_TTL_MS, getStoredConsent, storeConsent, TERMS_CONSENT_KEY } from './termsConsent';
 import { getSupabase } from './supabase';
 import { TERMS_VERSION } from './legal';
 
@@ -18,11 +18,39 @@ describe('stored consent', () => {
     await expect(getStoredConsent()).resolves.toBeNull();
   });
 
-  it('stores the version and reads it back', async () => {
+  it('stores the version with the time it was given and reads it back', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
     await storeConsent(TERMS_VERSION);
+    expect(JSON.parse((await AsyncStorage.getItem(TERMS_CONSENT_KEY))!)).toEqual({ version: TERMS_VERSION, at: 1_000_000 });
+    now.mockReturnValue(1_000_000 + CONSENT_TTL_MS);
     await expect(getStoredConsent()).resolves.toBe(TERMS_VERSION);
-    expect(await AsyncStorage.getItem(TERMS_CONSENT_KEY)).toBe(TERMS_VERSION);
+    now.mockRestore();
   });
+
+  it('a consent older than 15 minutes is ignored and removed', async () => {
+    expect(CONSENT_TTL_MS).toBe(15 * 60_000);
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    await storeConsent(TERMS_VERSION);
+    now.mockReturnValue(1_000_000 + CONSENT_TTL_MS + 1);
+    await expect(getStoredConsent()).resolves.toBeNull();
+    expect(await AsyncStorage.getItem(TERMS_CONSENT_KEY)).toBeNull();
+    now.mockRestore();
+  });
+
+  it('a consent dated in the future is ignored and removed', async () => {
+    await AsyncStorage.setItem(TERMS_CONSENT_KEY, JSON.stringify({ version: TERMS_VERSION, at: Date.now() + 60_000 }));
+    await expect(getStoredConsent()).resolves.toBeNull();
+    expect(await AsyncStorage.getItem(TERMS_CONSENT_KEY)).toBeNull();
+  });
+
+  it.each([TERMS_VERSION, 'not json', '{}', '{"version":"2026-11-10"}', '{"version":1,"at":1}', 'null'])(
+    'a malformed value (%s) is ignored and removed',
+    async (raw) => {
+      await AsyncStorage.setItem(TERMS_CONSENT_KEY, raw);
+      await expect(getStoredConsent()).resolves.toBeNull();
+      expect(await AsyncStorage.getItem(TERMS_CONSENT_KEY)).toBeNull();
+    },
+  );
 
   it('clearConsent forgets it', async () => {
     await storeConsent(TERMS_VERSION);

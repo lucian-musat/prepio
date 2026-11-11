@@ -5,7 +5,7 @@ import { AppText, Button, ScreenLayout, TextButton } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import AgeTermsCheckbox from '../components/AgeTermsCheckbox';
 import { TERMS_VERSION } from '../lib/legal';
-import { acceptTerms } from '../lib/termsConsent';
+import { acceptTerms, clearConsent } from '../lib/termsConsent';
 
 const SAVE_FAILED = 'Nu am putut salva. Încearcă din nou.';
 
@@ -26,6 +26,8 @@ export default function TermsGateScreen() {
     setSaving(true);
     try {
       await acceptTerms();
+      // Recorded on the account: a consent still stored from Welcome is no longer needed.
+      await clearConsent();
       // The refresh never throws; a profile still without the current terms means the status did not move on.
       const fresh = await refreshProfile();
       if (fresh?.termsVersion !== TERMS_VERSION) setError(SAVE_FAILED);

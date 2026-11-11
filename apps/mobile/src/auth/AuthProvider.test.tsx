@@ -540,6 +540,17 @@ describe('terms consent', () => {
     expect(acceptTerms).toHaveBeenCalledTimes(1);
   });
 
+  it('a stale consent (left behind by a cancelled sign-in) is not recorded on the next account, and is removed', async () => {
+    await AsyncStorage.setItem('prepio.termsConsent', JSON.stringify({ version: TV, at: Date.now() - 16 * 60_000 }));
+    mockFetchProfile.mockResolvedValue({ ...noTerms, id: OTHER, displayName: 'Ion' });
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session(OTHER, 'access-9'));
+    await waitForState('needsTerms|Ion|access-9');
+    expect(acceptTerms).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem('prepio.termsConsent')).toBeNull();
+  });
+
   it('a consent stored for another terms version is not sent', async () => {
     await storeConsent('2020-01-01');
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
@@ -728,6 +739,31 @@ describe('suspension changes while the app is open', () => {
     mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null });
     await act(async () => onChange('active'));
     await waitForState('ready|Ana|access-1');
+  });
+
+  it('back in the foreground, a student on the terms gate who was suspended meanwhile moves to suspended', async () => {
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: null, suspendedReason: null, accessUntil: null });
+    await renderAuth();
+    await waitForState('needsTerms|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: null, suspendedReason: 'Motiv', accessUntil: null });
+    await act(async () => onChange('active'));
+    await waitForState('suspended|Ana|access-1');
+  });
+
+  it('back in the foreground, a ready student whose accepted terms no longer match goes to the gate', async () => {
+    await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: '2020-01-01', suspendedReason: null, accessUntil: null });
+    await act(async () => onChange('active'));
+    await waitForState('needsTerms|Ana|access-1');
+  });
+
+  it('back in the foreground, an unchanged gate profile stays on the gate', async () => {
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: null, suspendedReason: null, accessUntil: null });
+    await renderAuth();
+    await waitForState('needsTerms|Ana|access-1');
+    await act(async () => onChange('active'));
+    expect(state()).toBe('needsTerms|Ana|access-1');
   });
 
   it('a failed check keeps the current state', async () => {

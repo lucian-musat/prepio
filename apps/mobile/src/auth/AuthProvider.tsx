@@ -182,12 +182,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Back in the foreground: re-reads the profile of a loaded student, so a suspension (or a reactivation) made by
-   * an admin while the app was open takes effect. Only a changed suspension moves the status; a failed read
-   * changes nothing.
+   * an admin while the app was open takes effect, and a student whose accepted terms no longer match goes to the gate.
+   * Only a changed suspension, access or terms acceptance moves the status; a failed read changes nothing.
    */
   const recheckSuspension = useCallback(async () => {
     const { status, session, profile } = stateRef.current;
-    if ((status !== 'ready' && status !== 'suspended') || !session || !profile) return;
+    if ((status !== 'ready' && status !== 'suspended' && status !== 'needsTerms') || !session || !profile) return;
     const start = generation.current;
     let fresh: Profile | null;
     try {
@@ -198,8 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (start !== generation.current || !fresh || stateRef.current.session?.user.id !== fresh.id) return;
     const cur = stateRef.current.profile;
-    if ((fresh.suspendedReason ?? null) === (cur?.suspendedReason ?? null) && (fresh.accessUntil ?? null) === (cur?.accessUntil ?? null)) return;
-    const next = { ...stateRef.current, status: statusFor(fresh, false), profile: fresh };
+    const got: Profile = fresh;
+    const same = (k: 'suspendedReason' | 'accessUntil' | 'termsVersion') => (got[k] ?? null) === (cur?.[k] ?? null);
+    const derived = statusFor(got, false);
+    // The accepted terms count too: a student on the gate can be suspended, and one whose acceptance no longer
+    // matches (reset, or a version bump) goes back to the gate.
+    if (same('suspendedReason') && same('accessUntil') && same('termsVersion') && derived === stateRef.current.status) return;
+    const next = { ...stateRef.current, status: derived, profile: got };
     stateRef.current = next;
     setState(next);
   }, []);
