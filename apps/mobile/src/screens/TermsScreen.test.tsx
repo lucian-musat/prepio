@@ -70,6 +70,23 @@ it('uses the same grade disclaimer as the BAC result', async () => {
   expect(screen.getByText(BAC_GRADE_NOTE, { exact: false })).toBeTruthy();
 });
 
+it('says the grade is not official and names the automatic check', async () => {
+  await renderScreen();
+  expect(screen.getByText(/verificate automat, cu inteligență artificială \(OpenAI\), nu de un profesor/)).toBeTruthy();
+  expect(
+    screen.getByText('Notele din Prepio nu sunt note oficiale și nu îți influențează rezultatul la examenul de bacalaureat.'),
+  ).toBeTruthy();
+});
+
+it('explains what happens when a new version is not accepted (sign out, ask for deletion)', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      `Dacă nu o accepți, nu mai poți folosi aplicația. Poți ieși din cont și ne poți cere ștergerea contului la ${CONTACT_EMAIL}.`,
+    ),
+  ).toBeTruthy();
+});
+
 it('links to the privacy policy', async () => {
   await renderScreen();
   fireEvent.press(screen.getByText('Politica de confidențialitate'));

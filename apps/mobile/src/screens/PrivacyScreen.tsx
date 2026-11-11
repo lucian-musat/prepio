@@ -18,7 +18,6 @@ export default function PrivacyScreen() {
         <Section title="Cine răspunde de datele tale">
           <AppText role="body">Operatorul datelor tale, adică cel care decide cum sunt folosite, este:</AppText>
           <OperatorDetails />
-          <Item>{`Email: ${CONTACT_EMAIL}`}</Item>
         </Section>
 
         <Section title="Vârsta minimă">
@@ -32,6 +31,14 @@ export default function PrivacyScreen() {
           <Item>Adresa ta de email, folosită pentru autentificare (cu cod trimis pe email sau cu contul Google).</Item>
           <Item>Numele din profilul Google, dacă intri cu Google.</Item>
           <Item>Creditele: soldul, cumpărările de pachete și istoricul verificărilor.</Item>
+          <Item>Progresul tău în lecții și răspunsurile la exercițiile de consolidare.</Item>
+          <Item>Lucrările BAC: răspunsurile, eseurile și notele primite.</Item>
+          <Item>Accesul complet: perioadele și istoricul obținerii lui.</Item>
+          <Item>
+            Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție),
+            folosit pentru suport și pentru siguranța contului.
+          </Item>
+          <Item>Data la care ai confirmat că ai cel puțin 16 ani și versiunea termenilor acceptată.</Item>
         </Section>
 
         <Section title="De ce le folosim">
@@ -54,12 +61,13 @@ export default function PrivacyScreen() {
           </Item>
           <Item>Vercel găzduiește site-urile Prepio.</Item>
           <Item>
-            OpenAI evaluează eseurile scrise în lecții: textul eseului tău este trimis către OpenAI pentru evaluare și
-            poate fi prelucrat în afara UE (în SUA).
+            OpenAI verifică răspunsurile la exercițiile de consolidare și lucrările BAC, inclusiv eseurile: textul
+            răspunsului tău este trimis către OpenAI pentru evaluare și poate fi prelucrat în afara UE (în SUA).
           </Item>
           <Item>
-            Sentry ne anunță când apare o eroare în aplicație. Datele sunt stocate în UE. Sentry nu primește numele, adresa
-            de email sau răspunsurile tale, ci doar un identificator tehnic al contului.
+            Sentry ne ajută să aflăm de erorile din aplicație. Datele sunt stocate în UE. Sentry primește detaliile erorii,
+            date despre dispozitiv sau browser și un identificator tehnic al contului, dar nu numele, adresa de email sau
+            răspunsurile tale.
           </Item>
         </Section>
 

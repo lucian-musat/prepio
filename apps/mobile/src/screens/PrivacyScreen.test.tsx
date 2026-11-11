@@ -51,7 +51,7 @@ it('states where data is stored and processed: Supabase in London (UK adequacy),
 it('states the minimum age: 16, and accounts of younger users are deleted', async () => {
   await renderScreen();
   expect(screen.getByText('Vârsta minimă')).toBeTruthy();
-  expect(screen.getByText(/cel puțin 16 ani/)).toBeTruthy();
+  expect(screen.getByText('Prepio este pentru elevii de clasa a 12-a care au cel puțin 16 ani.')).toBeTruthy();
   expect(screen.getByText(/sub 16 ani.*șters/)).toBeTruthy();
 });
 
@@ -63,7 +63,33 @@ it('gives the legal basis: contract and legitimate interest', async () => {
 
 it('lists Sentry as a processor that receives no names, emails or answers', async () => {
   await renderScreen();
-  expect(screen.getByText(/Sentry.*UE.*nu primește numele, adresa de email sau răspunsurile tale/)).toBeTruthy();
+  expect(
+    screen.getByText(
+      'Sentry ne ajută să aflăm de erorile din aplicație. Datele sunt stocate în UE. Sentry primește detaliile erorii, date despre dispozitiv sau browser și un identificator tehnic al contului, dar nu numele, adresa de email sau răspunsurile tale.',
+    ),
+  ).toBeTruthy();
+});
+
+it('says OpenAI checks consolidation answers and BAC papers, possibly in the USA', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'OpenAI verifică răspunsurile la exercițiile de consolidare și lucrările BAC, inclusiv eseurile: textul răspunsului tău este trimis către OpenAI pentru evaluare și poate fi prelucrat în afara UE (în SUA).',
+    ),
+  ).toBeTruthy();
+});
+
+it('declares everything the app stores about the student', async () => {
+  await renderScreen();
+  for (const item of [
+    'Progresul tău în lecții și răspunsurile la exercițiile de consolidare.',
+    'Lucrările BAC: răspunsurile, eseurile și notele primite.',
+    'Accesul complet: perioadele și istoricul obținerii lui.',
+    'Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție), folosit pentru suport și pentru siguranța contului.',
+    'Data la care ai confirmat că ai cel puțin 16 ani și versiunea termenilor acceptată.',
+  ]) {
+    expect(screen.getByText(item)).toBeTruthy();
+  }
 });
 
 it('names the operator', async () => {

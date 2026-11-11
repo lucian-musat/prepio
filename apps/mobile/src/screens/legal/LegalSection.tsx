@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText } from '../../ui';
-import { OPERATOR_ADDRESS, OPERATOR_CUI, OPERATOR_NAME } from '../../lib/legal';
+import { CONTACT_EMAIL, OPERATOR_ADDRESS, OPERATOR_CUI, OPERATOR_NAME } from '../../lib/legal';
 
 /** Shared building blocks of the public legal pages (privacy policy, terms of use). */
 
@@ -39,13 +39,14 @@ export function LegalLink({ href, children }: { href: Href; children: string }) 
   );
 }
 
-/** Who runs Prepio; the values are placeholders in `lib/legal.ts` until the owner fills them. */
+/** Who runs Prepio and how to reach them; the values are placeholders in `lib/legal.ts` until the owner fills them. */
 export function OperatorDetails() {
   return (
     <>
       <Item>{`Denumire: ${OPERATOR_NAME}`}</Item>
       <Item>{`Cod de identificare fiscală (CUI): ${OPERATOR_CUI}`}</Item>
       <Item>{`Sediu: ${OPERATOR_ADDRESS}`}</Item>
+      <Item>{`Email: ${CONTACT_EMAIL}`}</Item>
     </>
   );
 }

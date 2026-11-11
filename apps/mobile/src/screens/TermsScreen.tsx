@@ -22,7 +22,6 @@ export default function TermsScreen() {
         <Section title="Cine suntem">
           <AppText role="body">Prepio este oferit de:</AppText>
           <OperatorDetails />
-          <Item>{`Email: ${CONTACT_EMAIL}`}</Item>
         </Section>
 
         <Section title="Ce este Prepio">
@@ -62,12 +61,14 @@ export default function TermsScreen() {
 
         <Section title="Notele și verificările sunt orientative">
           <Item>
-            Unele răspunsuri, cum sunt eseurile și subiectele BAC, sunt verificate automat de un serviciu de evaluare, nu de
-            un profesor. Detaliile sunt în politica de confidențialitate.
+            Unele răspunsuri, cum sunt eseurile și subiectele BAC, sunt verificate automat, cu inteligență artificială
+            (OpenAI), nu de un profesor. Detaliile sunt în politica de confidențialitate.
           </Item>
           <Item>{BAC_GRADE_NOTE}</Item>
           <Item>Verificarea automată poate greși. Folosește notele și comentariile ca ajutor la învățat.</Item>
-          <Item>Notele din Prepio nu sunt note oficiale și nu au legătură cu examenul de bacalaureat.</Item>
+          <Item>
+            Notele din Prepio nu sunt note oficiale și nu îți influențează rezultatul la examenul de bacalaureat.
+          </Item>
         </Section>
 
         <Section title="Folosire corectă">
@@ -109,9 +110,9 @@ export default function TermsScreen() {
 
         <Section title="Modificări">
           <Item>Putem schimba acești termeni. Când o facem, actualizăm data de mai sus.</Item>
+          <Item>La următoarea intrare în aplicație îți cerem să accepți noua versiune înainte să continui.</Item>
           <Item>
-            La următoarea intrare în aplicație îți cerem să accepți noua versiune înainte să continui. Dacă nu o accepți,
-            nu mai poți folosi aplicația, dar ne poți cere oricând ștergerea contului.
+            {`Dacă nu o accepți, nu mai poți folosi aplicația. Poți ieși din cont și ne poți cere ștergerea contului la ${CONTACT_EMAIL}.`}
           </Item>
         </Section>
 
