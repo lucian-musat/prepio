@@ -57,6 +57,12 @@ Last updated: 2026-11-11
   - An old APK skips the consent until it is updated.
   - A terms version bump has to follow `docs/deploy.md` "Terms version bump".
 
+**Admins in the student list (2026-11-11, `feat/admins-in-students`).** Small change, agreed in chat, no separate spec. Migration `20261111120000_admins_in_students`:
+- `admin_students` lists an admin once they have a lesson, a consolidation run or a BAC subject started, and returns `is_admin`. The Trial filter leaves admins out; Acces complet lists them.
+- `admin_student_progress` and `admin_student_events` no longer refuse admins, because reading is not an account action. Every account action still refuses them. The exception is `admin_adjust_credits`, which never did; the UI just doesn't offer it.
+- Admin UI: an „Admin” badge and the plan „Admin” in the list and on the detail page. The detail page is read-only for admins: no account buttons, no per-lesson „Resetează”, and the note „Cont de administrator: acțiunile asupra contului nu sunt disponibile.”
+- Also fixed: 17px of horizontal scroll at 360px on the student detail page. It came from the Parcurs table's visually-hidden header.
+
 **Launch readiness, batch 1 is done (2026-11-11): PRs 1–5 merged.** Next is batch 2 (spec "Later batches"): admin MFA, a per-user AI limit, server-side verdicts, JSON size limits, grant revokes and OpenAI hardening.
 
 **Owner actions (launch blockers):**

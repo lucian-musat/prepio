@@ -1,5 +1,5 @@
 begin;
-select plan(55);
+select plan(53);
 
 -- Fixtures (as postgres). Assertions are scoped to these ids so the suite also passes on a seeded DB.
 -- f1, f2, f4, f5 are students (f2 gets suspended), f3 an admin. The auth trigger creates their profiles.
@@ -86,8 +86,6 @@ select results_eq(
             ('00000000-0000-0000-0000-0000000000e2'::uuid, false, '{"phase":"cards","index":0}'::jsonb, 1, 1,
              null::int, null::int, null::timestamptz, false, true) $$,
   'admin_student_progress returns both published lessons with their totals and the run (not the draft)');
-select throws_ok($$ select * from public.admin_student_progress('00000000-0000-0000-0000-0000000000f3') $$,
-  'P0001', 'cannot_target_admin', 'admin_student_progress refuses an admin');
 select is((select count(*)::int from public.admin_student_progress('00000000-0000-0000-0000-0000000000f4')), 0,
   'a student without progress has no rows');
 
@@ -194,8 +192,6 @@ select ok(
      from public.admin_student_events('00000000-0000-0000-0000-0000000000f1', 50,
             (select max(id) from student_events where user_id = '00000000-0000-0000-0000-0000000000f1'))),
   'p_before pages to older events');
-select throws_ok($$ select * from public.admin_student_events('00000000-0000-0000-0000-0000000000f3', 10) $$,
-  'P0001', 'cannot_target_admin', 'admin_student_events refuses an admin');
 
 -- ---------------------------------------------------------------- the student continues after a reset
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f1","role":"authenticated"}';

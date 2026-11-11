@@ -27,7 +27,7 @@ export default function StudentHeader({
   const close = () => setDialog(null);
   const suspended = student.suspendedAt != null;
   const now = new Date();
-  const plan = planLabel(student.accessUntil, now);
+  const plan = planLabel(student.accessUntil, now, student.isAdmin);
   const fullAccess = hasActiveAccess(student.accessUntil, now);
   const meta = [
     student.email ?? '—',
@@ -51,6 +51,7 @@ export default function StudentHeader({
             <div className="d-flex flex-wrap align-items-center gap-2">
               <h1 className="h4 mb-0">{student.displayName || 'Fără nume'}</h1>
               <Badge bg={suspended ? 'danger' : 'success'} data-testid="status">{suspended ? 'Suspendat' : 'Activ'}</Badge>
+              {student.isAdmin && <Badge bg="dark" data-testid="admin-badge">Admin</Badge>}
               {student.reregistrationBlocked && <span className="small text-muted">Reînregistrare blocată</span>}
             </div>
             <div className="text-muted small text-break">{meta}</div>
@@ -90,18 +91,22 @@ export default function StudentHeader({
           </div>
         </div>
 
-        <div className="d-flex flex-wrap gap-2 mt-3">
-          <Button variant="primary" onClick={() => setDialog('credits')}>Ajustează credite</Button>
-          <Button variant="outline-secondary" onClick={() => setDialog('reset')}>Resetează tot parcursul</Button>
-          <Button variant="outline-primary" onClick={() => setDialog('grant')}>Acordă acces</Button>
-          {fullAccess && <Button variant="outline-danger" onClick={() => setDialog('revoke')}>Retrage accesul</Button>}
-          {suspended ? (
-            <Button variant="outline-success" onClick={() => setDialog('reactivate')}>Reactivează</Button>
-          ) : (
-            <Button variant="outline-danger" onClick={() => setDialog('suspend')}>Suspendă</Button>
-          )}
-          <Button variant="outline-danger" onClick={() => setDialog('delete')}>Șterge contul</Button>
-        </div>
+        {student.isAdmin ? (
+          <p className="text-muted small mt-3 mb-0">Cont de administrator: acțiunile asupra contului nu sunt disponibile.</p>
+        ) : (
+          <div className="d-flex flex-wrap gap-2 mt-3">
+            <Button variant="primary" onClick={() => setDialog('credits')}>Ajustează credite</Button>
+            <Button variant="outline-secondary" onClick={() => setDialog('reset')}>Resetează tot parcursul</Button>
+            <Button variant="outline-primary" onClick={() => setDialog('grant')}>Acordă acces</Button>
+            {fullAccess && <Button variant="outline-danger" onClick={() => setDialog('revoke')}>Retrage accesul</Button>}
+            {suspended ? (
+              <Button variant="outline-success" onClick={() => setDialog('reactivate')}>Reactivează</Button>
+            ) : (
+              <Button variant="outline-danger" onClick={() => setDialog('suspend')}>Suspendă</Button>
+            )}
+            <Button variant="outline-danger" onClick={() => setDialog('delete')}>Șterge contul</Button>
+          </div>
+        )}
       </Card.Body>
 
       <Modal show={dialog === 'credits'} onHide={close} centered size="lg">

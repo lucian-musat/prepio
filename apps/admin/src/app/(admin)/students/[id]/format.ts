@@ -53,9 +53,11 @@ export function hasActiveAccess(accessUntil: string | null, now: Date): boolean 
 
 /**
  * The student's plan for the header and the list: "Trial" (never had access), "Acces până la 8 februarie 2027"
- * while access lasts, "Expirat pe 8 februarie 2027" once it ended (expired or revoked).
+ * while access lasts, "Expirat pe 8 februarie 2027" once it ended (expired or revoked). Admins always have full
+ * access: "Admin".
  */
-export function planLabel(accessUntil: string | null, now: Date): string {
+export function planLabel(accessUntil: string | null, now: Date, isAdmin = false): string {
+  if (isAdmin) return 'Admin';
   if (accessUntil === null) return 'Trial';
   const until = formatAccessDate(new Date(accessUntil));
   return hasActiveAccess(accessUntil, now) ? `Acces până la ${until}` : `Expirat pe ${until}`;

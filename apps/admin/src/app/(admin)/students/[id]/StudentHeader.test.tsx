@@ -18,7 +18,7 @@ afterEach(cleanup);
 const ACTIVE: StudentRow = {
   id: 's1', displayName: 'Madalin Anghel', email: 'madalin@gmail.com', creditBalance: 12, createdAt: '2026-11-04T10:00:00Z',
   provider: 'google', suspendedAt: null, suspendedReason: null, reregistrationBlocked: false,
-  lastActivityAt: '2026-11-01T08:12:00Z', lessonsFinished: 2, accessUntil: null,
+  lastActivityAt: '2026-11-01T08:12:00Z', lessonsFinished: 2, accessUntil: null, isAdmin: false,
 };
 
 describe('StudentHeader', () => {
@@ -103,6 +103,19 @@ describe('StudentHeader', () => {
     expect(screen.getByTestId('plan').textContent).toMatch(/^Expirat pe \d{1,2} \p{L}+ \d{4}$/u);
     expect(screen.getByRole('button', { name: 'Acordă acces' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Retrage accesul' })).toBeNull();
+  });
+
+  it('shows an admin read-only: badge, plan Admin, no account actions', () => {
+    render(<StudentHeader student={{ ...ACTIVE, isAdmin: true }} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    expect(screen.getByTestId('admin-badge').textContent).toBe('Admin');
+    expect(screen.getByTestId('plan').textContent).toBe('Admin');
+    expect(screen.getByText('Cont de administrator: acțiunile asupra contului nu sunt disponibile.')).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('shows no admin badge for a student', () => {
+    render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} />);
+    expect(screen.queryByTestId('admin-badge')).toBeNull();
   });
 
   it('opens the grant dialog', async () => {

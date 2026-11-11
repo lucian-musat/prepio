@@ -65,13 +65,16 @@ export default async function StudentsPage({
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td><Link href={`/students/${s.id}`}>{s.displayName || '—'}</Link></td>
+                  <td>
+                    <Link href={`/students/${s.id}`}>{s.displayName || '—'}</Link>
+                    {s.isAdmin && <span className="badge text-bg-dark ms-2">Admin</span>}
+                  </td>
                   <td>{s.email ?? '—'}</td>
                   <td>
                     {s.suspendedAt ? <span className="badge text-bg-danger">Suspendat</span> : <span className="badge text-bg-success">Activ</span>}
                     {s.reregistrationBlocked && <div className="small text-muted">Reînregistrare blocată</div>}
                   </td>
-                  <td>{planLabel(s.accessUntil, now)}</td>
+                  <td>{planLabel(s.accessUntil, now, s.isAdmin)}</td>
                   <td>{s.creditBalance}</td>
                   <td>{s.lastActivityAt ? dateTimeFmt.format(new Date(s.lastActivityAt)) : '—'}</td>
                   <td>{dateFmt.format(new Date(s.createdAt))}</td>

@@ -39,4 +39,8 @@ describe('planLabel', () => {
   it('names the end date while access is active', () => {
     expect(planLabel('2027-02-08T10:00:00Z', now)).toBe('Acces până la 8 februarie 2027');
   });
+  it('is Admin for an admin, whatever the access', () => {
+    expect(planLabel(null, now, true)).toBe('Admin');
+    expect(planLabel('2027-02-08T10:00:00Z', now, true)).toBe('Admin');
+  });
 });

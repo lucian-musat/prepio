@@ -24,6 +24,8 @@ export type StudentRow = {
   lessonsFinished: number;
   /** End of the paid access (may be in the past); null when never bought or granted. */
   accessUntil: string | null;
+  /** An admin who used the student app: listed and readable, but every account action refuses them. */
+  isAdmin: boolean;
 };
 
 export type StudentFilter = 'all' | 'suspended' | 'active_today' | 'trial' | 'full';
@@ -121,7 +123,7 @@ export function orderStatusLabel(o: Pick<AdminOrder, 'status' | 'provider'>): st
 type StudentDb = {
   id: string; display_name: string | null; email: string | null; credit_balance: number; created_at: string; total: number;
   provider: string | null; suspended_at: string | null; suspended_reason: string | null; reregistration_blocked: boolean;
-  last_activity_at: string | null; lessons_finished: number; access_until: string | null;
+  last_activity_at: string | null; lessons_finished: number; access_until: string | null; is_admin: boolean;
 };
 
 const toStudent = (r: StudentDb): StudentRow => ({
@@ -137,6 +139,7 @@ const toStudent = (r: StudentDb): StudentRow => ({
   lastActivityAt: r.last_activity_at,
   lessonsFinished: Number(r.lessons_finished ?? 0),
   accessUntil: r.access_until ?? null,
+  isAdmin: !!r.is_admin,
 });
 
 export async function listStudents(
