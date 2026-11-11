@@ -272,9 +272,9 @@ describe('MarkSlots', () => {
     await press(screen.getByLabelText('Șterge informația 1'));
     expect(onRemove).toHaveBeenCalledWith(0);
     await press(screen.getByText('„cuvânt0 cuvânt1”'));
-    expect(onOpen).toHaveBeenCalledWith('info', 0);
+    expect(onOpen).toHaveBeenCalledWith('info', 0, 0);
     await press(screen.getByText('Informație: marchează în text'));
-    expect(onOpen).toHaveBeenCalledWith('info', null);
+    expect(onOpen).toHaveBeenCalledWith('info', null, 1);
   });
 
 });
