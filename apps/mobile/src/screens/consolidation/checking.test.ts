@@ -66,8 +66,10 @@ describe('emptyAnswer / isComplete', () => {
 
 describe('markerConfig', () => {
   it('limits each pen to what the exercise asks for', () => {
-    expect(markerConfig(info)).toEqual({ pens: ['info'], limits: { info: 2 } });
-    expect(markerConfig(viewpoint)).toEqual({ pens: ['support'], limits: { support: 2 } });
+    expect(markerConfig(info)).toEqual({ pens: ['info'], limits: { info: 2 }, numbered: true });
+    expect(markerConfig(viewpoint)).toEqual({ pens: ['support'], limits: { support: 2 }, numbered: true });
+    expect(markerConfig({ ...info, count: 1 })).toEqual({ pens: ['info'], limits: { info: 1 } });
+    expect(markerConfig({ ...viewpoint, count: 1 })).toEqual({ pens: ['support'], limits: { support: 1 } });
     expect(markerConfig(ce)).toEqual({ pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true });
     expect(markerConfig(short)).toBeNull();
   });

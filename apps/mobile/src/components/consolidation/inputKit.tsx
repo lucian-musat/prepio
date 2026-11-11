@@ -67,7 +67,14 @@ const plain = (m: MarkerMark): Mark => ({ sourceId: m.sourceId, from: m.from, to
  */
 export function useMarksAnswer<A>(marks: MarkerMark[], toAnswer: (marks: (pen: MarkerMark['pen']) => Mark[]) => A, value: A, onChange: (a: A) => void) {
   useEffect(() => {
-    const next = toAnswer((pen) => marks.filter((m) => m.pen === pen).map(plain));
+    // Numbered marks are stored in slot order, so a reload puts them back in the same slots.
+    const of = (pen: MarkerMark['pen']) =>
+      marks
+        .map((m, k) => ({ m, k: m.slot ?? k }))
+        .filter((x) => x.m.pen === pen)
+        .sort((x, y) => x.k - y.k)
+        .map((x) => plain(x.m));
+    const next = toAnswer(of);
     if (JSON.stringify(next) !== JSON.stringify(value)) onChange(next);
     // Only a change of the marks re-derives the answer; the text parts change through onChange directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
