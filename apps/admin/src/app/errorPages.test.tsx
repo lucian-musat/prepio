@@ -2,12 +2,37 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { captureBoundaryError } from '@/lib/sentry';
 import AdminError from './(admin)/error';
 import AdminLoading from './(admin)/loading';
 import GlobalError from './global-error';
 import NotFound from './not-found';
 
-afterEach(cleanup);
+vi.mock('@/lib/sentry', () => ({ captureBoundaryError: vi.fn() }));
+const capture = vi.mocked(captureBoundaryError);
+
+afterEach(() => {
+  cleanup();
+  capture.mockClear();
+});
+
+// A digest means the error happened on the server, where `onRequestError` already reported it.
+describe.each([
+  ['(admin)/error', (error: Error) => render(<AdminError error={error} reset={() => {}} />)],
+  ['global-error', (error: Error) => render(<GlobalError error={error} reset={() => {}} />, { container: document })],
+])('%s reporting', (_name, renderWith) => {
+  it('reports a client error (no digest) as unhandled', () => {
+    const error = new Error('client crash');
+    renderWith(error);
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith(error);
+  });
+
+  it('does not report a server error again (it has a digest)', () => {
+    renderWith(Object.assign(new Error('server'), { digest: 'abc123' }));
+    expect(capture).not.toHaveBeenCalled();
+  });
+});
 
 describe('(admin)/error', () => {
   it('shows the generic message, the digest and a working retry, never the error message', async () => {

@@ -12,6 +12,7 @@ import { isUuid } from '@/lib/data/db';
 import type { Credits } from '@/lib/credits/credits';
 import type { Grader } from '@/lib/evaluate/openai';
 import type { RateLimit } from '@/lib/evaluate/rateLimit';
+import { captureFailure } from '@/lib/sentry';
 import type { BacCharge } from './charge';
 import { buildBacItemPrompt, buildBacStylePrompt } from './prompt';
 import { bacGradeSchema, bacStyleSchema } from './schema';
@@ -19,6 +20,10 @@ import { bacGradeSchema, bacStyleSchema } from './schema';
 /** `credits` is used for refunds; charging goes through `charge` (spend + ledger entry on the attempt, atomically). */
 export type BacDeps = { db: SupabaseClient; grade: Grader; rateLimit: RateLimit; credits: Credits; charge: BacCharge; now?: () => Date };
 export type BacHandlerResult = { status: number; json: BacSubmitResponse | BacSubmitError };
+
+/** The Sentry route tag of this handler's failures; every failed grading answers 502 grading_failed. */
+const ROUTE = 'bac/submit';
+const FAILED_STATUS = 502;
 
 /** Papers per day across all students; separate from the consolidation checks' `evaluate:global` budget. */
 export const BAC_RATE_KEY = 'bac:global';
@@ -302,6 +307,7 @@ async function logEvent(db: SupabaseClient, userId: string, kind: string, detail
     if (error) throw new Error(error.message);
   } catch (e) {
     console.error(`[bac/submit] logging ${kind} failed:`, e);
+    captureFailure(ROUTE, 'log_event', e);
   }
 }
 
@@ -493,12 +499,14 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
     if (!graded) {
       // The stale sweep failed the attempt and refunded its entry meanwhile: nothing left to give back.
       console.error(`[bac/submit] attempt ${attemptId} left grading before it was graded`);
+      captureFailure(ROUTE, 'stuck_grading', undefined, FAILED_STATUS);
       return bacError('grading_failed', { credits: { spent: 0, balance: await currentBalance(db, userId) } });
     }
     await logEvent(db, userId, 'bac_graded', { subject_id: subjectId, points, grade });
     return { status: 200, json: { attemptId, points, grade, results, credits: { spent: cost, balance: spend.balance } } };
   } catch (e) {
     console.error('[bac/submit] failed:', e);
+    captureFailure(ROUTE, 'grade', e, FAILED_STATUS);
     if (attemptId === null) return bacError('grading_failed');
     if (entryId === null) {
       // The charge may have committed with its response lost: the attempt is the source of truth.
@@ -507,6 +515,7 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
       } catch (lookupError) {
         // Unknown outcome: leave the attempt in `grading`; the stale sweep refunds a stored entry and fails it.
         console.error(`[bac/submit] ledger lookup for attempt ${attemptId} failed:`, lookupError);
+        captureFailure(ROUTE, 'ledger_lookup', lookupError, FAILED_STATUS);
         return bacError('grading_failed');
       }
     }
@@ -516,6 +525,7 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
         await whileGrading(db, attemptId, { status: 'failed' });
       } catch (stateError) {
         console.error(`[bac/submit] failing attempt ${attemptId} failed:`, stateError);
+        captureFailure(ROUTE, 'fail_attempt', stateError, FAILED_STATUS);
       }
       return bacError('grading_failed');
     }
@@ -526,6 +536,7 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
     } catch (refundError) {
       // The attempt stays in `grading` with its ledger entry: the stale sweep refunds and fails it within minutes.
       console.error(`[bac/submit] refund of ledger entry ${entryId} failed:`, refundError);
+      captureFailure(ROUTE, 'refund', refundError, FAILED_STATUS);
       return bacError('grading_failed');
     }
     try {
@@ -535,6 +546,7 @@ export async function handleBacSubmit(body: unknown, userId: string, deps: BacDe
     } catch (stateError) {
       // Refunded already; the sweep fails the attempt later.
       console.error(`[bac/submit] failing attempt ${attemptId} failed:`, stateError);
+      captureFailure(ROUTE, 'fail_attempt', stateError, FAILED_STATUS);
     }
     return bacError('grading_failed', { credits: { spent: 0, balance } });
   }

@@ -25,3 +25,12 @@ jest.mock('react-native-webview', () => {
 
 // Native module with no Jest binding: link and video-fallback buttons call it; tests assert on the mock.
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn().mockResolvedValue({ type: 'opened' }) }));
+
+// Sentry is off without a DSN (always the case under Jest) and its ESM build does not load in Jest: a stub
+// stands in so any module that imports it can load. src/lib/sentry.test.ts asserts on its own mock.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  setUser: jest.fn(),
+  captureException: jest.fn(),
+  wrap: jest.fn((component) => component),
+}));

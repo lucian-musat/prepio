@@ -273,6 +273,35 @@ Share the internal-distribution install link from the build page; the phone must
 - There is no branch protection, by owner decision: the rule "never merge on red or pending CI" is followed by the agent (CLAUDE.md "Branches and PRs"), not enforced by GitHub.
 - The repository is public, so Actions minutes are free. The workflow holds no secrets: the local stack's keys are derived at runtime from `supabase status`.
 
+## Error tracking (Sentry)
+
+Sentry org `sc-expertpower-webluc-srl`, EU region (`https://de.sentry.io`). There are two projects:
+
+- `prepio-admin` covers the admin pages, server actions and the student API routes.
+- `prepio-mobile` covers the APK and the student web.
+
+The SDK only starts when its DSN env var is set, so local dev, tests and CI send nothing. Source maps upload only when `SENTRY_AUTH_TOKEN` is present. A failed upload only warns; it never fails the build.
+
+| Where | Variables |
+|---|---|
+| Vercel `prepio-admin` (Production, Preview) | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN` (secret, set by the owner) |
+| Vercel `prepio-web` | `EXPO_PUBLIC_SENTRY_DSN` (Production, Preview), `EXPO_PUBLIC_SENTRY_ENV` (`production` / `preview`), `SENTRY_AUTH_TOKEN` (secret, set by the owner) |
+| EAS (`apps/mobile/eas.json` + EAS env) | `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_SENTRY_ENV`, `SENTRY_ALLOW_FAILURE` in `eas.json`; `SENTRY_AUTH_TOKEN` as an EAS secret |
+| Local APK builds | no token: `scripts/build-apk-local.sh` sets `SENTRY_DISABLE_AUTO_UPLOAD`, so those builds keep minified stack traces |
+
+The student web build is `apps/mobile/scripts/build-web.sh`. It runs `expo export` with source maps, uploads them, then deletes the `.map` files from `dist`, so the site never serves them. The release is `prepio-web@<git sha>`.
+
+**Privacy.** `packages/shared/src/sentryScrub.ts` runs as `beforeSend`, `beforeSendTransaction`, `beforeSendSpan` and `beforeBreadcrumb` in both SDKs. It removes:
+
+- the user, except the Supabase id
+- request bodies and cookies
+- the `Authorization`, cookie and IP headers
+- emails
+- auth tokens and search terms in URLs
+- console breadcrumb text after the first `:`
+
+The handled failure paths in the API (OpenAI, refunds, ledger, purchases) report a synthetic `route:stage` error, never the original message. Trace headers are never sent (`tracePropagationTargets: []`). No replay.
+
 ## Redeploy
 
 - Admin / student web: push to `main` (Vercel auto-deploys), or "Redeploy" in the Vercel dashboard after changing env vars.

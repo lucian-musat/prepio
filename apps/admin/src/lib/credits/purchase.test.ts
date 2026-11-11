@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { captureFailure } from '@/lib/sentry';
 import { handleCreditsPurchase } from './purchase';
+
+vi.mock('@/lib/sentry', () => ({ captureFailure: vi.fn() }));
+const failure = vi.mocked(captureFailure);
+beforeEach(() => failure.mockClear());
 
 const PKG = '11111111-1111-4111-8111-111111111111';
 const USER = '22222222-2222-4222-8222-222222222222';
@@ -37,11 +42,32 @@ describe('handleCreditsPurchase', () => {
     const r = await handleCreditsPurchase({ packageId: PKG }, USER, db);
     expect(r.status).toBe(500);
     expect(r.json).toEqual({ error: 'server_error', message: 'Cumpărarea nu a reușit. Încearcă din nou.' });
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('credits/purchase', 'rpc', expect.objectContaining({ message: 'profile_not_found' }), 500);
   });
 
   it('maps an empty result to 500', async () => {
     const { db } = fakeDb({ data: [] });
     expect((await handleCreditsPurchase({ packageId: PKG }, USER, db)).status).toBe(500);
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('credits/purchase', 'rpc_empty', undefined, 500);
+  });
+
+  it('reports a failing suspension lookup as a 500', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { db, from } = fakeDb({});
+    from.mockImplementation(() => {
+      throw new Error('network down');
+    });
+    expect((await handleCreditsPurchase({ packageId: PKG }, USER, db)).status).toBe(500);
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('credits/purchase', 'suspension_lookup', expect.any(Error), 500);
+  });
+
+  it('reports nothing for expected outcomes', async () => {
+    await handleCreditsPurchase({ packageId: PKG }, USER, fakeDb({ error: { message: 'package_unavailable' } }).db);
+    await handleCreditsPurchase({ packageId: PKG }, USER, fakeDb({ data: [{ order_id: 'o1', credits: 50, balance: 62 }] }).db);
+    expect(failure).not.toHaveBeenCalled();
   });
 
   it('returns the order on success', async () => {

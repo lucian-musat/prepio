@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CreditsPurchaseError, CreditsPurchaseErrorCode, CreditsPurchaseResponse } from '@prepio/shared';
 import { isSuspended } from '@/lib/account/suspended';
 import { isUuid } from '@/lib/data/db';
+import { captureFailure } from '@/lib/sentry';
 
 export type PurchaseResult = { status: number; json: CreditsPurchaseResponse | CreditsPurchaseError };
 
@@ -18,6 +19,13 @@ export function purchaseError(code: CreditsPurchaseErrorCode): PurchaseResult {
   return { status, json: { error: code, message } };
 }
 
+/** A server_error answer, reported to Sentry (sanitized) under `stage`. */
+function serverError(stage: string, e?: unknown): PurchaseResult {
+  const r = purchaseError('server_error');
+  captureFailure('credits/purchase', stage, e, r.status);
+  return r;
+}
+
 /** Buys a credit package instantly (no payment provider yet) through the service-role RPC. */
 export async function handleCreditsPurchase(body: unknown, userId: string, db: SupabaseClient): Promise<PurchaseResult> {
   const packageId = typeof body === 'object' && body !== null ? (body as Record<string, unknown>).packageId : undefined;
@@ -27,20 +35,20 @@ export async function handleCreditsPurchase(body: unknown, userId: string, db: S
     if (await isSuspended(db, userId)) return purchaseError('suspended');
   } catch (e) {
     console.error('[credits/purchase] suspension lookup failed:', e);
-    return purchaseError('server_error');
+    return serverError('suspension_lookup', e);
   }
 
   const { data, error } = await db.rpc('purchase_credit_package', { p_user: userId, p_package: packageId });
   if (error) {
     if (error.message === 'package_unavailable' || error.message === 'package_not_found') return purchaseError('package_unavailable');
     console.error('[credits/purchase] RPC failed:', error.message);
-    return purchaseError('server_error');
+    return serverError('rpc', error);
   }
   // A table-returning RPC comes back as an array of rows.
   const row = (Array.isArray(data) ? data[0] : data) as { order_id: string; credits: number; balance: number } | undefined;
   if (!row || typeof row.order_id !== 'string' || typeof row.credits !== 'number' || typeof row.balance !== 'number') {
     console.error('[credits/purchase] RPC returned no row');
-    return purchaseError('server_error');
+    return serverError('rpc_empty');
   }
   return { status: 200, json: { orderId: row.order_id, credits: row.credits, balance: row.balance } };
 }

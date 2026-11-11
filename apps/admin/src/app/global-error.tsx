@@ -1,7 +1,15 @@
 'use client';
 
+import { useEffect } from 'react';
+import { captureBoundaryError } from '@/lib/sentry';
+
 /** Last-resort boundary: replaces the root layout, so no Bootstrap or theme is available (inline styles only). */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    // A digest means a server error, already reported by `onRequestError`.
+    if (!error.digest) captureBoundaryError(error);
+  }, [error]);
+
   return (
     <html lang="ro">
       <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>

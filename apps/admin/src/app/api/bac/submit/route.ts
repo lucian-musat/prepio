@@ -6,6 +6,7 @@ import { createOpenAIGrader } from '@/lib/evaluate/openai';
 import { createRateLimit } from '@/lib/evaluate/rateLimit';
 import { createCredits } from '@/lib/credits/credits';
 import { createBacCharge } from '@/lib/bac/charge';
+import { captureFailure } from '@/lib/sentry';
 
 export const dynamic = 'force-dynamic';
 /** The paper's grading calls run in parallel with a 40 s timeout each; Vercel's default would kill the function first. */
@@ -71,6 +72,8 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error('[bac/submit] unexpected failure:', e);
     const r = bacError('grading_failed');
+    // Sanitized: the error's message can quote model output about the student's answer.
+    captureFailure('bac/submit', 'unhandled', e, r.status);
     return reply(r.status, r.json, request);
   }
 }

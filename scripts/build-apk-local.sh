@@ -20,6 +20,14 @@ export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.workers.max=2 -Dkotlin.compiler.execution.strategy=in-process}"
 export ORG_GRADLE_PROJECT_reactNativeArchitectures="${ABIS:-arm64-v8a}"
 
+# Sentry: the config plugin uploads source maps and the ProGuard mapping during the Gradle build when
+# SENTRY_AUTH_TOKEN is set. Local builds usually have no token, so the upload is turned off instead of failing the
+# build; that build's Sentry stack traces stay minified (spec: acceptable).
+if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+  export SENTRY_DISABLE_AUTO_UPLOAD=true
+  echo "SENTRY_AUTH_TOKEN is not set: Sentry source map upload disabled for this build."
+fi
+
 ext="apk"
 [ "$profile" = production ] && ext="aab"
 out_dir="$HOME/prepio-builds"

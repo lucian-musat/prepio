@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateBearer } from '@/lib/auth/bearer';
 import { allowedOrigins, corsHeaders } from '@/lib/evaluate/cors';
 import { handleCreditsPurchase, purchaseError } from '@/lib/credits/purchase';
+import { captureError } from '@/lib/sentry';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     return reply(r.status, r.json, request);
   } catch (e) {
     console.error('[credits/purchase] unexpected failure:', e);
+    captureError(e, { route: 'credits/purchase' });
     const r = purchaseError('server_error');
     return reply(r.status, r.json, request);
   }

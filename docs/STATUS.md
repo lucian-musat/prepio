@@ -16,7 +16,19 @@ Last updated: 2026-11-10
   - Tests: pgTAP 645, admin unit 433 + integration 124, content integration 47, admin Playwright e2e 17/17. The final review found two e2e specs broken by the new confirm and trigger, now fixed. It also found that PR 2's `(admin)/loading.tsx` makes an unknown lesson answer HTTP 200 with the not-found page; that's kept, and the e2e asserts the visible page.
   - Browser walk (headless Chromium), 23/23: disabled deletes and hints at 1280 and 360, the stale delete refused, the unpublish confirms (cancel and confirm), draft lesson and drafts-only node deletes, the lesson-editor and BAC confirms, console clean. Seed counts were unchanged after cleanup.
   - Note: CI has no e2e. From now on, every admin PR runs `pnpm --filter @prepio/admin e2e` locally before merge.
-- PR 4 — Sentry (`feat/sentry`): not started.
+- PR 4 — Sentry (`feat/sentry`): implemented and reviewed, including a whole-branch final review. See `docs/deploy.md` "Error tracking (Sentry)".
+  - Versions: `@sentry/react-native` 8.28.0 for the student app and web, and `@sentry/nextjs` 10.78.0 for the admin. 10.x was chosen over 11.x because 11.x collects gen-AI inputs and HTTP bodies by default.
+  - PII: there is a shared scrubber in `@prepio/shared`. Handled API failures are reported sanitized, as `route:stage`.
+  - Tests: shared 389, mobile 1021, admin 457 unit + 124 integration, and admin Playwright e2e 17/17 all pass.
+  - Local end-to-end, with the DSNs set temporarily (environment `development`):
+    - A forced server error in the admin arrived as `PREPIO-ADMIN-1`, via `onRequestError`, with the email in the message replaced by `[email]`.
+    - A forced render error in the student web arrived as `PREPIO-MOBILE-1`, via the ErrorBoundary, `handled: no`.
+    - No trace headers went to the local APIs. Both test issues were resolved afterwards.
+  - Vercel env set:
+    - by Claude: the DSNs, and `EXPO_PUBLIC_SENTRY_ENV`
+    - by the owner: `SENTRY_AUTH_TOKEN` on both projects
+  - **Native: new module, so a new APK is needed.** On the phone, check that the app starts, that a forced error arrives in Sentry, and that Google sign-in and video still work.
+  - Owner action: in Sentry, go to Settings → Security & Privacy and turn on "Prevent Storing of IP Addresses" for the organization. Sentry derives `user.geo` from the sender's IP on its own side.
 - PR 5 — Terms and the 16+ confirmation (`feat/terms-age`): not started.
 
 Owner actions: lawyer review of the legal texts; fill the operator placeholders in `apps/mobile/src/lib/legal.ts`; phone checks after the Sentry APK.

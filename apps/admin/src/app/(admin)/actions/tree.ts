@@ -5,6 +5,7 @@ import type { LessonStatus } from '@prepio/shared';
 import type { ActionResult } from '@/lib/actionResult';
 import { createServerClient } from '@/lib/supabase/server';
 import * as tree from '@/lib/data/tree';
+import { captureError } from '@/lib/sentry';
 
 async function run<T = void>(fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<T>): Promise<ActionResult<T>> {
   try {
@@ -15,6 +16,7 @@ async function run<T = void>(fn: (db: Awaited<ReturnType<typeof createServerClie
   } catch (e) {
     if (e instanceof tree.UserError) return { ok: false, error: e.message };
     console.error('[tree action] unexpected error:', e);
+    captureError(e, { route: 'tree action' });
     return { ok: false, error: 'Operația a eșuat. Încearcă din nou.' };
   }
 }

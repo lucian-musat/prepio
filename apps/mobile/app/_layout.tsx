@@ -6,10 +6,15 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 import { color } from '@prepio/shared';
 import { fontFiles } from '../src/theme/fonts';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import ErrorScreen from '../src/screens/ErrorScreen';
+import { initSentry } from '../src/lib/sentry';
+
+// Before anything renders, so start-up errors are reported too. Off (returns false) without a DSN.
+const sentryEnabled = initSentry();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -70,7 +75,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     // Gesture detectors (the card stepper swipe) need a root view above them on native.
     <GestureHandlerRootView style={styles.root}>
@@ -84,3 +89,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({ root: { flex: 1 } });
+
+// Sentry.wrap adds the touch-event and app-start instrumentation; without a DSN the plain layout is exported.
+export default sentryEnabled ? Sentry.wrap(RootLayout) : RootLayout;

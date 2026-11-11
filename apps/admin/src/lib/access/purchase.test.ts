@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { captureFailure } from '@/lib/sentry';
 import { handleAccessPurchase } from './purchase';
+
+vi.mock('@/lib/sentry', () => ({ captureFailure: vi.fn() }));
+const failure = vi.mocked(captureFailure);
+beforeEach(() => failure.mockClear());
 
 const USER = '22222222-2222-4222-8222-222222222222';
 const OK_BODY = { expectedPriceBani: 15000, expectedBonusCredits: 100, expectedDurationMonths: 3 };
@@ -68,17 +73,40 @@ describe('handleAccessPurchase', () => {
     const { db } = fakeDb({ error: { message: 'offer_changed' } }, { settingsError: true });
     const r = await handleAccessPurchase(OK_BODY, USER, db);
     expect(r.status).toBe(500);
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('access/purchase', 'offer_read', expect.objectContaining({ message: 'down' }), 500);
   });
 
   it('other RPC errors → 500', async () => {
     const { db } = fakeDb({ error: { message: 'profile_not_found' } });
     const r = await handleAccessPurchase(OK_BODY, USER, db);
     expect(r).toEqual({ status: 500, json: { error: 'server_error', message: 'Plata nu a reușit. Încearcă din nou.' } });
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('access/purchase', 'rpc', expect.objectContaining({ message: 'profile_not_found' }), 500);
   });
 
   it('an empty result → 500', async () => {
     const { db } = fakeDb({ data: [] });
     expect((await handleAccessPurchase(OK_BODY, USER, db)).status).toBe(500);
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('access/purchase', 'rpc_empty', undefined, 500);
+  });
+
+  it('reports a failing suspension lookup as a 500', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { db, from } = fakeDb({});
+    from.mockImplementation(() => {
+      throw new Error('network down');
+    });
+    expect((await handleAccessPurchase(OK_BODY, USER, db)).status).toBe(500);
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith('access/purchase', 'suspension_lookup', expect.any(Error), 500);
+  });
+
+  it('reports nothing for an offer change or a success', async () => {
+    await handleAccessPurchase(OK_BODY, USER, fakeDb({ error: { message: 'offer_changed' } }).db);
+    await handleAccessPurchase(OK_BODY, USER, fakeDb({ data: [{ order_id: 'o1', access_until: 'x', bonus: 1, balance: 2 }] }).db);
+    expect(failure).not.toHaveBeenCalled();
   });
 
   it('success maps the row and passes the expected values to the RPC', async () => {

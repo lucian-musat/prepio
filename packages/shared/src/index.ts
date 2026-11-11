@@ -17,3 +17,4 @@ export * from './credits';
 export * from './access';
 export * from './bac/types';
 export * from './bac/bac';
+export * from './sentryScrub';

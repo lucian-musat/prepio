@@ -10,6 +10,7 @@ import type { CreditSettingsInput } from '@/lib/data/credits';
 import * as settings from '@/lib/data/settings';
 import type { SettingsInput } from '@/lib/data/settings';
 import { createServerClient } from '@/lib/supabase/server';
+import { captureError } from '@/lib/sentry';
 
 export async function saveSettings(input: SettingsInput): Promise<ActionResult> {
   try {
@@ -20,6 +21,7 @@ export async function saveSettings(input: SettingsInput): Promise<ActionResult> 
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[settings action] unexpected error:', e);
+    captureError(e, { route: 'settings action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
@@ -34,6 +36,7 @@ export async function saveCreditSettingsAction(input: CreditSettingsInput): Prom
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[credit settings action] unexpected error:', e);
+    captureError(e, { route: 'credit settings action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
@@ -47,6 +50,7 @@ export async function saveAccessSettings(input: AccessSettingsInput): Promise<Ac
   } catch (e) {
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[access settings action] unexpected error:', e);
+    captureError(e, { route: 'access settings action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }

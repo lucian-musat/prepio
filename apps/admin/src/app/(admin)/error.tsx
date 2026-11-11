@@ -1,8 +1,15 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from 'react-bootstrap';
+import { captureBoundaryError } from '@/lib/sentry';
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    // A digest means a server error, already reported by `onRequestError`.
+    if (!error.digest) captureBoundaryError(error);
+  }, [error]);
+
   return (
     <div className="text-center py-5">
       <h1 className="h4 mb-3">Ceva n-a mers bine pe această pagină.</h1>
