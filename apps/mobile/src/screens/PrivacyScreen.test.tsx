@@ -48,11 +48,14 @@ it('states where data is stored and processed: Supabase in London (UK adequacy),
   expect(screen.getByText(/OpenAI.*în afara UE \(în SUA\)/)).toBeTruthy();
 });
 
-it('states the minimum age: 16, and accounts of younger users are deleted', async () => {
+it('states the minimum age: 14, a parent consent under 18, and accounts of younger users are deleted', async () => {
   await renderScreen();
   expect(screen.getByText('Vârsta minimă')).toBeTruthy();
-  expect(screen.getByText('Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.')).toBeTruthy();
-  expect(screen.getByText(/sub 16 ani.*șters/)).toBeTruthy();
+  expect(screen.queryByText('16 ani', { exact: false })).toBeNull();
+  expect(screen.getByText('Prepio este pentru elevii de liceu care au cel puțin 14 ani.')).toBeTruthy();
+  expect(screen.getByText('Dacă ai sub 18 ani, folosești Prepio cu acordul părintelui sau al tutorelui.')).toBeTruthy();
+  expect(screen.getByText(/părintele sau tutorele poate cere.*ștergerea contului/i)).toBeTruthy();
+  expect(screen.getByText(/sub 14 ani sau unui minor care folosește Prepio fără acordul\s+părintelui, contul este șters/)).toBeTruthy();
 });
 
 it('gives the legal basis: contract and legitimate interest', async () => {
@@ -86,7 +89,7 @@ it('declares everything the app stores about the student', async () => {
     'Lucrările BAC: răspunsurile, eseurile și notele primite.',
     'Accesul complet: perioadele și istoricul obținerii lui.',
     'Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție), folosit pentru suport și pentru siguranța contului.',
-    'Data la care ai confirmat că ai cel puțin 16 ani și versiunea termenilor acceptată.',
+    'Data la care ai confirmat că ai cel puțin 14 ani (și, dacă ai sub 18 ani, că ai acordul părintelui sau al tutorelui) și versiunea termenilor acceptată.',
   ]) {
     expect(screen.getByText(item)).toBeTruthy();
   }

@@ -56,6 +56,14 @@ Last updated: 2026-11-11
     - the Android back button on the gate
   - An old APK skips the consent until it is updated.
   - A terms version bump has to follow `docs/deploy.md` "Terms version bump".
+- PR 6 — Minimum age 14 with parental consent (`feat/terms-age-14`, owner decision 2026-11-11, spec `docs/superpowers/specs/2026-11-11-terms-age-14-design.md`): replaces the 16+ rule of PR 5.
+  - **Checkbox** (Welcome and the gate), still one tick: „Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. Dacă am sub 18 ani, am acordul părintelui sau al tutorelui pentru a folosi Prepio și pentru plăți.” No date of birth, no parent email, no extra step at payment.
+  - **Terms and privacy:** audience „elevii de liceu care au cel puțin 14 ani” (was „clasa a XII-a … 16 ani”); under 18 needs a parent's or guardian's consent to use Prepio and to buy credits or full access; a parent can ask to close the account or about its data; an account under 14, or of a minor without consent, is deleted and unused paid credits/access refunded. Draft for the lawyer.
+  - **DB:** migration `20261111140603_terms_age_14`: `current_terms_version()` = `2026-11-11` (`TERMS_VERSION`, dates 11 noiembrie 2026). Every existing account accepts again through the gate. `age_confirmed_at` now records 14+ and, for a minor, the parental consent.
+  - **Tests:** mobile 1133, pgTAP `terms_acceptance` 15 (the 2026-11-10 version is now refused).
+  - **Browser walk (headless Chromium), 53/53 at 360 touch and 1280:** Welcome with the new text, Google disabled until ticked; `/termeni` and `/confidentialitate` with the new texts and date, no „16 ani” left; an account on the 2026-11-10 version gets the gate, accepts and is stored as 2026-11-11; no horizontal scroll; console clean; test account removed.
+  - **Release order** (`docs/deploy.md` "Terms version bump"): new APK → `pnpm db:cloud:push` → merge right after. Between the push and the Vercel deploy the web gate briefly shows „Actualizează aplicația”; an older APK keeps showing it until updated.
+  - **Native:** text only, no new module. With the next APK, check the longer checkbox text on the phone (wrapping, TalkBack reads the whole sentence).
 
 **Admins in the student list (2026-11-11, `feat/admins-in-students`).** Small change, agreed in chat, no separate spec. Migration `20261111120000_admins_in_students`:
 - `admin_students` lists an admin once they have a lesson, a consolidation run or a BAC subject started, and returns `is_admin`. The Trial filter leaves admins out; Acces complet lists them.

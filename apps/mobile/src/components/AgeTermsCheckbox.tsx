@@ -4,7 +4,9 @@ import { border, color, layout, radius, space, stroke } from '@prepio/shared';
 import { AppText, Icon } from '../ui';
 
 /** The consent sentence: the checkbox's visible text and accessible name. */
-export const AGE_TERMS_LABEL = 'Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.';
+export const AGE_TERMS_LABEL =
+  'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. ' +
+  'Dacă am sub 18 ani, am acordul părintelui sau al tutorelui pentru a folosi Prepio și pentru plăți.';
 
 /** Screen-reader hint on a button disabled until the consent is checked. */
 export const CONSENT_HINT = 'Bifează confirmarea de mai sus.';
@@ -20,7 +22,7 @@ const LINKS: Array<{ label: string; href: Href }> = [
 type Props = { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean };
 
 /**
- * The required 16+/terms checkbox (Welcome and the terms gate). The checkbox row holds only the box and the plain
+ * The required 14+/parental consent/terms checkbox (Welcome and the terms gate). The checkbox row holds only the box and the plain
  * sentence (at least the 48 px touch target); the two pages are separate links below it, so screen readers reach
  * them on their own and a link is never inside the checkbox.
  */
@@ -66,7 +68,8 @@ export default function AgeTermsCheckbox({ checked, onChange, disabled = false }
 
 const styles = StyleSheet.create({
   stack: { gap: space[1] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: layout.minTouch, paddingVertical: space[1] },
+  // The sentence wraps to several lines: the box sits on the first one (small line height 22.5 ≈ the 24 px box).
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], minHeight: layout.minTouch, paddingVertical: space[1] },
   box: {
     width: BOX,
     height: BOX,

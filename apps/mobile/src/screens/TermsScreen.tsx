@@ -31,9 +31,23 @@ export default function TermsScreen() {
         </Section>
 
         <Section title="Cine poate folosi aplicația">
-          <Item>Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.</Item>
-          <Item>Când îți creezi contul, confirmi că ai cel puțin 16 ani.</Item>
-          <Item>Dacă aflăm că un cont aparține unei persoane sub 16 ani, contul este șters.</Item>
+          <Item>Prepio este pentru elevii de liceu care au cel puțin 14 ani.</Item>
+          <Item>
+            Dacă ai sub 18 ani, ai nevoie de acordul părintelui sau al tutorelui ca să folosești Prepio și ca să cumperi
+            credite sau acces complet.
+          </Item>
+          <Item>
+            Când îți creezi contul, confirmi că ai cel puțin 14 ani și, dacă ai sub 18 ani, că ai acordul părintelui sau al
+            tutorelui.
+          </Item>
+          <Item>
+            {`Părintele sau tutorele poate cere oricând închiderea contului, la ${CONTACT_EMAIL}.`}
+          </Item>
+          <Item>
+            Dacă aflăm că un cont aparține unei persoane sub 14 ani sau unui minor care folosește Prepio fără acordul
+            părintelui, contul este șters. Pentru creditele sau accesul complet plătite și nefolosite, rambursăm suma
+            plătită.
+          </Item>
         </Section>
 
         <Section title="Contul tău">
@@ -53,6 +67,7 @@ export default function TermsScreen() {
           <Item>
             Accesul complet deschide toate lecțiile pentru o perioadă. Fără el, ai deschisă doar lecția gratuită.
           </Item>
+          <Item>Dacă ai sub 18 ani, cumperi credite sau acces complet doar cu acordul părintelui sau al tutorelui.</Item>
           <Item>
             În acest moment nu încasăm plăți: pachetele de credite și accesul complet se obțin fără bani. Înainte să
             introducem plățile, vom afișa în aplicație prețurile și condițiile, inclusiv cele de rambursare.

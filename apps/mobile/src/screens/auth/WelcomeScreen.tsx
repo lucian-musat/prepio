@@ -14,7 +14,7 @@ const TITLE = 'Bun venit la Prepio';
 const SUBTITLE = 'Pregătește-te pentru BAC cu lecții scurte și exerciții. Intră sau creează-ți cont ca să începi.';
 
 /**
- * First screen for a signed-out student: the required 16+/terms checkbox, then Google, and email code when the
+ * First screen for a signed-out student: the required 14+/parental consent/terms checkbox, then Google, and email code when the
  * build enables it. The consent is stored on this device (it survives the web OAuth redirect) and recorded on the
  * account right after the sign-in (AuthProvider), so a new student goes straight to the name.
  */

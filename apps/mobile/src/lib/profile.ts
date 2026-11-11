@@ -11,7 +11,7 @@ export type Profile = {
   suspendedReason: string | null;
   /** End of the paid access (ISO), or null for a trial account that never bought it. */
   accessUntil: string | null;
-  /** Version of the terms of use the student accepted (with the 16+ confirmation), or null when never accepted. */
+  /** Version of the terms of use the student accepted (with the 14+ and parental consent confirmation), or null when never accepted. */
   termsVersion: string | null;
 };
 

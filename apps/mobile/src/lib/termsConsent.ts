@@ -3,7 +3,7 @@ import { getSupabase } from './supabase';
 import { TERMS_VERSION } from './legal';
 
 /**
- * The 16+/terms consent ticked on Welcome, kept on this device with the time it was given (valid 15 minutes) until
+ * The 14+/parental consent/terms consent ticked on Welcome, kept on this device with the time it was given (valid 15 minutes) until
  * the sign-in it was given for records it (`accept_terms`), that sign-in is cancelled or fails, or sign-out.
  * AsyncStorage is localStorage on the web, like the Supabase session, so the consent survives the OAuth redirect.
  */
