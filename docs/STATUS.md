@@ -64,7 +64,6 @@ Last updated: 2026-11-11
   - **Browser walk (headless Chromium), 53/53 at 360 touch and 1280:** Welcome with the new text, Google disabled until ticked; `/termeni` and `/confidentialitate` with the new texts and date, no „16 ani” left; an account on the 2026-11-10 version gets the gate, accepts and is stored as 2026-11-11; no horizontal scroll; console clean; test account removed.
   - **Release order** (`docs/deploy.md` "Terms version bump"): new APK → `pnpm db:cloud:push` → merge right after. Between the push and the Vercel deploy the web gate briefly shows „Actualizează aplicația”; an older APK keeps showing it until updated.
   - **Native:** text only, no new module. With the next APK, check the longer checkbox text on the phone (wrapping, TalkBack reads the whole sentence).
-  - **Parallel work:** `feat/admins-in-students` has a migration timestamped `20261111120000`, older than this one. Owner decision: this PR ships first, so regenerate that migration with a new timestamp (`pnpm db:new`) before its `db:cloud:push`.
 
 **Admins in the student list (2026-11-11, `feat/admins-in-students`).** Small change, agreed in chat, no separate spec. Migration `20261111120000_admins_in_students`:
 - `admin_students` lists an admin once they have a lesson, a consolidation run or a BAC subject started, and returns `is_admin`. The Trial filter leaves admins out; Acces complet lists them.
