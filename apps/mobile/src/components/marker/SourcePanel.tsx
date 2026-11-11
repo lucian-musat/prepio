@@ -79,13 +79,16 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
 
   const causeEffect = canMark(marker) && isCauseEffect(marker.cfg);
   const numbered = canMark(marker) && !!marker.cfg.numbered;
-  // Cause-effect and numbered: the role / slot is in the banner under the prompt, so only the gesture hint stays here.
+  // Cause-effect and numbered: the role / slot is in the banner under the prompt, so only the gesture hint stays here
+  // (numbered and idle: none, the banner's done line already says how to change a mark).
   const pens = canMark(marker) ? (
     <View style={styles.pens}>
       {causeEffect || numbered ? null : <PenBar marker={marker} />}
-      <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
-        {hintFor(marker.cfg, marker.state)}
-      </AppText>
+      {numbered && marker.state.pen === null && !marker.state.anchor ? null : (
+        <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
+          {hintFor(marker.cfg, marker.state)}
+        </AppText>
+      )}
     </View>
   ) : null;
   const banner = causeEffect ? (

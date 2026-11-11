@@ -344,13 +344,14 @@ describe('numbered banner', () => {
     expect(screen.queryByTestId('pen-info')).toBeNull();
   });
 
-  it('every slot filled: the hint asks which information to change', async () => {
+  it('every slot filled: the banner says how to change one, without a second hint under the source', async () => {
     const marks: MarkerMark[] = [
       { sourceId: 'short', from: 0, to: 1, pen: 'info' },
       { sourceId: 'short', from: 3, to: 4, pen: 'info' },
     ];
     await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" marks={marks} />);
-    expect(screen.getByText('Atinge informația pe care vrei s-o schimbi.')).toBeTruthy();
+    expect(screen.getByText('Atinge un slot sau un marcaj ca să-l schimbi.')).toBeTruthy();
+    expect(screen.queryByText('Atinge informația pe care vrei s-o schimbi.')).toBeNull();
   });
 
   it('the reader tray shows the compact numbered step instead of the pen', async () => {
