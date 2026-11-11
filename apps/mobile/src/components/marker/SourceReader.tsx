@@ -20,6 +20,7 @@ import { fontFamily } from '../../theme/fonts';
 import { AppText, Button, IconButton } from '../../ui';
 import { raisedShadow } from '../../ui/elevation';
 import { CauseEffectTrayStep } from './CauseEffectBanner';
+import { markBg } from './numbered';
 import MarkableText, { PEN_LABEL, type DragGesture } from './MarkableText';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
 
@@ -279,7 +280,7 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
                   testID={`minimap-${k}`}
                   style={[
                     styles.miniBar,
-                    { top: `${(m.from / count) * 100}%`, height: `${Math.max(2, ((m.to - m.from + 1) / count) * 100)}%`, backgroundColor: markerPen[m.pen] },
+                    { top: `${(m.from / count) * 100}%`, height: `${Math.max(2, ((m.to - m.from + 1) / count) * 100)}%`, backgroundColor: markBg(m) },
                   ]}
                 />
               ))}

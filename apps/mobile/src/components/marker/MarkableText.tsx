@@ -11,10 +11,11 @@ import {
   type TapGestureConfig,
 } from 'react-native-gesture-handler';
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
-import { color, markerInk, markerPen, tokenizeSource, typeScale, type ExerciseFeedback, type Source, type Verdict } from '@prepio/shared';
+import { color, markerInk, tokenizeSource, typeScale, type ExerciseFeedback, type Source, type Verdict } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
 import { ROLE, type Role } from './causeEffect';
 import type { MarkerAction, MarkerState, Pen } from './markerReducer';
+import { markBg, slotName, slotPill } from './numbered';
 import { wordAt, type WordBox } from './wordHit';
 
 const LONG_PRESS_MS = 280; // touch: hold this long (without moving) before a drag starts
@@ -311,31 +312,39 @@ export default function MarkableText({
   const onInnerLayout = useCallback((i: number, e: LayoutChangeEvent) => void layout.current.inner.set(i, e.nativeEvent.layout), []);
   const onA11yTap = useCallback((i: number) => live.current.dispatch({ type: 'tap', sourceId: live.current.sourceId, i }), []);
 
-  // CAUZĂ / EFECT pills by word: from the committed marks only, plus a mark lifted by its handle at its original
-  // start, so nothing reflows under the finger during a drag (they move when the drag is dropped).
-  const pills = new Map<number, Role>();
+  // CAUZĂ / EFECT and INFO n / SUPORT n pills by word: from the committed marks only, plus a mark lifted by its
+  // handle at its original start, so nothing reflows under the finger during a drag (they move when it is dropped).
+  const pills = new Map<number, { label: string; ink: string }>();
   for (const m of drag?.lifted ? [...state.marks, drag.lifted.mark] : state.marks) {
-    if (m.sourceId === source.id && isRole(m.pen)) pills.set(m.from, m.pen);
+    if (m.sourceId !== source.id) continue;
+    if (isRole(m.pen)) pills.set(m.from, { label: ROLE[m.pen].label, ink: markerInk[m.pen] });
+    else if (m.slot !== undefined) pills.set(m.from, slotPill(m.pen, m.slot));
   }
 
   const paintOf = (i: number) => {
     const w = words[i]!;
     const sameParagraphNext = words[i + 1]?.paragraph === w.paragraph;
     let pen: Pen | null = null;
+    let slot: number | undefined;
     let from = -1;
     let to = -1;
     if (drag && i >= Math.min(drag.a, drag.b) && i <= Math.max(drag.a, drag.b)) {
       pen = drag.pen;
+      slot = drag.lifted?.mark.slot ?? state.slot ?? undefined;
       from = Math.min(drag.a, drag.b);
       to = Math.max(drag.a, drag.b);
     } else {
       const m = state.marks.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
-      if (m) ({ pen, from, to } = m);
+      if (m) ({ pen, slot, from, to } = m);
     }
     const v = verdicts?.find((x) => x.sourceId === source.id && i >= x.from && i <= x.to);
+    const pill = pills.get(i);
     return {
       pen,
-      label: pills.get(i) ?? null,
+      bg: pen ? markBg({ pen, slot }) : null,
+      markName: pen ? (slot !== undefined ? slotName(pen, slot) : PEN_LABEL[pen]) : null,
+      label: pill?.label ?? null,
+      labelInk: pill?.ink ?? null,
       first: i === from,
       last: i === to,
       cont: pen !== null && i < to && sameParagraphNext,
@@ -348,7 +357,7 @@ export default function MarkableText({
   // A role pill moves the words after it, and web onLayout only fires on resize: remounting the paragraphs whenever
   // the pills change re-measures every word, so hit-testing and handles never use stale positions. Native onLayout
   // follows position changes, so the key only changes on web. The pills stay put during a drag (see `pills`).
-  const pillKey = web ? [...pills].map(([i, role]) => `${i}${role}`).join(',') : '';
+  const pillKey = web ? [...pills].map(([i, pill]) => `${i}${pill.label}`).join(',') : '';
 
   return (
     <GestureDetector gesture={gesture} touchAction="pan-y" userSelect="none">
@@ -393,8 +402,13 @@ type WordProps = {
   text: string;
   omission: boolean;
   pen: Pen | null;
-  /** A cause/effect mark starts here: its CAUZĂ / EFECT pill goes before the word. */
-  label: Role | null;
+  /** The mark's background (its slot's colour when numbered, else its pen's). */
+  bg: string | null;
+  /** What screen readers hear after „marcat”: the pen, or the numbered slot („Informația 2”). */
+  markName: string | null;
+  /** A cause/effect or numbered mark starts here: its pill (CAUZĂ, INFO 2…) goes before the word, on `labelInk`. */
+  label: string | null;
+  labelInk: string | null;
   first: boolean;
   last: boolean;
   cont: boolean;
@@ -411,7 +425,7 @@ type WordProps = {
 
 /** One word plus its trailing space; the space takes the mark colour when the next word is in the same mark. */
 const Word = memo(function Word(p: WordProps) {
-  const bg = p.pen ? { backgroundColor: markerPen[p.pen] } : null;
+  const bg = p.bg ? { backgroundColor: p.bg } : null;
   const native = Platform.OS !== 'web'; // web screen readers read the DOM text; 500 tab stops would not help
   return (
     <View
@@ -419,7 +433,7 @@ const Word = memo(function Word(p: WordProps) {
       style={[styles.word, { marginVertical: p.lineGap }]}
       onLayout={(e) => p.onLayout(p.i, e)}
       accessible={native}
-      accessibilityLabel={p.pen ? `${p.text}, marcat ${PEN_LABEL[p.pen]}` : p.text}
+      accessibilityLabel={p.markName ? `${p.text}, marcat ${p.markName}` : p.text}
       accessibilityHint={p.interactive ? HINT : undefined}
       accessibilityActions={p.interactive ? [{ name: 'activate' }] : undefined}
       onAccessibilityAction={p.interactive ? (e) => e.nativeEvent.actionName === 'activate' && p.onA11yTap(p.i) : undefined}
@@ -431,9 +445,9 @@ const Word = memo(function Word(p: WordProps) {
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           aria-hidden
-          style={[styles.roleLabel, { backgroundColor: markerInk[p.label] }]}
+          style={[styles.roleLabel, { backgroundColor: p.labelInk ?? color.text }]}
         >
-          <Text style={styles.roleLabelText}>{ROLE[p.label].label}</Text>
+          <Text style={styles.roleLabelText}>{p.label}</Text>
         </View>
       ) : null}
       <View
