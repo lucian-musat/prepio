@@ -33,7 +33,7 @@ export default function TermsScreen() {
         <Section title="Cine poate folosi aplicația">
           <Item>Prepio este pentru elevii de liceu care au cel puțin 14 ani.</Item>
           <Item>
-            Dacă ai sub 18 ani, ai nevoie de acordul unui părinte sau al tutorelui ca să folosești Prepio și ca să cumperi
+            Dacă ai sub 18 ani, ai nevoie de acordul părintelui sau al tutorelui ca să folosești Prepio și ca să cumperi
             credite sau acces complet.
           </Item>
           <Item>
@@ -45,7 +45,8 @@ export default function TermsScreen() {
           </Item>
           <Item>
             Dacă aflăm că un cont aparține unei persoane sub 14 ani sau unui minor care folosește Prepio fără acordul
-            părintelui, contul este șters. Dacă au fost plătite credite sau acces complet nefolosite, rambursăm plata.
+            părintelui, contul este șters. Pentru creditele sau accesul complet plătite și nefolosite, rambursăm suma
+            plătită.
           </Item>
         </Section>
 

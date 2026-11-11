@@ -18,7 +18,7 @@ jest.mock('../lib/termsConsent', () => ({
 }));
 
 const CONSENT =
-  'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. Dacă am sub 18 ani, am acordul părintelui sau tutorelui pentru a folosi Prepio și pentru plăți.';
+  'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. Dacă am sub 18 ani, am acordul părintelui sau al tutorelui pentru a folosi Prepio și pentru plăți.';
 const SAVE_FAILED = 'Nu am putut salva. Încearcă din nou.';
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
@@ -117,4 +117,5 @@ it('„Continuă” carries the hint to tick the consent only while it is disabl
 it('says the app is for high-school students aged 14 or more', async () => {
   await renderGate();
   expect(screen.getByText(/elevii de liceu care au cel puțin 14 ani/)).toBeTruthy();
+  expect(screen.getByText(/dacă ai sub 18 ani, acordul părintelui/)).toBeTruthy();
 });

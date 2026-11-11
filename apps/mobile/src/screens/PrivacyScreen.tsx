@@ -27,7 +27,10 @@ export default function PrivacyScreen() {
             {`Părintele sau tutorele poate cere oricând, la ${CONTACT_EMAIL}, informații despre datele contului sau ștergerea contului.`}
           </Item>
           <Item>Nu colectăm cu bună știință date de la persoane mai mici de 14 ani.</Item>
-          <Item>Dacă aflăm că un cont aparține unei persoane sub 14 ani, contul este șters, împreună cu datele lui.</Item>
+          <Item>
+            Dacă aflăm că un cont aparține unei persoane sub 14 ani sau unui minor care folosește Prepio fără acordul
+            părintelui, contul este șters, împreună cu datele lui.
+          </Item>
         </Section>
 
         <Section title="Ce date colectăm">

@@ -55,7 +55,7 @@ it('states the minimum age: 14, a parent consent under 18, and accounts of young
   expect(screen.getByText('Prepio este pentru elevii de liceu care au cel puțin 14 ani.')).toBeTruthy();
   expect(screen.getByText('Dacă ai sub 18 ani, folosești Prepio cu acordul părintelui sau al tutorelui.')).toBeTruthy();
   expect(screen.getByText(/părintele sau tutorele poate cere.*ștergerea contului/i)).toBeTruthy();
-  expect(screen.getByText(/sub 14 ani.*șters/)).toBeTruthy();
+  expect(screen.getByText(/sub 14 ani sau unui minor care folosește Prepio fără acordul\s+părintelui, contul este șters/)).toBeTruthy();
 });
 
 it('gives the legal basis: contract and legitimate interest', async () => {

@@ -6,7 +6,7 @@ import { AppText, Icon } from '../ui';
 /** The consent sentence: the checkbox's visible text and accessible name. */
 export const AGE_TERMS_LABEL =
   'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. ' +
-  'Dacă am sub 18 ani, am acordul părintelui sau tutorelui pentru a folosi Prepio și pentru plăți.';
+  'Dacă am sub 18 ani, am acordul părintelui sau al tutorelui pentru a folosi Prepio și pentru plăți.';
 
 /** Screen-reader hint on a button disabled until the consent is checked. */
 export const CONSENT_HINT = 'Bifează confirmarea de mai sus.';
@@ -68,7 +68,8 @@ export default function AgeTermsCheckbox({ checked, onChange, disabled = false }
 
 const styles = StyleSheet.create({
   stack: { gap: space[1] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: layout.minTouch, paddingVertical: space[1] },
+  // The sentence wraps to several lines: the box sits on the first one (small line height 22.5 ≈ the 24 px box).
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], minHeight: layout.minTouch, paddingVertical: space[1] },
   box: {
     width: BOX,
     height: BOX,

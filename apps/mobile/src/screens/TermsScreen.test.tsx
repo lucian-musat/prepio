@@ -71,7 +71,7 @@ it('requires a parent or guardian consent under 18, for using the app and for pa
   await renderScreen();
   expect(
     screen.getByText(
-      'Dacă ai sub 18 ani, ai nevoie de acordul unui părinte sau al tutorelui ca să folosești Prepio și ca să cumperi credite sau acces complet.',
+      'Dacă ai sub 18 ani, ai nevoie de acordul părintelui sau al tutorelui ca să folosești Prepio și ca să cumperi credite sau acces complet.',
     ),
   ).toBeTruthy();
   expect(
@@ -81,7 +81,7 @@ it('requires a parent or guardian consent under 18, for using the app and for pa
   ).toBeTruthy();
   expect(screen.getByText('Dacă ai sub 18 ani, cumperi credite sau acces complet doar cu acordul părintelui sau al tutorelui.')).toBeTruthy();
   expect(screen.getByText(/părintele sau tutorele poate cere oricând închiderea contului/i)).toBeTruthy();
-  expect(screen.getByText(/fără acordul părintelui.*șters.*rambursăm/)).toBeTruthy();
+  expect(screen.getByText(/fără acordul părintelui.*șters.*rambursăm suma plătită/)).toBeTruthy();
 });
 
 it('does not promise welcome credits', async () => {
