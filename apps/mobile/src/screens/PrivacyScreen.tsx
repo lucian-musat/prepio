@@ -21,7 +21,7 @@ export default function PrivacyScreen() {
         </Section>
 
         <Section title="Vârsta minimă">
-          <Item>Prepio este pentru elevii de clasa a 12-a care au cel puțin 16 ani.</Item>
+          <Item>Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.</Item>
           <Item>Nu colectăm cu bună știință date de la persoane mai mici de 16 ani.</Item>
           <Item>Dacă aflăm că un cont aparține unei persoane sub 16 ani, contul este șters, împreună cu datele lui.</Item>
         </Section>

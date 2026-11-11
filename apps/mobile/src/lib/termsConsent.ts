@@ -73,5 +73,27 @@ export async function clearConsent(): Promise<void> {
  */
 export async function acceptTerms(): Promise<void> {
   const { error } = await getSupabase().rpc('accept_terms', { p_version: TERMS_VERSION });
-  if (error) throw error;
+  if (!error) return;
+  if (String(error.message ?? '').includes(TERMS_VERSION_MISMATCH)) {
+    throw new TermsAcceptError(TERMS_VERSION_MISMATCH, error.message);
+  }
+  throw error;
+}
+
+/** The server's current terms are not this build's `TERMS_VERSION`: the app (or the web page) is out of date. */
+export const TERMS_VERSION_MISMATCH = 'terms_version_mismatch';
+
+export class TermsAcceptError extends Error {
+  readonly code: typeof TERMS_VERSION_MISMATCH;
+
+  constructor(code: typeof TERMS_VERSION_MISMATCH, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'TermsAcceptError';
+  }
+}
+
+/** True when `acceptTerms` failed because this build's terms version is not the server's current one. */
+export function isTermsVersionMismatch(e: unknown): boolean {
+  return e instanceof TermsAcceptError && e.code === TERMS_VERSION_MISMATCH;
 }

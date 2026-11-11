@@ -63,6 +63,13 @@ it('shows the operator, the contact address and the terms date', async () => {
 it('states the minimum age', async () => {
   await renderScreen();
   expect(screen.getAllByText('cel puțin 16 ani', { exact: false }).length).toBeGreaterThan(0);
+  expect(screen.getByText('Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.')).toBeTruthy();
+});
+
+it('does not promise welcome credits', async () => {
+  await renderScreen();
+  expect(screen.getByText('poți primi credite de bun venit', { exact: false })).toBeTruthy();
+  expect(screen.queryByText('primești credite de bun venit', { exact: false })).toBeNull();
 });
 
 it('uses the same grade disclaimer as the BAC result', async () => {

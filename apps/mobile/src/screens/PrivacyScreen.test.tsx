@@ -51,7 +51,7 @@ it('states where data is stored and processed: Supabase in London (UK adequacy),
 it('states the minimum age: 16, and accounts of younger users are deleted', async () => {
   await renderScreen();
   expect(screen.getByText('Vârsta minimă')).toBeTruthy();
-  expect(screen.getByText('Prepio este pentru elevii de clasa a 12-a care au cel puțin 16 ani.')).toBeTruthy();
+  expect(screen.getByText('Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.')).toBeTruthy();
   expect(screen.getByText(/sub 16 ani.*șters/)).toBeTruthy();
 });
 

@@ -6,6 +6,9 @@ import { AppText, Icon } from '../ui';
 /** The consent sentence: the checkbox's visible text and accessible name. */
 export const AGE_TERMS_LABEL = 'Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.';
 
+/** Screen-reader hint on a button disabled until the consent is checked. */
+export const CONSENT_HINT = 'Bifează confirmarea de mai sus.';
+
 const BOX = space[6]; // 24 px
 const GLYPH = space[4]; // 16 px
 

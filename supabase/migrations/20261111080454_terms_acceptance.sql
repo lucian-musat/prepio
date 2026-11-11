@@ -8,7 +8,7 @@ alter table public.profiles
 create function public.current_terms_version()
 returns text
 language sql
-immutable
+stable
 set search_path = ''
 as $$ select '2026-11-10'::text $$;
 revoke execute on function public.current_terms_version() from public, anon;

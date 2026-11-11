@@ -199,3 +199,14 @@ describe('pre-tick from the real stored consent', () => {
     expect(await AsyncStorage.getItem(actual.TERMS_CONSENT_KEY)).toBeNull();
   });
 });
+
+it('the sign-in buttons carry the hint to tick the consent only while they are disabled for it', async () => {
+  (emailAuthEnabled as jest.Mock).mockReturnValue(true);
+  await renderWelcome();
+  const email = () => screen.getByRole('button', { name: 'Continuă cu email' });
+  expect(google().props.accessibilityHint).toBe('Bifează confirmarea de mai sus.');
+  expect(email().props.accessibilityHint).toBe('Bifează confirmarea de mai sus.');
+  await tick();
+  expect(google().props.accessibilityHint).toBeUndefined();
+  expect(email().props.accessibilityHint).toBeUndefined();
+});

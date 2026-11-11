@@ -31,7 +31,7 @@ export default function TermsScreen() {
         </Section>
 
         <Section title="Cine poate folosi aplicația">
-          <Item>Prepio este pentru elevii de clasa a 12-a care au cel puțin 16 ani.</Item>
+          <Item>Prepio este pentru elevii de clasa a XII-a care au cel puțin 16 ani.</Item>
           <Item>Când îți creezi contul, confirmi că ai cel puțin 16 ani.</Item>
           <Item>Dacă aflăm că un cont aparține unei persoane sub 16 ani, contul este șters.</Item>
         </Section>
@@ -48,7 +48,7 @@ export default function TermsScreen() {
         <Section title="Credite și acces">
           <Item>
             Creditele sunt unități din aplicație cu care plătești verificarea unor răspunsuri, de exemplu un eseu sau un
-            subiect BAC. Când îți creezi contul, primești credite de bun venit.
+            subiect BAC. Când îți creezi contul, poți primi credite de bun venit.
           </Item>
           <Item>
             Accesul complet deschide toate lecțiile pentru o perioadă. Fără el, ai deschisă doar lecția gratuită.

@@ -7,7 +7,7 @@ import { signInWithGoogle } from '../../auth/google';
 import { emailAuthEnabled } from '../../lib/flags';
 import { TERMS_VERSION } from '../../lib/legal';
 import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
-import AgeTermsCheckbox from '../../components/AgeTermsCheckbox';
+import AgeTermsCheckbox, { CONSENT_HINT } from '../../components/AgeTermsCheckbox';
 import AuthHero from './AuthHero';
 
 const TITLE = 'Bun venit la Prepio';
@@ -75,9 +75,21 @@ export default function WelcomeScreen() {
           <AgeTermsCheckbox checked={consented} onChange={toggle} disabled={pending} />
         </Enter>
         <Enter index={2} style={styles.buttons}>
-          <Button label="Continuă cu Google" onPress={google} disabled={pending || !consented} loading={pending} />
+          <Button
+            label="Continuă cu Google"
+            onPress={google}
+            disabled={pending || !consented}
+            loading={pending}
+            accessibilityHint={consented ? undefined : CONSENT_HINT}
+          />
           {emailAuthEnabled() ? (
-            <Button label="Continuă cu email" variant="secondary" onPress={email} disabled={pending || !consented} />
+            <Button
+              label="Continuă cu email"
+              variant="secondary"
+              onPress={email}
+              disabled={pending || !consented}
+              accessibilityHint={consented ? undefined : CONSENT_HINT}
+            />
           ) : null}
           {error ? (
             <AppText role="small" color="danger" accessibilityRole="alert" style={styles.center}>

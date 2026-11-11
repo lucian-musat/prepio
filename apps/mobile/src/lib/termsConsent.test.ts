@@ -1,5 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { acceptTerms, clearConsent, CONSENT_TTL_MS, getStoredConsent, storeConsent, TERMS_CONSENT_KEY } from './termsConsent';
+import {
+  acceptTerms,
+  clearConsent,
+  CONSENT_TTL_MS,
+  getStoredConsent,
+  isTermsVersionMismatch,
+  storeConsent,
+  TermsAcceptError,
+  TERMS_CONSENT_KEY,
+} from './termsConsent';
 import { getSupabase } from './supabase';
 import { TERMS_VERSION } from './legal';
 
@@ -78,8 +87,20 @@ describe('acceptTerms', () => {
     expect(rpc).toHaveBeenCalledWith('accept_terms', { p_version: TERMS_VERSION });
   });
 
-  it('throws when the RPC answers with an error', async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: 'terms_version_mismatch' } });
-    await expect(acceptTerms()).rejects.toMatchObject({ message: 'terms_version_mismatch' });
+  it('a version mismatch throws a TermsAcceptError with the code', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'terms_version_mismatch' } });
+    const err = await acceptTerms().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(TermsAcceptError);
+    expect(err).toMatchObject({ code: 'terms_version_mismatch', message: 'terms_version_mismatch' });
+    expect(isTermsVersionMismatch(err)).toBe(true);
+  });
+
+  it('any other error is thrown as it is and is not a mismatch', async () => {
+    const other = { code: '08006', message: 'connection failure' };
+    rpc.mockResolvedValue({ data: null, error: other });
+    const err = await acceptTerms().catch((e: unknown) => e);
+    expect(err).toBe(other);
+    expect(isTermsVersionMismatch(err)).toBe(false);
+    expect(isTermsVersionMismatch(new Error('terms_version_mismatch'))).toBe(false);
   });
 });

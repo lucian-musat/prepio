@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import TermsGateScreen from './TermsGateScreen';
-import { acceptTerms, clearConsent } from '../lib/termsConsent';
-import { TERMS_VERSION } from '../lib/legal';
+import { acceptTerms, clearConsent, TermsAcceptError } from '../lib/termsConsent';
+import { CONTACT_EMAIL, TERMS_VERSION } from '../lib/legal';
 
 const mockRefresh = jest.fn();
 const mockSignOut = jest.fn();
@@ -11,7 +11,11 @@ jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ refreshProfile: mockRefresh, signOut: mockSignOut }),
 }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
-jest.mock('../lib/termsConsent', () => ({ acceptTerms: jest.fn(), clearConsent: jest.fn() }));
+jest.mock('../lib/termsConsent', () => ({
+  ...jest.requireActual('../lib/termsConsent'),
+  acceptTerms: jest.fn(),
+  clearConsent: jest.fn(),
+}));
 
 const CONSENT = 'Am cel puțin 16 ani și accept Termenii de utilizare și Politica de confidențialitate.';
 const SAVE_FAILED = 'Nu am putut salva. Încearcă din nou.';
@@ -53,9 +57,9 @@ it('once checked, „Continuă” accepts the terms and refreshes the profile', 
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-it('an RPC error shows the save error and does not refresh', async () => {
+it('any other RPC error shows the generic save error and does not refresh', async () => {
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  (acceptTerms as jest.Mock).mockRejectedValue(new Error('terms_version_mismatch'));
+  (acceptTerms as jest.Mock).mockRejectedValue(new Error('connection failure'));
   await renderGate();
   await fireEvent.press(screen.getByRole('checkbox', { name: CONSENT }));
   await fireEvent.press(cont());
@@ -86,4 +90,30 @@ it('the links sit outside the checkbox and open the terms and the privacy policy
   expect(router.push).toHaveBeenCalledWith('/termeni');
   await fireEvent.press(screen.getByRole('link', { name: 'Politica de confidențialitate' }));
   expect(router.push).toHaveBeenCalledWith('/confidentialitate');
+});
+
+it('a terms version mismatch asks to update the app instead of retrying', async () => {
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  (acceptTerms as jest.Mock).mockRejectedValue(new TermsAcceptError('terms_version_mismatch', 'terms_version_mismatch'));
+  await renderGate();
+  await fireEvent.press(screen.getByRole('checkbox', { name: CONSENT }));
+  await fireEvent.press(cont());
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    `Actualizează aplicația (sau reîncarcă pagina) ca să continui. Dacă problema rămâne, scrie-ne la ${CONTACT_EMAIL}.`,
+  );
+  expect(screen.queryByText(SAVE_FAILED)).toBeNull();
+  expect(mockRefresh).not.toHaveBeenCalled();
+  warn.mockRestore();
+});
+
+it('„Continuă” carries the hint to tick the consent only while it is disabled for it', async () => {
+  await renderGate();
+  expect(cont().props.accessibilityHint).toBe('Bifează confirmarea de mai sus.');
+  await fireEvent.press(screen.getByRole('checkbox', { name: CONSENT }));
+  expect(cont().props.accessibilityHint).toBeUndefined();
+});
+
+it('says the app is for 12th graders (clasa a XII-a), aged 16 or more', async () => {
+  await renderGate();
+  expect(screen.getByText(/clasa a XII-a care au cel puțin 16 ani/)).toBeTruthy();
 });
