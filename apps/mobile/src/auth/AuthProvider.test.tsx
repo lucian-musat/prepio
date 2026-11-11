@@ -6,8 +6,12 @@ import { AUTH_TIMEOUT_MS, getSupabase, signOut as libSignOut } from '../lib/supa
 import { signOutGoogle } from './google';
 import { localDay, logAppOpen } from '../lib/activity';
 import { refreshRegisteredProfile } from '../lib/profileRefresh';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { acceptTerms, getStoredConsent, storeConsent } from '../lib/termsConsent';
+import { TERMS_VERSION as TV } from '../lib/legal';
 
 jest.mock('../lib/profile', () => ({ fetchProfile: jest.fn() }));
+jest.mock('../lib/termsConsent', () => ({ ...jest.requireActual('../lib/termsConsent'), acceptTerms: jest.fn() }));
 jest.mock('../lib/activity', () => ({ logAppOpen: jest.fn(), localDay: jest.fn() }));
 jest.mock('./google', () => ({ signOutGoogle: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../lib/supabase', () => ({
@@ -33,8 +37,10 @@ async function emit(event: string, s: unknown) {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
+  (acceptTerms as jest.Mock).mockResolvedValue(undefined);
   listeners = [];
   auth = {
     getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
@@ -51,7 +57,7 @@ beforeEach(() => {
   mockLibSignOut.mockImplementation(async () => {
     for (const l of [...listeners]) l('SIGNED_OUT', null);
   });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null });
   (logAppOpen as jest.Mock).mockResolvedValue(true);
   (localDay as jest.Mock).mockReturnValue('2026-11-06');
 });
@@ -97,7 +103,7 @@ it('is loading until the stored session is resolved', async () => {
 
 it('a session whose profile has no name → needsName', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV });
   await renderAuth();
   await waitForState('needsName|-|access-1');
   expect(mockFetchProfile).toHaveBeenCalledWith(USER);
@@ -143,7 +149,7 @@ it('a stale start-up rejection does not sign out a student who signed in meanwhi
   auth.getUser.mockReturnValue(new Promise((r) => (rejectUser = r)));
   await renderAuth();
   await waitFor(() => expect(auth.getUser).toHaveBeenCalled());
-  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: 'Ion', learningMode: 'guided', creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: 'Ion', learningMode: 'guided', creditBalance: 5, termsVersion: TV });
   await emit('SIGNED_IN', session(OTHER, 'access-9'));
   await waitForState('ready|Ion|access-9');
   await act(async () =>
@@ -183,7 +189,7 @@ it('SIGNED_OUT event → signedOut and the profile is dropped', async () => {
 it('SIGNED_IN event from signedOut loads the profile', async () => {
   await renderAuth();
   await waitForState('signedOut|-|-');
-  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: null, learningMode: null, creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: OTHER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV });
   await emit('SIGNED_IN', session(OTHER, 'access-9'));
   await waitForState('needsName|-|access-9');
   expect(mockFetchProfile).toHaveBeenCalledWith(OTHER);
@@ -201,20 +207,20 @@ it('TOKEN_REFRESHED only swaps the session, without reloading the profile or lea
 
 it('refreshProfile moves needsName → ready once the name is saved', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV });
   await renderAuth();
   await waitForState('needsName|-|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV });
   await act(() => latest.refreshProfile());
   expect(state()).toBe('ready|Ana|access-1');
 });
 
 it('refreshProfile moves needsMode → ready once the mode is saved', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, termsVersion: TV });
   await renderAuth();
   await waitForState('needsMode|Ana|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV });
   await act(() => latest.refreshProfile());
   expect(state()).toBe('ready|Ana|access-1');
 });
@@ -223,12 +229,12 @@ it('refreshProfile resolves with the profile it settled on', async () => {
   auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
   await renderAuth();
   await waitForState('ready|Ana|access-1');
-  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 });
+  mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, termsVersion: TV });
   let fresh: unknown;
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5 });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, termsVersion: TV });
 });
 
 it('refreshProfile resolves with the kept profile when the reload fails', async () => {
@@ -241,7 +247,7 @@ it('refreshProfile resolves with the kept profile when the reload fails', async 
   await act(async () => {
     fresh = await latest.refreshProfile();
   });
-  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
+  expect(fresh).toEqual({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null });
   warn.mockRestore();
 });
 
@@ -388,7 +394,7 @@ describe('network outages are not a logout', () => {
     });
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-    mockFetchProfile.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5 });
+    mockFetchProfile.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV });
     await renderAuth();
     await waitForState('ready|-|access-1');
     await act(async () => onChange('active'));
@@ -435,27 +441,199 @@ it('useAuth outside the provider throws', async () => {
 
 describe('statusFor', () => {
   it('asks for the name first, then the mode, then lets the student in', () => {
-    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('needsName');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('needsMode');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null }, false)).toBe('needsName');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: null, creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null }, false)).toBe('needsMode');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'free', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null }, false)).toBe('ready');
   });
 
   it('a suspended profile is suspended first, even without a name or mode', () => {
     const reason = 'Cont creat pentru test.';
-    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
-    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
+    expect(statusFor({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
+    expect(statusFor({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: reason, accessUntil: null }, false)).toBe('suspended');
   });
 
   it('lets the student in when the profile could not be loaded', () => {
     expect(statusFor(null, true)).toBe('ready');
+  });
+
+  const base = { id: USER, displayName: 'Ana', learningMode: 'guided' as const, creditBalance: 5, suspendedReason: null, accessUntil: null };
+
+  it('asks for the terms first when they were never accepted or are an older version', () => {
+    expect(statusFor({ ...base, termsVersion: null }, false)).toBe('needsTerms');
+    expect(statusFor({ ...base, termsVersion: '2020-01-01' }, false)).toBe('needsTerms');
+    expect(statusFor({ ...base, displayName: null, learningMode: null, termsVersion: null }, false)).toBe('needsTerms');
+  });
+
+  it('a suspended profile with no terms is still suspended', () => {
+    expect(statusFor({ ...base, termsVersion: null, suspendedReason: 'Motiv' }, false)).toBe('suspended');
+  });
+
+  it('a failed load without a profile still lets the student in (no gate offline)', () => {
+    expect(statusFor(null, true)).toBe('ready');
+  });
+
+  it('accepted terms but no name → needsName', () => {
+    expect(statusFor({ ...base, displayName: null, learningMode: null, termsVersion: TV }, false)).toBe('needsName');
+  });
+});
+
+describe('terms consent', () => {
+  const noTerms = { id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null, termsVersion: null };
+  let seen: string[];
+  function Recorder() {
+    const { status } = useAuth();
+    seen.push(status);
+    return null;
+  }
+  const renderRecorded = () =>
+    render(
+      <AuthProvider>
+        <Probe />
+        <Recorder />
+      </AuthProvider>,
+    );
+  beforeEach(() => {
+    seen = [];
+  });
+
+  it('a profile without accepted terms and no stored consent → needsTerms (no RPC)', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('needsTerms|Ana|access-1');
+    expect(acceptTerms).not.toHaveBeenCalled();
+  });
+
+  it('a stored consent is accepted once after sign-in, cleared, and the gate never shows', async () => {
+    await storeConsent(TV);
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderRecorded();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+    await waitForState('ready|Ana|access-1');
+    expect(acceptTerms).toHaveBeenCalledTimes(1);
+    expect(latest.profile?.termsVersion).toBe(TV);
+    await expect(getStoredConsent()).resolves.toBeNull();
+    expect(seen).not.toContain('needsTerms');
+  });
+
+  it('a new account with a stored consent goes straight to the name screen', async () => {
+    await storeConsent(TV);
+    mockFetchProfile.mockResolvedValue({ ...noTerms, displayName: null, learningMode: null });
+    await renderRecorded();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+    await waitForState('needsName|-|access-1');
+    expect(seen).not.toContain('needsTerms');
+  });
+
+  it('a failed auto-accept settles on needsTerms (the gate)', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (acceptTerms as jest.Mock).mockRejectedValue(new Error('terms_version_mismatch'));
+    await storeConsent(TV);
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+    await waitForState('needsTerms|Ana|access-1');
+    expect(acceptTerms).toHaveBeenCalledTimes(1);
+  });
+
+  it('a consent stored for another terms version is not sent', async () => {
+    await storeConsent('2020-01-01');
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('needsTerms|Ana|access-1');
+    expect(acceptTerms).not.toHaveBeenCalled();
+  });
+
+  it('a suspended student is not auto-accepted and stays suspended', async () => {
+    await storeConsent(TV);
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockResolvedValue({ ...noTerms, suspendedReason: 'Motiv' });
+    await renderAuth();
+    await waitForState('suspended|Ana|access-1');
+    expect(acceptTerms).not.toHaveBeenCalled();
+  });
+
+  it('a student who already accepted the current terms needs no RPC', async () => {
+    await storeConsent(TV);
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    await renderAuth();
+    await waitForState('ready|Ana|access-1');
+    expect(acceptTerms).not.toHaveBeenCalled();
+  });
+
+  it('signOut() clears the stored consent, so the next person on this device must tick it themselves', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (acceptTerms as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    await storeConsent(TV);
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+    await waitForState('needsTerms|Ana|access-1');
+    // The first student leaves from the gate: the consent they gave on this device goes with them.
+    await act(() => latest.signOut());
+    await waitForState('signedOut|-|-');
+    await expect(getStoredConsent()).resolves.toBeNull();
+    // A second student signs in on the same device without ticking: the gate, no RPC on their behalf.
+    (acceptTerms as jest.Mock).mockClear();
+    mockFetchProfile.mockResolvedValue({ ...noTerms, id: OTHER, displayName: 'Ion' });
+    await emit('SIGNED_IN', session(OTHER, 'access-9'));
+    await waitForState('needsTerms|Ion|access-9');
+    expect(acceptTerms).not.toHaveBeenCalled();
+  });
+
+  it('a session ended elsewhere (SIGNED_OUT event) also clears the stored consent', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (acceptTerms as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    await storeConsent(TV);
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+    await waitForState('needsTerms|Ana|access-1');
+    await emit('SIGNED_OUT', null);
+    await waitForState('signedOut|-|-');
+    await waitFor(async () => expect(await getStoredConsent()).toBeNull());
+  });
+
+  it('a consent ticked on Welcome survives while signed out (not cleared by the signed-out start)', async () => {
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await storeConsent(TV);
+    await emit('SIGNED_OUT', null);
+    await expect(getStoredConsent()).resolves.toBe(TV);
+  });
+
+  it('refreshProfile after the gate moves needsTerms → ready', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockResolvedValue(noTerms);
+    await renderAuth();
+    await waitForState('needsTerms|Ana|access-1');
+    mockFetchProfile.mockResolvedValue({ ...noTerms, termsVersion: TV });
+    await act(() => latest.refreshProfile());
+    expect(state()).toBe('ready|Ana|access-1');
+  });
+
+  it('an offline profile load never shows the gate', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await storeConsent(TV);
+    auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
+    mockFetchProfile.mockRejectedValue(new Error('offline'));
+    await renderAuth();
+    await waitForState('ready|-|access-1');
+    expect(acceptTerms).not.toHaveBeenCalled();
   });
 });
 
 describe('suspension', () => {
   it('a session with a suspended profile → suspended', async () => {
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV, suspendedReason: 'Motiv', accessUntil: null });
     await renderAuth();
     await waitForState('suspended|-|access-1');
     expect(logAppOpen).not.toHaveBeenCalled();
@@ -465,7 +643,7 @@ describe('suspension', () => {
     auth.getSession.mockResolvedValue({ data: { session: session() }, error: null });
     const view = await renderAuth();
     await waitForState('ready|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: 'Motiv', accessUntil: null });
     await act(() => refreshRegisteredProfile());
     await waitForState('suspended|Ana|access-1');
     await view.unmount();
@@ -516,7 +694,7 @@ describe('app opened event', () => {
   });
 
   it('is not logged while signed out or before the profile is complete', async () => {
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, suspendedReason: null, accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: null, learningMode: null, creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null });
     await renderAuth();
     await waitForState('needsName|-|access-1');
     await act(async () => onChange('active'));
@@ -538,16 +716,16 @@ describe('suspension changes while the app is open', () => {
   it('back in the foreground, a student suspended meanwhile moves to suspended', async () => {
     await renderAuth();
     await waitForState('ready|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: 'Motiv', accessUntil: null });
     await act(async () => onChange('active'));
     await waitForState('suspended|Ana|access-1');
   });
 
   it('back in the foreground, a reactivated student moves back to ready', async () => {
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: 'Motiv', accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: 'Motiv', accessUntil: null });
     await renderAuth();
     await waitForState('suspended|Ana|access-1');
-    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, suspendedReason: null, accessUntil: null });
+    mockFetchProfile.mockResolvedValue({ id: USER, displayName: 'Ana', learningMode: 'guided', creditBalance: 5, termsVersion: TV, suspendedReason: null, accessUntil: null });
     await act(async () => onChange('active'));
     await waitForState('ready|Ana|access-1');
   });

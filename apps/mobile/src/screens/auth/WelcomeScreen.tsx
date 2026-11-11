@@ -1,25 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, Enter, ScreenLayout } from '../../ui';
 import { signInWithGoogle } from '../../auth/google';
 import { emailAuthEnabled } from '../../lib/flags';
+import { TERMS_VERSION } from '../../lib/legal';
+import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
+import AgeTermsCheckbox from '../../components/AgeTermsCheckbox';
 import AuthHero from './AuthHero';
 
 const TITLE = 'Bun venit la Prepio';
 const SUBTITLE = 'Pregătește-te pentru BAC cu lecții scurte și exerciții. Intră sau creează-ți cont ca să începi.';
 
-/** First screen for a signed-out student: Google, and email code when the build enables it. */
+/**
+ * First screen for a signed-out student: the required 16+/terms checkbox, then Google, and email code when the
+ * build enables it. The consent is stored on this device (it survives the web OAuth redirect) and recorded on the
+ * account right after the sign-in (AuthProvider), so a new student goes straight to the name.
+ */
 export default function WelcomeScreen() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consented, setConsented] = useState(false);
+  const touched = useRef(false);
+
+  // Back on Welcome with a consent already given on this device (e.g. the web OAuth redirect without a session).
+  useEffect(() => {
+    let live = true;
+    void getStoredConsent().then((v) => {
+      if (live && !touched.current && v === TERMS_VERSION) setConsented(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const toggle = (next: boolean) => {
+    touched.current = true;
+    setConsented(next);
+    void (next ? storeConsent(TERMS_VERSION) : clearConsent());
+  };
 
   const google = async () => {
-    if (pending) return;
+    if (pending || !consented) return;
     setPending(true);
     setError(null);
     try {
+      // Written before leaving the page (web redirect), whatever happened to the earlier write.
+      await storeConsent(TERMS_VERSION);
       // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent.
       await signInWithGoogle();
     } catch (e) {
@@ -29,37 +57,31 @@ export default function WelcomeScreen() {
     }
   };
 
+  const email = () => {
+    if (pending || !consented) return;
+    void storeConsent(TERMS_VERSION);
+    router.push('/email');
+  };
+
   return (
     <ScreenLayout logo>
       <View style={styles.stack}>
         <Enter index={0}>
           <AuthHero title={TITLE} body={SUBTITLE} />
         </Enter>
-        <Enter index={1} style={styles.buttons}>
-          <Button label="Continuă cu Google" onPress={google} disabled={pending} loading={pending} />
+        <Enter index={1}>
+          <AgeTermsCheckbox checked={consented} onChange={toggle} disabled={pending} />
+        </Enter>
+        <Enter index={2} style={styles.buttons}>
+          <Button label="Continuă cu Google" onPress={google} disabled={pending || !consented} loading={pending} />
           {emailAuthEnabled() ? (
-            <Button label="Continuă cu email" variant="secondary" onPress={() => router.push('/email')} disabled={pending} />
+            <Button label="Continuă cu email" variant="secondary" onPress={email} disabled={pending || !consented} />
           ) : null}
           {error ? (
             <AppText role="small" color="danger" accessibilityRole="alert" style={styles.center}>
               {error}
             </AppText>
           ) : null}
-        </Enter>
-        <Enter index={2}>
-          <AppText role="caption" color="textMuted" style={styles.center}>
-            {'Continuând, ești de acord cu '}
-            <AppText
-              role="caption"
-              color="primaryStrong"
-              accessibilityRole="link"
-              onPress={() => router.push('/confidentialitate')}
-              style={styles.link}
-            >
-              Politica de confidențialitate
-            </AppText>
-            .
-          </AppText>
         </Enter>
       </View>
     </ScreenLayout>
@@ -70,5 +92,4 @@ const styles = StyleSheet.create({
   stack: { gap: space[5], paddingTop: space[1] },
   buttons: { gap: space[4] },
   center: { textAlign: 'center' },
-  link: { textDecorationLine: 'underline' },
 });
