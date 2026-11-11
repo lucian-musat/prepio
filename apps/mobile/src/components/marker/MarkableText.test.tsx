@@ -401,3 +401,33 @@ it('native: a new role pill does not remount the paragraphs (onLayout follows po
   expect(screen.getByTestId('role-label-2', { includeHiddenElements: true })).toBeTruthy();
   expect(screen.getByTestId('paragraph-0')).toBe(before);
 });
+
+describe('numbered marks', () => {
+  const slotted = (from: number, to: number, slot: number, pen: MarkerMark['pen'] = 'info'): MarkerMark => ({ sourceId: 's1', from, to, pen, slot });
+
+  it('each mark has its slot colour and an INFO n pill before its first word', async () => {
+    await render(<MarkableText source={source} state={state({ marks: [slotted(0, 1, 0), slotted(4, 5, 1)] })} dispatch={jest.fn()} />);
+    expect(screen.getByTestId('role-label-0', hidden)).toHaveTextContent('INFO 1');
+    expect(screen.getByTestId('role-label-4', hidden)).toHaveTextContent('INFO 2');
+    expect(bg(0)).toBe('#FFE38A');
+    expect(bg(4)).toBe('#C9D7FF');
+    expect(StyleSheet.flatten(screen.getByTestId('role-label-4', hidden).props.style).backgroundColor).toBe('#2F4BA8');
+  });
+
+  it('support marks read SUPORT n', async () => {
+    await render(<MarkableText source={source} state={state({ marks: [slotted(2, 3, 1, 'support')] })} dispatch={jest.fn()} />);
+    expect(screen.getByTestId('role-label-2', hidden)).toHaveTextContent('SUPORT 2');
+    expect(bg(2)).toBe('#C9D7FF');
+  });
+
+  it('a selection being dragged takes the current slot colour', async () => {
+    await render(<MarkableText source={source} state={state({ slot: 2, drag: { sourceId: 's1', pen: 'info', a: 6, b: 7 } })} dispatch={jest.fn()} />);
+    expect(bg(6)).toBe('#FBCFE8');
+  });
+
+  it('a mark without a slot keeps its pen colour and no pill', async () => {
+    await render(<MarkableText source={source} state={state({ marks: [mark(2, 3)] })} dispatch={jest.fn()} />);
+    expect(bg(2)).toBe(markerPen.info);
+    expect(screen.queryByTestId('role-label-2', hidden)).toBeNull();
+  });
+});

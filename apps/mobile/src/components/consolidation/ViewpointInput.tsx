@@ -11,6 +11,7 @@ const COUNT_WORDS = ['', 'o informație care îl susține', 'două informații c
 export default function ViewpointInput({ exercise, sources, value, onChange, feedback, disabled, marker }: MarkerInputProps<'viewpoint'>) {
   const textOf = useMarkText(sources);
   const marks = marker.state.marks;
+  const numbered = !!marker.cfg.numbered;
   useMarksAnswer<Extract<ExerciseAnswer, { type: 'viewpoint' }>>(
     marks,
     (of) => ({ type: 'viewpoint', text: value.text, marks: of('support') }),
@@ -36,9 +37,10 @@ export default function ViewpointInput({ exercise, sources, value, onChange, fee
         <MarkSlots
           kind="support"
           count={exercise.count}
+          numbered={numbered}
           state={marker.state}
           textOf={textOf}
-          onOpen={() => {}}
+          onOpen={(_pen, _index, slot) => numbered && marker.dispatch({ type: 'setSlot', slot })}
           onRemove={(index) => marker.dispatch({ type: 'remove', index })}
           disabled={disabled}
           verdictOf={slotVerdict(feedback, marks)}

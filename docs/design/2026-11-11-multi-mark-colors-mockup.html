@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcaje numerotate</title>
+<link href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500&family=Nunito:wght@800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3FAF7; --surface:#FFFFFF; --muted:#E6F4EF; --border:#D8EAE3; --text:#0F2E28; --text2:#4C6A63;
+  --primary:#0F766E; --primarySub:#E0F5F1; --paper:#FFFDF8; --good:#1A7C49;
+  /* numbered marks: background (text AA on it) + ink (white AA on it) + tint */
+  --m1:#FFE38A; --m1i:#7A5A00; --m1t:#FFF8DC;
+  --m2:#C9D7FF; --m2i:#2F4BA8; --m2t:#EEF2FF;
+  --m3:#FBCFE8; --m3i:#9D1F63; --m3t:#FDF0F7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Nunito Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+header{padding:20px 16px 8px;max-width:1180px;margin:0 auto}
+h1{font-family:Nunito,sans-serif;font-weight:900;font-size:26px;margin:0 0 4px}
+.sub{color:var(--text2);margin:0}
+nav{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;max-width:1180px;margin:0 auto;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--border)}
+nav .grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-right:14px}
+nav .lab{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+nav button{font:inherit;font-weight:700;border:1.5px solid var(--border);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--text)}
+nav button[aria-selected=true]{border-color:var(--primary);background:var(--primarySub);color:var(--primary)}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px;display:grid;grid-template-columns:380px 1fr;gap:32px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.phone{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:10px;box-shadow:0 10px 30px rgba(15,46,40,.08)}
+.screen{background:var(--bg);border-radius:20px;padding:14px 12px 18px;min-height:640px}
+.reset{float:right;font:inherit;font-size:12px;border:none;background:none;color:var(--primary);cursor:pointer;font-weight:700}
+.q{font-weight:700;font-size:15.5px;margin:4px 0 10px}
+.q small{display:block;font-weight:400;color:var(--text2);font-size:13px;margin-top:2px}
+.src{background:var(--paper);border:1px solid var(--border);border-radius:16px;padding:12px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.txt{font-family:Literata,serif;font-size:14.5px;line-height:1.95;user-select:none;-webkit-user-select:none;cursor:text}
+.w{border-radius:3px;padding:1px 0}
+.w:hover{background:rgba(15,118,110,.08)}
+.w.k1{background:var(--m1)} .w.k2{background:var(--m2)} .w.k3{background:var(--m3)}
+.w.on{outline:2px solid var(--text);outline-offset:0}
+.w.anchor{outline:2px dashed var(--primary);outline-offset:1px}
+.tag{display:inline-flex;align-items:center;justify-content:center;font-family:"Nunito Sans",sans-serif;font-size:10px;font-weight:800;letter-spacing:.05em;border-radius:6px;padding:0 5px;margin-right:3px;vertical-align:2px;line-height:16px;color:#fff;min-width:16px}
+.tag.round{border-radius:999px;padding:0;width:17px;height:17px;font-size:11px;letter-spacing:0}
+.tag.k1{background:var(--m1i)} .tag.k2{background:var(--m2i)} .tag.k3{background:var(--m3i)}
+.cite{font-size:12px;color:var(--text2);font-style:italic;text-align:right;margin-top:6px}
+.hint{font-size:12.5px;color:var(--text2);min-height:18px;margin:8px 2px}
+
+/* step banner */
+.step{border-radius:14px;padding:9px 12px;margin-bottom:10px;border:2px solid;transition:background .2s,border-color .2s}
+.step .k{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.step .big{font-family:Nunito,sans-serif;font-weight:900;font-size:18px;margin:1px 0;display:flex;align-items:center;gap:8px}
+.step .help{font-size:12.5px;color:var(--text2)}
+.step.k1{background:var(--m1t);border-color:var(--m1i)} .step.k1 .k{color:var(--m1i)}
+.step.k2{background:var(--m2t);border-color:var(--m2i)} .step.k2 .k{color:var(--m2i)}
+.step.k3{background:var(--m3t);border-color:var(--m3i)} .step.k3 .k{color:var(--m3i)}
+.step.done{background:var(--surface);border-color:var(--good)} .step.done .k{color:var(--good)}
+.dots{display:flex;gap:6px;margin-top:7px}
+.dot{flex:1;height:5px;border-radius:3px;background:var(--border)}
+.dot.k1{background:var(--m1i)} .dot.k2{background:var(--m2i)} .dot.k3{background:var(--m3i)}
+
+/* slots */
+.field{font-weight:800;font-size:13.5px;margin:12px 0 6px}
+textarea{width:100%;font:inherit;font-size:14px;border:1.5px solid var(--border);border-radius:10px;padding:8px 10px;min-height:64px;resize:none;background:var(--surface)}
+.slots{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.slot{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:box-shadow .15s}
+.slot.empty{border-style:dashed;background:transparent;color:var(--text2);font-size:13.5px}
+.slot.cur{border-width:2px;border-style:solid;padding:9px}
+.slot.cur.k1{border-color:var(--m1i);box-shadow:0 0 0 3px var(--m1t)} .slot.cur.k2{border-color:var(--m2i);box-shadow:0 0 0 3px var(--m2t)} .slot.cur.k3{border-color:var(--m3i);box-shadow:0 0 0 3px var(--m3t)}
+.slot .bar{width:6px;align-self:stretch;border-radius:3px}
+.bar.k1{background:var(--m1)} .bar.k2{background:var(--m2)} .bar.k3{background:var(--m3)}
+.slot .body{flex:1;min-width:0}
+.slot .t{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:2px}
+.slot .t .tag{vertical-align:0;margin:0}
+.slot .x{margin-left:auto;border:none;background:var(--muted);border-radius:8px;width:26px;height:26px;cursor:pointer;flex:none}
+.slot .go{color:var(--primary);font-weight:800}
+
+/* notes */
+.notes h2{font-family:Nunito,sans-serif;font-weight:900;font-size:22px;margin:0 0 6px}
+.notes h3{font-family:Nunito,sans-serif;font-weight:800;font-size:16px;margin:18px 0 6px}
+.notes ul{margin:0;padding-left:20px} .notes li{margin:4px 0}
+.notes .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.legend i{display:inline-block;width:26px;height:14px;border-radius:4px}
+.before .w.old{background:#FFE38A}
+</style>
+</head>
+<body>
+<header>
+  <h1>Marcaje numerotate, în culori diferite</h1>
+  <p class="sub">Cerințele cu mai multe marcaje în sursă (BAC + consolidare): „Precizați două informații…”, „Punct de vedere” cu două informații-suport. Atinge un cuvânt, apoi ultimul cuvânt al informației.</p>
+</header>
+<nav>
+  <div class="grp"><span class="lab">Cerința</span>
+    <button data-ex="info2" aria-selected="true">2 informații</button>
+    <button data-ex="info3">3 informații</button>
+    <button data-ex="view2">Punct de vedere</button>
+  </div>
+  <div class="grp"><span class="lab">Eticheta în text</span>
+    <button data-tag="round">A · cerc cu număr</button>
+    <button data-tag="label" aria-selected="true">B · „INFO 1” (aleasă)</button>
+  </div>
+  <div class="grp"><span class="lab">Comparație</span>
+    <button data-before="0" aria-selected="true">Propunerea</button>
+    <button data-before="1">Cum e acum</button>
+  </div>
+</nav>
+<main>
+  <div class="phone"><div class="screen" id="screen"></div></div>
+  <div class="notes">
+    <div class="card">
+      <h2>Ce se schimbă</h2>
+      <ul>
+        <li><b>Fiecare informație are culoarea ei:</b> 1 galben, 2 albastru, 3 roz. Aceeași culoare apare în text, pe bara slotului, pe eticheta din text și în bannerul de pas.</li>
+        <li><b>Etichetă înaintea marcajului</b>, ca pastilele CAUZĂ / EFECT: cerc cu număr (A) sau „INFO 1” / „SUPORT 1” (B). Rămâne și după „Verifică”.</li>
+        <li><b>Banner de pas</b> sub cerință: „Informația 1 din 2 · marchezi acum”, cu bara de progres colorată; la final „✓ Gata, ambele informații marcate”.</li>
+        <li><b>Elevul alege ce înlocuiește.</b> Azi, o selecție nouă cu sloturile pline o șterge în tăcere pe cea mai veche (și numerele se mută). Propunerea: slotul curent e primul gol; atingi un slot plin (sau marcajul din text) ca să-l refaci; când toate sunt pline, o selecție nouă e ignorată: „Atinge informația pe care vrei s-o schimbi.” — la fel ca la cauză-efect.</li>
+        <li><b>Numerele nu se mută:</b> ștergi informația 1 → slotul 1 rămâne gol și devine curent; informația 2 își păstrează culoarea.</li>
+        <li>Cerințele cu un singur marcaj rămân exact ca acum (galben / albastru, fără număr).</li>
+      </ul>
+      <h3>Paleta</h3>
+      <div class="legend">
+        <span><i style="background:var(--m1)"></i><span class="tag round k1">1</span> galben</span>
+        <span><i style="background:var(--m2)"></i><span class="tag round k2">2</span> albastru</span>
+        <span><i style="background:var(--m3)"></i><span class="tag round k3">3</span> roz</span>
+      </div>
+      <p class="sub" style="margin-top:8px">Am evitat turcoazul și piersica — sunt ale cauzei și efectului.</p>
+      <h3>Neschimbat</h3>
+      <ul>
+        <li>Notarea, răspunsul salvat, cititorul pe telefon / split pe desktop (bannerul compact apare și în tava cititorului).</li>
+      </ul>
+    </div>
+  </div>
+</main>
+<script>
+const SRC = 'În vara anului 1918, Consiliul Național Român Central a preluat conducerea mișcării naționale din Transilvania. La 1 Decembrie 1918, Marea Adunare Națională de la Alba Iulia, la care au participat peste o sută de mii de oameni, a votat Rezoluția Unirii. Documentul prevedea libertatea națională deplină pentru toate popoarele conlocuitoare și egala îndreptățire a confesiunilor. Consiliul Dirigent a fost ales ca organ executiv provizoriu până la întrunirea Constituantei.';
+const words = SRC.split(' ');
+const EX = {
+  info2:{count:2,kind:'info',q:'Precizați două informații referitoare la Marea Adunare Națională, din sursa A.'},
+  info3:{count:3,kind:'info',q:'Precizați trei informații din sursa A referitoare la anul 1918.'},
+  view2:{count:2,kind:'support',q:'Formulați un punct de vedere referitor la Unire și susțineți-l cu două informații din sursa A.'},
+};
+const NUM = ['', 'prima', 'a doua', 'a treia'];
+let ex='info2', tagStyle='label', before=false;
+let slots=[], cur=0, anchor=null, msg='';
+
+function reset(){ slots=Array(EX[ex].count).fill(null); cur=0; anchor=null; msg=''; render(); }
+const firstEmpty=()=>slots.findIndex(s=>!s);
+const slotAt=i=>slots.findIndex(s=>s&&i>=s.from&&i<=s.to);
+const noun=()=>EX[ex].kind==='info'?'Informația':'Informația-suport';
+const short=k=>EX[ex].kind==='info'?`INFO ${k}`:`SUPORT ${k}`;
+const tag=k=>tagStyle==='round'?`<span class="tag round k${k}">${k}</span>`:`<span class="tag k${k}">${short(k)}</span>`;
+
+function tap(i){
+  const hit=slotAt(i);
+  if(hit>=0 && anchor===null){ cur=hit; msg=`Marchează din nou ca s-o înlocuiești pe ${noun().toLowerCase()} ${hit+1}.`; render(); return; }
+  if(cur<0){ msg='Atinge informația pe care vrei s-o schimbi.'; render(); return; }
+  if(anchor===null){ anchor=i; msg='Acum atinge ultimul cuvânt.'; render(); return; }
+  const from=Math.min(anchor,i), to=Math.max(anchor,i);
+  slots=slots.map((s,k)=>k!==cur&&s&&!(s.to<from||s.from>to)?null:s); // overlap goes
+  slots[cur]={from,to}; anchor=null; msg='';
+  cur=firstEmpty(); render();
+}
+function pickSlot(k){ cur=k; anchor=null; msg=slots[k]?`Marchează din nou ca s-o înlocuiești pe ${noun().toLowerCase()} ${k+1}.`:''; render(); }
+function remove(k,e){ e.stopPropagation(); slots[k]=null; cur=k; anchor=null; msg=''; render(); }
+
+function renderText(){
+  let h='';
+  words.forEach((w,i)=>{
+    const s=slotAt(i), k=s+1;
+    if(s>=0 && slots[s].from===i && !before) h+=tag(k);
+    const cls=['w'];
+    if(s>=0) cls.push(before?'old':'k'+(EX[ex].kind==='support'&&before?2:k));
+    if(s>=0 && s===cur && !before) cls.push('on');
+    if(anchor===i) cls.push('anchor');
+    h+=`<span class="${cls.join(' ')}" data-i="${i}">${w}</span> `;
+  });
+  return h;
+}
+function renderStep(){
+  const n=EX[ex].count, filled=slots.filter(Boolean).length;
+  const dots=slots.map((s,k)=>`<div class="dot ${s?'k'+(k+1):''}"></div>`).join('');
+  if(cur<0) return `<div class="step done"><div class="k">${filled} din ${n}</div><div class="big">✓ Gata, toate informațiile marcate</div><div class="help">Atinge un slot sau un marcaj ca să-l schimbi.</div><div class="dots">${dots}</div></div>`;
+  const k=cur+1;
+  return `<div class="step k${k}"><div class="k">${noun()} ${k} din ${n}${slots[cur]?' · o refaci':''}</div><div class="big">${tag(k)} Marchezi ${NUM[k]||k} informație</div><div class="help">Atinge primul cuvânt, apoi ultimul.</div><div class="dots">${dots}</div></div>`;
+}
+function renderSlots(){
+  return '<div class="slots">'+slots.map((s,k)=>{
+    const kk=k+1, isCur=k===cur && !before;
+    const colour = before ? (EX[ex].kind==='info'?'background:#FFE38A':'background:#C9D7FF') : '';
+    if(!s) return `<div class="slot empty ${isCur?'cur k'+kk:''}" data-slot="${k}"><div class="bar ${before?'':'k'+kk}" style="${colour}"></div><div class="body">${before?'':tag(kk)+' '}${noun()}${before?'':' '+kk}: marchează în text</div><span class="go">›</span></div>`;
+    const t=words.slice(s.from,s.to+1).join(' ');
+    return `<div class="slot ${isCur?'cur k'+kk:''}" data-slot="${k}"><div class="bar ${before?'':'k'+kk}" style="${colour}"></div><div class="body"><div class="t">${before?'':tag(kk)}${noun()} ${kk}</div>„${t}”</div><button class="x" data-x="${k}" aria-label="Șterge">✕</button></div>`;
+  }).join('')+'</div>';
+}
+function render(){
+  const e=EX[ex];
+  const view = e.kind==='support';
+  document.getElementById('screen').innerHTML=
+    `<button class="reset" id="rst">↺ resetează</button>`+
+    `<div class="q">${e.q}<small>${before?'Cum arată acum: aceeași culoare pentru toate, fără numere.':'Propunerea.'}</small></div>`+
+    (before?'':renderStep())+
+    (view?`<div class="field">1 · Punctul tău de vedere</div><textarea placeholder="Consider că…"></textarea>`:'')+
+    `<div class="src"><div class="eyebrow">Sursa A</div><div class="txt" id="txt">${renderText()}</div><div class="cite">(Istoria românilor, manual)</div></div>`+
+    `<div class="hint">${msg}</div>`+
+    (view?`<div class="field">2 · Marchează în sursă două informații care îl susțin</div>`:'')+
+    renderSlots();
+  if(before) document.querySelectorAll('.w.old').forEach(el=>el.style.background=view?'#C9D7FF':'#FFE38A');
+  document.getElementById('rst').onclick=reset;
+  document.querySelectorAll('.w').forEach(el=>el.onclick=()=>tap(+el.dataset.i));
+  document.querySelectorAll('[data-slot]').forEach(el=>el.onclick=()=>pickSlot(+el.dataset.slot));
+  document.querySelectorAll('[data-x]').forEach(el=>el.onclick=e=>remove(+el.dataset.x,e));
+}
+function sel(attr,val){ document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.setAttribute('aria-selected',b.dataset[attr]===val)); }
+document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{ex=b.dataset.ex;sel('ex',ex);reset();demo();});
+document.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{tagStyle=b.dataset.tag;sel('tag',tagStyle);render();});
+document.querySelectorAll('[data-before]').forEach(b=>b.onclick=()=>{before=b.dataset.before==='1';sel('before',b.dataset.before);render();});
+// prefill one mark so the colours are visible straight away
+function demo(){ const a=words.indexOf('peste'); tap(a); tap(a+5); }
+reset(); demo();
+</script>
+</body>
+</html>

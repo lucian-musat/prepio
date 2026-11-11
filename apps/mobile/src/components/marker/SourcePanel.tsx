@@ -6,6 +6,7 @@ import MarkableText from './MarkableText';
 import type { Pen } from './markerReducer';
 import SourceCard from './SourceCard';
 import CauseEffectBanner from './CauseEffectBanner';
+import NumberedBanner from './NumberedBanner';
 import SourceReader, { canMark, citation, hintFor, isCauseEffect, NO_MARKS, noop, PenBar, type PanelMarker, type PanelSource } from './SourceReader';
 import SourceSplit from './SourceSplit';
 
@@ -67,7 +68,9 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
       if (!marker) return;
       if (!marker.readOnly) marker.dispatch({ type: 'setPen', pen });
       const marks = marker.state.marks;
-      const mark = (markIndex !== null ? marks[markIndex] : undefined) ?? marks.find((m) => m.pen === pen) ?? null;
+      // Numbered: an empty slot has no mark of its own; another slot's mark is not where it should open.
+      const fallback = marker.cfg.numbered ? undefined : marks.find((m) => m.pen === pen);
+      const mark = (markIndex !== null ? marks[markIndex] : undefined) ?? fallback ?? null;
       const target = (mark && sources.find((s) => s.source.id === mark.sourceId)) || longSources.find((s) => s.label === label) || longSources[0];
       // A mark in a short source is already on screen: choosing the pen is enough.
       if (!target || !isLong.get(target.label)) return;
@@ -77,16 +80,24 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
   };
 
   const causeEffect = canMark(marker) && isCauseEffect(marker.cfg);
-  // Cause-effect: the role is in the banner under the prompt, so only the gesture hint stays here.
+  const numbered = canMark(marker) && !!marker.cfg.numbered;
+  // Cause-effect and numbered: the role / slot is in the banner under the prompt, so only the gesture hint stays here
+  // (numbered and idle: none, the banner's done line already says how to change a mark).
   const pens = canMark(marker) ? (
     <View style={styles.pens}>
-      {causeEffect ? null : <PenBar marker={marker} />}
-      <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
-        {hintFor(marker.cfg, marker.state)}
-      </AppText>
+      {causeEffect || numbered ? null : <PenBar marker={marker} />}
+      {numbered && marker.state.pen === null && !marker.state.anchor ? null : (
+        <AppText role="caption" color="textMuted" accessibilityLiveRegion="polite">
+          {hintFor(marker.cfg, marker.state)}
+        </AppText>
+      )}
     </View>
   ) : null;
-  const banner = causeEffect ? <CauseEffectBanner state={marker!.state} clues={!!marker!.clues} /> : null;
+  const banner = causeEffect ? (
+    <CauseEffectBanner state={marker!.state} clues={!!marker!.clues} />
+  ) : numbered ? (
+    <NumberedBanner cfg={marker!.cfg} state={marker!.state} />
+  ) : null;
   const promptText =
     promptLead || promptTail ? (
       <AppText role="question">

@@ -1,19 +1,23 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, layout, markerPen, radius, space, VERDICT_LABELS, type Verdict } from '@prepio/shared';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { border, color, layout, radius, space, VERDICT_LABELS, type Verdict } from '@prepio/shared';
+import { fontFamily } from '../../theme/fonts';
 import { AppText, Icon } from '../../ui';
 import { VERDICT_TONE } from '../consolidation/verdictTone';
 import { PEN_LABEL } from './MarkableText';
 import type { MarkerMark, MarkerState, Pen } from './markerReducer';
+import { markBg, slotName, slotPill, slotTone } from './numbered';
 import { useSourcePanel } from './SourcePanel';
 
 type Props = {
   kind: 'info' | 'support';
   /** Number of slots. */
   count: number;
+  /** Numbered marker (spec 2026-11-11): each slot holds the mark with its `slot`, in its own colour and pill. */
+  numbered?: boolean;
   state: MarkerState;
   textOf: (m: MarkerMark) => string;
-  /** A slot was pressed: its pen, and the index in `state.marks` of its mark (null when the slot is empty). */
-  onOpen: (pen: Pen, markIndex: number | null) => void;
+  /** A slot was pressed: its pen, the index in `state.marks` of its mark (null when the slot is empty), and its number. */
+  onOpen: (pen: Pen, markIndex: number | null, slot: number) => void;
   onRemove: (index: number) => void;
   /** After checking: no ✕ (the slots still open the source). */
   disabled?: boolean;
@@ -32,60 +36,91 @@ const REMOVE_SLOP = (layout.minTouch - REMOVE) / 2;
  * next to a bar in the pen's colour, with ✕; an empty one invites to mark. Pressing a slot opens the source
  * (inside a SourcePanel: the reader on the phone, the left column on desktop) with that pen.
  */
-export default function MarkSlots({ kind, count, state, textOf, onOpen, onRemove, disabled = false, verdictOf }: Props) {
+export default function MarkSlots({ kind, count, numbered = false, state, textOf, onOpen, onRemove, disabled = false, verdictOf }: Props) {
   const panel = useSourcePanel();
-  const open = (pen: Pen, index: number | null) => {
-    onOpen(pen, index);
+  const open = (pen: Pen, index: number | null, k: number) => {
+    onOpen(pen, index, k);
     panel?.open(pen, index);
   };
   const indexed = state.marks.map((m, i) => ({ m, i }));
-  const slot = (pen: Pen, k: number, numbered: boolean) => {
-    const own = indexed.filter((x) => x.m.pen === pen)[k];
-    const title = numbered ? `${TITLE[pen]} ${k + 1}` : TITLE[pen];
+  const slot = (pen: Pen, k: number) => {
+    const mine = indexed.filter((x) => x.m.pen === pen);
+    const own = numbered ? mine.find((x) => x.m.slot === k) : mine[k];
+    const title = numbered ? slotName(pen, k) : count > 1 ? `${TITLE[pen]} ${k + 1}` : TITLE[pen];
+    const common = {
+      testID: `slot-${k}`,
+      pen,
+      slot: numbered ? k : undefined,
+      title,
+      current: numbered && !disabled && state.slot === k,
+    };
     return own ? (
       <Slot
         key={`${pen}-${k}`}
-        pen={pen}
-        title={title}
+        {...common}
         text={textOf(own.m)}
         verdict={verdictOf?.(own.i) ?? null}
-        onPress={() => open(pen, own.i)}
+        onPress={() => open(pen, own.i, k)}
         onRemove={disabled ? undefined : () => onRemove(own.i)}
       />
     ) : (
-      <Slot key={`${pen}-${k}`} pen={pen} title={title} onPress={() => open(pen, null)} />
+      <Slot key={`${pen}-${k}`} {...common} onPress={() => open(pen, null, k)} />
     );
   };
 
   const pen: Pen = kind === 'info' ? 'info' : 'support';
-  return <View style={styles.list}>{Array.from({ length: count }, (_, k) => slot(pen, k, count > 1))}</View>;
+  return <View style={styles.list}>{Array.from({ length: count }, (_, k) => slot(pen, k))}</View>;
 }
 
-type SlotProps = { pen: Pen; title: string; text?: string; verdict?: Verdict | null; onPress: () => void; onRemove?: () => void };
+type SlotProps = {
+  testID: string;
+  pen: Pen;
+  /** Numbered: the slot's number (its colour and pill); undefined for the pen's own colour. */
+  slot?: number;
+  title: string;
+  /** Numbered: the slot a new selection fills (a border in its ink). */
+  current: boolean;
+  text?: string;
+  verdict?: Verdict | null;
+  onPress: () => void;
+  onRemove?: () => void;
+};
 
-function Slot({ pen, title, text, verdict = null, onPress, onRemove }: SlotProps) {
+function Slot({ testID, pen, slot, title, current, text, verdict = null, onPress, onRemove }: SlotProps) {
   const filled = text !== undefined;
+  const pill = slot === undefined ? null : slotPill(pen, slot);
+  const pillView = pill ? (
+    <View style={[styles.pill, { backgroundColor: pill.ink }]}>
+      <Text style={styles.pillText}>{pill.label}</Text>
+    </View>
+  ) : null;
   // The ✕ is a sibling of the slot's pressable area, not inside it (a button inside a button is invalid on web).
   return (
-    <View style={[styles.slot, !filled && styles.empty]}>
+    <View testID={testID} style={[styles.slot, !filled && styles.empty, current && slot !== undefined && [styles.current, { borderColor: slotTone(slot).ink }]]}>
       <Pressable
         accessibilityRole="button"
         accessibilityHint={filled ? 'Deschide sursa la acest marcaj' : 'Deschide sursa ca să marchezi'}
         onPress={onPress}
         style={styles.open}
       >
-        <View style={[styles.bar, { backgroundColor: markerPen[pen] }]} />
+        <View style={[styles.bar, { backgroundColor: markBg({ pen, slot }) }]} />
         {filled ? (
           <View style={styles.body}>
-            <AppText role="badge" color="textMuted" style={styles.title}>
-              {title}
-            </AppText>
+            <View style={styles.titleRow}>
+              {pillView}
+              <AppText role="badge" color="textMuted" style={styles.title}>
+                {title}
+              </AppText>
+            </View>
             <AppText role="note">„{text}”</AppText>
           </View>
         ) : (
-          <AppText role="note" color="textMuted" style={styles.body}>
-            {PEN_LABEL[pen]}: marchează în text
-          </AppText>
+          <View style={[styles.body, styles.titleRow]}>
+            {pillView}
+            <AppText role="note" color="textMuted" style={styles.body}>
+              {slot === undefined ? PEN_LABEL[pen] : title}: marchează în text
+            </AppText>
+          </View>
         )}
         {filled ? null : (
           <AppText role="label" color="primary">
@@ -129,6 +164,11 @@ const styles = StyleSheet.create({
   },
   open: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: space[2.5], alignSelf: 'stretch' },
   empty: { borderStyle: 'dashed', backgroundColor: 'transparent' },
+  // 2 px border, the padding shrinks by the extra pixel so the content does not move.
+  current: { borderWidth: 2, borderStyle: 'solid', padding: space[2.5] - 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[1.5] },
+  pill: { borderRadius: 6, paddingHorizontal: 5, marginBottom: 2 },
+  pillText: { fontFamily: fontFamily.bodyBold, fontSize: 10, lineHeight: 16, letterSpacing: 0.6, color: color.surface },
   bar: { width: 6, alignSelf: 'stretch', borderRadius: 3 },
   body: { flex: 1 },
   title: { textTransform: 'uppercase', letterSpacing: 0.55, marginBottom: 2 },

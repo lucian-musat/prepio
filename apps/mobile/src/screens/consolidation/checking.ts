@@ -59,9 +59,9 @@ export function isComplete(ex: ConsolidationExercise, a: ExerciseAnswer): boolea
 export function markerConfig(ex: ConsolidationExercise): MarkerConfig | null {
   switch (ex.type) {
     case 'source_info':
-      return { pens: ['info'], limits: { info: ex.count } };
+      return { pens: ['info'], limits: { info: ex.count }, ...(ex.count > 1 ? { numbered: true } : {}) };
     case 'viewpoint':
-      return { pens: ['support'], limits: { support: ex.count } };
+      return { pens: ['support'], limits: { support: ex.count }, ...(ex.count > 1 ? { numbered: true } : {}) };
     case 'cause_effect':
       return { pens: ['cause', 'effect'], limits: { cause: 1, effect: 1 }, autoNext: { cause: 'effect', effect: 'cause' }, idleWhenDone: true };
     default:

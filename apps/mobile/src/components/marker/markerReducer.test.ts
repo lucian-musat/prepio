@@ -299,3 +299,82 @@ describe('cause-effect roles', () => {
     expect(initialMarker(ce, [cause]).pen).toBe('cause');
   });
 });
+
+describe('numbered', () => {
+  const num: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+  const m = (from: number, to: number, slot: number) => ({ sourceId: A, from, to, pen: 'info' as const, slot });
+
+  it('fills slot 1, then slot 2, then goes idle', () => {
+    expect(initialMarker(num)).toMatchObject({ pen: 'info', slot: 0 });
+    const one = run(num, [tap(0), tap(1)]);
+    expect(one.marks).toEqual([m(0, 1, 0)]);
+    expect(one).toMatchObject({ pen: 'info', slot: 1 });
+    const two = run(num, [tap(4), tap(5)], one);
+    expect(two.marks).toEqual([m(0, 1, 0), m(4, 5, 1)]);
+    expect(two).toMatchObject({ pen: null, slot: null });
+  });
+
+  it('ignores a new selection once every slot is filled', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]);
+    const after = run(num, [tap(8), tap(9)], full);
+    expect(after.marks).toEqual(full.marks);
+    expect(after.anchor).toBeNull();
+  });
+
+  it('setSlot picks the slot a selection replaces, then goes idle again', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]);
+    const s = run(num, [{ type: 'setSlot', slot: 0 }, tap(8), tap(9)], full);
+    expect(s.marks).toEqual([m(4, 5, 1), m(8, 9, 0)]);
+    expect(s).toMatchObject({ pen: null, slot: null });
+  });
+
+  it('setPen while idle stays idle', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]);
+    expect(run(num, [{ type: 'setPen', pen: 'info' }], full)).toMatchObject({ pen: null, slot: null });
+  });
+
+  it('remove keeps the other slot and its number; the emptied slot becomes current', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]);
+    const r = run(num, [{ type: 'remove', index: 0 }], full);
+    expect(r.marks).toEqual([m(4, 5, 1)]);
+    expect(r).toMatchObject({ pen: 'info', slot: 0 });
+  });
+
+  it('a selection overlapping another slot removes that mark and fills the current slot', () => {
+    const one = run(num, [tap(0), tap(3)]);
+    // A tap inside a mark selects it, so the overlapping selection is a drag.
+    const s = run(num, [{ type: 'dragStart', sourceId: A, i: 5 }, { type: 'dragMove', i: 2 }, { type: 'dragEnd' }], one);
+    expect(s.marks).toEqual([m(2, 5, 1)]);
+    expect(s).toMatchObject({ pen: 'info', slot: 0 });
+  });
+
+  it('tapping a mark makes its slot current', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]);
+    const s = run(num, [tap(0)], full); // the second mark was active; the first one becomes active
+    expect(s).toMatchObject({ pen: 'info', slot: 0, active: 0 });
+  });
+
+  it('a handle drag keeps the slot; cancel puts the mark back with its slot', () => {
+    const full = run(num, [tap(0), tap(1), tap(4), tap(5)]); // the second mark is active
+    const lifted = run(num, [{ type: 'handleStart', end: 'end' }, { type: 'dragMove', i: 7 }], full);
+    expect(run(num, [{ type: 'dragEnd' }], lifted).marks).toEqual([m(0, 1, 0), m(4, 7, 1)]);
+    expect(run(num, [{ type: 'cancel' }], lifted).marks).toEqual([m(0, 1, 0), m(4, 5, 1)]);
+  });
+
+  it('a drag commits into the current slot', () => {
+    const s = run(num, [{ type: 'setSlot', slot: 1 }, { type: 'dragStart', sourceId: A, i: 2 }, { type: 'dragMove', i: 4 }, { type: 'dragEnd' }]);
+    expect(s.marks).toEqual([m(2, 4, 1)]);
+    expect(s).toMatchObject({ pen: 'info', slot: 0 });
+  });
+
+  it('initialMarker assigns slots in order: idle when full, the first empty slot otherwise', () => {
+    const plain = [
+      { sourceId: A, from: 0, to: 1, pen: 'info' as const },
+      { sourceId: A, from: 4, to: 5, pen: 'info' as const },
+    ];
+    const full = initialMarker(num, plain);
+    expect(full.marks).toEqual([m(0, 1, 0), m(4, 5, 1)]);
+    expect(full).toMatchObject({ pen: null, slot: null });
+    expect(initialMarker(num, plain.slice(0, 1))).toMatchObject({ pen: 'info', slot: 1 });
+  });
+});

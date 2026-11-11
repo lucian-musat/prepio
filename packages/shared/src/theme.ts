@@ -60,6 +60,13 @@ export const markerPen = { info: '#FFE38A', cause: '#99F6E4', effect: '#FFD0A8',
 // Cause/effect role ink (labels, borders) and tints (banner, filled gaps); AA-checked.
 export const markerInk = { cause: '#0A5C55', effect: '#8A4B12' } as const;
 export const markerTint = { cause: '#E6FCF7', effect: '#FFF3E8' } as const;
+// Numbered marks (a requirement asking for two or three informations): mark n's background, its pill/border ink and
+// its banner tint (spec 2026-11-11, documented exception like the pens; AA-checked). Turquoise and peach stay cause/effect.
+export const markerSlot = [
+  { bg: '#FFE38A', ink: '#7A5A00', tint: '#FFF8DC' },
+  { bg: '#C9D7FF', ink: '#2F4BA8', tint: '#EEF2FF' },
+  { bg: '#FBCFE8', ink: '#9D1F63', tint: '#FDF0F7' },
+] as const;
 
 // Consolidation surfaces from the approved mockups (documented exception, like the pens): `paper` behind source
 // texts (card, reader, desktop split), `tint` the lilac of the consolidation zone and its cards.

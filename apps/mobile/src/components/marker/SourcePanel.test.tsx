@@ -59,6 +59,7 @@ function Harness({
         <MarkSlots
           kind="info"
           count={2}
+          numbered={!!cfg.numbered}
           state={state}
           textOf={textOf(sources.map((s) => s.source))}
           onOpen={() => {}}
@@ -272,9 +273,9 @@ describe('MarkSlots', () => {
     await press(screen.getByLabelText('Șterge informația 1'));
     expect(onRemove).toHaveBeenCalledWith(0);
     await press(screen.getByText('„cuvânt0 cuvânt1”'));
-    expect(onOpen).toHaveBeenCalledWith('info', 0);
+    expect(onOpen).toHaveBeenCalledWith('info', 0, 0);
     await press(screen.getByText('Informație: marchează în text'));
-    expect(onOpen).toHaveBeenCalledWith('info', null);
+    expect(onOpen).toHaveBeenCalledWith('info', null, 1);
   });
 
 });
@@ -331,4 +332,41 @@ describe('cause-effect banner', () => {
     expect(screen.getByTestId('pen-info')).toBeTruthy();
     expect(screen.queryByTestId('ce-banner')).toBeNull();
   });
+});
+
+describe('numbered banner', () => {
+  const numbered: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+
+  it('a two-information exercise: the step banner after the prompt replaces the pen', async () => {
+    await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" />);
+    expect(screen.getByTestId('num-banner')).toBeTruthy();
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf(PROMPT)).toBeLessThan(tree.indexOf('"num-banner"'));
+    expect(screen.queryByTestId('pen-info')).toBeNull();
+  });
+
+  it('every slot filled: the banner says how to change one, without a second hint under the source', async () => {
+    const marks: MarkerMark[] = [
+      { sourceId: 'short', from: 0, to: 1, pen: 'info' },
+      { sourceId: 'short', from: 3, to: 4, pen: 'info' },
+    ];
+    await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" marks={marks} />);
+    expect(screen.getByText('Atinge un slot sau un marcaj ca să-l schimbi.')).toBeTruthy();
+    expect(screen.queryByText('Atinge informația pe care vrei s-o schimbi.')).toBeNull();
+  });
+
+  it('the reader tray shows the compact numbered step instead of the pen', async () => {
+    await render(<Harness sources={[{ source: long('b'), label: 'B' }]} cfg={numbered} kind="info" />);
+    await press(screen.getByTestId('source-card-B'));
+    expect(screen.getByTestId('num-tray')).toBeTruthy();
+    expect(within(screen.getByTestId('source-reader')).queryByTestId('pen-info')).toBeNull();
+  });
+});
+
+it('numbered: pressing an empty slot does not jump to another slot’s mark in the other source', async () => {
+  const numbered: MarkerConfig = { pens: ['info'], limits: { info: 2 }, numbered: true };
+  const marks: MarkerMark[] = [{ sourceId: 'b', from: 2, to: 4, pen: 'info' }];
+  await render(<Harness sources={[{ source: long('a'), label: 'A' }, { source: long('b'), label: 'B' }]} cfg={numbered} kind="info" marks={marks} />);
+  await press(screen.getByText('Informația 2: marchează în text'));
+  expect(screen.getByTestId('reader-tab-A').props.accessibilityState).toMatchObject({ selected: true });
 });
