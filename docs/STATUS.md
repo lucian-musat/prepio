@@ -4,6 +4,10 @@ Last updated: 2026-11-12
 
 ## Where we are
 
+**Student web UX audit (2026-11-12) — plan ready, not started.** Production walk in Claude in Chrome at desktop width and at 360 px: about 60 findings (no console errors, no horizontal scroll). Audit `docs/audits/2026-11-12-student-web-ux-audit.md`, plan `docs/superpowers/plans/2026-11-12-student-ux-polish.md` (6 PRs: web shell and consistency, Home, Lesson, Consolidation, BAC, account screens). Owner items:
+- delete the „card test” card in „Constituția din 1866”
+- the referral flag looks ON in production — check it
+
 **Launch readiness (2026-11-10 →) — in progress, five PRs, each on its own branch (see CLAUDE.md "Branches and PRs").** Spec `docs/superpowers/specs/2026-11-10-launch-readiness-design.md`, plan `docs/superpowers/plans/2026-11-10-launch-readiness.md`, audit `docs/audits/2026-11-10-production-readiness.md`.
 
 - PR 1 — CI (GitHub Actions) + standing branch/PR rule + docs (`ci/github-actions`): **merged** (#1, `bbe7dc0`). The first Actions run was green in 4m24s: every step ran, including Supabase in the runner, seed, pgTAP and both integration suites.
