@@ -82,6 +82,28 @@ Last updated: 2026-11-12
     - the summary chips jumping to the requirement
   - The walk caught a button nested in a button (a console error on web), now fixed with a regression test; console clean.
   - Deferred: the compact phone header of the paper (B9).
+- **Batch F — Account screens (`feat/ux-account`):**
+  - **Profile:**
+    - access, credits and invite are settings rows, with the value on a second line (no truncation at 360 px)
+    - the signed-in email and provider show under the name
+    - „Salvează” is enabled only for a changed name
+  - **Credits:**
+    - BAC rows name the subject, read from the published `bac_subjects`, so no migration
+    - an old row without its exercise reads „Verificare cu profesorul digital”
+    - history grouped by day, with „sold n” under each row
+    - „CEL MAI POPULAR”
+  - **The contact address is a `mailto:` link** on the legal pages, /sterge-cont, /recomandari and the suspended screen. The wording is unchanged.
+  - **/recomandari:** „Pe scurt” stays open and the other sections start closed.
+  - Tests: mobile 1325.
+  - Browser walk (Chrome, local, `[test]` full-access student, 360 + 1280, console clean): profile, credits, /recomandari folds, the /sterge-cont link.
+- **Deferred from the plan** (still open):
+  - restyling the Access screen like the Credits card (P3)
+  - an invite hero with three steps (P6)
+  - /sterge-cont: full-width button and the „Ce se șterge” list (P8; legal wording, waits for the lawyer)
+  - the compact phone header of the BAC paper (B9)
+  - the consolidation „Cum rezolv” sheet vs BAC's inline block, and the icon-only back button (C6/C7, owner decision)
+  - consolidation progress on the lesson start screen
+  - the email in the `/code?email=` URL
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
   - the referral flag looks ON in production — check it
