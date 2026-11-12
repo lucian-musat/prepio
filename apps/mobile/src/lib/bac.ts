@@ -296,32 +296,45 @@ export async function submitBac(req: BacSubmitRequest): Promise<BacSubmitRespons
 
 const filled = (s: string | null | undefined) => !!s && s.trim() !== '';
 
-function isAnswered(item: BacItem, a: ExerciseAnswer | undefined): boolean {
-  if (!a || a.type !== item.type) return false;
+export type Completeness = 'empty' | 'partial' | 'complete';
+
+/** `done` of `need` parts written: none is empty, all is complete, anything between is partial. */
+const of = (done: number, need: number): Completeness => (done <= 0 ? 'empty' : done >= need ? 'complete' : 'partial');
+const countOf = (item: BacItem) => Math.max(1, Number((item as { count?: number }).count ?? 1));
+
+/** How much of a requirement is written, the way the grader will count it (every part it asks for). */
+export function completeness(item: BacItem, a: ExerciseAnswer | undefined): Completeness {
+  if (!a || a.type !== item.type) return 'empty';
   switch (a.type) {
     case 'short_answer':
     case 'comparison':
     case 'argument':
-      return filled(a.text);
+      return filled(a.text) ? 'complete' : 'empty';
     case 'multi_answer':
     case 'facts':
-      return a.texts.some(filled);
+      return of(a.texts.filter(filled).length, countOf(item));
     case 'source_info':
-      return a.marks.length > 0;
+      return of(a.marks.length, countOf(item));
     case 'source_letter':
-      return a.letter != null;
+      return a.letter != null ? 'complete' : 'empty';
     case 'cause_effect':
-      return a.cause != null || a.effect != null;
+      return of(Number(a.cause != null) + Number(a.effect != null), 2);
     case 'viewpoint':
-      return filled(a.text) || a.marks.length > 0;
+      return of(Number(filled(a.text)) + Math.min(a.marks.length, countOf(item)), 1 + countOf(item));
     case 'essay': {
-      if (item.type !== 'essay') return false;
-      return item.requirements.length > 0 && item.requirements.every((r) => filled(a.parts?.[r.id]));
+      if (item.type !== 'essay' || item.requirements.length === 0) return 'empty';
+      return of(item.requirements.filter((r) => filled(a.parts?.[r.id])).length, item.requirements.length);
     }
   }
 }
 
-export function answeredCount(items: BacItem[], answers: BacAnswers): { answered: number; total: number; empty: BacItem[] } {
-  const empty = items.filter((it) => !isAnswered(it, answers[it.id]));
-  return { answered: items.length - empty.length, total: items.length, empty };
+/** Requirements answered completely, plus the ones left empty and the ones only partly written. */
+export function answeredCount(
+  items: BacItem[],
+  answers: BacAnswers,
+): { answered: number; total: number; empty: BacItem[]; partial: BacItem[] } {
+  const state = items.map((it) => completeness(it, answers[it.id]));
+  const empty = items.filter((_, i) => state[i] === 'empty');
+  const partial = items.filter((_, i) => state[i] === 'partial');
+  return { answered: items.length - empty.length - partial.length, total: items.length, empty, partial };
 }

@@ -119,3 +119,27 @@ it('opens the paywall for a locked deep link sent back from a subject', async ()
   expect(await screen.findByText('Mai târziu')).toBeTruthy();
   expect(router.setParams).toHaveBeenCalledWith({ paywall: undefined });
 });
+
+it('explains what a subject is and what the credits pay for', async () => {
+  await renderList();
+  expect(await screen.findByText(/Lucrare completă ca la examen: Subiectul I, II și III\./)).toBeTruthy();
+  expect(screen.getAllByText('10 credite la predare').length).toBeGreaterThan(0);
+});
+
+it('a subject in progress still shows its last grade, which opens that result', async () => {
+  mockedFetch.mockResolvedValue([row({ id: 'b', title: 'Subiect B', state: 'draft', lastGrade: 1.3, position: { section: 2, index: 4 } })]);
+  await renderList();
+  expect(await screen.findByText('În lucru · Subiectul II, cerința 5')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Ultima notă: 1,30, vezi rezultatul' }));
+  expect(router.push).toHaveBeenCalledWith('/bac/b/rezultat');
+});
+
+it('the last-grade link is not nested inside the row button (invalid HTML on the web)', async () => {
+  mockedFetch.mockResolvedValue([row({ id: 'b', title: 'Subiect B', state: 'draft', lastGrade: 1.3 })]);
+  await renderList();
+  const link = await screen.findByRole('button', { name: 'Ultima notă: 1,30, vezi rezultatul' });
+  const rowButton = screen.getByRole('button', { name: 'Subiect B' });
+  let inside = false;
+  for (let p = link.parent; p; p = p.parent) if (p === rowButton) inside = true;
+  expect(inside).toBe(false);
+});

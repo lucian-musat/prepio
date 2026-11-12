@@ -162,7 +162,9 @@ export default function BacPaperScreen() {
         .map((s, i) => ({ source: s, label: String.fromCharCode(65 + i) as SourceLabel })),
     [paper, position.section],
   );
-  const emptyIds = useMemo(() => new Set(answeredCount(items, draft.answers).empty.map((i) => i.id)), [items, draft.answers]);
+  const counted = useMemo(() => answeredCount(items, draft.answers), [items, draft.answers]);
+  const emptyIds = useMemo(() => new Set(counted.empty.map((i) => i.id)), [counted]);
+  const partialIds = useMemo(() => new Set(counted.partial.map((i) => i.id)), [counted]);
   const templateIds = useMemo(() => new Set(Object.keys(paper?.templates ?? {})), [paper]);
 
   const go = (section: BacSection, idx: number) => {
@@ -287,6 +289,10 @@ export default function BacPaperScreen() {
             sending={submitting}
             onSend={() => void send()}
             onBack={() => setMode('paper')}
+            onJump={(target) => {
+              setMode('paper');
+              go(target.section, items.filter((i) => i.section === target.section).indexOf(target));
+            }}
           />
         </ScreenLayout>
         {gate.sheet}
@@ -322,18 +328,19 @@ export default function BacPaperScreen() {
       <View style={styles.map}>
         {sectionItems.map((it, i) => {
           const here = i === index;
-          const done = !emptyIds.has(it.id);
+          const partly = partialIds.has(it.id);
+          const done = !emptyIds.has(it.id) && !partly;
           return (
             <Pressable
               key={it.id}
               accessibilityRole="button"
-              accessibilityLabel={`Cerința ${it.number}${done ? ', completată' : ''}`}
+              accessibilityLabel={`Cerința ${it.number}${done ? ', completată' : partly ? ', incompletă' : ''}`}
               accessibilityState={{ selected: here }}
               onPress={() => !here && go(position.section, i)}
               style={styles.slot}
             >
-              <View style={[styles.dot, done && styles.dotDone, here && styles.dotHere]}>
-                <AppText role="badge" style={{ color: done ? feedbackText.good : color.textMuted }}>
+              <View style={[styles.dot, done && styles.dotDone, partly && styles.dotPartial, here && styles.dotHere]}>
+                <AppText role="badge" style={{ color: done ? feedbackText.good : partly ? feedbackText.almost : color.textMuted }}>
                   {it.number}
                 </AppText>
               </View>
@@ -446,6 +453,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dotDone: { backgroundColor: color.successSubtle, borderColor: color.success },
+  // Partly written (e.g. the marks without the viewpoint): the grader would score it low.
+  dotPartial: { backgroundColor: color.accentSubtle, borderColor: color.accent },
   dotHere: { borderWidth: 2.5, borderColor: color.primary },
   failed: { backgroundColor: color.dangerSubtle, borderRadius: radius.md, padding: space[3], marginBottom: space[3] },
 });
