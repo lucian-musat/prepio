@@ -2,15 +2,16 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { BAC_GRADE_NOTE, type BacItemResult } from '@prepio/shared';
-import { fetchLatestGraded, type BacAttemptView } from '../../lib/bac';
+import { fetchLatestGraded, fetchOpenAttempt, type BacAttemptView } from '../../lib/bac';
 import BacResultScreen from './BacResultScreen';
 
-jest.mock('../../lib/bac', () => ({ ...jest.requireActual('../../lib/bac'), fetchLatestGraded: jest.fn() }));
+jest.mock('../../lib/bac', () => ({ ...jest.requireActual('../../lib/bac'), fetchLatestGraded: jest.fn(), fetchOpenAttempt: jest.fn() }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true },
   useLocalSearchParams: () => ({ id: 's1' }),
 }));
 const mockedGraded = fetchLatestGraded as jest.Mock;
+const mockedOpen = fetchOpenAttempt as jest.Mock;
 
 const r = (section: 1 | 2 | 3, number: number, points: number, max: number, feedback = ''): BacItemResult => ({
   itemId: `i${section}-${number}`,
@@ -39,7 +40,10 @@ const mount = async () =>
     </SafeAreaProvider>,
   );
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedOpen.mockResolvedValue(null);
+});
 
 it('lists only the items below full marks, by section and number, with their points', async () => {
   mockedGraded.mockResolvedValue(
@@ -95,4 +99,25 @@ it('without a graded attempt it says so', async () => {
   mockedGraded.mockResolvedValue(null);
   await mount();
   expect(await screen.findByText('Nu ai încă un rezultat la acest subiect.')).toBeTruthy();
+});
+
+it('shows the subtotal of each Subiect, the date and the ex officio points', async () => {
+  mockedGraded.mockResolvedValue(graded([r(1, 1, 2, 2), r(1, 5, 3, 7), r(2, 6, 4, 6), r(3, 1, 20, 30)]));
+  await mount();
+  await screen.findByText('8,40');
+  expect(screen.getByText('Subiectul I · 5 / 9 p')).toBeTruthy();
+  expect(screen.getByText('Subiectul II · 4 / 6 p')).toBeTruthy();
+  expect(screen.getByText('Subiectul III · 20 / 30 p')).toBeTruthy();
+  expect(screen.getByText('Corectată pe 9 noiembrie 2026 · include 10 puncte din oficiu')).toBeTruthy();
+});
+
+it('with a paper already in progress it offers to continue it, not a new retake', async () => {
+  mockedGraded.mockResolvedValue(graded([r(1, 5, 3, 7, 'Ai inversat cauza cu efectul.')]));
+  mockedOpen.mockResolvedValue({ ...graded([]), id: 'att2', status: 'draft', grade: null, results: null, gradedAt: null });
+  await mount();
+  await screen.findByText('8,40');
+  expect(screen.queryByRole('button', { name: 'Reia subiectul' })).toBeNull();
+  expect(screen.queryByText('Reluarea necesită credite suplimentare.')).toBeNull();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Continuă lucrarea începută' })));
+  expect(router.replace).toHaveBeenCalledWith('/bac/s1');
 });

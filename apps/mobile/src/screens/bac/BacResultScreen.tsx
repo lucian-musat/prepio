@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { BAC_GRADE_NOTE, color, formatGrade, radius, space, type BacItemResult } from '@prepio/shared';
-import { fetchLatestGraded, type BacAttemptView } from '../../lib/bac';
+import { BAC_GRADE_NOTE, color, formatAccessDate, formatGrade, radius, space, type BacItemResult } from '@prepio/shared';
+import { fetchLatestGraded, fetchOpenAttempt, type BacAttemptView } from '../../lib/bac';
 import { AppText, Button, ScreenLayout, Spinner, Surface } from '../../ui';
 import { ROMAN } from './BacSubmitView';
 
@@ -23,11 +23,25 @@ function itemLabel(r: BacItemResult, results: BacItemResult[]): string {
   return r.section === 3 && alone ? ROMAN[3] : `${ROMAN[r.section]}.${r.number}`;
 }
 
+/** Points per Subiect, in order: „Subiectul I · 5 / 9 p”. */
+export function subtotals(results: BacItemResult[]): string[] {
+  return ([1, 2, 3] as const).flatMap((s) => {
+    const rows = results.filter((r) => r.section === s);
+    if (!rows.length) return [];
+    const sum = (k: 'points' | 'max') => rows.reduce((t, r) => t + r[k], 0);
+    return [`Subiectul ${ROMAN[s]} · ${sum('points')} / ${sum('max')} p`];
+  });
+}
+
 type ViewProps = {
   grade: number;
   results: BacItemResult[];
+  /** When it was graded (ISO); shown with the ex officio points. */
+  gradedAt?: string | null;
   /** „Reia subiectul”: an empty paper of the same subject. */
   onRedo: () => void;
+  /** Set when another attempt of the subject is already open: „Continuă lucrarea începută” replaces the retake. */
+  onContinue?: () => void;
   onDone: () => void;
 };
 
@@ -36,7 +50,7 @@ type ViewProps = {
  * „De lucrat” — every item below full marks with its one-line feedback and points — or the congratulation when there is
  * none; „Reia subiectul” (it costs credits again) and „Înapoi la subiecte”.
  */
-export function BacResultView({ grade, results, onRedo, onDone }: ViewProps) {
+export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, onDone }: ViewProps) {
   const work = toWorkOn(results);
   return (
     <ScreenLayout
@@ -44,10 +58,16 @@ export function BacResultView({ grade, results, onRedo, onDone }: ViewProps) {
       onBack={onDone}
       actions={
         <View style={styles.actions}>
-          <Button label="Reia subiectul" variant="secondary" onPress={onRedo} />
-          <AppText role="caption" color="textMuted" style={styles.center}>
-            Reluarea necesită credite suplimentare.
-          </AppText>
+          {onContinue ? (
+            <Button label="Continuă lucrarea începută" variant="secondary" onPress={onContinue} />
+          ) : (
+            <>
+              <Button label="Reia subiectul" variant="secondary" onPress={onRedo} />
+              <AppText role="caption" color="textMuted" style={styles.center}>
+                Reluarea necesită credite suplimentare.
+              </AppText>
+            </>
+          )}
           <Button label="Înapoi la subiecte" onPress={onDone} />
         </View>
       }
@@ -62,6 +82,18 @@ export function BacResultView({ grade, results, onRedo, onDone }: ViewProps) {
         <AppText role="caption" color="textMuted" style={styles.center}>
           {BAC_GRADE_NOTE}
         </AppText>
+        <AppText role="caption" color="textMuted" style={styles.center}>
+          {gradedAt
+            ? `Corectată pe ${formatAccessDate(new Date(gradedAt))} · include 10 puncte din oficiu`
+            : 'Include 10 puncte din oficiu'}
+        </AppText>
+      </View>
+      <View style={styles.subtotals}>
+        {subtotals(results).map((line) => (
+          <AppText key={line} role="label" color="textMuted">
+            {line}
+          </AppText>
+        ))}
       </View>
       {work.length ? (
         <View style={styles.list}>
@@ -96,7 +128,7 @@ export function BacResultView({ grade, results, onRedo, onDone }: ViewProps) {
 /** `/bac/[id]/rezultat`: the latest graded attempt of the subject. */
 export default function BacResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [state, setState] = useState<{ status: 'loading' | 'error' | 'ready'; attempt: BacAttemptView | null }>({
+  const [state, setState] = useState<{ status: 'loading' | 'error' | 'ready'; attempt: BacAttemptView | null; open?: boolean }>({
     status: 'loading',
     attempt: null,
   });
@@ -104,8 +136,9 @@ export default function BacResultScreen() {
   const load = useCallback(() => {
     let live = true;
     setState({ status: 'loading', attempt: null });
-    fetchLatestGraded(id).then(
-      (attempt) => live && setState({ status: 'ready', attempt }),
+    // An open attempt only changes the action; failing to read it never hides the result.
+    Promise.all([fetchLatestGraded(id), fetchOpenAttempt(id).catch(() => null)]).then(
+      ([attempt, open]) => live && setState({ status: 'ready', attempt, open: open?.status === 'draft' }),
       (e) => {
         console.warn('[bac] the result could not be read:', e);
         if (live) setState({ status: 'error', attempt: null });
@@ -119,7 +152,16 @@ export default function BacResultScreen() {
 
   const a = state.attempt;
   if (state.status === 'ready' && a && a.grade != null) {
-    return <BacResultView grade={a.grade} results={a.results ?? []} onRedo={() => router.replace(`/bac/${id}`)} onDone={backToSubjects} />;
+    return (
+      <BacResultView
+        grade={a.grade}
+        results={a.results ?? []}
+        gradedAt={a.gradedAt}
+        onRedo={() => router.replace(`/bac/${id}`)}
+        onContinue={state.open ? () => router.replace(`/bac/${id}`) : undefined}
+        onDone={backToSubjects}
+      />
+    );
   }
   return (
     <ScreenLayout title="Rezultat" onBack={backToSubjects}>
@@ -152,6 +194,7 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   actions: { flex: 1, gap: space[2] },
   gradeBox: { alignItems: 'center', gap: space[1], paddingVertical: space[4] },
+  subtotals: { alignItems: 'center', gap: space[1], marginBottom: space[4] },
   grade: { fontSize: 56, lineHeight: 64, color: color.primaryStrong },
   list: { gap: space[2.5] },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], borderRadius: radius.lg },

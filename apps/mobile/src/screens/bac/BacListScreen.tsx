@@ -37,18 +37,31 @@ function stateChip(r: BacListRow): { label: string; fg: string; bg: string } {
   }
 }
 
-function SubjectRow({ row, locked, onPress }: { row: BacListRow; locked: boolean; onPress: () => void }) {
+function SubjectRow({ row, locked, onPress, onResult }: { row: BacListRow; locked: boolean; onPress: () => void; onResult?: () => void }) {
   const chip = stateChip(row);
+  // A paper in progress hides the last graded one in the chip: keep it reachable.
+  const earlier = row.state !== 'completed' && row.lastGrade != null && onResult;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={row.title} onPress={onPress}>
       <Surface style={styles.row}>
         <View style={styles.rowText}>
           <AppText role="bodyStrong">{row.title}</AppText>
           <Chip label={chip.label} fg={chip.fg} bg={chip.bg} />
-          <View style={styles.cost} accessible accessibilityLabel={`Costă ${row.creditCost} credite`}>
+          {earlier ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Ultima notă: ${formatGrade(row.lastGrade!)}, vezi rezultatul`}
+              onPress={onResult}
+              hitSlop={8}
+              style={styles.earlier}
+            >
+              <AppText role="small" color="primary">{`Ultima notă: ${formatGrade(row.lastGrade!)} ›`}</AppText>
+            </Pressable>
+          ) : null}
+          <View style={styles.cost} accessible accessibilityLabel={`Costă ${row.creditCost} credite la predare`}>
             <Coin size={12} />
-            <AppText role="eyebrow" color="textMuted" accessible={false}>
-              {row.creditCost}
+            <AppText role="caption" color="textMuted" accessible={false}>
+              {`${row.creditCost} credite la predare`}
             </AppText>
           </View>
         </View>
@@ -140,7 +153,15 @@ export default function BacListScreen() {
       );
     }
     const years = [...new Set(rows.map((r) => r.year))];
-    return years.map((year) => (
+    const intro = (
+      <Surface key="intro" style={styles.intro}>
+        <AppText role="small" color="textMuted">
+          Lucrare completă ca la examen: Subiectul I, II și III. Lucrezi în ritmul tău, lucrarea se salvează automat, iar
+          la final primești o notă orientativă și ce mai ai de lucrat.
+        </AppText>
+      </Surface>
+    );
+    return [intro, ...years.map((year) => (
       <View key={year} style={styles.group}>
         <AppText role="caption" color="textMuted" accessibilityRole="header">
           {`Istorie · ${year}`}
@@ -152,6 +173,7 @@ export default function BacListScreen() {
               key={r.id}
               row={r}
               locked={!full}
+              onResult={full ? () => router.push(`/bac/${r.id}/rezultat`) : undefined}
               onPress={() =>
                 // A completed subject (no open attempt) opens its latest result, which offers „Reia subiectul”.
                 full ? router.push(r.state === 'completed' ? `/bac/${r.id}/rezultat` : `/bac/${r.id}`) : setPaywall(true)
@@ -159,7 +181,7 @@ export default function BacListScreen() {
             />
           ))}
       </View>
-    ));
+    ))];
   };
 
   return (
@@ -183,4 +205,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], borderRadius: radius.lg },
   rowText: { flex: 1, gap: space[2] },
   cost: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  earlier: { alignSelf: 'flex-start' },
+  intro: { marginBottom: space[4] },
 });
