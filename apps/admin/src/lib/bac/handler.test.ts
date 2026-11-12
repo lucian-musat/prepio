@@ -425,6 +425,13 @@ describe('handleBacSubmit', () => {
     expect(result(r, I_LETTER).feedback).not.toBe('');
   });
 
+  it('the student feedback uses comma-below ș / ț', async () => {
+    const s = setup({ grade: grader({ 'ENUNȚ-ARG': { points: 7, feedback: 'Lipseşte concluzia ţării. Mai mult.' } }) });
+    const r = await handleBacSubmit(body({ [I_ARG]: fullAnswers()[I_ARG] }), USER, s.deps);
+    expect(r.status).toBe(200);
+    expect(result(r, I_ARG).feedback).toBe('Lipsește concluzia țării.');
+  });
+
   it('clampToStep applies to AI points', async () => {
     const s = setup({ grade: grader({ 'ENUNȚ-ARG': { points: 8, feedback: 'Lipsește concluzia. Mai mult text.' }, 'ENUNȚ-FACTS': { points: 99, feedback: 'Bine.' } }) });
     const r = await handleBacSubmit(

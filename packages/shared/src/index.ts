@@ -18,3 +18,4 @@ export * from './access';
 export * from './bac/types';
 export * from './bac/bac';
 export * from './sentryScrub';
+export * from './diacritics';

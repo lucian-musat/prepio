@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fixRomanianDiacritics } from '@prepio/shared';
 
 /**
  * What the model returns: one entry per expected item key. No length constraints on purpose:
@@ -52,9 +53,9 @@ export function normalizeAiOutput(out: AiOutput, expectedKeys: string[]): AiOutp
     items: picked.slice(0, MAX_ITEMS).map((i) => ({
       key: i.key,
       verdict: i.verdict,
-      title: truncate(i.title, MAX_TITLE_CHARS),
-      good: i.good.slice(0, MAX_ENTRIES).map((s) => truncate(s, MAX_ENTRY_CHARS)),
-      improve: i.improve.slice(0, MAX_ENTRIES).map((s) => truncate(s, MAX_ENTRY_CHARS)),
+      title: truncate(fixRomanianDiacritics(i.title), MAX_TITLE_CHARS),
+      good: i.good.slice(0, MAX_ENTRIES).map((s) => truncate(fixRomanianDiacritics(s), MAX_ENTRY_CHARS)),
+      improve: i.improve.slice(0, MAX_ENTRIES).map((s) => truncate(fixRomanianDiacritics(s), MAX_ENTRY_CHARS)),
     })),
   };
 }
