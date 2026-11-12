@@ -216,7 +216,7 @@ it('the last „Continuă” finishes the run and shows the end screen with verd
   await press('Verifică');
   await press('Continuă');
   expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
-  expect(screen.getByText('Fără note, doar unde mai ai de lucrat.')).toBeTruthy();
+  expect(screen.getByText('Mai ai 1 exercițiu de lucrat. Fără note, doar unde mai ai de lucrat.')).toBeTruthy();
   expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1'], index: 0, finished: true });
   const row1 = within(screen.getByTestId('summary-e1'));
   expect(row1.getByText('Răspuns scurt')).toBeTruthy();
@@ -229,6 +229,8 @@ it('„Reia doar ce nu a fost corect” builds a run of the exercises not yet co
   mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'no')));
   await open();
   expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  // With something left, redoing it is the main action.
+  expect(bar().getAllByRole('button')[0]).toHaveAccessibleName('Reia doar ce nu a fost corect');
   await press('Reia doar ce nu a fost corect');
   expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e2'], index: 0, finished: false });
   expect(await screen.findByText('Prezentați două fapte istorice din perioada 1866-1886.')).toBeTruthy();
@@ -240,6 +242,9 @@ it('reopening with a finished run lands on the end screen; with all correct only
   mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'ok')));
   await open();
   expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(screen.getByText('Toate exercițiile sunt corecte. 🎉')).toBeTruthy();
+  // All correct: going on is the main action.
+  expect(bar().getAllByRole('button')[0]).toHaveAccessibleName('Mergi la lecția următoare');
   expect(bar().getByRole('button', { name: 'Reia consolidarea' })).toBeTruthy();
   expect(bar().queryByRole('button', { name: 'Reia doar ce nu a fost corect' })).toBeNull();
   await press('Mergi la lecția următoare');

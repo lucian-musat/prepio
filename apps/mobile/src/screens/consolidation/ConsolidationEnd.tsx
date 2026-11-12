@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, CONSOLIDATION_TYPE_LABELS, radius, space, type ConsolidationExercise } from '@prepio/shared';
+import { border, color, CONSOLIDATION_TYPE_LABELS, plural, radius, space, type ConsolidationExercise } from '@prepio/shared';
 import type { Attempt } from '../../lib/consolidation';
-import { AppText, Button, Enter, Icon, ScreenLayout, Surface } from '../../ui';
+import { AppText, Button, Enter, Icon, ScreenLayout, Surface, TextButton } from '../../ui';
 import { exerciseStatus } from './status';
 
 type Props = {
@@ -23,20 +23,33 @@ function labelOf(ex: ConsolidationExercise) {
 
 /**
  * „Consolidare parcursă” (types mockup flow screen 3): every exercise with its latest verdict, no grade. A row opens
- * its exercise (with the answer and feedback, if it was checked).
+ * its exercise (with the answer and feedback, if it was checked). The main action follows the result: redo what is
+ * not correct yet, or, with everything correct, go on; the full retake is the quiet option.
  */
 export default function ConsolidationEnd({ exercises, attempts, onBack, onRestart, onRestartWrong, onOpen, next }: Props) {
+  const left = exercises.filter((ex) => attempts.get(ex.id)?.verdict !== 'ok').length;
+  const summary =
+    left === 0
+      ? 'Toate exercițiile sunt corecte. 🎉'
+      : `Mai ai ${plural(left, 'exercițiu', 'exerciții')} de lucrat. Fără note, doar unde mai ai de lucrat.`;
   return (
     <ScreenLayout
       title="Consolidare"
-      progress={1}
-      progressLabel="Progres consolidare"
       onBack={onBack}
       actions={
         <View style={styles.stack}>
-          <Button label="Reia consolidarea" onPress={onRestart} />
-          {onRestartWrong ? <Button label="Reia doar ce nu a fost corect" variant="secondary" onPress={onRestartWrong} /> : null}
-          <Button label={next.label} variant="secondary" onPress={next.onPress} />
+          {onRestartWrong ? (
+            <>
+              <Button label="Reia doar ce nu a fost corect" onPress={onRestartWrong} />
+              <Button label={next.label} variant="secondary" onPress={next.onPress} />
+              <TextButton label="Reia consolidarea" onPress={onRestart} />
+            </>
+          ) : (
+            <>
+              <Button label={next.label} onPress={next.onPress} />
+              <Button label="Reia consolidarea" variant="secondary" onPress={onRestart} />
+            </>
+          )}
         </View>
       }
     >
@@ -45,7 +58,7 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
           Consolidare parcursă
         </AppText>
         <AppText role="lead" color="textMuted" style={styles.centre}>
-          Fără note, doar unde mai ai de lucrat.
+          {summary}
         </AppText>
       </Enter>
       <Enter index={1}>
