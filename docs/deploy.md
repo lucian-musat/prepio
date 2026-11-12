@@ -187,6 +187,21 @@ The block fingerprint reuses the welcome-grant pepper, so there is no env var or
    - signed in as admin: Elevi shows the „Stare” / „Ultima activitate” columns and the filter chips; a student page shows Parcurs and the backfilled Cronologie;
    - the owner's phone checks (STATUS "Test student administration on the phone").
 
+## Referrals rollout
+
+Spec `docs/superpowers/specs/2026-11-12-referrals-design.md`. Everything ships dark: `referrals_enabled` defaults to off, so pushing the migrations changes nothing for students.
+
+1. `pnpm db:cloud:push:dry`, then `pnpm db:cloud:push` (the referral migrations; the flag stays off). Safe before the code: the old admin and web simply don't call the new functions.
+2. Merge the PR, which deploys admin and web through Vercel (the settings card and the student page tab appear; the student screens stay hidden while the flag is off).
+3. Build and ship an APK from this branch. Old APKs render new referral rows wrongly: `AccessScreen.historyLabel` labels unknown access kinds „Acces retras”, and the old `credits.ts` has no label for the `referral` ledger kind.
+4. Only then switch `referrals_enabled` on in admin Settings → Recomandări.
+
+Keep it off until:
+- real payments exist (purchases are simulated, `provider='none'`, so a „paying” invitee costs nothing);
+- the explainer copy and the Terms/Privacy sentences have the owner's (and the lawyer's) review.
+
+Two follow-ups to do before real payments (STATUS backlog): an invitee deleting their account while a purchase runs can deadlock (lock the profile first in the delete trigger), and referral errors must never roll back a captured payment.
+
 ## Local APK builds
 
 EAS cloud builds are limited on the Free plan (the Android quota ran out on 2026-11-10, resets on the 1st). `eas build --local` builds on this machine with no quota and the same signing keystore (downloaded from the EAS credentials; the CLI must be logged in as `lucian.m91`).
