@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CONSOLIDATION_TYPE_LABELS, creditsLabel, formatGrade, formatLei, type ConsolidationType } from '@prepio/shared';
+import { CONSOLIDATION_TYPE_LABELS, creditsLabel, formatAccessDate, formatGrade, formatLei, type ConsolidationType } from '@prepio/shared';
 import { deleteAccount } from '@/lib/account/deleteAccount';
 import { check, isUuid, UserError } from './db';
 import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from './studentLabels';
@@ -395,11 +395,24 @@ export function eventLabel(e: EventInput): string {
     case 'bac_submitted': return `Lucrare trimisă la corectat · ${subject} · 🪙 ${num('cost')}`;
     case 'bac_graded': return `Lucrare corectată · ${subject} · nota ${formatGrade(num('grade'))}`;
     case 'bac_grading_failed': return 'Corectare nereușită · returnat';
+    case 'referral_joined': {
+      const n = typeof d.inviter_first_name === 'string' && d.inviter_first_name ? d.inviter_first_name : null;
+      return n ? `S-a înregistrat cu codul de recomandare al lui ${n}` : 'S-a înregistrat cu un cod de recomandare';
+    }
+    case 'referral_access': {
+      const parts = [
+        num('months') > 0 ? monthsLabel(num('months')) : null,
+        typeof d.until === 'string' ? `până la ${formatAccessDate(new Date(d.until))}` : null,
+      ].filter(Boolean);
+      return `Acces gratuit prin recomandări${parts.length ? ` (${parts.join(', ')})` : ''}`;
+    }
+    case 'referral_credits': return `Credite din recomandare: +${num('credits')}`;
     default: return e.kind;
   }
 }
 
 const EVENT_ICONS: Record<string, string> = { access_purchased: '⭐', access_granted: '🎟️', access_revoked: '⛔', access_expired: '⌛',
+  referral_joined: '🤝', referral_access: '🎁', referral_credits: '🪙',
   bac_started: '📝', bac_submitted: '📤', bac_graded: '🎓', bac_grading_failed: '⚠️',
 };
 

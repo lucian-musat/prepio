@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { listStudentBacAttempts } from '@/lib/data/bac';
+import { accessSource, getStudentReferrals } from '@/lib/data/referrals';
 import { LEDGER_KIND_LABELS } from '@/lib/data/studentLabels';
 import {
   EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, ledgerDetails, orderLabel, orderPrice, orderStatusLabel,
@@ -10,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
 import BacTab from './BacTab';
 import ProgressTab from './ProgressTab';
+import ReferralsSection from './ReferralsSection';
 import { NoticeProvider } from './Notice';
 import StudentHeader from './StudentHeader';
 import TimelineTab from './TimelineTab';
@@ -25,6 +27,7 @@ const TABS = [
   { key: 'cronologie', label: 'Cronologie' },
   { key: 'credite', label: 'Credite' },
   { key: 'comenzi', label: 'Comenzi' },
+  { key: 'recomandari', label: 'Recomandări' },
 ] as const;
 type Tab = (typeof TABS)[number]['key'];
 
@@ -86,18 +89,20 @@ export default async function StudentPage({
   if (!data) notFound();
   const { student, ledger, orders } = data;
   // getStudent succeeded through the session client (admin_students refuses non-admins), so the caller is an admin.
-  const [progress, account, events, bacAttempts] = await Promise.all([
+  const [progress, account, events, bacAttempts, referrals] = await Promise.all([
     getStudentProgress(db, id),
     getStudentAccount(createAdminClient(), id),
     tab === 'cronologie' ? getStudentEvents(db, id) : Promise.resolve([]),
     tab === 'bac' ? listStudentBacAttempts(db, id) : Promise.resolve([]),
+    getStudentReferrals(db, id),
   ]);
+  const source = student.isAdmin ? undefined : accessSource(referrals.accessEntries, student.accessUntil, new Date());
 
   return (
     <>
       <p className="mb-2"><Link href="/students">‹ Elevi</Link></p>
       <NoticeProvider>
-      <StudentHeader student={student} lessonsTotal={progress.length} mode={account.mode} suspendedBy={account.suspendedBy} />
+      <StudentHeader student={student} lessonsTotal={progress.length} mode={account.mode} suspendedBy={account.suspendedBy} accessSource={source} />
 
       <div className="card">
         <div className="card-header">
@@ -120,6 +125,7 @@ export default async function StudentPage({
           {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
           {tab === 'credite' && <LedgerTable ledger={ledger} />}
           {tab === 'comenzi' && <OrdersTable orders={orders} />}
+          {tab === 'recomandari' && <ReferralsSection code={referrals.code} invitedBy={referrals.invitedBy} invitees={referrals.invitees} />}
         </div>
       </div>
       </NoticeProvider>

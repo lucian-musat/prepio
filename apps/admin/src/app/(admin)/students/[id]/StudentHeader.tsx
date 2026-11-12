@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Badge, Button, Card, Modal } from 'react-bootstrap';
+import { formatAccessDate } from '@prepio/shared';
+import { accessSourceLabel, type AccessSourceKind } from '@/lib/data/referrals';
 import { MODE_LABELS, PROVIDER_LABELS, type LearningMode } from '@/lib/data/studentLabels';
 import type { StudentRow } from '@/lib/data/students';
 import AdjustCreditsForm from './AdjustCreditsForm';
@@ -15,13 +18,15 @@ import SuspendDialog, { ReactivateDialog } from './SuspendDialog';
 type Dialog = 'credits' | 'reset' | 'suspend' | 'reactivate' | 'delete' | 'grant' | 'revoke';
 
 export default function StudentHeader({
-  student, lessonsTotal, mode, suspendedBy,
+  student, lessonsTotal, mode, suspendedBy, accessSource,
 }: {
   student: StudentRow;
   lessonsTotal: number;
   mode: LearningMode | null;
   /** Email of the admin who suspended the student; null for the system. */
   suspendedBy: string | null;
+  /** How the current access was obtained (see `accessSource`); the line is hidden when omitted. */
+  accessSource?: { kind: AccessSourceKind; at: string | null };
 }) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const close = () => setDialog(null);
@@ -61,6 +66,14 @@ export default function StudentHeader({
         {suspended && (
           <div className="alert alert-danger py-2 mt-3 mb-0" data-testid="suspension">
             {`Suspendat de ${suspendedBy ?? 'sistem'} pe ${formatDay(student.suspendedAt!)} · Motiv: „${student.suspendedReason ?? ''}”`}
+          </div>
+        )}
+
+        {accessSource && (
+          <div className="small mt-2" data-testid="access-source">
+            {`Acces: ${accessSourceLabel(accessSource.kind)}`}
+            {accessSource.kind !== 'trial' && student.accessUntil && ` · până la ${formatAccessDate(new Date(student.accessUntil))}`}
+            {accessSource.kind === 'referral_reward' && <> · <Link href={`/students/${student.id}?tab=recomandari`}>vezi Recomandări</Link></>}
           </div>
         )}
 
