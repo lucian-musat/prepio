@@ -347,7 +347,7 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
     );
   }
   if (!outcome.passed) {
-    return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
+    return <GuidedFailed outcome={outcome} questions={lesson.questions} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
   }
   // Go on to the lesson that is current once this pass counts: after a free → guided switch the finished
   // lessons need not be a prefix of the order, so it is not always the next one. "Ai deblocat" only when this

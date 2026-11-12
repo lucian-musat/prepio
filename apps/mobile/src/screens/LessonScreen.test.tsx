@@ -469,7 +469,14 @@ describe('guided mode', () => {
     await openLesson(lesson(), 'Știu deja — sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Aproape!')).toBeTruthy();
-    expect(screen.getByText('Ai greșit la: întrebarea 1')).toBeTruthy();
+    expect(screen.getByText('Rezultatul testului')).toBeTruthy();
+    expect(screen.getByText('Ai greșit la:')).toBeTruthy();
+    // Each mistake opens in place with the right answer.
+    const row = screen.getByRole('button', { name: 'Întrebarea 1 · Prima întrebare?' });
+    expect(screen.queryByText('Răspuns corect: Da')).toBeNull();
+    await fireEvent.press(row);
+    expect(screen.getByText('Răspuns corect: Da')).toBeTruthy();
+    expect(screen.getByLabelText('0 din 1 întrebări corecte')).toBeTruthy();
     expect(
       screen.getByText(
         'Ca să treci mai departe, ai nevoie de toate răspunsurile corecte. Revezi cardurile și încearcă din nou.',
@@ -556,7 +563,7 @@ describe('guided mode', () => {
     // q2 alone is not enough: the saved q1 answer is gone, so the attempt fails on question 1.
     await answer('Nu', 'Următoarea întrebare');
     await answer('Da', 'Continuă');
-    expect(await screen.findByText('Ai greșit la: întrebarea 1')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Întrebarea 1 · Prima întrebare?' })).toBeTruthy();
   });
 
   it('Revezi cardurile, then skipping from the cards starts a fresh test', async () => {
