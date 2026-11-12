@@ -53,6 +53,18 @@ Last updated: 2026-11-12
     - feedback, the per-row order result and the expandable mistakes
     - schema and video
   - **Native:** the image cap and the sound pill change on the phone too; check them on the next APK.
+- **Batch D — Consolidation (`feat/ux-consolidation`):**
+  - **AI feedback** gets comma-below ș / ț. A shared `fixRomanianDiacritics` is applied to the consolidation output and the BAC student feedback, and the prompt contract asks for it.
+  - **AI items** start with the verdict word („Corect” / „Aproape” / „Mai lucrează”), and their bullets are in the text colour.
+  - **„Încearcă din nou”** shows the check's cost, and after „Corect” it becomes a quiet link.
+  - **One progress indicator:** the exercise map, with a colour legend. The bar and the „n/10” are gone.
+  - **End screen:** „Mai ai n exerciții de lucrat” with „Reia doar ce nu a fost corect” first, or „Toate exercițiile sunt corecte. 🎉” with going on first. The full retake is the quiet option.
+  - Tests: mobile 1302, shared 392, admin unit (lib) 281.
+  - Browser walk (Chrome, local, trial student with the lesson finished, 1280 + 360, console clean):
+    - map and legend
+    - a deterministic check: „Corect!” with the retry as a link
+    - the end screen
+  - **Not browser-checked:** the AI feedback view (the verdict word, the retry cost). It needs the admin API with an OpenAI mock; unit tests only.
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
   - the referral flag looks ON in production — check it
