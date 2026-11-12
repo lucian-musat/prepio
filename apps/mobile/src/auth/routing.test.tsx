@@ -7,12 +7,18 @@ import SuspendedLayout from '../../app/(suspended)/_layout';
 import PrivacyRoute from '../../app/confidentialitate';
 import DeleteAccountRoute from '../../app/sterge-cont';
 import PreviewRoute from '../../app/preview';
+import InviteRoute from '../../app/invita/[code]';
+import ReferralsInfoRoute from '../../app/recomandari';
 import type { AuthStatus } from './AuthProvider';
 
 let mockStatus: AuthStatus = 'signedOut';
 jest.mock('./AuthProvider', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: () => ({ status: mockStatus, session: null, profile: null, refreshProfile: jest.fn(), signOut: jest.fn() }),
+}));
+jest.mock('../lib/referrals', () => ({
+  ...jest.requireActual('../lib/referrals'),
+  fetchReferralPublicSettings: jest.fn().mockResolvedValue({ enabled: true, threshold: 5, creditsPerInvitee: 40, durationMonths: 3, maxRewarded: 100, bonusCredits: 100 }),
 }));
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }));
 
@@ -32,11 +38,13 @@ const routes = {
   confidentialitate: PrivacyRoute,
   'sterge-cont': DeleteAccountRoute,
   preview: PreviewRoute,
+  'invita/[code]': InviteRoute,
+  recomandari: ReferralsInfoRoute,
 };
 
 // Jest runs as native: the preview page shows its web-only notice, which is enough to prove the route renders.
 const PREVIEW = 'Previzualizarea este disponibilă doar pe web.';
-const SCREENS = ['welcome', 'terms-gate', 'name', 'mode', 'suspended', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', PREVIEW];
+const SCREENS = ['welcome', 'terms-gate', 'name', 'mode', 'suspended', 'home', 'lesson', 'Politica de confidențialitate', 'Ștergerea contului', 'Cum funcționează recomandările', PREVIEW];
 
 it.each([
   ['signedOut', '/', 'welcome'],
@@ -63,6 +71,13 @@ it.each([
   ['signedOut', '/sterge-cont', 'Ștergerea contului'],
   ['needsName', '/sterge-cont', 'Ștergerea contului'],
   ['ready', '/sterge-cont', 'Ștergerea contului'],
+  ['signedOut', '/invita/ABCD2345', 'welcome'],
+  ['needsName', '/invita/ABCD2345', 'name'],
+  ['ready', '/invita/ABCD2345', 'home'],
+  ['signedOut', '/recomandari', 'Cum funcționează recomandările'],
+  ['needsName', '/recomandari', 'Cum funcționează recomandările'],
+  ['suspended', '/recomandari', 'Cum funcționează recomandările'],
+  ['ready', '/recomandari', 'Cum funcționează recomandările'],
   ['signedOut', '/preview', PREVIEW],
   ['needsName', '/preview', PREVIEW],
   ['ready', '/preview', PREVIEW],

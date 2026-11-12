@@ -10,6 +10,7 @@ import {
 } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
+import { fetchMyReferrals } from './referrals';
 import { ownUserId } from './ownUser';
 import { apiUrl, getSupabase } from './supabase';
 
@@ -35,6 +36,10 @@ export type StudentLedgerEntry = {
   target: string | null;
   reason: string | null;
   createdAt: string;
+  /** `referral`: the invitee's first name (the snapshot when the account is deleted); null when there is none. */
+  referralName?: string | null;
+  /** `access_bonus`: the bonus credits of a free access earned through referrals (not of a purchase). */
+  fromReferral?: boolean;
   /** `lesson`: the title of the exercise's lesson, when the student can read it (published). */
   exercise: { type: ConsolidationType; prompt: string; requirements?: string[]; lesson?: string } | null;
 };
@@ -67,13 +72,22 @@ export async function fetchLedger(
   const userId = await ownUserId(client);
   let q = client
     .from('credit_ledger')
-    .select('id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content,lessons(title))')
+    .select('id,delta,balance_after,kind,target,reason,created_at,referral_id,consolidation_exercises(type,prompt,content,lessons(title))')
     .eq('user_id', userId)
     .order('id', { ascending: false })
     .limit(opts.limit ?? DEFAULT_LEDGER_LIMIT);
   if (opts.before !== undefined) q = q.lt('id', opts.before);
   const { data, error } = await q;
   if (error) throw error;
+  // A referral reward names its invitee; the first names come from my_referrals (a student cannot read profiles).
+  const names = new Map<string, string | null>();
+  if ((data ?? []).some((r) => r.kind === 'referral' && r.referral_id)) {
+    try {
+      for (const ref of await fetchMyReferrals(client)) names.set(ref.id, ref.firstName || null);
+    } catch (e) {
+      console.warn('[credits] referral names could not be loaded:', e); // the rows keep the plain label
+    }
+  }
   return (data ?? []).map((r) => {
     const joined = r.consolidation_exercises as JoinedExercise | JoinedExercise[] | null;
     const ex = Array.isArray(joined) ? (joined[0] ?? null) : joined;
@@ -88,6 +102,8 @@ export async function fetchLedger(
       target: r.target,
       reason: r.reason,
       createdAt: r.created_at,
+      ...(r.kind === 'referral' ? { referralName: (r.referral_id && names.get(r.referral_id)) || null } : {}),
+      ...(r.kind === 'access_bonus' && r.referral_id ? { fromReferral: true } : {}),
       exercise: ex
         ? { type: ex.type, prompt: ex.prompt, ...(reqs ? { requirements: reqs } : {}), ...(lesson ? { lesson } : {}) }
         : null,
@@ -119,9 +135,11 @@ function base(e: StudentLedgerEntry): string {
     case 'purchase':
       return `Pachet ${creditsLabel(e.delta)}`;
     case 'access_bonus':
-      return 'Credite incluse în acces';
+      return e.fromReferral ? 'Credite incluse în accesul gratuit din recomandări' : 'Credite incluse în acces';
     case 'refund':
       return 'Verificare nereușită · returnat';
+    case 'referral':
+      return e.referralName ? `Recomandare: ${e.referralName}` : 'Recomandare';
     case 'admin':
       return e.reason?.trim() ? `Ajustare · ${e.reason.trim()}` : 'Ajustare';
     case 'check': {

@@ -23,6 +23,7 @@ export default function AppLayout() {
           <Stack.Screen name="bac/[id]/rezultat" options={{ title: 'Rezultat BAC' }} />
           <Stack.Screen name="profile" options={{ title: 'Profil' }} />
           <Stack.Screen name="credits" options={{ title: 'Creditele mele' }} />
+          <Stack.Screen name="invita" options={{ title: 'Invită colegi' }} />
         </Stack>
       </AccessProvider>
     </CreditsProvider>

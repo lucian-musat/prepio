@@ -7,6 +7,20 @@ import { signInWithGoogle } from '../../auth/google';
 import { emailAuthEnabled } from '../../lib/flags';
 import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
 import { TERMS_VERSION } from '../../lib/legal';
+import { clearPendingCode, storePendingCode } from '../../lib/referrals';
+
+jest.mock('../../lib/referrals', () => ({ storePendingCode: jest.fn(), clearPendingCode: jest.fn() }));
+jest.mock('../../components/ReferralCodeField', () => {
+  const { Pressable, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ onChange }: { onChange: (c: string | null) => void }) => (
+      <Pressable accessibilityRole="button" accessibilityLabel="set-code" onPress={() => onChange('ABCD2345')}>
+        <Text>field</Text>
+      </Pressable>
+    ),
+  };
+});
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../auth/google', () => ({ signInWithGoogle: jest.fn() }));
@@ -38,6 +52,8 @@ beforeEach(() => {
   (getStoredConsent as jest.Mock).mockResolvedValue(null);
   (storeConsent as jest.Mock).mockResolvedValue(undefined);
   (clearConsent as jest.Mock).mockResolvedValue(undefined);
+  (storePendingCode as jest.Mock).mockResolvedValue(undefined);
+  (clearPendingCode as jest.Mock).mockResolvedValue(undefined);
 });
 
 it('shows the copy, the Google button and the consent checkbox (unchecked)', async () => {
@@ -97,6 +113,35 @@ it('the two links sit outside the checkbox and open the terms and the privacy po
   expect(router.push).toHaveBeenCalledWith('/confidentialitate');
   expect(storeConsent).not.toHaveBeenCalled();
   expect(consent().props.accessibilityState).toMatchObject({ checked: false });
+});
+
+it('stores the invite code before starting Google', async () => {
+  (signInWithGoogle as jest.Mock).mockResolvedValue('ok');
+  await renderWelcome();
+  await fireEvent.press(screen.getByRole('button', { name: 'set-code' }));
+  await tick();
+  await fireEvent.press(google());
+  expect(storePendingCode).toHaveBeenCalledWith('ABCD2345');
+  expect((storePendingCode as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+    (signInWithGoogle as jest.Mock).mock.invocationCallOrder[0],
+  );
+});
+
+it('stores the invite code before opening the email screen', async () => {
+  (emailAuthEnabled as jest.Mock).mockReturnValue(true);
+  await renderWelcome();
+  await fireEvent.press(screen.getByRole('button', { name: 'set-code' }));
+  await tick();
+  await fireEvent.press(screen.getByRole('button', { name: 'Continuă cu email' }));
+  expect(storePendingCode).toHaveBeenCalledWith('ABCD2345');
+});
+
+it('stores no invite code when none was entered', async () => {
+  (signInWithGoogle as jest.Mock).mockResolvedValue('ok');
+  await renderWelcome();
+  await tick();
+  await fireEvent.press(google());
+  expect(storePendingCode).not.toHaveBeenCalled();
 });
 
 it('hides the email button when the flag is off', async () => {
@@ -167,6 +212,31 @@ it('a failed Google sign-in clears the stored consent', async () => {
   await tick();
   await fireEvent.press(google());
   expect(clearConsent).toHaveBeenCalledTimes(1);
+});
+
+it('a cancelled or failed Google sign-in clears the pending invite code; the next press stores it again', async () => {
+  (signInWithGoogle as jest.Mock).mockResolvedValue('cancelled');
+  await renderWelcome();
+  await fireEvent.press(screen.getByRole('button', { name: 'set-code' }));
+  await tick();
+  await fireEvent.press(google());
+  expect(clearPendingCode).toHaveBeenCalledTimes(1);
+  expect((clearPendingCode as jest.Mock).mock.invocationCallOrder[0]).toBeGreaterThan(
+    (signInWithGoogle as jest.Mock).mock.invocationCallOrder[0],
+  );
+  (signInWithGoogle as jest.Mock).mockRejectedValue(new Error('x'));
+  await fireEvent.press(google());
+  expect(storePendingCode).toHaveBeenCalledTimes(2);
+  expect(clearPendingCode).toHaveBeenCalledTimes(2);
+});
+
+it('a Google sign-in that goes ahead keeps the pending invite code', async () => {
+  (signInWithGoogle as jest.Mock).mockResolvedValue('ok');
+  await renderWelcome();
+  await fireEvent.press(screen.getByRole('button', { name: 'set-code' }));
+  await tick();
+  await fireEvent.press(google());
+  expect(clearPendingCode).not.toHaveBeenCalled();
 });
 
 it('a Google sign-in that goes ahead keeps the stored consent (AuthProvider records it)', async () => {

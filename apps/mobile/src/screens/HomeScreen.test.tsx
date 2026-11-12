@@ -5,6 +5,8 @@ import { router } from 'expo-router';
 import HomeScreen from './HomeScreen';
 import { fetchHome } from '../lib/content';
 import { fetchProgress } from '../lib/progress';
+import { fetchReferralSummary } from '../lib/referrals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let mockCanOpen = (_id: string) => true;
 const mockRefreshAccess = jest.fn();
@@ -26,6 +28,8 @@ jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
 const mockFocusListeners = new Set<() => void>();
 const mockRefocus = () => act(async () => mockFocusListeners.forEach((l) => l()));
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn() }));
+jest.mock('../lib/referrals', () => ({ ...jest.requireActual('../lib/referrals'), fetchReferralSummary: jest.fn() }));
+const mockedReferral = fetchReferralSummary as jest.Mock;
 // useFocusEffect runs its callback once, like an effect (the screen is focused on mount).
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
@@ -76,8 +80,26 @@ const renderHome = async () =>
 
 const lesson = (id: string, title: string, position = 1) => ({ id, nodeId: 'n', title, position });
 
-beforeEach(() => {
+const summaryOf = (over: Record<string, unknown> = {}) => ({
+  code: 'ABCD2345',
+  enabled: true,
+  threshold: 5,
+  creditsPerInvitee: 40,
+  durationMonths: 3,
+  hasAccess: false,
+  pendingCount: 0,
+  inviteeCount: 0,
+  creditsEarned: 0,
+  freePeriodsEarned: 0,
+  maxRewarded: 100,
+  capReached: false,
+  ...over,
+});
+
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
+  mockedReferral.mockRejectedValue(new Error('off')); // the feature stays hidden unless a test turns it on
   mockCanOpen = () => true;
   mockAccessReady = true;
   mockParams = {};
@@ -441,4 +463,73 @@ it('has a Subiecte BAC card above the lessons that opens the BAC list', async ()
   expect(await screen.findByText('Exersează lucrarea completă')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: /Subiecte BAC/ }));
   expect(router.push).toHaveBeenCalledWith('/bac');
+});
+
+describe('invite entry points', () => {
+  const home = () => mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [{ path: ['A'], lessons: [lesson('a1', 'Prima')] }] });
+
+  it('shows one quiet line with the progress for a student without access', async () => {
+    home();
+    mockResetAccess({ accessUntil: null });
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 2 }));
+    await renderHome();
+    await fireEvent.press(await screen.findByText('🎁 Invită colegi, 2/5 ›'));
+    expect(router.push).toHaveBeenCalledWith('/invita');
+  });
+
+  it('shows the plain line without progress, or with access', async () => {
+    home();
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 0 }));
+    const { unmount } = await renderHome();
+    expect(await screen.findByText('🎁 Invită colegi ›')).toBeTruthy();
+    await unmount();
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 2, hasAccess: true }));
+    await renderHome();
+    expect(await screen.findByText('🎁 Invită colegi ›')).toBeTruthy();
+  });
+
+  it('renders nothing when disabled, without a code, or when the summary fails', async () => {
+    home();
+    mockedReferral.mockResolvedValue(summaryOf({ enabled: false }));
+    const { unmount } = await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText(/Invită colegi/)).toBeNull();
+    await unmount();
+    mockedReferral.mockResolvedValue(summaryOf({ code: null }));
+    const second = await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText(/Invită colegi/)).toBeNull();
+    await second.unmount();
+    mockedReferral.mockRejectedValue(new Error('down'));
+    await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText(/Invită colegi/)).toBeNull();
+  });
+
+  it('shows the note after the first finished lesson, once', async () => {
+    home();
+    mockedProgress.mockResolvedValue(progressOf('a1'));
+    mockedReferral.mockResolvedValue(summaryOf());
+    const { unmount } = await renderHome();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Închide' }));
+    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    await unmount();
+    await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+  });
+
+  it('shows no note without a finished lesson or when the feature is off', async () => {
+    home();
+    mockedReferral.mockResolvedValue(summaryOf());
+    const { unmount } = await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    await unmount();
+    mockedProgress.mockResolvedValue(progressOf('a1'));
+    mockedReferral.mockResolvedValue(summaryOf({ enabled: false }));
+    await renderHome();
+    await screen.findByText('Prima');
+    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+  });
 });

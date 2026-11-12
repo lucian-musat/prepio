@@ -182,3 +182,41 @@ describe('eventLabel', () => {
     );
   });
 });
+
+describe('referral timeline events', () => {
+  const ev = (kind: string, details: Record<string, unknown> | null) =>
+    ({ kind, details, lessonTitle: null, exerciseType: null, adminEmail: null }) satisfies EventInput;
+  it('labels referral_joined with and without the inviter name', () => {
+    expect(eventLabel(ev('referral_joined', { inviter_first_name: 'Ana' }))).toBe('S-a înregistrat cu codul de recomandare al lui Ana');
+    expect(eventLabel(ev('referral_joined', null))).toBe('S-a înregistrat cu un cod de recomandare');
+  });
+  it('labels referral_access with months and end date', () => {
+    expect(eventLabel(ev('referral_access', { months: 3, until: '2027-02-08T10:00:00Z' }))).toBe(
+      'Acces gratuit prin recomandări (3 luni, până la 8 februarie 2027)',
+    );
+    expect(eventLabel(ev('referral_access', { months: 1 }))).toBe('Acces gratuit prin recomandări (1 lună)');
+    expect(eventLabel(ev('referral_access', null))).toBe('Acces gratuit prin recomandări');
+  });
+  it('labels referral_access with the included bonus credits', () => {
+    expect(eventLabel(ev('referral_access', { months: 3, until: '2027-02-08T10:00:00Z', bonus_credits: 100 }))).toBe(
+      'Acces gratuit prin recomandări (3 luni, până la 8 februarie 2027, +100 credite incluse)',
+    );
+    expect(eventLabel(ev('referral_access', { months: 3, bonus_credits: 0 }))).toBe('Acces gratuit prin recomandări (3 luni)');
+  });
+  it('names the bonus row of a free access from referrals', () => {
+    const base = { kind: 'access_bonus', target: null, reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: null };
+    expect(ledgerDetails({ ...base, referralId: 'r1', accessOrderId: null })).toBe('Acces gratuit din recomandări');
+    expect(ledgerDetails({ ...base, referralId: null, accessOrderId: 'o1' })).toBe('Acces cumpărat');
+    expect(ledgerDetails({ ...base, referralId: null, accessOrderId: null })).toBe('');
+  });
+  it('labels referral_credits', () => {
+    expect(eventLabel(ev('referral_credits', { credits: 40 }))).toBe('Credite din recomandare: +40');
+  });
+  it('has icons and a ledger label', () => {
+    expect(eventIcon('referral_joined', null)).toBeTruthy();
+    expect(eventIcon('referral_access', null)).toBeTruthy();
+    expect(eventIcon('referral_credits', null)).toBeTruthy();
+    expect(LEDGER_KIND_LABELS.referral).toBe('Recomandare');
+    expect(ledgerDetails({ kind: 'referral', target: null, reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: null })).toBe('Invitat care a plătit');
+  });
+});

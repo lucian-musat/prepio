@@ -9,6 +9,7 @@ import { registerProfileRefresh } from '../lib/profileRefresh';
 import { setSentryUser } from '../lib/sentry';
 import { TERMS_VERSION } from '../lib/legal';
 import { acceptTerms, clearConsent, getStoredConsent } from '../lib/termsConsent';
+import { attachReferralCode, clearPendingCode, getPendingCode } from '../lib/referrals';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'suspended' | 'needsTerms' | 'needsName' | 'needsMode' | 'ready';
 
@@ -73,6 +74,24 @@ async function autoAccept(profile: Profile | null): Promise<Profile | null> {
   return { ...profile, termsVersion: TERMS_VERSION };
 }
 
+/**
+ * After a sign-in, the invite code kept on this device (link or typed on Welcome) is attached to the account.
+ * The pending code is cleared first, so a second settle of the same sign-in finds nothing and attaches nothing;
+ * it is a one-shot whatever the answer ('not_allowed' for an old account, 'invalid', ...) and whatever fails:
+ * the student is never blocked and never sees an error. The server only accepts new accounts.
+ */
+async function autoAttachReferral(): Promise<void> {
+  try {
+    const code = await getPendingCode();
+    if (!code) return;
+    await clearPendingCode();
+    await withTimeout(attachReferralCode(code));
+  } catch (e) {
+    console.warn('[auth] invite code could not be attached:', e);
+    await clearPendingCode();
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading', session: null, profile: null });
   const stateRef = useRef(state);
@@ -117,6 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mine !== generation.current) return;
       if (!failed) {
         profile = await autoAccept(profile);
+        if (mine !== generation.current) return;
+        await autoAttachReferral();
         if (mine !== generation.current) return;
       }
       const prev = stateRef.current;

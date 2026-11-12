@@ -76,6 +76,15 @@ describe('ledgerLabel', () => {
     expect(ledgerLabel(entry({ kind: 'refund', delta: 10, target: 'bac:s1' }))).toBe('Corectare nereușită · returnat');
   });
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));
+  it('referral names the invitee, or falls back when they are gone', () => {
+    expect(ledgerLabel(entry({ kind: 'referral', delta: 40, referralName: 'Ana' }))).toBe('Recomandare: Ana');
+    expect(ledgerLabel(entry({ kind: 'referral', delta: 40, referralName: null }))).toBe('Recomandare');
+    expect(ledgerLabel(entry({ kind: 'referral', delta: 40 }))).toBe('Recomandare');
+  });
+  it('access bonus: from a purchase, or included in the free access from referrals', () => {
+    expect(ledgerLabel(entry({ kind: 'access_bonus', delta: 100 }))).toBe('Credite incluse în acces');
+    expect(ledgerLabel(entry({ kind: 'access_bonus', delta: 100, fromReferral: true }))).toBe('Credite incluse în accesul gratuit din recomandări');
+  });
   it('check and refund rows name the lesson of their exercise', () => {
     const viewpoint = { type: 'viewpoint' as const, prompt: 'p', lesson: 'Cuza' };
     expect(ledgerLabel(entry({ delta: -1, target: 'exercise', exercise: viewpoint }))).toBe('Punct de vedere · Cuza');
@@ -255,13 +264,62 @@ describe('queries', () => {
     expect(rows[2].exercise).toBeNull();
     expect(calls).toContainEqual([
       'select',
-      ['id,delta,balance_after,kind,target,reason,created_at,consolidation_exercises(type,prompt,content,lessons(title))'],
+      ['id,delta,balance_after,kind,target,reason,created_at,referral_id,consolidation_exercises(type,prompt,content,lessons(title))'],
     ]);
     expect(calls).toContainEqual(['limit', [30]]);
     expect(calls).toContainEqual(['lt', ['id', 10]]);
     expect(calls).toContainEqual(['order', ['id', { ascending: false }]]);
     // An admin's RLS reads every student's ledger: the app must ask for its own rows only.
     expect(calls).toContainEqual(['eq', ['user_id', 'me']]);
+  });
+
+  it('fetchLedger names the invitee of a referral row from my_referrals, and skips that call without one', async () => {
+    const row = (id: number, kind: string, referral_id: string | null) => ({
+      id, delta: 40, balance_after: 40, kind, target: null, reason: null, created_at: 't', referral_id, consolidation_exercises: null,
+    });
+    const { client } = fakeClient({ data: [row(2, 'referral', 'r1'), row(1, 'referral', 'gone')], error: null });
+    const rpc = jest.fn().mockResolvedValue({
+      data: [{ id: 'r1', first_name: 'Ana', email: null, state: 'converted_credits', created_at: 't', first_paid_at: null, reward_credits: 40, account_deleted: false }],
+      error: null,
+    });
+    (client as unknown as { rpc: unknown }).rpc = rpc;
+    const rows = await fetchLedger({}, client);
+    expect(rpc).toHaveBeenCalledWith('my_referrals');
+    expect(rows.map((r) => r.referralName)).toEqual(['Ana', null]);
+    expect(ledgerLabel(rows[0])).toBe('Recomandare: Ana');
+
+    const deleted = fakeClient({ data: [row(4, 'referral', 'r2')], error: null });
+    (deleted.client as unknown as { rpc: unknown }).rpc = jest.fn().mockResolvedValue({
+      data: [{ id: 'r2', first_name: 'Dan', email: null, state: 'converted_credits', created_at: 't', first_paid_at: null, reward_credits: 40, account_deleted: true }],
+      error: null,
+    });
+    const deletedRows = await fetchLedger({}, deleted.client);
+    expect(ledgerLabel(deletedRows[0])).toBe('Recomandare: Dan');
+
+    // A bonus row of the free access carries the referral link but needs no name lookup.
+    const bonus = fakeClient({ data: [row(5, 'access_bonus', 'r1'), row(6, 'access_bonus', null)], error: null });
+    const rpc3 = jest.fn();
+    (bonus.client as unknown as { rpc: unknown }).rpc = rpc3;
+    const bonusRows = await fetchLedger({}, bonus.client);
+    expect(rpc3).not.toHaveBeenCalled();
+    expect(bonusRows.map((r) => ledgerLabel(r))).toEqual(['Credite incluse în accesul gratuit din recomandări', 'Credite incluse în acces']);
+
+    const plain = fakeClient({ data: [row(3, 'welcome', null)], error: null });
+    const rpc2 = jest.fn();
+    (plain.client as unknown as { rpc: unknown }).rpc = rpc2;
+    await fetchLedger({}, plain.client);
+    expect(rpc2).not.toHaveBeenCalled();
+  });
+
+  it('fetchLedger still lists a referral row when my_referrals fails', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { client } = fakeClient({
+      data: [{ id: 2, delta: 40, balance_after: 40, kind: 'referral', target: null, reason: null, created_at: 't', referral_id: 'r1', consolidation_exercises: null }],
+      error: null,
+    });
+    (client as unknown as { rpc: unknown }).rpc = jest.fn().mockResolvedValue({ data: null, error: new Error('down') });
+    const rows = await fetchLedger({}, client);
+    expect(ledgerLabel(rows[0])).toBe('Recomandare');
   });
 
   it('fetchCreditBalance reads profiles.credit_balance', async () => {

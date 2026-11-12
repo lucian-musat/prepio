@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { formatAccessDate } from '@prepio/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StudentRow } from '@/lib/data/students';
 import { NoticeProvider } from './Notice';
@@ -122,5 +123,36 @@ describe('StudentHeader', () => {
     render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode="guided" suspendedBy={null} />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Acordă acces' }));
     expect(await screen.findByRole('heading', { name: 'Acordă acces' })).toBeTruthy();
+  });
+});
+
+describe('StudentHeader access source', () => {
+  const until = '2027-02-08T10:00:00Z';
+  const untilText = formatAccessDate(new Date(until));
+  const withSource = (kind: 'trial' | 'purchase' | 'referral_reward' | 'admin_grant') =>
+    render(
+      <StudentHeader
+        student={{ ...ACTIVE, accessUntil: kind === 'trial' ? null : until }}
+        lessonsTotal={5} mode={null} suspendedBy={null}
+        accessSource={{ kind, at: kind === 'trial' ? null : '2026-11-01T10:00:00Z' }}
+      />,
+    );
+  it.each([
+    ['purchase', 'Acces: Plătit · până la'],
+    ['admin_grant', 'Acces: Acordat manual · până la'],
+    ['referral_reward', 'Acces: Recomandări · până la'],
+    ['trial', 'Acces: Trial'],
+  ] as const)('%s', (kind, text) => {
+    withSource(kind);
+    expect(screen.getByTestId('access-source').textContent).toContain(kind === 'trial' ? text : `${text} ${untilText}`);
+    cleanup();
+  });
+  it('points to the Recomandări tab for a referral reward', () => {
+    withSource('referral_reward');
+    expect(screen.getByRole('link', { name: 'vezi Recomandări' }).getAttribute('href')).toBe('/students/s1?tab=recomandari');
+  });
+  it('renders no line without the prop', () => {
+    render(<StudentHeader student={ACTIVE} lessonsTotal={5} mode={null} suspendedBy={null} />);
+    expect(screen.queryByTestId('access-source')).toBeNull();
   });
 });

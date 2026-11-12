@@ -9,6 +9,9 @@ import { refreshRegisteredProfile } from '../lib/profileRefresh';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { acceptTerms, getStoredConsent, storeConsent } from '../lib/termsConsent';
 import { TERMS_VERSION as TV } from '../lib/legal';
+import { attachReferralCode, getPendingCode, storePendingCode } from '../lib/referrals';
+
+jest.mock('../lib/referrals', () => ({ ...jest.requireActual('../lib/referrals'), attachReferralCode: jest.fn() }));
 
 jest.mock('../lib/profile', () => ({ fetchProfile: jest.fn() }));
 jest.mock('../lib/termsConsent', () => ({ ...jest.requireActual('../lib/termsConsent'), acceptTerms: jest.fn() }));
@@ -773,5 +776,61 @@ describe('suspension changes while the app is open', () => {
     mockFetchProfile.mockRejectedValue(new Error('offline'));
     await act(async () => onChange('active'));
     expect(state()).toBe('ready|Ana|access-1');
+  });
+});
+
+describe('referral code after sign-in', () => {
+  const signIn = async () => {
+    await renderAuth();
+    await waitForState('signedOut|-|-');
+    await emit('SIGNED_IN', session());
+  };
+
+  it('attaches the pending code once and clears it', async () => {
+    (attachReferralCode as jest.Mock).mockResolvedValue('attached');
+    await storePendingCode('ABCD2345');
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(attachReferralCode).toHaveBeenCalledTimes(1);
+    expect(attachReferralCode).toHaveBeenCalledWith('ABCD2345');
+    expect(await getPendingCode()).toBeNull();
+    // A later token refresh / reload of the same student attaches nothing more.
+    await emit('TOKEN_REFRESHED', session(USER, 'access-2'));
+    expect(attachReferralCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the pending code on not_allowed', async () => {
+    (attachReferralCode as jest.Mock).mockResolvedValue('not_allowed');
+    await storePendingCode('ABCD2345');
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(await getPendingCode()).toBeNull();
+  });
+
+  it('still completes sign-in when attach throws, and clears the code', async () => {
+    (attachReferralCode as jest.Mock).mockRejectedValue(new Error('down'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await storePendingCode('ABCD2345');
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(await getPendingCode()).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('a rate-limited attach (server error rate_limited) does not block sign-in and clears the code', async () => {
+    (attachReferralCode as jest.Mock).mockRejectedValue({ code: 'P0001', message: 'rate_limited', details: null, hint: null });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await storePendingCode('ABCD2345');
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(attachReferralCode).toHaveBeenCalledTimes(1);
+    expect(await getPendingCode()).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('does nothing without a pending code', async () => {
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(attachReferralCode).not.toHaveBeenCalled();
   });
 });

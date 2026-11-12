@@ -21,7 +21,7 @@ const PURCHASE_TIMEOUT = 'Achiziția durează prea mult. Încearcă din nou.';
 const PURCHASE_NOT_CONFIGURED = 'Achiziția nu este disponibilă momentan. Încearcă din nou mai târziu.';
 
 export type AccessHistoryEntry = {
-  kind: 'purchase' | 'admin_grant' | 'admin_revoke';
+  kind: 'purchase' | 'admin_grant' | 'admin_revoke' | 'referral_reward';
   months: number | null;
   untilAfter: string;
   createdAt: string;

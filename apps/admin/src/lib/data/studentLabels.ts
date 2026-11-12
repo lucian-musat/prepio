@@ -12,4 +12,5 @@ export const LEDGER_KIND_LABELS: Record<string, string> = {
   refund: 'Rambursare',
   admin: 'Ajustare admin',
   access_bonus: 'Credite incluse în acces',
+  referral: 'Recomandare',
 };

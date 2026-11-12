@@ -13,6 +13,8 @@ import CreditChip from '../credits/CreditChip';
 import { useAccess } from '../access/AccessProvider';
 import AccessBanner from '../access/AccessBanner';
 import PaywallSheet from '../access/PaywallSheet';
+import InviteNote from '../components/InviteNote';
+import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
 const LAST_STAGGER = 5;
@@ -94,6 +96,8 @@ function HomeTrailing() {
 }
 
 export default function HomeScreen() {
+  const referral = useReferralSummary();
+  const referralBadge = referral ? progressBadge(referral) : null;
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const [data, setData] = useState<HomeData | null>(null);
   const [failed, setFailed] = useState(false);
@@ -218,6 +222,7 @@ export default function HomeScreen() {
           bg={color.primarySubtle}
         />
       </View>
+      <InviteNote enabled={referral !== null} finishedCount={done} />
       <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>
         <Surface style={styles.bacRow}>
           <AppText role="section">📝</AppText>
@@ -245,6 +250,13 @@ export default function HomeScreen() {
           </View>
         );
       })}
+      {referral ? (
+        <Pressable accessibilityRole="link" onPress={() => router.push('/invita')} style={styles.invite} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}>
+          <AppText role="small" color="textMuted">
+            {`🎁 Invită colegi${referralBadge ? `, ${referralBadge}` : ''} ›`}
+          </AppText>
+        </Pressable>
+      ) : null}
       <PaywallSheet visible={sheet !== null} lessonTitle={sheetTitle} lessonCount={total} canOpenAfterPurchase={afterPurchase !== 'locked'} onClose={closeSheet} onUnlocked={unlocked} />
     </ScreenLayout>
   );
@@ -267,6 +279,7 @@ const styles = StyleSheet.create({
   bacCard: { marginBottom: space[6] },
   bacRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   bacText: { flex: 1 },
+  invite: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginBottom: space[4] },
   loader: { marginTop: space[12], alignItems: 'center' },
   // Prototype `.sec-title`: baseline-aligned title and count, 10 px above the list.
   header: {

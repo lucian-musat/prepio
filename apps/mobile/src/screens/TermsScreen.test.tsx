@@ -117,3 +117,12 @@ it('links to the privacy policy', async () => {
   fireEvent.press(screen.getByText('Politica de confidențialitate'));
   expect(router.push).toHaveBeenCalledWith('/confidentialitate');
 });
+
+it('tells that an inviter sees the first name and e-mail of the student they invited', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'Dacă te-ai înregistrat cu codul de invitație al unui coleg, acel coleg vede prenumele și adresa ta de email în aplicația lui.',
+    ),
+  ).toBeTruthy();
+});

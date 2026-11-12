@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { formatAccessDate, space } from '@prepio/shared';
-import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../ui';
+import { color, formatAccessDate, radius, space } from '@prepio/shared';
+import { AppText, Button, Chip, ScreenLayout, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import { OFFLINE } from '../lib/api';
 import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
@@ -12,6 +12,7 @@ import LearningModePicker from '../components/LearningModePicker';
 import { ownMessage } from '../lib/errorMessage';
 import { useCredits } from '../credits/CreditsProvider';
 import { useAccess } from '../access/AccessProvider';
+import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
 
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
@@ -27,6 +28,8 @@ export default function ProfileScreen() {
   const { session, profile, refreshProfile, signOut } = useAuth();
   const { balance } = useCredits();
   const { status } = useAccess();
+  const referral = useReferralSummary();
+  const badge = referral ? progressBadge(referral) : null;
   const planLabel = status.plan === 'trial' ? 'Trial' : status.plan === 'expired' ? 'Expirat' : `Acces până la ${formatAccessDate(status.until)}`;
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -147,6 +150,19 @@ export default function ProfileScreen() {
           disabled={busy}
         />
 
+        {referral ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={badge ? `Invită colegi, ${badge}` : 'Invită colegi'}
+            disabled={busy}
+            onPress={() => router.push('/invita')}
+            style={styles.inviteRow}
+          >
+            <AppText role="bodyStrong">Invită colegi</AppText>
+            {badge ? <Chip label={badge} fg={color.primaryStrong} bg={color.primarySubtle} size="badge" /> : null}
+          </Pressable>
+        ) : null}
+
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 
         {deletion.confirming ? (
@@ -182,5 +198,16 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   stack: { gap: space[4] },
   field: { gap: space[2] },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: space[4],
+    borderWidth: 1,
+    borderColor: color.border,
+    borderRadius: radius.lg,
+    backgroundColor: color.surface,
+  },
   link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });

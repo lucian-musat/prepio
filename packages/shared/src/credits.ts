@@ -3,7 +3,7 @@ import type { ConsolidationEvaluateRequest, ConsolidationExercise } from './cons
 import { plural } from './plural';
 
 export type CreditPackage = { id: string; credits: number; priceBani: number; featured: boolean };
-export type CreditLedgerKind = 'welcome' | 'purchase' | 'check' | 'refund' | 'admin' | 'access_bonus';
+export type CreditLedgerKind = 'welcome' | 'purchase' | 'check' | 'refund' | 'admin' | 'access_bonus' | 'referral';
 
 /** `POST /api/credits/purchase`. */
 export type CreditsPurchaseRequest = { packageId: string };
