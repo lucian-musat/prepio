@@ -14,10 +14,9 @@ export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 [ -x "$JAVA_HOME/bin/java" ] || { echo "No JDK at $JAVA_HOME (see docs/deploy.md \"Local APK builds\")." >&2; exit 1; }
 [ -d "$ANDROID_HOME/cmdline-tools" ] || { echo "No Android SDK at $ANDROID_HOME (see docs/deploy.md \"Local APK builds\")." >&2; exit 1; }
 
-# A 2-core / 8 GB WSL machine: one Gradle daemon with a bounded heap, Kotlin compiled in that process (no extra
-# daemon), and native code for arm64-v8a only (every current Android phone). ABIS="arm64-v8a,armeabi-v7a,x86,x86_64"
-# builds all four, which needs much more memory and time. Stop the local Supabase / dev servers first if memory is short.
-export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.workers.max=2 -Dkotlin.compiler.execution.strategy=in-process}"
+# Gradle heap and workers come from ~/.gradle/gradle.properties (docs/deploy.md "Local APK builds"); the script sets no
+# -D overrides, which would win over that file. Native code for arm64-v8a only (every current Android phone);
+# ABIS="arm64-v8a,armeabi-v7a,x86,x86_64" builds all four, which needs much more memory and time.
 export ORG_GRADLE_PROJECT_reactNativeArchitectures="${ABIS:-arm64-v8a}"
 
 # Sentry: the config plugin uploads source maps and the ProGuard mapping during the Gradle build when

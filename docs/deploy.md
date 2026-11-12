@@ -193,7 +193,16 @@ EAS cloud builds are limited on the Free plan (the Android quota ran out on 2026
 
 - One-time setup in WSL, no sudo (done 2026-11-10): Temurin JDK 17 in `~/.local/jdk-17` (`https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`), Android command-line tools in `~/Android/Sdk/cmdline-tools/latest` (`commandlinetools-linux-11076708_latest.zip` from `dl.google.com/android/repository`), then `sdkmanager --sdk_root=$HOME/Android/Sdk --licenses` and `--install platform-tools`. Gradle downloads the platform, build-tools and NDK it needs on the first build.
 - Build: `bash scripts/build-apk-local.sh` (profile `preview` → APK; `production` → AAB). The artifact lands in `~/prepio-builds/prepio-<profile>-<date>-<sha>.<ext>`; copy it to Windows (e.g. `cp ~/prepio-builds/<file> /mnt/c/Users/lucia/Downloads/`) to install or share it. A local build has no expo.dev install page.
-- The machine is small (2 cores, ~8 GB): the script caps Gradle at a 3 GB heap and 2 workers; the first build takes long (downloads), later ones reuse the Gradle cache.
+- Machine resources (2026-11-12): WSL gets 20 GB RAM, 16 processors and 8 GB swap via `C:\Users\lucia\.wslconfig` (`[wsl2]` `memory=20GB`, `processors=16`, `swap=8GB`; `[experimental]` `autoMemoryReclaim=gradual`; apply with `wsl --shutdown`). Gradle settings live in `~/.gradle/gradle.properties` in WSL, outside the repo, and the script does not override them:
+
+  ```properties
+  org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g
+  org.gradle.parallel=true
+  org.gradle.caching=true
+  org.gradle.workers.max=12
+  ```
+
+  On a smaller machine lower the heap and workers there (e.g. `-Xmx3g`, `workers.max=2`). The first build takes long (downloads); later ones reuse the Gradle cache.
 
 ## Schema and content
 
