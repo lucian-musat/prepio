@@ -10,7 +10,6 @@ import {
   shuffleForDisplay,
   space,
   stroke,
-  border,
   type Answer,
   typeScale,
   type OrderItem,
@@ -50,21 +49,6 @@ const BADGE_OVERHANG = (typeScale.badge.lineHeight + space[1] - typeScale.eyebro
 const ICON_SIZE = space[6] + space[1]; // 28 px circle (prototype `.feedback .ic`)
 const ICON_GLYPH = space[4];
 
-// A sentence end that leaves less than this is most likely an abbreviation ("Al. I. Cuza").
-const MIN_SENTENCE = 20;
-// Sentence end: punctuation followed by whitespace and a capital letter (so "ian. 1859" doesn't count).
-const SENTENCE_END = /[.!?…](?=\s+[A-ZĂÂÎȘȚŞŢ])/g;
-
-/** First sentence of the explanation for the action bar, or the whole text when no safe cut exists. */
-function firstSentence(text: string) {
-  const t = text.trim();
-  for (const m of t.matchAll(SENTENCE_END)) {
-    const end = m.index + 1;
-    if (end >= MIN_SENTENCE) return t.slice(0, end);
-  }
-  return t;
-}
-
 const verdictText = (good: boolean) => (good ? 'Corect, bravo!' : 'Nu chiar.');
 
 /** Verdict icon in a circle that pops in (prototype `.feedback .ic`). */
@@ -97,7 +81,8 @@ function Verdict({ good, line }: { good: boolean; line: string | null }) {
 
 /**
  * One question screen: the question card scrolls, "Verifică" and then the verdict + next button live
- * in the fixed action bar; the full correct answer and the explanation appear under the options.
+ * in the fixed action bar. Each thing is said once: the options mark the right answer, the bar names a short one
+ * (or points up), the explanation sits under the options, and a wrong order shows the correct sequence there.
  */
 export default function QuestionView({ question, onAnswered, onNext, nextLabel = 'Următoarea întrebare', frame }: Props) {
   const isOrder = question.type === 'chronological_order';
@@ -113,9 +98,9 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
 
   const correctTexts = question.type === 'chronological_order' ? [] : question.options.filter((o) => o.correct).map((o) => o.text);
 
-  /** Second line of the verdict in the action bar. */
+  /** Second line of the verdict in the action bar: only after a wrong answer, never the explanation again. */
   const barLine = (ok: boolean): string | null => {
-    if (ok) return question.explanation ? firstSentence(question.explanation) : null;
+    if (ok) return null;
     const only = correctTexts.length === 1 ? correctTexts[0]! : null;
     if (correctTexts.length === 0) return null; // nothing is revealed above, so there is nothing to point at
     return only && only.length <= SHORT_ANSWER_MAX ? `Răspuns corect: ${only}` : SEE_ABOVE;
@@ -171,9 +156,9 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
   const line = correct === null ? null : barLine(correct);
 
   const canCheck = isOrder || selected.length > 0;
-  const showCorrectChoice = correct === false && correctTexts.length > 0;
+  // Choice questions mark the right options in place; only a wrong order needs the sequence spelled out.
   const showCorrectOrder = correct === false && question.type === 'chronological_order';
-  const hasReveal = showCorrectChoice || showCorrectOrder || !!(answered && question.explanation);
+  const hasReveal = showCorrectOrder || !!(answered && question.explanation);
 
   return (
     <View style={styles.fill}>
@@ -186,7 +171,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
         feedback={answered ? <Verdict good={!!correct} line={line} /> : undefined}
         actions={
           answered ? (
-            <Button key="next" flex label={nextLabel} tone={correct ? 'success' : 'danger'} onPress={next} />
+            <Button key="next" flex label={nextLabel} tone={correct ? 'success' : 'primary'} onPress={next} />
           ) : (
             <Button key="check" flex label="Verifică" disabled={!canCheck} onPress={submit} />
           )
@@ -204,9 +189,14 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
               </View>
             </Enter>
             <Enter index={1}>
-              <AppText role="question" style={styles.prompt}>
+              <AppText role="question" style={question.type === 'multiple_choice' ? styles.promptWithHint : styles.prompt}>
                 {question.prompt}
               </AppText>
+              {question.type === 'multiple_choice' ? (
+                <AppText role="small" color="textMuted" style={styles.hint}>
+                  Alege toate variantele corecte.
+                </AppText>
+              ) : null}
             </Enter>
             <Enter index={2}>
               {question.type === 'chronological_order' ? (
@@ -226,13 +216,6 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
           {hasReveal ? (
             <View onLayout={onRevealLayout}>
               <Enter config={feedbackConfig} curve={easing.standard} style={styles.reveal}>
-                {showCorrectChoice ? (
-                  <View style={styles.answerBox}>
-                    <AppText role="bodyStrong" style={styles.answerText}>
-                      {`${correctTexts.length === 1 ? 'Răspuns corect: ' : 'Răspunsuri corecte: '}${correctTexts.join('; ')}`}
-                    </AppText>
-                  </View>
-                ) : null}
                 {showCorrectOrder && question.type === 'chronological_order' ? <CorrectOrder items={question.options} /> : null}
                 {question.explanation ? (
                   <Surface padding={4} radius="lg">
@@ -256,15 +239,9 @@ const styles = StyleSheet.create({
   // The badge (app-only) is taller than the eyebrow line; it overhangs so the prompt sits where the prototype has it.
   badge: { marginVertical: -BADGE_OVERHANG },
   prompt: { marginTop: space[1.5], marginBottom: space[4] },
+  promptWithHint: { marginTop: space[1.5], marginBottom: space[1] },
+  hint: { marginBottom: space[4] },
   reveal: { gap: space[3] },
-  answerBox: {
-    padding: space[3.5],
-    borderRadius: radius.lg,
-    borderWidth: border.thick,
-    borderColor: color.success,
-    backgroundColor: color.successSubtle,
-  },
-  answerText: { color: feedbackText.good },
   // Prototype `.feedback`: padding 2px 0 12px.
   verdict: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], paddingTop: space[1] / 2, paddingBottom: space[3] },
   icon: { width: ICON_SIZE, height: ICON_SIZE, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
