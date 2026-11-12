@@ -5,12 +5,15 @@ const dateFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyl
 const fmt = (iso: string) => dateFmt.format(new Date(iso));
 
 export default function ReferralsSection({
-  code, invitedBy, invitees,
+  code, invitedBy, invitees, failed = false,
 }: {
   code: string | null;
   invitedBy: { id: string; name: string } | null;
   invitees: AdminReferralRow[];
+  /** The data could not be loaded: show a note instead of an empty list. */
+  failed?: boolean;
 }) {
+  if (failed) return <p className="text-danger mb-0" role="alert">Recomandările nu au putut fi încărcate.</p>;
   return (
     <div>
       <p className="mb-1">Cod de recomandare: <code data-testid="referral-code">{code ?? '—'}</code></p>

@@ -37,11 +37,11 @@ export function accessSource(
 ): { kind: AccessSourceKind; at: string | null } {
   const end = instant(accessUntil);
   if (accessUntil === null || !(end > now.getTime())) return { kind: 'trial', at: null };
-  const latestFirst = [...entries].sort((a, b) => b.id - a.id);
-  const pick =
-    latestFirst.find((e) => e.kind !== 'admin_revoke' && instant(e.untilAfter) === end) ??
-    latestFirst.find((e) => e.kind !== 'admin_revoke');
-  if (!pick || pick.kind === 'admin_revoke') return { kind: 'trial', at: null };
+  const latestFirst = [...entries]
+    .sort((a, b) => b.id - a.id)
+    .filter((e): e is AdminAccessLedgerEntry & { kind: AccessSourceKind } => e.kind !== 'admin_revoke');
+  const pick = latestFirst.find((e) => instant(e.untilAfter) === end) ?? latestFirst[0];
+  if (!pick) return { kind: 'trial', at: null };
   return { kind: pick.kind, at: pick.createdAt };
 }
 
@@ -71,17 +71,32 @@ type LedgerDb = {
   reason: string | null; created_at: string;
 };
 
-export async function getStudentReferrals(
-  db: SupabaseClient,
-  userId: string,
-): Promise<{ code: string | null; invitedBy: { id: string; name: string } | null; invitees: AdminReferralRow[]; accessEntries: AdminAccessLedgerEntry[] }> {
-  const invitees = check(await db.rpc('admin_referrals', { p_user: userId })) as ReferralDb[];
-  const context = check(await db.rpc('admin_referral_context', { p_user: userId })) as { code: string | null; inviter_id: string | null; inviter_name: string | null }[];
-  // The context RPC returns the inviter's code; the student's own code is read from the table (admins can select it).
-  const own = check(await db.from('referral_codes').select('code').eq('user_id', userId).maybeSingle()) as { code: string } | null;
+const ACCESS_ENTRIES_LIMIT = 50;
+
+/** The student's latest access ledger entries, newest first (enough to name the source of the current access). */
+export async function getAccessEntries(db: SupabaseClient, userId: string): Promise<AdminAccessLedgerEntry[]> {
   const ledger = check(
-    await db.from('access_ledger').select('id,kind,months,until_before,until_after,reason,created_at').eq('user_id', userId).order('id', { ascending: false }),
+    await db.from('access_ledger').select('id,kind,months,until_before,until_after,reason,created_at')
+      .eq('user_id', userId).order('id', { ascending: false }).limit(ACCESS_ENTRIES_LIMIT),
   ) as LedgerDb[];
+  return ledger.map((l) => ({
+    id: l.id, kind: l.kind, months: l.months, untilBefore: l.until_before, untilAfter: l.until_after, reason: l.reason, createdAt: l.created_at,
+  }));
+}
+
+export type ReferralDetails = { code: string | null; invitedBy: { id: string; name: string } | null; invitees: AdminReferralRow[] };
+
+/** The student's own code, who invited them and the people they invited. */
+export async function getReferralDetails(db: SupabaseClient, userId: string): Promise<ReferralDetails> {
+  const [inviteesRes, contextRes, ownRes] = await Promise.all([
+    db.rpc('admin_referrals', { p_user: userId }),
+    db.rpc('admin_referral_context', { p_user: userId }),
+    db.from('referral_codes').select('code').eq('user_id', userId).maybeSingle(),
+  ]);
+  const invitees = check(inviteesRes) as ReferralDb[];
+  const context = check(contextRes) as { code: string | null; inviter_id: string | null; inviter_name: string | null }[];
+  // The context RPC returns the inviter's code; the student's own code is read from the table (admins can select it).
+  const own = check(ownRes) as { code: string } | null;
   const inviter = context.find((c) => c.inviter_id);
   return {
     code: own?.code ?? null,
@@ -90,8 +105,35 @@ export async function getStudentReferrals(
       id: r.id, firstName: r.first_name, email: r.email, state: r.state, createdAt: r.created_at, firstPaidAt: r.first_paid_at,
       rewardCredits: r.reward_credits, accountDeleted: r.account_deleted,
     })),
-    accessEntries: ledger.map((l) => ({
-      id: l.id, kind: l.kind, months: l.months, untilBefore: l.until_before, untilAfter: l.until_after, reason: l.reason, createdAt: l.created_at,
-    })),
   };
+}
+
+export async function getStudentReferrals(db: SupabaseClient, userId: string): Promise<ReferralDetails & { accessEntries: AdminAccessLedgerEntry[] }> {
+  const [details, accessEntries] = await Promise.all([getReferralDetails(db, userId), getAccessEntries(db, userId)]);
+  return { ...details, accessEntries };
+}
+
+/**
+ * Secondary data must never break the student page: on any failure the access source is undefined (the header then
+ * shows no access line rather than a misleading "Trial").
+ */
+export async function loadAccessSource(
+  db: SupabaseClient, userId: string, accessUntil: string | null, now: Date,
+): Promise<{ kind: AccessSourceKind; at: string | null } | undefined> {
+  try {
+    return accessSource(await getAccessEntries(db, userId), accessUntil, now);
+  } catch (e) {
+    console.error('[student] access source unavailable:', e);
+    return undefined;
+  }
+}
+
+/** The Recomandari tab data, or null when it could not be loaded. */
+export async function loadReferralDetails(db: SupabaseClient, userId: string): Promise<ReferralDetails | null> {
+  try {
+    return await getReferralDetails(db, userId);
+  } catch (e) {
+    console.error('[student] referrals unavailable:', e);
+    return null;
+  }
 }

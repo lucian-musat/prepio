@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { listStudentBacAttempts } from '@/lib/data/bac';
-import { accessSource, getStudentReferrals } from '@/lib/data/referrals';
+import { loadAccessSource, loadReferralDetails } from '@/lib/data/referrals';
 import { LEDGER_KIND_LABELS } from '@/lib/data/studentLabels';
 import {
   EVENTS_PAGE_SIZE, getStudent, getStudentAccount, getStudentEvents, getStudentProgress, ledgerDetails, orderLabel, orderPrice, orderStatusLabel,
@@ -89,14 +89,14 @@ export default async function StudentPage({
   if (!data) notFound();
   const { student, ledger, orders } = data;
   // getStudent succeeded through the session client (admin_students refuses non-admins), so the caller is an admin.
-  const [progress, account, events, bacAttempts, referrals] = await Promise.all([
+  const [progress, account, events, bacAttempts, source, referrals] = await Promise.all([
     getStudentProgress(db, id),
     getStudentAccount(createAdminClient(), id),
     tab === 'cronologie' ? getStudentEvents(db, id) : Promise.resolve([]),
     tab === 'bac' ? listStudentBacAttempts(db, id) : Promise.resolve([]),
-    getStudentReferrals(db, id),
+    student.isAdmin ? Promise.resolve(undefined) : loadAccessSource(db, id, student.accessUntil, new Date()),
+    tab === 'recomandari' ? loadReferralDetails(db, id) : Promise.resolve(null),
   ]);
-  const source = student.isAdmin ? undefined : accessSource(referrals.accessEntries, student.accessUntil, new Date());
 
   return (
     <>
@@ -125,7 +125,7 @@ export default async function StudentPage({
           {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
           {tab === 'credite' && <LedgerTable ledger={ledger} />}
           {tab === 'comenzi' && <OrdersTable orders={orders} />}
-          {tab === 'recomandari' && <ReferralsSection code={referrals.code} invitedBy={referrals.invitedBy} invitees={referrals.invitees} />}
+          {tab === 'recomandari' && <ReferralsSection code={referrals?.code ?? null} invitedBy={referrals?.invitedBy ?? null} invitees={referrals?.invitees ?? []} failed={referrals === null} />}
         </div>
       </div>
       </NoticeProvider>

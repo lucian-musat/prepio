@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { formatAccessDate } from '@prepio/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StudentRow } from '@/lib/data/students';
 import { NoticeProvider } from './Notice';
@@ -127,6 +128,7 @@ describe('StudentHeader', () => {
 
 describe('StudentHeader access source', () => {
   const until = '2027-02-08T10:00:00Z';
+  const untilText = formatAccessDate(new Date(until));
   const withSource = (kind: 'trial' | 'purchase' | 'referral_reward' | 'admin_grant') =>
     render(
       <StudentHeader
@@ -136,13 +138,13 @@ describe('StudentHeader access source', () => {
       />,
     );
   it.each([
-    ['purchase', 'Acces: Plătit · până la 8 februarie 2027'],
-    ['admin_grant', 'Acces: Acordat manual · până la 8 februarie 2027'],
-    ['referral_reward', 'Acces: Recomandări · până la 8 februarie 2027'],
+    ['purchase', 'Acces: Plătit · până la'],
+    ['admin_grant', 'Acces: Acordat manual · până la'],
+    ['referral_reward', 'Acces: Recomandări · până la'],
     ['trial', 'Acces: Trial'],
   ] as const)('%s', (kind, text) => {
     withSource(kind);
-    expect(screen.getByTestId('access-source').textContent).toContain(text);
+    expect(screen.getByTestId('access-source').textContent).toContain(kind === 'trial' ? text : `${text} ${untilText}`);
     cleanup();
   });
   it('points to the Recomandări tab for a referral reward', () => {

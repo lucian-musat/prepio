@@ -6,6 +6,8 @@ import ReferralsSection from './ReferralsSection';
 
 afterEach(cleanup);
 
+const dateFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Bucharest' });
+
 const row = (over: Partial<AdminReferralRow>): AdminReferralRow => ({
   id: 'r', firstName: 'Ion', email: 'ion@x.ro', state: 'registered', createdAt: '2026-11-04T10:00:00Z',
   firstPaidAt: null, rewardCredits: null, accountDeleted: false, ...over,
@@ -36,7 +38,7 @@ describe('ReferralsSection', () => {
     expect(within(rows[1]).getByText(/în așteptare/)).toBeTruthy();
     expect(within(rows[4]).getByText(/limită atinsă/)).toBeTruthy();
     expect(within(rows[5]).getByText(/erau oprite/)).toBeTruthy();
-    expect(within(rows[1]).getByText(/5 nov.? 2026/)).toBeTruthy();
+    expect(within(rows[1]).getByText(dateFmt.format(new Date('2026-11-05T10:00:00Z')))).toBeTruthy();
   });
 
   it('marks a deleted account instead of an e-mail', () => {
@@ -44,6 +46,12 @@ describe('ReferralsSection', () => {
     expect(screen.getByText('cont șters').className).toContain('text-muted');
     expect(screen.queryByText(/Invitat de/)).toBeNull();
     expect(screen.getByTestId('referral-code').textContent).toBe('—');
+  });
+
+  it('shows an error note instead of the list when the data could not be loaded', () => {
+    render(<ReferralsSection code={null} invitedBy={null} invitees={[]} failed />);
+    expect(screen.getByRole('alert').textContent).toBe('Recomandările nu au putut fi încărcate.');
+    expect(screen.queryByText('Nu a invitat pe nimeni.')).toBeNull();
   });
 
   it('shows the empty state', () => {
