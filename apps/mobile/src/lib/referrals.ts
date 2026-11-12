@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 
 /**
@@ -130,4 +131,64 @@ export async function fetchReferralPublicSettings(): Promise<ReferralPublicSetti
     durationMonths: row.duration_months,
     maxRewarded: row.max_rewarded,
   };
+}
+
+/** The student's own code, programme numbers and totals. Throws on error (the caller hides the feature / shows retry). */
+export async function fetchReferralSummary(client: SupabaseClient = getSupabase()): Promise<ReferralSummary> {
+  const { data, error } = await client.rpc('my_referral_summary');
+  if (error) throw error;
+  const row = (
+    data as Array<{
+      code: string | null;
+      enabled: boolean;
+      threshold: number;
+      credits_per_invitee: number;
+      duration_months: number;
+      has_access: boolean;
+      pending_count: number;
+      invitee_count: number;
+      credits_earned: number;
+      free_periods_earned: number;
+    }> | null
+  )?.[0];
+  if (!row) throw new Error('referral summary missing');
+  return {
+    code: row.code,
+    enabled: row.enabled,
+    threshold: row.threshold,
+    creditsPerInvitee: row.credits_per_invitee,
+    durationMonths: row.duration_months,
+    hasAccess: row.has_access,
+    pendingCount: row.pending_count,
+    inviteeCount: row.invitee_count,
+    creditsEarned: row.credits_earned,
+    freePeriodsEarned: row.free_periods_earned,
+  };
+}
+
+/** The student's invitees, newest first (the server hides what a student must not see). Throws on error. */
+export async function fetchMyReferrals(client: SupabaseClient = getSupabase()): Promise<ReferralRow[]> {
+  const { data, error } = await client.rpc('my_referrals');
+  if (error) throw error;
+  return (
+    (data as Array<{
+      id: string;
+      first_name: string | null;
+      email: string | null;
+      state: string;
+      created_at: string;
+      first_paid_at: string | null;
+      reward_credits: number | null;
+      account_deleted: boolean;
+    }> | null) ?? []
+  ).map((r) => ({
+    id: r.id,
+    firstName: r.first_name,
+    email: r.email,
+    state: r.state,
+    createdAt: r.created_at,
+    firstPaidAt: r.first_paid_at,
+    rewardCredits: r.reward_credits ?? 0,
+    accountDeleted: r.account_deleted,
+  }));
 }

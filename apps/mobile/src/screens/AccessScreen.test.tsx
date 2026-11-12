@@ -107,12 +107,14 @@ it('lists the history without admin details', async () => {
     hist({}),
     hist({ kind: 'admin_grant', months: 2, priceBani: null }),
     hist({ kind: 'admin_revoke', months: null, priceBani: null }),
+    hist({ kind: 'referral_reward', months: 3, priceBani: null }),
   ]);
   await mount();
   expect(mockedHistory).toHaveBeenCalledWith('u1');
   expect(await screen.findByText('8 noiembrie 2026 · Acces 3 luni · 150 lei')).toBeTruthy();
   expect(screen.getByText('Acces acordat · 2 luni')).toBeTruthy();
   expect(screen.getByText('Acces retras')).toBeTruthy();
+  expect(screen.getByText('Recomandări')).toBeTruthy();
   expect(screen.getByText('Istoric')).toBeTruthy();
 });
 

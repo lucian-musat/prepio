@@ -18,6 +18,7 @@ function historyLabel(h: AccessHistoryEntry): string {
       .filter(Boolean)
       .join(' · ');
   }
+  if (h.kind === 'referral_reward') return 'Recomandări';
   if (h.kind === 'admin_grant') return months ? `Acces acordat · ${months}` : 'Acces acordat';
   return 'Acces retras';
 }

@@ -4,6 +4,8 @@ import { formatAccessDate } from '@prepio/shared';
 import ProfileScreen from './ProfileScreen';
 import { updateDisplayName, updateLearningMode } from '../lib/profile';
 import { deleteAccount } from '../lib/api';
+import { fetchReferralSummary } from '../lib/referrals';
+import { router } from 'expo-router';
 
 const mockRefresh = jest.fn();
 const mockSignOut = jest.fn();
@@ -23,6 +25,8 @@ jest.mock('../lib/profile', () => ({
   updateLearningMode: jest.fn(),
 }));
 jest.mock('../credits/CreditsProvider');
+jest.mock('../lib/referrals', () => ({ ...jest.requireActual('../lib/referrals'), fetchReferralSummary: jest.fn() }));
+const mockedReferral = fetchReferralSummary as jest.Mock;
 jest.mock('../access/AccessProvider');
 const { mockResetAccess } = jest.requireMock<typeof import('../access/__mocks__/AccessProvider')>('../access/AccessProvider');
 jest.mock('../lib/api', () => ({ ...jest.requireActual('../lib/api'), deleteAccount: jest.fn() }));
@@ -39,8 +43,23 @@ const renderScreen = async () =>
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const CONFIRM = 'Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.';
 
+const summaryOf = (over: Record<string, unknown> = {}) => ({
+  code: 'ABCD2345',
+  enabled: true,
+  threshold: 5,
+  creditsPerInvitee: 40,
+  durationMonths: 3,
+  hasAccess: false,
+  pendingCount: 0,
+  inviteeCount: 0,
+  creditsEarned: 0,
+  freePeriodsEarned: 0,
+  ...over,
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedReferral.mockRejectedValue(new Error('off'));
   mockSession = { user: { id: 'u1' } };
   mockMode = 'guided';
   mockResetAccess();
@@ -201,8 +220,37 @@ it('labels full and expired plans', async () => {
   mockResetAccess({ accessUntil: d.toISOString() });
   const { unmount } = await renderScreen();
   expect(screen.getByRole('button', { name: `Abonamentul meu · Acces până la ${formatAccessDate(d)}` })).toBeTruthy();
-  unmount();
+  await unmount();
   mockResetAccess({ accessUntil: new Date(Date.now() - 86400000).toISOString() });
   await renderScreen();
   expect(screen.getByRole('button', { name: 'Abonamentul meu · Expirat' })).toBeTruthy();
+});
+
+describe('invite row', () => {
+  it('shows the row with the progress badge for a student without access', async () => {
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 2 }));
+    await renderScreen();
+    expect(await screen.findByText('2/5')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: /Invită colegi/ }));
+    expect(router.push).toHaveBeenCalledWith('/invita');
+  });
+
+  it('shows no badge without progress or with access', async () => {
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 0 }));
+    const { unmount } = await renderScreen();
+    expect(await screen.findByRole('button', { name: /Invită colegi/ })).toBeTruthy();
+    expect(screen.queryByText('0/5')).toBeNull();
+    await unmount();
+    mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 2, hasAccess: true }));
+    await renderScreen();
+    expect(await screen.findByRole('button', { name: /Invită colegi/ })).toBeTruthy();
+    expect(screen.queryByText('2/5')).toBeNull();
+  });
+
+  it('hides the row when the feature is off or the summary fails', async () => {
+    mockedReferral.mockResolvedValue(summaryOf({ enabled: false }));
+    await renderScreen();
+    await waitFor(() => expect(mockedReferral).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Invită colegi/ })).toBeNull();
+  });
 });

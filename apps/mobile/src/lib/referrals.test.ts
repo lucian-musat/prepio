@@ -4,7 +4,9 @@ import {
   PENDING_CODE_TTL_MS,
   attachReferralCode,
   clearPendingCode,
+  fetchMyReferrals,
   fetchReferralPublicSettings,
+  fetchReferralSummary,
   getPendingCode,
   inviteUrl,
   lookupReferralCode,
@@ -97,5 +99,45 @@ describe('RPCs', () => {
     });
     rpc.mockResolvedValue({ data: [], error: null });
     await expect(fetchReferralPublicSettings()).rejects.toThrow();
+  });
+});
+
+describe('student reads', () => {
+  it('maps the summary row', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          code: 'ABCD2345', enabled: true, threshold: 5, credits_per_invitee: 40, duration_months: 3, has_access: false,
+          pending_count: 2, invitee_count: 4, credits_earned: 80, free_periods_earned: 1,
+        },
+      ],
+      error: null,
+    });
+    expect(await fetchReferralSummary()).toEqual({
+      code: 'ABCD2345', enabled: true, threshold: 5, creditsPerInvitee: 40, durationMonths: 3, hasAccess: false,
+      pendingCount: 2, inviteeCount: 4, creditsEarned: 80, freePeriodsEarned: 1,
+    });
+    expect(rpc).toHaveBeenCalledWith('my_referral_summary');
+    rpc.mockResolvedValue({ data: [], error: null });
+    await expect(fetchReferralSummary()).rejects.toThrow();
+    rpc.mockResolvedValue({ data: null, error: new Error('down') });
+    await expect(fetchReferralSummary()).rejects.toThrow('down');
+  });
+
+  it('maps the invitee rows', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        { id: 'r1', first_name: 'Ana', email: 'a@x.ro', state: 'pending', created_at: 't1', first_paid_at: 't2', reward_credits: null, account_deleted: false },
+      ],
+      error: null,
+    });
+    expect(await fetchMyReferrals()).toEqual([
+      { id: 'r1', firstName: 'Ana', email: 'a@x.ro', state: 'pending', createdAt: 't1', firstPaidAt: 't2', rewardCredits: 0, accountDeleted: false },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('my_referrals');
+    rpc.mockResolvedValue({ data: null, error: null });
+    expect(await fetchMyReferrals()).toEqual([]);
+    rpc.mockResolvedValue({ data: null, error: new Error('down') });
+    await expect(fetchMyReferrals()).rejects.toThrow('down');
   });
 });
