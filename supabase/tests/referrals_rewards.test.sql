@@ -1,5 +1,5 @@
 begin;
-select plan(69);
+select plan(76);
 
 -- Offer: 15000 bani, 100 bonus credits, 3 months (the defaults). Referrals: on, threshold 5, 40 credits, cap 100.
 update access_settings set price_bani = 15000, bonus_credits = 100, duration_months = 3 where id = 1;
@@ -219,7 +219,6 @@ select is(pg_temp.reward_grants('a6'), 1, 'threshold lowered to 2 with 3 pending
 select results_eq($$ select r.state from referrals r where r.inviter_id = pg_temp.uid('a6') order by r.first_paid_at, r.created_at $$,
   $$ values ('consumed_access'::text), ('consumed_access'), ('pending') $$,
   'the two oldest pending are consumed, one stays pending');
-
 -- ---------------------------------------------------------------- pending invitee deletes the account
 -- a7: cb pays (pending, threshold 2), deletes the account, then another paying invitee completes the threshold.
 select pg_temp.buy('cb');
@@ -291,6 +290,44 @@ insert into referrals (inviter_id, invitee_id) values (pg_temp.uid('a2'), pg_tem
 select pg_temp.buy('d3');
 select results_eq($$ select state, first_paid_at from referrals where invitee_id = pg_temp.uid('d3') $$,
   $$ values ('registered'::text, null::timestamptz) $$, 'a row attached after an earlier paid order is never rewarded');
+
+-- ---------------------------------------------------------------- credits_per_invitee = 0
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  (pg_temp.uid('d4'), 'rw-d4@test.local', 'authenticated', 'authenticated', '{}'),
+  (pg_temp.uid('d5'), 'rw-d5@test.local', 'authenticated', 'authenticated', '{}'),
+  (pg_temp.uid('d6'), 'rw-d6@test.local', 'authenticated', 'authenticated', '{}'),
+  (pg_temp.uid('e0'), 'rw-e0@test.local', 'authenticated', 'authenticated', '{}');
+insert into referrals (inviter_id, invitee_id) values
+  (pg_temp.uid('a2'), pg_temp.uid('d4')), (pg_temp.uid('e0'), pg_temp.uid('d5')), (pg_temp.uid('e0'), pg_temp.uid('d6'));
+update referral_settings set credits_per_invitee = 0 where id = 1;
+create temp table t_a2_rows as select count(*)::int n from credit_ledger where user_id = pg_temp.uid('a2') and kind = 'referral';
+select pg_temp.buy('d4');
+select results_eq($$ select state, reward_credits, credit_ledger_id from referrals where invitee_id = pg_temp.uid('d4') $$,
+  $$ values ('converted_credits'::text, 0, null::bigint) $$, 'credits 0: converted with reward 0 and no ledger link');
+select is((select count(*)::int from credit_ledger where user_id = pg_temp.uid('a2') and kind = 'referral'),
+  (select n from t_a2_rows), 'credits 0: no credit ledger row');
+update referral_settings set credits_per_invitee = 40 where id = 1;
+
+-- ---------------------------------------------------------------- admin-granted access with an older pending invitee
+select pg_temp.buy('d5');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000ae","role":"authenticated"}';
+select admin_grant_access('00000000-0000-0000-0000-0000000000e0', 1, 'cadou');
+reset role;
+select pg_temp.buy('d6');
+select results_eq($$ select state, reward_credits from referrals where invitee_id = pg_temp.uid('d6') $$,
+  $$ values ('converted_credits'::text, 40) $$, 'admin-granted access counts: the newcomer gets credits');
+select is(pg_temp.state('d5'), 'pending', 'the older pending invitee stays pending');
+select is(pg_temp.referral_credits('e0'), 40, 'only the newcomer was credited');
+
+-- ---------------------------------------------------------------- admin skip in referral_convert_pending
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  (pg_temp.uid('d7'), 'rw-d7@test.local', 'authenticated', 'authenticated', '{}');
+insert into referrals (inviter_id, invitee_id, state, first_paid_at)
+  values (pg_temp.uid('ad'), pg_temp.uid('d7'), 'pending', now());
+select pg_temp.buy('ad');
+select is(pg_temp.state('d7'), 'pending', 'an admin''s purchase does not convert pending invitees');
+select is(pg_temp.referral_credits('ad'), 0, 'the admin gets no referral credits');
 
 -- ---------------------------------------------------------------- unchanged surface
 select is((select pg_get_function_result(p.oid) from pg_proc p where p.oid = 'public.purchase_access(uuid,int,int,int)'::regprocedure),

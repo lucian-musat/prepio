@@ -1,5 +1,5 @@
 begin;
-select plan(36);
+select plan(42);
 
 -- Fixtures. d1 is the inviter, d3 an admin (with a code row forced in), e1..e9 invitees.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
@@ -15,6 +15,8 @@ insert into auth.users (id, email, aud, role, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000e8', 'att-i8@test.local', 'authenticated', 'authenticated', '{}'),
   ('00000000-0000-0000-0000-0000000000e9', 'att-i9@test.local', 'authenticated', 'authenticated', '{}');
 insert into public.admins (user_id) values ('00000000-0000-0000-0000-0000000000d3');
+-- An inviter must be strictly older than the invitee; all fixtures above share now().
+update profiles set created_at = now() - interval '1 hour' where id = '00000000-0000-0000-0000-0000000000d1';
 update referral_codes set code = 'ADMNCDEF' where user_id = '00000000-0000-0000-0000-0000000000d3';
 update referral_settings set enabled = true where id = 1;
 create temp table t_code as select code from referral_codes where user_id = '00000000-0000-0000-0000-0000000000d1';
@@ -153,6 +155,39 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e3","role":"authenticated"}';
 select is(referral_attach((select code from t_code)), 'attached', 're-enabled: the same account attaches');
 reset role;
+
+-- ---------------------------------------------------------------- acyclic: the inviter must be older
+-- g1 (older), g2 (younger), g3 (same age as g2). All new accounts.
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000a1', 'att-g1@test.local', 'authenticated', 'authenticated', '{}'),
+  ('00000000-0000-0000-0000-0000000000a2', 'att-g2@test.local', 'authenticated', 'authenticated', '{}'),
+  ('00000000-0000-0000-0000-0000000000a3', 'att-g3@test.local', 'authenticated', 'authenticated', '{}');
+update profiles set created_at = now() - interval '2 hours' where id = '00000000-0000-0000-0000-0000000000a1';
+update profiles set created_at = now() - interval '1 hour'
+ where id in ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a3');
+create temp table t_codes as select user_id, code from referral_codes
+ where user_id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2');
+grant select on t_codes to authenticated;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select is(referral_attach((select code from t_codes where user_id = '00000000-0000-0000-0000-0000000000a2')), 'not_allowed',
+  'a younger inviter is not_allowed');
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select is(referral_attach((select code from t_codes where user_id = '00000000-0000-0000-0000-0000000000a1')), 'attached',
+  'an older inviter attaches');
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select is(referral_attach((select code from t_codes where user_id = '00000000-0000-0000-0000-0000000000a2')), 'not_allowed',
+  'the mutual attach (back to the younger invitee) is not_allowed');
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select is(referral_attach((select code from t_codes where user_id = '00000000-0000-0000-0000-0000000000a2')), 'not_allowed',
+  'an inviter of exactly the same age is not_allowed');
+reset role;
+select is((select count(*)::int from referrals where invitee_id in
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a3')), 0,
+  'no row for the rejected attaches, so no cycle');
+select is((select count(*)::int from referrals r join profiles i on i.id = r.inviter_id join profiles e on e.id = r.invitee_id
+            where i.created_at >= e.created_at), 0, 'every referral points from an older inviter to a younger invitee');
 
 select * from finish();
 rollback;
