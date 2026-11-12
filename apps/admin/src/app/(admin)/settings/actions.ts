@@ -5,6 +5,8 @@ import type { ActionResult } from '@/lib/actionResult';
 import { GENERIC_ERROR, UserError } from '@/lib/data/db';
 import * as access from '@/lib/data/accessSettings';
 import type { AccessSettingsInput } from '@/lib/data/accessSettings';
+import * as referrals from '@/lib/data/referralSettings';
+import type { ReferralSettingsInput } from '@/lib/data/referralSettings';
 import * as credits from '@/lib/data/credits';
 import type { CreditSettingsInput } from '@/lib/data/credits';
 import * as settings from '@/lib/data/settings';
@@ -51,6 +53,20 @@ export async function saveAccessSettings(input: AccessSettingsInput): Promise<Ac
     if (e instanceof UserError) return { ok: false, error: e.message };
     console.error('[access settings action] unexpected error:', e);
     captureError(e, { route: 'access settings action' });
+    return { ok: false, error: GENERIC_ERROR };
+  }
+}
+
+export async function saveReferralSettings(input: ReferralSettingsInput): Promise<ActionResult> {
+  try {
+    const db = await createServerClient();
+    await referrals.saveReferralSettings(db, input);
+    revalidatePath('/settings');
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof UserError) return { ok: false, error: e.message };
+    console.error('[referral settings action] unexpected error:', e);
+    captureError(e, { route: 'referral settings action' });
     return { ok: false, error: GENERIC_ERROR };
   }
 }
