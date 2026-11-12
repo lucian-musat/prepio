@@ -41,7 +41,7 @@ const renderScreen = async () =>
   );
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
-const CONFIRM = 'Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.';
+const CONFIRM = 'Ștergi contul definitiv? Se șterg numele, emailul, progresul, creditele și accesul, și nu le mai poți recupera.';
 
 const summaryOf = (over: Record<string, unknown> = {}) => ({
   code: 'ABCD2345',

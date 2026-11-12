@@ -39,9 +39,9 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
       {hasCards ? <Button label="Începe învățarea" variant={lead ? 'secondary' : 'primary'} onPress={onLearn} /> : null}
       {/* With nothing to learn first, going to the verification is the main action; otherwise a quiet link. */}
       {onRetake && !onResume ? null : lead || hasCards ? (
-        <TextButton label="Știu deja — sari la verificare" onPress={onSkip} />
+        <TextButton label="Știu deja, sari la verificare" onPress={onSkip} />
       ) : (
-        <Button label="Știu deja — sari la verificare" onPress={onSkip} />
+        <Button label="Știu deja, sari la verificare" onPress={onSkip} />
       )}
     </View>
   );

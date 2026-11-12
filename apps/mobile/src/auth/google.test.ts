@@ -82,7 +82,7 @@ describe('signInWithGoogle (native)', () => {
   });
 
   it('uses the exact Romanian message', () => {
-    expect(GOOGLE_SIGN_IN_ERROR).toBe('Autentificarea cu Google nu a reușit. Încearcă din nou.');
+    expect(GOOGLE_SIGN_IN_ERROR).toBe('Intrarea cu Google nu a reușit. Încearcă din nou.');
   });
 });
 

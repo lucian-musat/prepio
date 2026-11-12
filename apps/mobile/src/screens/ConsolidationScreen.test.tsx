@@ -179,7 +179,7 @@ describe('AI types', () => {
     expect(mocked.evaluate).toHaveBeenCalledWith({ exerciseId: 'e2', target: 'exercise', answer: { type: 'facts', texts: [FACT_1, FACT_2] } });
     expect(await screen.findByText('Aproape: e doar menționat')).toBeTruthy();
     expect(screen.getByText('FAPTUL 1')).toBeTruthy();
-    expect(screen.getByText('Feedback de la profesorul digital, pe baza indicațiilor profesorului. Poate greși.')).toBeTruthy();
+    expect(screen.getByText('Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.')).toBeTruthy();
     expect(screen.getByText('Vezi un răspuns model')).toBeTruthy();
     expect(mocked.saveAttempt).toHaveBeenCalledWith(expect.objectContaining({ exerciseId: 'e2', verdict: 'almost' }));
   });
@@ -215,8 +215,8 @@ it('the last „Continuă” finishes the run and shows the end screen with verd
   await fireEvent.changeText(await screen.findByLabelText('Răspunsul tău'), 'Statutul Dezvoltător');
   await press('Verifică');
   await press('Continuă');
-  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
-  expect(screen.getByText('Mai ai 1 exercițiu de lucrat. Fără note, doar unde mai ai de lucrat.')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
+  expect(screen.getByText('Mai ai 1 exercițiu de lucrat.')).toBeTruthy();
   expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1'], index: 0, finished: true });
   const row1 = within(screen.getByTestId('summary-e1'));
   expect(row1.getByText('Răspuns scurt')).toBeTruthy();
@@ -228,7 +228,7 @@ it('„Reia doar ce nu a fost corect” builds a run of the exercises not yet co
   mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: true });
   mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'no')));
   await open();
-  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
   // With something left, redoing it is the main action.
   expect(bar().getAllByRole('button')[0]).toHaveAccessibleName('Reia doar ce nu a fost corect');
   await press('Reia doar ce nu a fost corect');
@@ -241,7 +241,7 @@ it('reopening with a finished run lands on the end screen; with all correct only
   mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: true });
   mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'ok')));
   await open();
-  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
   expect(screen.getByText('Toate exercițiile sunt corecte. 🎉')).toBeTruthy();
   // All correct: going on is the main action.
   expect(bar().getAllByRole('button')[0]).toHaveAccessibleName('Mergi la lecția următoare');
@@ -259,7 +259,7 @@ it.each(['free', 'guided'] as const)('trial (%s): no next-lesson button into a p
   mocked.run.mockResolvedValue({ exerciseIds: ['e1', 'e2'], index: 1, finished: true });
   mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'ok')));
   await open();
-  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
   expect(bar().queryByRole('button', { name: 'Mergi la lecția următoare' })).toBeNull();
   expect(bar().getByRole('button', { name: 'Înapoi acasă' })).toBeTruthy();
 });
@@ -268,7 +268,7 @@ it('the last lesson offers „Înapoi acasă”', async () => {
   mocked.home.mockResolvedValue({ welcomeMessage: '', sections: [{ path: ['A'], lessons: [summary('l1', 1)] }] });
   mocked.run.mockResolvedValue({ exerciseIds: ['e1'], index: 0, finished: true });
   await open();
-  expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+  expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
   await press('Înapoi acasă');
   expect(mockReplace).toHaveBeenCalledWith('/');
 });
@@ -308,7 +308,7 @@ describe('navigation', () => {
     expect(screen.getByRole('button', { name: /^Exercițiul 2, /, selected: true })).toBeTruthy();
     expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
     await press('Sari peste, exercițiul următor');
-    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
     expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: true });
     expect(within(screen.getByTestId('summary-e1')).getByText('Nerezolvat')).toBeTruthy();
     expect(within(screen.getByTestId('summary-e2')).getByText('Nerezolvat')).toBeTruthy();
@@ -368,7 +368,7 @@ describe('navigation', () => {
     mocked.run.mockResolvedValue({ exerciseIds: ['e2'], index: 0, finished: true });
     mocked.attempts.mockResolvedValue(attemptsOf(okAttempt));
     await open();
-    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
     await tap('Exercițiul 2, Prezentare fapte, Nerezolvat');
     expect(await screen.findByText(prompt2)).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Exercițiul 2, /, selected: true })).toBeTruthy();
@@ -390,7 +390,7 @@ describe('navigation', () => {
     await press('Sari peste, exercițiul următor');
     await fireEvent.changeText(await screen.findByLabelText('Faptul istoric 1'), FACT_1);
     await press('Sari peste, exercițiul următor');
-    expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
+    expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
     await tap('Exercițiul 1, Răspuns scurt, Corect');
     expect(await screen.findByText('Corect!')).toBeTruthy();
     await press('Continuă');

@@ -43,7 +43,7 @@ describe('NumberedBanner', () => {
   it('every slot filled: the done line', async () => {
     await render(<NumberedBanner cfg={info(2)} state={state([slotted(0), slotted(1)], null)} />);
     expect(screen.getByText('✓ Gata, toate informațiile marcate')).toBeTruthy();
-    expect(screen.getByText('Atinge un slot sau un marcaj ca să-l schimbi.')).toBeTruthy();
+    expect(screen.getByText('Ca să schimbi o informație, atinge-i căsuța sau marcajul din text.')).toBeTruthy();
   });
 
   it('support: „Informația-suport” and SUPORT pills', async () => {

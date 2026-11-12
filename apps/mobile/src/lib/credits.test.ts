@@ -165,7 +165,7 @@ describe('purchaseCredits', () => {
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => Promise.reject(new Error('html')) });
     await expect(purchaseCredits('p1')).rejects.toMatchObject({
       code: 'server_error',
-      message: 'Achiziția nu a reușit. Încearcă din nou.',
+      message: 'Cumpărarea nu a reușit. Încearcă din nou.',
     });
   });
 

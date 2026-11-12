@@ -38,10 +38,10 @@ export const EVALUATE_TIMEOUT_MS = 65_000;
 const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
 export const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 const TIMEOUT = 'Evaluarea durează prea mult. Încearcă din nou.';
-const NOT_CONFIGURED = 'Evaluarea nu este disponibilă momentan. Încearcă din nou mai târziu.';
+const NOT_CONFIGURED = 'Evaluarea nu e disponibilă acum. Încearcă mai târziu.';
 export const SESSION_EXPIRED = 'Sesiunea a expirat. Intră din nou în cont.';
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
-const DELETE_NOT_CONFIGURED = 'Ștergerea contului nu este disponibilă momentan. Încearcă din nou mai târziu.';
+const DELETE_NOT_CONFIGURED = 'Ștergerea contului nu e disponibilă acum. Încearcă mai târziu.';
 
 export function missingApiUrl(caller: string) {
   console.error(

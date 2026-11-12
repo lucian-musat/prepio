@@ -66,7 +66,7 @@ export function DeleteAccountConfirm({ deletion }: { deletion: AccountDeletion }
   return (
     <Surface style={styles.confirm}>
       <AppText accessibilityRole="alert">
-        Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.
+        Ștergi contul definitiv? Se șterg numele, emailul, progresul, creditele și accesul, și nu le mai poți recupera.
       </AppText>
       {deletion.error ? (
         <AppText role="small" color="danger" accessibilityRole="alert">

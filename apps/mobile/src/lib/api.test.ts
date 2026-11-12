@@ -169,7 +169,7 @@ describe('deleteAccount', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     const err = await deleteAccount().catch((e) => e);
     expect(err.code).toBe('server_error');
-    expect(err.message).toBe('Ștergerea contului nu este disponibilă momentan. Încearcă din nou mai târziu.');
+    expect(err.message).toBe('Ștergerea contului nu e disponibilă acum. Încearcă mai târziu.');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -180,7 +180,7 @@ it('fails with a clear ai_failed error and never calls localhost when EXPO_PUBLI
   const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('ai_failed');
-  expect(err.message).toBe('Evaluarea nu este disponibilă momentan. Încearcă din nou mai târziu.');
+  expect(err.message).toBe('Evaluarea nu e disponibilă acum. Încearcă mai târziu.');
   expect(fetchMock).not.toHaveBeenCalled();
   expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('EXPO_PUBLIC_API_URL'));
 });

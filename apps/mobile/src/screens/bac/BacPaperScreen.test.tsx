@@ -215,7 +215,7 @@ it('submit shows the answered count and the empty list', async () => {
   expect(screen.getByText('Ai răspuns complet la 8 din 10 cerințe')).toBeTruthy();
   expect(screen.getByText('Incomplete:')).toBeTruthy();
   expect(screen.getByText('Necompletate:')).toBeTruthy();
-  expect(screen.getByText('După trimitere nu mai poți modifica răspunsurile.')).toBeTruthy();
+  expect(screen.getByText('După ce predai lucrarea, nu mai poți schimba răspunsurile.')).toBeTruthy();
   expect(send()).toBeTruthy();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Mai lucrez' })));
   expect(screen.getByText('Cerința I.1')).toBeTruthy();
@@ -237,7 +237,7 @@ it('a successful submit renders the result with „8,40” and the grade note', 
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText('8,40')).toBeTruthy();
   expect(screen.getByText(BAC_GRADE_NOTE)).toBeTruthy();
-  expect(screen.getByText('I.5 — Ai inversat cauza cu efectul.')).toBeTruthy();
+  expect(screen.getByText('I.5: Ai inversat cauza cu efectul.')).toBeTruthy();
   expect(mockedSubmit).toHaveBeenCalledWith({ subjectId: 's1', answers: MOST });
   expect(setBalance).toHaveBeenCalledWith(35);
 });

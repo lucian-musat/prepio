@@ -122,7 +122,7 @@ it('opens the paywall for a locked deep link sent back from a subject', async ()
 
 it('explains what a subject is and what the credits pay for', async () => {
   await renderList();
-  expect(await screen.findByText(/Lucrare completă ca la examen: Subiectul I, II și III\./)).toBeTruthy();
+  expect(await screen.findByText(/Lucrări complete, ca la examen: Subiectul I, II și III\./)).toBeTruthy();
   expect(screen.getAllByText('10 credite la predare').length).toBeGreaterThan(0);
 });
 

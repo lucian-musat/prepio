@@ -44,7 +44,7 @@ it('choose: says how many credits are missing, lists the packages with the featu
   expect(screen.getByRole('radio', { name: /^50 de credite, 19,99 lei/ })).toBeChecked();
   expect(screen.getByRole('radio', { name: /^20 de credite, 9,99 lei/ })).not.toBeChecked();
   expect(screen.getByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' })).toBeEnabled();
-  expect(screen.getByText('Plata nu e încă activă — cererea a fost aprobată automat.')).toBeTruthy();
+  expect(screen.getByText('Plățile nu sunt active încă, așa că pachetul ți se adaugă gratuit.')).toBeTruthy();
   await fireEvent.press(screen.getByRole('radio', { name: /^20 de credite/ }));
   expect(screen.getByRole('button', { name: 'Cumpără 20 de credite · 9,99 lei' })).toBeTruthy();
 });
@@ -129,13 +129,13 @@ it('a package that is no longer available: the message, and the packages are fet
 
 it('another purchase error: the message, and the same button retries', async () => {
   mockedPurchase
-    .mockRejectedValueOnce(new CreditsApiError('server_error', 'Achiziția nu a reușit. Încearcă din nou.'))
+    .mockRejectedValueOnce(new CreditsApiError('server_error', 'Cumpărarea nu a reușit. Încearcă din nou.'))
     .mockResolvedValueOnce({ orderId: 'o1', credits: 50, balance: 51 });
   await mount();
   const buy = () => screen.getByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' });
   await screen.findByText('CEL MAI POPULAR');
   await act(async () => void fireEvent.press(buy()));
-  expect(screen.getByText('Achiziția nu a reușit. Încearcă din nou.')).toBeTruthy();
+  expect(screen.getByText('Cumpărarea nu a reușit. Încearcă din nou.')).toBeTruthy();
   await act(async () => void fireEvent.press(buy()));
   expect(screen.getByText('Credite adăugate!')).toBeTruthy();
 });

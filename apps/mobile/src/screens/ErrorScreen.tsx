@@ -22,7 +22,7 @@ export default function ErrorScreen({ error, retry }: { error: Error; retry: () 
           Ceva n-a mers bine
         </AppText>
         <AppText role="body" color="textMuted" style={styles.centre}>
-          A apărut o eroare neașteptată. Am fost anunțați.
+          Ceva n-a mers bine. Am primit eroarea și ne uităm la ea.
         </AppText>
         <Button label="Încearcă din nou" onPress={() => void retry()} />
         <Button label="Mergi la început" variant="secondary" onPress={() => router.replace('/')} />

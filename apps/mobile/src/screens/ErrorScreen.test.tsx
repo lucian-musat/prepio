@@ -22,7 +22,7 @@ beforeEach(() => jest.clearAllMocks());
 it('shows the generic message and never the error text', async () => {
   await renderScreen();
   expect(screen.getByText('Ceva n-a mers bine')).toBeTruthy();
-  expect(screen.getByText('A apărut o eroare neașteptată. Am fost anunțați.')).toBeTruthy();
+  expect(screen.getByText('Ceva n-a mers bine. Am primit eroarea și ne uităm la ea.')).toBeTruthy();
   expect(screen.queryByText(/secret internal detail/)).toBeNull();
 });
 

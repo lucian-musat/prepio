@@ -13,7 +13,7 @@ import {
 } from '../lib/referrals';
 
 const LINK = 'Ai un cod de invitație?';
-const PRIVACY = 'Cel care te-a invitat va vedea prenumele și e-mailul tău.';
+const PRIVACY = 'Cel care te-a invitat va vedea prenumele și emailul tău.';
 const HOW = 'Cum funcționează recomandările?';
 const INVALID = 'Codul nu este valid.';
 const UNREACHABLE = 'Nu am putut verifica codul acum.';

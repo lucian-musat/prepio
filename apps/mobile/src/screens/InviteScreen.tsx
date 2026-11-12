@@ -11,27 +11,27 @@ const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
 const COPIED = 'Copiat ✓';
 const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
-const CAP_REACHED = 'Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.';
+const CAP_REACHED = 'Ai ajuns la numărul maxim de colegi pentru care primești recompense. Îi poți invita în continuare, dar fără recompensă.';
 /** Below this width the two copy buttons stack, so their labels fit. */
 const STACK_BELOW = 420;
 
-const shareMessage = (link: string) => `Învață pentru BAC cu Prepio. Folosește linkul meu ca să te înregistrezi: ${link}`;
+const shareMessage = (link: string) => `Învăț pentru BAC cu Prepio. Dacă vrei să încerci și tu, fă-ți cont cu linkul meu: ${link}`;
 
 /** What a referral row says about itself, in the student's words. */
 export function referralStatus(r: ReferralRow): string {
   switch (r.state) {
     case 'registered':
-      return 'Cont creat, fără acces';
+      return 'Și-a făcut cont, încă fără acces';
     case 'pending':
-      return 'Cu acces · numără spre accesul gratuit';
+      return 'Are acces · se numără pentru accesul tău gratuit';
     case 'consumed_access':
-      return 'Cu acces · a contribuit la accesul gratuit';
+      return 'Are acces · a contat pentru accesul tău gratuit';
     case 'converted_credits':
-      return `Abonat · +${plural(r.rewardCredits, 'credit', 'credite')}`;
+      return `Are acces · +${plural(r.rewardCredits, 'credit', 'credite')}`;
     case 'over_cap':
-      return 'Abonat, fără recompensă (limita a fost atinsă)';
+      return 'Are acces · fără recompensă (ai atins limita)';
     default:
-      return 'Abonat, fără recompensă';
+      return 'Are acces · fără recompensă';
   }
 }
 
@@ -83,7 +83,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
           <CapNote />
         ) : (
           <AppText role="bodyStrong">
-            {`Încă ${plural(left, 'coleg', 'colegi')} care își cumpără acces și primești ${monthsText(summary.durationMonths)} gratis`}
+            {`Mai ai nevoie de ${plural(left, 'coleg', 'colegi')} care să-și cumpere acces și primești ${monthsText(summary.durationMonths)} gratis`}
           </AppText>
         )}
         <ProgressBar
@@ -98,7 +98,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   const earned = summary.creditsEarned;
   const periods = summary.freePeriodsEarned;
   const totals = [
-    plural(subscribed, 'abonat', 'abonați'),
+    `${plural(subscribed, 'coleg', 'colegi')} cu acces`,
     ...(earned > 0 ? [`${plural(earned, 'credit', 'credite')} ${earned === 1 ? 'câștigat' : 'câștigate'}`] : []),
     ...(periods > 0
       ? [periods === 1 ? 'o perioadă de acces gratuit câștigată' : `${periods} perioade de acces gratuit câștigate`]
@@ -118,10 +118,10 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   );
 }
 
-/** „Înregistrat 10 noiembrie 2026 · Abonat din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
+/** „Cont creat pe 10 noiembrie 2026 · acces din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
 export function inviteeDates(r: ReferralRow): string {
-  const registered = `Înregistrat ${formatAccessDate(new Date(r.createdAt))}`;
-  return r.firstPaidAt ? `${registered} · Abonat din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
+  const registered = `Cont creat pe ${formatAccessDate(new Date(r.createdAt))}`;
+  return r.firstPaidAt ? `${registered} · acces din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
 }
 
 function InviteeRow({ r }: { r: ReferralRow }) {
@@ -245,7 +245,7 @@ export default function InviteScreen() {
           </View>
 
           <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.link}>
-            Cum funcționează ›
+            Toate regulile ›
           </AppText>
         </View>
       )}

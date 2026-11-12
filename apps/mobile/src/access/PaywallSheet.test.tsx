@@ -42,7 +42,7 @@ it('shows the offer from useAccess with the copy of the mockup', async () => {
   expect(screen.getByText('„Unirea Principatelor” face parte din accesul complet.')).toBeTruthy();
   expect(screen.getByText('📚 Toate cele 24 de lecții, în orice mod de învățare')).toBeTruthy();
   expect(screen.getByText('🪙 +100 de credite pentru profesorul digital')).toBeTruthy();
-  expect(screen.getByText(`📅 Acces 3 luni — până la ${end}`)).toBeTruthy();
+  expect(screen.getByText(`📅 Acces 3 luni, până la ${end}`)).toBeTruthy();
   expect(screen.getByText('🎁 Îți păstrezi creditele pe care le ai deja')).toBeTruthy();
   expect(screen.getByText('150 lei')).toBeTruthy();
   expect(screen.getByText('plată unică · nu se reînnoiește automat')).toBeTruthy();
@@ -63,21 +63,21 @@ it('expired: „Reînnoiește accesul”, the end date counts from today', async
   await mount();
   expect(screen.getByText('Reînnoiește accesul')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Reînnoiește · 150 lei' })).toBeTruthy();
-  expect(screen.getByText(`📅 Acces 3 luni — până la ${formatAccessDate(extendAccessUntil(past, 3, new Date()))}`)).toBeTruthy();
+  expect(screen.getByText(`📅 Acces 3 luni, până la ${formatAccessDate(extendAccessUntil(past, 3, new Date()))}`)).toBeTruthy();
 });
 
 it('expiring: the new months are added after the current end', async () => {
   const soon = new Date(Date.now() + 4 * DAY).toISOString();
   mockResetAccess({ accessUntil: soon });
   await mount();
-  expect(screen.getByText(`📅 Acces 3 luni — până la ${formatAccessDate(extendAccessUntil(soon, 3, new Date()))}`)).toBeTruthy();
+  expect(screen.getByText(`📅 Acces 3 luni, până la ${formatAccessDate(extendAccessUntil(soon, 3, new Date()))}`)).toBeTruthy();
 });
 
 it('no bonus: no credits line', async () => {
   mockResetAccess({ offer: { priceBani: 15000, bonusCredits: 0, durationMonths: 1 } });
   await mount();
   expect(screen.queryByText(/pentru profesorul digital/)).toBeNull();
-  expect(screen.getByText(/^📅 Acces 1 lună — până la /)).toBeTruthy();
+  expect(screen.getByText(/^📅 Acces 1 lună, până la /)).toBeTruthy();
 });
 
 it('a double tap sends one purchase; the button is disabled while it runs', async () => {
@@ -142,10 +142,10 @@ it('offer_changed: shows the new offer and the message, and stays open', async (
 });
 
 it('a failure shows its message; „Mai târziu” closes', async () => {
-  mockedPurchase.mockRejectedValue(new AccessApiError('server_error', 'Achiziția nu a reușit. Încearcă din nou.'));
+  mockedPurchase.mockRejectedValue(new AccessApiError('server_error', 'Cumpărarea nu a reușit. Încearcă din nou.'));
   const { onClose } = await mount();
   await fireEvent.press(unlock());
-  expect(screen.getByText('Achiziția nu a reușit. Încearcă din nou.')).toBeTruthy();
+  expect(screen.getByText('Cumpărarea nu a reușit. Încearcă din nou.')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Mai târziu' }));
   expect(onClose).toHaveBeenCalled();
 });

@@ -54,7 +54,7 @@ export default function NumberedBanner({ cfg, state }: { cfg: MarkerConfig; stat
             {NUM_DONE}
           </AppText>
           <AppText role="caption" color="textMuted">
-            Atinge un slot sau un marcaj ca să-l schimbi.
+            Ca să schimbi o informație, atinge-i căsuța sau marcajul din text.
           </AppText>
         </>
       ) : (

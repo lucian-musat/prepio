@@ -18,14 +18,14 @@ it.each(TYPES)('%s: the AI note never says "AI"', async (type) => {
 });
 
 it('uses the agreed wording', async () => {
-  expect(AI_NOTE).toBe('Feedback de la profesorul digital, pe baza indicațiilor profesorului. Poate greși.');
+  expect(AI_NOTE).toBe('Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.');
   await render(<FeedbackView exercise={exercise('viewpoint')} feedback={feedback('viewpoint')} />);
-  expect(screen.getByText('Punctul de vedere e evaluat de profesorul digital și poate greși; informațiile sunt verificate exact.')).toBeTruthy();
+  expect(screen.getByText('Punctul de vedere îl evaluează profesorul digital, care poate greși. Informațiile din sursă le verificăm exact.')).toBeTruthy();
 });
 
 it('argument note', async () => {
   await render(<FeedbackView exercise={exercise('argument')} feedback={feedback('answer')} />);
-  expect(screen.getByText('Conectorii sunt verificați automat; faptul istoric e evaluat de profesorul digital și poate greși.')).toBeTruthy();
+  expect(screen.getByText('Conectorii îi verificăm automat. Faptul istoric îl evaluează profesorul digital, care poate greși.')).toBeTruthy();
 });
 
 it('Analyzing and CheckError carry no "AI"', async () => {

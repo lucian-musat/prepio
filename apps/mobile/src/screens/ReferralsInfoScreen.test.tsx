@@ -164,7 +164,7 @@ it('covers the rules the database enforces', async () => {
   expect(all(/mai vechi decât/)).toBe(true);
   expect(all(/Nu pierzi recompensa/)).toBe(true);
   expect(all(/limita a fost atinsă/)).toBe(true);
-  expect(all(/prenumele și adresa de e-mail/)).toBe(true);
+  expect(all(/prenumele și adresa de email/)).toBe(true);
   expect(all(/Istoricul creditelor/)).toBe(true);
   expect(all(/Istoricul accesului/)).toBe(true);
   expect(all(new RegExp(CONTACT_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBe(true);

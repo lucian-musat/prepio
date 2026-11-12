@@ -173,15 +173,15 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
 
       <Fold title="Reguli importante">
         <Item>Nu pierzi recompensa dacă colegul tău renunță la acces sau i se returnează banii mai târziu: ce ai primit rămâne al tău.</Item>
-        <Item>{`Poți primi recompense pentru cel mult ${p.cap} (limita se verifică la prima plată a fiecărui coleg). Un coleg care plătește după ce limita a fost atinsă apare în listă ca „Abonat, fără recompensă (limita a fost atinsă)”.`}</Item>
+        <Item>{`Poți primi recompense pentru cel mult ${p.cap} (limita se verifică la prima plată a fiecărui coleg). Un coleg care plătește după ce limita a fost atinsă apare în listă ca „Are acces · fără recompensă (ai atins limita)”.`}</Item>
         <Item>Un coleg nu aduce recompensă de două ori.</Item>
         <Item>Valorile (colegi necesari, credite, durata accesului) se pot schimba. Ce ai primit deja nu se modifică; la recompensele următoare se aplică valorile din acel moment.</Item>
       </Fold>
 
       <Fold title="Ce vede cel care te-a invitat">
-        <Item>Cel care te-a invitat vede prenumele și adresa de e-mail, și dacă ai cumpărat acces sau nu. Mai vede data înregistrării tale, data plății și dacă ai adus recompensă; nu vede altceva despre contul tău.</Item>
+        <Item>Cel care te-a invitat vede prenumele și adresa de email, și dacă ai cumpărat acces sau nu. Mai vede data înregistrării tale, data plății și dacă ai adus recompensă; nu vede altceva despre contul tău.</Item>
         <Item>Tu vezi doar prenumele celui care te-a invitat, când te înregistrezi.</Item>
-        <Item>Dacă îți ștergi contul după ce ai cumpărat acces, în lista celui care te-a invitat rămâne doar prenumele tău, marcat „cont șters”; adresa de e-mail este ștearsă. Dacă nu ai cumpărat nimic, dispari din listă.</Item>
+        <Item>Dacă îți ștergi contul după ce ai cumpărat acces, în lista celui care te-a invitat rămâne doar prenumele tău, marcat „cont șters”; adresa de email este ștearsă. Dacă nu ai cumpărat nimic, dispari din listă.</Item>
       </Fold>
 
       <Fold title="Unde vezi recomandările">
