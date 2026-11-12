@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { color, plural, space } from '@prepio/shared';
-import { AppText, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
-import { CONTACT_EMAIL } from '../lib/legal';
+import { AppText, Icon, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import { fetchReferralPublicSettings, monthsText, type ReferralPublicSettings } from '../lib/referrals';
 import { Item, Section, legalStyles } from './legal/LegalSection';
+import EmailLink from '../components/EmailLink';
 
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; settings: ReferralPublicSettings };
 
@@ -25,6 +25,29 @@ function phrases(s: ReferralPublicSettings | null) {
     /** ", cu 100 de credite bonus incluse" after a duration; empty without a bonus or without the numbers. */
     withBonus: s && s.bonusCredits > 0 ? `, cu ${plural(s.bonusCredits, 'credit', 'credite')} bonus incluse` : '',
   };
+}
+
+
+/** A section that starts closed: its title is a button that opens it (the page is long; „Pe scurt” stays open). */
+function Fold({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.fold}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((o) => !o)}
+        style={styles.foldHead}
+      >
+        <AppText role="section" accessibilityRole="header" style={styles.foldTitle}>
+          {title}
+        </AppText>
+        <Icon name={open ? 'up' : 'down'} tint={color.textMuted} />
+      </Pressable>
+      {open ? <View style={styles.foldBody}>{children}</View> : null}
+    </View>
+  );
 }
 
 function Question({ q, children }: { q: string; children: string }) {
@@ -96,33 +119,33 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <Item>{`Dacă ai acces activ: primești ${p.credits} pentru fiecare coleg care își cumpără acces, imediat.`}</Item>
       </Section>
 
-      <Section title="Cine este un coleg care a plătit">
+      <Fold title="Cine este un coleg care a plătit">
         <Item>Un coleg se numără când își cumpără accesul complet pentru prima dată. Contează doar prima cumpărare; reînnoirile nu aduc nimic în plus.</Item>
         <Item>Accesul primit de la un administrator nu contează ca plată.</Item>
         <Item>Un coleg care și-a creat cont cu codul tău, dar nu a cumpărat nimic, nu aduce nicio recompensă (încă).</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Dacă nu ai acces activ (probă sau expirat)">
+      <Fold title="Dacă nu ai acces activ (probă sau expirat)">
         <Item>{`Fiecare coleg care își cumpără acces este numărat. Când ai ${p.colleagues}, primești ${p.duration} de acces gratuit.`}</Item>
         <Item>{p.bonusIncluded}</Item>
         <Item>Colegii care așteaptă rămân numărați până sunt folosiți pentru accesul gratuit sau până îți cumperi acces cât timp recomandările sunt pornite (atunci se transformă în credite). Ei nu expiră, nici dacă îți expiră ție accesul.</Item>
         <Item>Un coleg este folosit o singură dată. După ce primești accesul gratuit, numărătoarea continuă cu colegii care nu au fost încă numărați.</Item>
         <Item>Primești cel mult o perioadă de acces gratuit pentru fiecare coleg care plătește. Dacă mai mulți colegi așteaptă decât este nevoie, ceilalți rămân la rând pentru data viitoare.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Dacă ai acces activ">
+      <Fold title="Dacă ai acces activ">
         <Item>{`Primești ${p.credits} pentru fiecare coleg care își cumpără acces, imediat ce plătește.`}</Item>
         <Item>Un acces activ înseamnă orice acces care nu a expirat, cumpărat sau dat de un administrator.</Item>
         <Item>Contează momentul în care plătește colegul: dacă atunci ai acces activ, primești credite; dacă nu, colegul așteaptă.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Dacă îți cumperi tu acces">
+      <Fold title="Dacă îți cumperi tu acces">
         <Item>{`Cât timp recomandările sunt pornite, colegii care așteaptă la tine se transformă în credite: primești ${p.credits} pentru fiecare.`}</Item>
         <Item>Nu primești și acces gratuit pentru aceiași colegi: un coleg aduce fie acces gratuit, fie credite, niciodată amândouă.</Item>
         <Item>Accesul oferit de un administrator nu transformă colegii în credite; doar cumpărarea ta o face.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Exemple">
+      <Fold title="Exemple">
         {settings ? (
           <>
             <Question q="Ana nu are acces">
@@ -138,44 +161,44 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         ) : (
           <AppText role="body">Exemplele cu cifre apar când Prepio poate încărca valorile actuale. Încearcă din nou mai târziu.</AppText>
         )}
-      </Section>
+      </Fold>
 
-      <Section title="Cum se folosește codul">
+      <Fold title="Cum se folosește codul">
         <Item>Codul sau linkul se folosesc doar la înregistrare, în aplicația Prepio. Nu poți introduce un cod după ce ai terminat înregistrarea.</Item>
         <Item>Contul trebuie să fie nou: creat în ultimele 24 de ore, cu înregistrarea neterminată (termeni, nume și mod de învățare), fără cumpărături și fără lecții începute.</Item>
         <Item>Contul celui care te invită trebuie să fie mai vechi decât al tău. Nu îți poți folosi propriul cod.</Item>
         <Item>Poți avea un singur invitator. O singură persoană te poate invita, iar alegerea nu se mai schimbă.</Item>
         <Item>Cât timp recomandările sunt oprite, codurile nu sunt acceptate.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Reguli importante">
+      <Fold title="Reguli importante">
         <Item>Nu pierzi recompensa dacă colegul tău renunță la acces sau i se returnează banii mai târziu: ce ai primit rămâne al tău.</Item>
         <Item>{`Poți primi recompense pentru cel mult ${p.cap} (limita se verifică la prima plată a fiecărui coleg). Un coleg care plătește după ce limita a fost atinsă apare în listă ca „Abonat, fără recompensă (limita a fost atinsă)”.`}</Item>
         <Item>Un coleg nu aduce recompensă de două ori.</Item>
         <Item>Valorile (colegi necesari, credite, durata accesului) se pot schimba. Ce ai primit deja nu se modifică; la recompensele următoare se aplică valorile din acel moment.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Ce vede cel care te-a invitat">
+      <Fold title="Ce vede cel care te-a invitat">
         <Item>Cel care te-a invitat vede prenumele și adresa de e-mail, și dacă ai cumpărat acces sau nu. Mai vede data înregistrării tale, data plății și dacă ai adus recompensă; nu vede altceva despre contul tău.</Item>
         <Item>Tu vezi doar prenumele celui care te-a invitat, când te înregistrezi.</Item>
         <Item>Dacă îți ștergi contul după ce ai cumpărat acces, în lista celui care te-a invitat rămâne doar prenumele tău, marcat „cont șters”; adresa de e-mail este ștearsă. Dacă nu ai cumpărat nimic, dispari din listă.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Unde vezi recomandările">
+      <Fold title="Unde vezi recomandările">
         <Item>Ecranul „Invită colegi” (din pagina principală sau din Profil): codul tău, linkul, colegii invitați și cât mai ai până la accesul gratuit.</Item>
         <Item>Istoricul creditelor: creditele primite pentru recomandări apar cu prenumele colegului, iar creditele bonus ale accesului gratuit apar ca „Credite incluse în accesul gratuit din recomandări”.</Item>
         <Item>Istoricul accesului: accesul gratuit primit pentru recomandări apare acolo.</Item>
         <Item>Nu trimitem notificări: vezi schimbările data viitoare când deschizi ecranul „Invită colegi”.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Dacă Prepio oprește recomandările">
+      <Fold title="Dacă Prepio oprește recomandările">
         <Item>Cât timp sunt oprite, nu se mai primesc recompense și codurile nu mai sunt acceptate.</Item>
         <Item>Recompensele deja primite rămân. Istoricul tău rămâne vizibil.</Item>
         <Item>Un coleg care plătește cât timp recomandările sunt oprite nu este recompensat, nici dacă ele sunt pornite din nou mai târziu.</Item>
         <Item>Dacă îți cumperi acces cât timp recomandările sunt oprite, colegii care așteaptă nu se transformă în credite; rămân la rând și se transformă la o cumpărare următoare, făcută cât timp recomandările sunt pornite.</Item>
-      </Section>
+      </Fold>
 
-      <Section title="Întrebări frecvente">
+      <Fold title="Întrebări frecvente">
         <Question q="Invitatul a plătit după ce mi-am cumpărat eu accesul">
           {`Cât timp ai acces activ în momentul în care plătește, primești ${p.credits} pentru el, imediat. Nu așteaptă și nu se adună spre acces gratuit.`}
         </Question>
@@ -194,10 +217,10 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <Question q="Se pierd recompensele dacă invitatul anulează?">
           Nu. Odată ce a plătit, recompensa rămâne.
         </Question>
-      </Section>
+      </Fold>
 
       <Section title="Cui te adresezi">
-        <AppText role="body">{`Pentru întrebări sau dacă ți se pare că ceva nu s-a calculat corect, scrie-ne la ${CONTACT_EMAIL}.`}</AppText>
+        <AppText role="body">{`Pentru întrebări sau dacă ți se pare că ceva nu s-a calculat corect, scrie-ne la `}<EmailLink />{`.`}</AppText>
       </Section>
     </View>
   );
@@ -206,4 +229,8 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
 const styles = StyleSheet.create({
   center: { alignItems: 'center', marginTop: space[12] },
   faq: { gap: space[1], borderBottomWidth: 1, borderBottomColor: color.border, paddingBottom: space[3] },
+  fold: { borderBottomWidth: 1, borderBottomColor: color.border },
+  foldHead: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 48, paddingVertical: space[2] },
+  foldTitle: { flex: 1 },
+  foldBody: { gap: space[3], paddingBottom: space[4] },
 });

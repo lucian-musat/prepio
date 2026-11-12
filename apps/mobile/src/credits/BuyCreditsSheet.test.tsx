@@ -39,7 +39,7 @@ beforeEach(() => {
 it('choose: says how many credits are missing, lists the packages with the featured one preselected', async () => {
   await mount();
   expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
-  expect(await screen.findByText('CEL MAI ALES')).toBeTruthy();
+  expect(await screen.findByText('CEL MAI POPULAR')).toBeTruthy();
   expect(screen.getByText('0,40 lei / credit')).toBeTruthy();
   expect(screen.getByRole('radio', { name: /^50 de credite, 19,99 lei/ })).toBeChecked();
   expect(screen.getByRole('radio', { name: /^20 de credite, 9,99 lei/ })).not.toBeChecked();
@@ -133,7 +133,7 @@ it('another purchase error: the message, and the same button retries', async () 
     .mockResolvedValueOnce({ orderId: 'o1', credits: 50, balance: 51 });
   await mount();
   const buy = () => screen.getByRole('button', { name: 'Cumpără 50 de credite · 19,99 lei' });
-  await screen.findByText('CEL MAI ALES');
+  await screen.findByText('CEL MAI POPULAR');
   await act(async () => void fireEvent.press(buy()));
   expect(screen.getByText('Achiziția nu a reușit. Încearcă din nou.')).toBeTruthy();
   await act(async () => void fireEvent.press(buy()));
@@ -150,5 +150,5 @@ it('packages that fail to load: the message with „Reîncearcă”, skip still 
   await fireEvent.press(screen.getByRole('button', { name: 'Sari peste exercițiu' }));
   expect(h.onSkip).toHaveBeenCalled();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Reîncearcă' })));
-  expect(await screen.findByText('CEL MAI ALES')).toBeTruthy();
+  expect(await screen.findByText('CEL MAI POPULAR')).toBeTruthy();
 });

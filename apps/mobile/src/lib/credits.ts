@@ -40,6 +40,8 @@ export type StudentLedgerEntry = {
   referralName?: string | null;
   /** `access_bonus`: the bonus credits of a free access earned through referrals (not of a purchase). */
   fromReferral?: boolean;
+  /** A BAC grading row (`bac:<subject id>`): the subject's title, when the student can read it (published). */
+  bacTitle?: string;
   /** `lesson`: the title of the exercise's lesson, when the student can read it (published). */
   exercise: { type: ConsolidationType; prompt: string; requirements?: string[]; lesson?: string } | null;
 };
@@ -88,7 +90,20 @@ export async function fetchLedger(
       console.warn('[credits] referral names could not be loaded:', e); // the rows keep the plain label
     }
   }
+  // BAC grading rows name their subject: the published titles, read in one query (a failure keeps the plain label).
+  const bacIds = [...new Set((data ?? []).flatMap((r) => (typeof r.target === 'string' && r.target.startsWith('bac:') ? [r.target.slice(4)] : [])))];
+  const bacTitles = new Map<string, string>();
+  if (bacIds.length) {
+    try {
+      const { data: subjects, error: subErr } = await client.from('bac_subjects').select('id,title').in('id', bacIds);
+      if (subErr) throw subErr;
+      for (const s of subjects ?? []) if (s.title?.trim()) bacTitles.set(s.id, s.title.trim());
+    } catch (e) {
+      console.warn('[credits] BAC subject titles could not be loaded:', e);
+    }
+  }
   return (data ?? []).map((r) => {
+    const bacTitle = typeof r.target === 'string' && r.target.startsWith('bac:') ? bacTitles.get(r.target.slice(4)) : undefined;
     const joined = r.consolidation_exercises as JoinedExercise | JoinedExercise[] | null;
     const ex = Array.isArray(joined) ? (joined[0] ?? null) : joined;
     const reqs = ex?.type === 'essay' ? ex.content?.requirements?.map((x) => x.id) : undefined;
@@ -104,6 +119,7 @@ export async function fetchLedger(
       createdAt: r.created_at,
       ...(r.kind === 'referral' ? { referralName: (r.referral_id && names.get(r.referral_id)) || null } : {}),
       ...(r.kind === 'access_bonus' && r.referral_id ? { fromReferral: true } : {}),
+      ...(bacTitle ? { bacTitle } : {}),
       exercise: ex
         ? { type: ex.type, prompt: ex.prompt, ...(reqs ? { requirements: reqs } : {}), ...(lesson ? { lesson } : {}) }
         : null,
@@ -120,9 +136,10 @@ export async function fetchCreditBalance(userId: string, client: SupabaseClient 
 
 /** A check or refund row names its exercise (type, essay part) and its lesson: „Punct de vedere · Cuza”. */
 export function ledgerLabel(e: StudentLedgerEntry): string {
-  // BAC paper grading rows target `bac:<subject id>`; the generic label (the ledger query does not join subjects).
+  // BAC paper grading rows target `bac:<subject id>`, named after the subject when its title is known.
   if ((e.kind === 'check' || e.kind === 'refund') && e.target?.startsWith('bac:')) {
-    return e.kind === 'refund' ? 'Corectare nereușită · returnat' : 'Corectare subiect';
+    const label = e.kind === 'refund' ? 'Corectare nereușită · returnat' : 'Corectare subiect';
+    return e.bacTitle ? `${label} · ${e.bacTitle}` : label;
   }
   const lesson = (e.kind === 'check' || e.kind === 'refund') && e.exercise?.lesson ? ` · ${e.exercise.lesson}` : '';
   return base(e) + lesson;
@@ -143,7 +160,7 @@ function base(e: StudentLedgerEntry): string {
     case 'admin':
       return e.reason?.trim() ? `Ajustare · ${e.reason.trim()}` : 'Ajustare';
     case 'check': {
-      if (!e.exercise) return 'Verificare';
+      if (!e.exercise) return 'Verificare cu profesorul digital';
       const base = e.exercise.type === 'essay' ? 'Eseu' : CONSOLIDATION_TYPE_LABELS[e.exercise.type];
       if (e.exercise.type !== 'essay') return base;
       // Old ledger rows still carry the removed whole-essay target.

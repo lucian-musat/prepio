@@ -47,7 +47,7 @@ it('shows the balance, the range of checks, refreshes on mount and lists the pac
   expect(screen.getByText('49')).toBeTruthy();
   expect(screen.getByText('≈ 24–49 verificări')).toBeTruthy();
   expect(screen.getByText('Cumpără credite')).toBeTruthy();
-  expect(await screen.findByText('CEL MAI ALES')).toBeTruthy();
+  expect(await screen.findByText('CEL MAI POPULAR')).toBeTruthy();
   expect(screen.queryByText('Verifică acum')).toBeNull();
 });
 
@@ -63,7 +63,9 @@ it('lists the history with signed, coloured deltas', async () => {
   const plus = screen.getByText('+50');
   expect(JSON.stringify(minus.props.style)).toMatch(/#/);
   expect(JSON.stringify(minus.props.style)).not.toEqual(JSON.stringify(plus.props.style));
-  expect(screen.getAllByText(/3 nov/).length).toBe(3);
+  // One day header for the three rows of 3 November, and the balance after each row.
+  expect(screen.getAllByText('3 noiembrie 2026')).toHaveLength(1);
+  expect(screen.getAllByText('sold 40')).toHaveLength(3);
   expect(screen.queryByText('Încarcă mai multe')).toBeNull();
 });
 
@@ -100,4 +102,11 @@ it('shows a placeholder while the balance is unknown', async () => {
   await mount();
   expect(screen.getByText('—')).toBeTruthy();
   expect(screen.queryByText(/≈/)).toBeNull();
+});
+
+it('groups the history by day', async () => {
+  mockedLedger.mockResolvedValue([entry(3, { createdAt: '2026-11-05T10:00:00Z' }), entry(2), entry(1)]);
+  await mount();
+  expect(await screen.findByText('5 noiembrie 2026')).toBeTruthy();
+  expect(screen.getByText('3 noiembrie 2026')).toBeTruthy();
 });

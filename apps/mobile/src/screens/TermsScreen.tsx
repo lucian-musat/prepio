@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 import { BAC_GRADE_NOTE } from '@prepio/shared';
 import { AppText, ScreenLayout, goBackOrHome } from '../ui';
-import { CONTACT_EMAIL, TERMS_DATE } from '../lib/legal';
+import { TERMS_DATE } from '../lib/legal';
 import { Item, LegalLink, OperatorDetails, Section, legalStyles } from './legal/LegalSection';
+import EmailLink from '../components/EmailLink';
 
 /**
  * Public terms of use (reachable signed out). Static text only: it never queries Supabase.
@@ -41,7 +42,7 @@ export default function TermsScreen() {
             tutorelui.
           </Item>
           <Item>
-            {`Părintele sau tutorele poate cere oricând închiderea contului, la ${CONTACT_EMAIL}.`}
+            {`Părintele sau tutorele poate cere oricând închiderea contului, la `}<EmailLink />{`.`}
           </Item>
           <Item>
             Dacă aflăm că un cont aparține unei persoane sub 14 ani sau unui minor care folosește Prepio fără acordul
@@ -130,19 +131,19 @@ export default function TermsScreen() {
           <Item>Putem schimba acești termeni. Când o facem, actualizăm data de mai sus.</Item>
           <Item>La următoarea intrare în aplicație îți cerem să accepți noua versiune înainte să continui.</Item>
           <Item>
-            {`Dacă nu o accepți, nu mai poți folosi aplicația. Poți ieși din cont și ne poți cere ștergerea contului la ${CONTACT_EMAIL}.`}
+            {`Dacă nu o accepți, nu mai poți folosi aplicația. Poți ieși din cont și ne poți cere ștergerea contului la `}<EmailLink />{`.`}
           </Item>
         </Section>
 
         <Section title="Legea aplicabilă">
           <Item>Acești termeni sunt guvernați de legea română.</Item>
-          <Item>{`Dacă apare o neînțelegere, încercăm mai întâi să o rezolvăm împreună: scrie-ne la ${CONTACT_EMAIL}.`}</Item>
+          <Item>{`Dacă apare o neînțelegere, încercăm mai întâi să o rezolvăm împreună: scrie-ne la `}<EmailLink />{`.`}</Item>
           <Item>Dacă nu reușim, neînțelegerea se rezolvă de instanțele competente din România.</Item>
           <Item>Drepturile pe care ți le dă legea ca utilizator și consumator rămân valabile.</Item>
         </Section>
 
         <Section title="Contact">
-          <AppText role="body">{`Pentru întrebări despre acești termeni: ${CONTACT_EMAIL}.`}</AppText>
+          <AppText role="body">{`Pentru întrebări despre acești termeni: `}<EmailLink />{`.`}</AppText>
           <AppText role="body">Cum folosim datele tale afli din politica de confidențialitate.</AppText>
           <LegalLink href="/confidentialitate">Politica de confidențialitate</LegalLink>
         </Section>
