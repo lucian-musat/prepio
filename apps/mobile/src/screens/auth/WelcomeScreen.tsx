@@ -73,7 +73,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ScreenLayout logo>
+    <ScreenLayout logo pageTitle="Intră în cont">
       <View style={styles.stack}>
         <Enter index={0}>
           <AuthHero title={TITLE} body={SUBTITLE} />

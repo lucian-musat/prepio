@@ -17,7 +17,10 @@ jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn(), savePosition: je
 jest.mock('../lib/consolidation', () => ({ countConsolidation: jest.fn() }));
 jest.mock('../lib/activity', () => ({ logTestFailed: jest.fn() }));
 let mockCanOpen = (_id: string) => true;
-jest.mock('../access/AccessProvider', () => ({ useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id) }) }));
+jest.mock('../access/AccessProvider', () => ({
+  useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), status: { plan: 'trial' }, isAdmin: false }),
+}));
+jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 7, change: null }) }));
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),
@@ -189,6 +192,12 @@ describe('start screen', () => {
     expect(actionBar().getByRole('button', { name: 'Începe învățarea' })).toBeTruthy();
     expect(actionBar().getByRole('button', { name: 'Știu deja — sari la verificare' })).toBeTruthy();
     expect(screen.queryByText('Continuă de unde ai rămas')).toBeNull();
+  });
+
+  it('shows the plan and credits pill in the top bar', async () => {
+    await renderLesson(lesson());
+    await screen.findByText(SKIP);
+    expect(within(screen.getByTestId('top-bar')).getByLabelText('Perioadă de probă, 7 credite, deschide accesul')).toBeTruthy();
   });
 
   it('pluralises the counts and has no guided line in free mode', async () => {
@@ -506,7 +515,7 @@ describe('guided mode', () => {
     await answer('Nu', 'Continuă');
     await press('Revezi cardurile');
     expect(await screen.findByText('Corp card')).toBeTruthy();
-    expect(screen.getByText('Cartonaș 1 din 1')).toBeTruthy();
+    expect(screen.getByText('Card 1 din 1')).toBeTruthy();
   });
 
   it('resumes a saved position with its answers', async () => {

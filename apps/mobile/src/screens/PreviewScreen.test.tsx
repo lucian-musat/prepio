@@ -64,12 +64,12 @@ it('renders the card posted by the admin in the lesson frame', async () => {
   await renderScreen();
   await emit(message('Cauzele'));
   expect(screen.getByText('Cauzele')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 2 din 4')).toBeTruthy();
+  expect(screen.getByText('Card 2 din 4')).toBeTruthy();
   expect(screen.getByText('Un paragraf.')).toBeTruthy();
   expect(screen.queryByText('Se așteaptă cardul…')).toBeNull();
   // Frame of the lesson stepper: progress (index+1)/total and the two action buttons, inert.
   expect(screen.getByRole('progressbar').props.accessibilityValue).toMatchObject({ now: 50 });
-  expect(screen.getByRole('button', { name: 'Înapoi la cartonașul anterior' }).props.accessibilityState).toMatchObject({ disabled: true });
+  expect(screen.getByRole('button', { name: 'Înapoi la cardul anterior' }).props.accessibilityState).toMatchObject({ disabled: true });
   expect(screen.getByRole('button', { name: 'Continuă' }).props.accessibilityState).toMatchObject({ disabled: true });
 });
 
@@ -78,7 +78,7 @@ it('replaces the card with each new admin message', async () => {
   await emit(message('Cauzele'));
   await emit(message('Urmările', { index: 3 }));
   expect(screen.getByText('Urmările')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 4 din 4')).toBeTruthy();
+  expect(screen.getByText('Card 4 din 4')).toBeTruthy();
   expect(screen.queryByText('Cauzele')).toBeNull();
 });
 

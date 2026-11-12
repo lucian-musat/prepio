@@ -4,6 +4,23 @@ Last updated: 2026-11-12
 
 ## Where we are
 
+**Student web UX audit (2026-11-12) — in progress, batch A done.** Production walk in Claude in Chrome at desktop width and at 360 px: about 60 findings (no console errors, no horizontal scroll). Audit `docs/audits/2026-11-12-student-web-ux-audit.md`, plan `docs/superpowers/plans/2026-11-12-student-ux-polish.md` (6 PRs: web shell and consistency, Home, Lesson, Consolidation, BAC, account screens).
+- **Batch A — web shell and consistency (`feat/ux-web-shell`):**
+  - The web shell is Romanian (`lang="ro"`), with a description, Open Graph / Twitter tags and a share image `og-image.png`, `theme-color` and a web manifest.
+  - Every screen sets the tab title („Creditele mele · Prepio”; a lesson uses its own name).
+  - The app icon, adaptive icon, splash and favicon were Expo's default „A”; they are now the Prepio „P” mark. **Native: the next APK shows the new icon and splash.**
+  - The header pill always has a word: „Probă”, „★ Acces”, „⏳ n zile”, „Expirat”. It also shows on the lesson start screen.
+  - Terminology: „acces” instead of „abonament” (invite, /recomandari, „Accesul meu”), „card” instead of „cartonaș”, and the guided mode speaks of questions.
+  - Chevrons on the BAC card and BAC rows; the „Cum rezolv” chevron is an icon.
+  - Tests: mobile 1252, tsc clean.
+  - Browser walk in Claude in Chrome against the local stack, with a `[test]` full-access and a `[test]` trial student: titles, `lang`, OG tags, the pill in both plans, chevrons, the new terms, 360 px with no horizontal scroll, console clean.
+- Owner items:
+  - delete the „card test” card in „Constituția din 1866”
+  - the referral flag looks ON in production — check it
+  - the Home welcome text (Admin → Setări) still says „cartonașele”
+  - a decision is needed: keep the consolidation „Cum rezolv” as a sheet (approved mockup) while BAC uses an inline block?
+- Found during the walk, for a later batch: the email-code screen puts the email in the URL (`/code?email=…`).
+
 **Launch readiness (2026-11-10 →) — in progress, five PRs, each on its own branch (see CLAUDE.md "Branches and PRs").** Spec `docs/superpowers/specs/2026-11-10-launch-readiness-design.md`, plan `docs/superpowers/plans/2026-11-10-launch-readiness.md`, audit `docs/audits/2026-11-10-production-readiness.md`.
 
 - PR 1 — CI (GitHub Actions) + standing branch/PR rule + docs (`ci/github-actions`): **merged** (#1, `bbe7dc0`). The first Actions run was green in 4m24s: every step ran, including Supabase in the runner, seed, pgTAP and both integration suites.

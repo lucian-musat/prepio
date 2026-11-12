@@ -180,7 +180,7 @@ export default function CardStepper({
               flex
               variant="secondary"
               label="Înapoi"
-              accessibilityLabel="Înapoi la cartonașul anterior"
+              accessibilityLabel="Înapoi la cardul anterior"
               disabled={index === 0}
               onPress={() => index > 0 && go(index - 1)}
             />
@@ -194,7 +194,7 @@ export default function CardStepper({
       <GestureDetector gesture={pan} touchAction="pan-y" userSelect="auto">
         <Animated.View testID="card-swipe" style={drag} onLayout={(e) => (width.value = e.nativeEvent.layout.width)}>
           <CardTransition contentKey={card.id} direction={direction} exit={!swiped}>
-            <CardView card={card} eyebrow={`Cartonaș ${index + 1} din ${cards.length}`} />
+            <CardView card={card} eyebrow={`Card ${index + 1} din ${cards.length}`} />
           </CardTransition>
         </Animated.View>
       </GestureDetector>

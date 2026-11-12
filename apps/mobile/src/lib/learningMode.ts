@@ -10,9 +10,9 @@ export const MODE_INFO: Record<LearningMode, { name: string; icon: string; point
     icon: '🧭',
     points: [
       'Parcurgi lecțiile în ordine, una după alta.',
-      'Lecția următoare se deschide după ce răspunzi corect la toate exercițiile.',
+      'Lecția următoare se deschide după ce răspunzi corect la toate întrebările.',
       'Dacă greșești, revezi cardurile și reiei testul.',
-      'Știi deja materia? Sari direct la exerciții.',
+      'Știi deja materia? Sari direct la verificare.',
     ],
   },
   free: {

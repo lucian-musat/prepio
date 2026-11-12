@@ -75,7 +75,7 @@ afterEach(() => {
 
 it('trial: tells how many more colleagues earn the free period, with progress', async () => {
   await mount();
-  expect(await screen.findByText('Încă 3 colegi care își iau abonament și primești 3 luni gratis')).toBeTruthy();
+  expect(await screen.findByText('Încă 3 colegi care își cumpără acces și primești 3 luni gratis')).toBeTruthy();
   expect(screen.getByText('2 din 5')).toBeTruthy();
   expect(screen.getByRole('progressbar')).toBeTruthy();
   expect(screen.getByText('ABCD2345')).toBeTruthy();
@@ -84,7 +84,7 @@ it('trial: tells how many more colleagues earn the free period, with progress', 
 it('trial: singular colleague and one month', async () => {
   mockedSummary.mockResolvedValue(summary({ pendingCount: 4, durationMonths: 1 }));
   await mount();
-  expect(await screen.findByText('Încă 1 coleg care își ia abonament și primești o lună gratis')).toBeTruthy();
+  expect(await screen.findByText('Încă 1 coleg care își cumpără acces și primești o lună gratis')).toBeTruthy();
 });
 
 it('active access: credits per colleague and totals', async () => {
@@ -96,7 +96,7 @@ it('active access: credits per colleague and totals', async () => {
     row('4', { state: 'registered' }),
   ]);
   await mount();
-  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își ia abonament')).toBeTruthy();
+  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își cumpără acces')).toBeTruthy();
   expect(screen.getByText('Până acum: 3 abonați · 120 de credite câștigate')).toBeTruthy();
   expect(screen.queryByRole('progressbar')).toBeNull();
 });
@@ -146,10 +146,10 @@ it('lists invitees with a status each, and marks deleted accounts', async () => 
     row('7', { state: 'pending', firstName: 'Radu', email: null, accountDeleted: true }),
   ]);
   await mount();
-  expect(await screen.findByText('Cont creat, fără abonament')).toBeTruthy();
+  expect(await screen.findByText('Cont creat, fără acces')).toBeTruthy();
   expect(screen.getByText('ion@x.ro')).toBeTruthy();
-  expect(screen.getAllByText('Abonat · numără spre abonamentul gratuit')).toHaveLength(2);
-  expect(screen.getByText('Abonat · a contribuit la abonamentul gratuit')).toBeTruthy();
+  expect(screen.getAllByText('Cu acces · numără spre accesul gratuit')).toHaveLength(2);
+  expect(screen.getByText('Cu acces · a contribuit la accesul gratuit')).toBeTruthy();
   expect(screen.getByText('Abonat · +40 de credite')).toBeTruthy();
   expect(screen.getByText('Abonat, fără recompensă (limita a fost atinsă)')).toBeTruthy();
   expect(screen.getByText('Abonat, fără recompensă')).toBeTruthy();
@@ -178,7 +178,7 @@ it('cap reached: a quiet note, and no per-colleague promise', async () => {
   ]);
   await mount();
   expect(await screen.findByText('Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.')).toBeTruthy();
-  expect(screen.queryByText(/pentru fiecare coleg care își ia abonament/)).toBeNull();
+  expect(screen.queryByText(/pentru fiecare coleg care își cumpără acces/)).toBeNull();
   expect(screen.getByText('Până acum: 2 abonați · 80 de credite câștigate')).toBeTruthy();
 });
 
@@ -193,7 +193,7 @@ it('cap reached without access: the note replaces the free-period promise, the p
 it('no cap note below the cap', async () => {
   mockedSummary.mockResolvedValue(summary({ hasAccess: true }));
   await mount();
-  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își ia abonament')).toBeTruthy();
+  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își cumpără acces')).toBeTruthy();
   expect(screen.queryByText(/Ai atins limita/)).toBeNull();
 });
 

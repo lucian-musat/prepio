@@ -54,7 +54,7 @@ it('an AI exercise shows the cost tag, the balance chip and „Verifică” with
   await mount(comparison);
   expect(screen.getByLabelText('Profesorul digital, costă 2 credite')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Verifică, costă 2 credite' })).toBeTruthy();
-  expect(screen.getByLabelText('Trial, 7 credite, deschide abonamentul')).toBeTruthy();
+  expect(screen.getByLabelText('Perioadă de probă, 7 credite, deschide accesul')).toBeTruthy();
   expect(screen.getByText('3/10')).toBeTruthy();
 });
 
@@ -69,7 +69,7 @@ it('a deterministic exercise shows neither the tag nor a cost', async () => {
 
 const ANSWER = 'Atât Cuza, cât și Carol I au modernizat statul român prin reforme.';
 const ok = { key: 'comparison', verdict: 'ok', title: 'Deosebire corectă', good: [], improve: [], ai: true };
-const chip = (n: number) => screen.getByLabelText(`Trial, ${creditsLabel(n)}, deschide abonamentul`);
+const chip = (n: number) => screen.getByLabelText(`Perioadă de probă, ${creditsLabel(n)}, deschide accesul`);
 const typeAnswer = async () => fireEvent.changeText(screen.getByLabelText('Răspunsul tău'), ANSWER);
 const verify = () => within(screen.getByTestId('action-bar')).getByRole('button', { name: 'Verifică, costă 2 credite' });
 

@@ -16,6 +16,7 @@ import TopBar from './TopBar';
 import ActionBar, { type ActionTone } from './ActionBar';
 import Enter from './Enter';
 import { screenConfig } from './motion';
+import { PageTitle } from '../lib/pageTitle';
 
 type Props = {
   title?: string;
@@ -36,6 +37,8 @@ type Props = {
   scrollRef?: Ref<Animated.ScrollView>;
   /** On desktop, content up to `layout.maxWideContentWidth` instead of 720 px (a source beside the answer). */
   wide?: boolean;
+  /** The browser tab title when it should differ from the bar title (e.g. the lesson's name); default `title`. */
+  pageTitle?: string;
 };
 
 /** Height the content can use without scrolling (the scroll viewport minus its paddings); null before layout. */
@@ -70,6 +73,7 @@ export default function ScreenLayout({
   contentKey,
   scrollRef,
   wide: wideContent = false,
+  pageTitle,
 }: Props) {
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const m = useRef({ y: 0, viewH: 0, contentH: 0 });
@@ -114,6 +118,7 @@ export default function ScreenLayout({
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <PageTitle name={pageTitle ?? title} />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TopBar title={title} logo={logo} progress={progress} progressLabel={progressLabel} onBack={onBack} trailing={trailing} below={subheader} raised={topRaised} />
         <Animated.ScrollView

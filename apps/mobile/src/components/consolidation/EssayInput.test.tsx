@@ -297,7 +297,7 @@ it('two requirements checked together with 1 credit: the second gets 402, the sh
   await act(async () => first.resolve({ items: [item('r1', 'ok', 'Bine')], credits: { spent: 1, balance: 0 } }));
   await act(async () => rejectSecond(new EvaluateApiError('insufficient_credits', 'Nu ai destule credite.', { required: 1, balance: 0 })));
   expect(screen.getByText('Îți mai trebuie 1 credit')).toBeTruthy();
-  expect(screen.getByLabelText('Trial, 0 credite, deschide abonamentul')).toBeTruthy();
+  expect(screen.getByLabelText('Perioadă de probă, 0 credite, deschide accesul')).toBeTruthy();
   expect(within(screen.getByTestId('requirement-r2')).queryByText('Nu ai destule credite.')).toBeNull();
   expect(screen.getByLabelText('Cerința 1').props.value).toBe('Prima parte.');
   expect(screen.getByLabelText('Cerința 2').props.value).toBe('A doua parte.');

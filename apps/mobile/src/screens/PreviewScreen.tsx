@@ -54,12 +54,12 @@ export default function PreviewScreen() {
       onBack={noop}
       actions={
         <>
-          <Button flex variant="secondary" label="Înapoi" accessibilityLabel="Înapoi la cartonașul anterior" disabled onPress={noop} />
+          <Button flex variant="secondary" label="Înapoi" accessibilityLabel="Înapoi la cardul anterior" disabled onPress={noop} />
           <Button flex label="Continuă" disabled onPress={noop} />
         </>
       }
     >
-      <CardView card={card} eyebrow={`Cartonaș ${index + 1} din ${total}`} />
+      <CardView card={card} eyebrow={`Card ${index + 1} din ${total}`} />
     </ScreenLayout>
   );
 }
