@@ -85,6 +85,17 @@ export async function countConsolidation(lessonId: string, client: SupabaseClien
   return (await fetchConsolidation(lessonId, client)).exercises.length;
 }
 
+export type ConsolidationSummary = { count: number; correct: number; done: number };
+
+/** How many valid exercises the lesson has, how many the student tried and how many they got right (verdict ok). */
+export async function consolidationSummary(lessonId: string, client: SupabaseClient = getSupabase()): Promise<ConsolidationSummary> {
+  const ids = (await fetchConsolidation(lessonId, client)).exercises.map((e) => e.id);
+  const attempts = await fetchAttempts(ids, client);
+  let correct = 0;
+  for (const a of attempts.values()) if (a.verdict === 'ok') correct += 1;
+  return { count: ids.length, correct, done: attempts.size };
+}
+
 export type Attempt = { exerciseId: string; answer: ExerciseAnswer; verdict: Verdict | null; feedback: ExerciseFeedback };
 
 /** The student's latest attempt per exercise (RLS scopes the rows to the student). */

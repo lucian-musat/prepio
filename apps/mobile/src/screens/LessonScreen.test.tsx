@@ -4,7 +4,7 @@ import type { Lesson, LessonSummary } from '@prepio/shared';
 import LessonScreen, { SKIP_CONFIRM, SKIP_MESSAGE, lessonProgress } from './LessonScreen';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { fetchProgress, markFinished, savePosition, type LessonPosition } from '../lib/progress';
-import { countConsolidation } from '../lib/consolidation';
+import { consolidationSummary } from '../lib/consolidation';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +15,7 @@ jest.mock('../lib/content', () => ({
   imageUrl: (p: string) => `http://x/${p}`,
 }));
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn(), savePosition: jest.fn(), markFinished: jest.fn() }));
-jest.mock('../lib/consolidation', () => ({ countConsolidation: jest.fn() }));
+jest.mock('../lib/consolidation', () => ({ consolidationSummary: jest.fn() }));
 jest.mock('../lib/activity', () => ({ logTestFailed: jest.fn() }));
 let mockCanOpen = (_id: string) => true;
 jest.mock('../access/AccessProvider', () => ({
@@ -47,7 +47,12 @@ const mockedHome = fetchHome as jest.Mock;
 const mockedProgress = fetchProgress as jest.Mock;
 const mockedSave = savePosition as jest.Mock;
 const mockedFinish = markFinished as jest.Mock;
-const mockedCount = countConsolidation as jest.Mock;
+const mockedSummary = consolidationSummary as jest.Mock;
+// Most tests only care about the number of exercises.
+const mockedCount = {
+  mockResolvedValue: (count: number) => mockedSummary.mockResolvedValue({ count, correct: 0, done: 0 }),
+  mockRejectedValue: (e: unknown) => mockedSummary.mockRejectedValue(e),
+};
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 
 const question = (n: number) => ({
@@ -750,6 +755,15 @@ describe('zones and consolidation', () => {
     expect(content.getAllByText('✓')).toHaveLength(2);
     await fireEvent.press(content.getByRole('button', { name: /Consolidare/ }));
     expect(mockPush).toHaveBeenCalledWith('/lesson/l1/consolidare');
+  });
+
+  it('a started consolidation shows its score and continues', async () => {
+    mockedSummary.mockResolvedValue({ count: 4, correct: 3, done: 3 });
+    mockedProgress.mockResolvedValue(progressOf(['l1']));
+    await renderLesson(lesson());
+    const content = await zones();
+    expect(content.getByText('3 din 4 rezolvate corect')).toBeTruthy();
+    expect(content.getByText('Continuă ›')).toBeTruthy();
   });
 
   it('the Consolidare zone is hidden when there are no exercises', async () => {

@@ -27,6 +27,11 @@ describe('describeProgress', () => {
     });
   });
 
+  it('says how many consolidation exercises are solved correctly once one was tried', () => {
+    expect(describeProgress(null, null, counts, { count: 10, correct: 3, done: 4 })).toEqual({ consolidate: '3 din 10 rezolvate corect' });
+    expect(describeProgress(null, null, counts, { count: 10, correct: 0, done: 0 })).toEqual({});
+  });
+
   it('is empty without progress', () => {
     expect(describeProgress(null, null, counts)).toEqual({});
   });

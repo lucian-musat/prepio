@@ -75,9 +75,9 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
                 icon="🎯"
                 title="Consolidare"
                 subtitle={`${countLabel(consolidation, 'exercițiu', 'exerciții')} tip BAC`}
-                hint={finished ? undefined : 'Se deschide după ce termini verificarea'}
+                hint={finished ? progress.consolidate : 'Se deschide după ce termini verificarea'}
                 tint={CONSOLIDATION_TINT}
-                marker={finished ? 'Începe ›' : undefined}
+                marker={finished ? (progress.consolidate ? 'Continuă ›' : 'Începe ›') : undefined}
                 highlight={finished}
                 dimmed={!finished}
                 onPress={finished ? () => router.push(`/lesson/${lesson.id}/consolidare`) : undefined}
