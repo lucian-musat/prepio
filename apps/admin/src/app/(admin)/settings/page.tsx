@@ -24,7 +24,7 @@ export default async function SettingsPage() {
       <SettingsForm initial={settings} />
       <CreditsForm initial={creditSettings} />
       <AccessForm initial={accessSettings} />
-      <ReferralsForm initial={referralSettings} durationMonths={accessSettings.durationMonths} />
+      <ReferralsForm initial={referralSettings} durationMonths={accessSettings.durationMonths} bonusCredits={accessSettings.bonusCredits} />
     </>
   );
 }

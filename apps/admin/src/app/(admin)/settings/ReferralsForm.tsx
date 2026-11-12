@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button, Card, Form } from 'react-bootstrap';
+import { plural } from '@prepio/shared';
 import { useRunner } from '@/components/editor/common';
 import { UserError } from '@/lib/data/db';
 import { monthsText, validateReferralSettings } from '@/lib/data/referralSettings';
@@ -10,7 +11,9 @@ import { saveReferralSettings } from './actions';
 
 const toNumber = (s: string) => (s.trim() === '' ? NaN : Number(s));
 
-export default function ReferralsForm({ initial, durationMonths }: { initial: ReferralSettings; durationMonths: number }) {
+export default function ReferralsForm({
+  initial, durationMonths, bonusCredits,
+}: { initial: ReferralSettings; durationMonths: number; bonusCredits: number }) {
   const [enabled, setEnabled] = useState(initial.enabled);
   const [threshold, setThreshold] = useState(String(initial.threshold));
   const [credits, setCredits] = useState(String(initial.creditsPerInvitee));
@@ -74,7 +77,11 @@ export default function ReferralsForm({ initial, durationMonths }: { initial: Re
               <Form.Control type="number" min={1} max={10000} step={1} value={maxRewarded} onChange={(e) => change(() => setMaxRewarded(e.target.value))} />
             </Form.Group>
           </div>
-          <Form.Text muted>Durata accesului gratuit este cea de la Acces (acum {monthsText(durationMonths)}).</Form.Text>
+          <Form.Text muted>
+            {`Accesul gratuit are durata și creditele bonus de la Acces (acum ${monthsText(durationMonths)}, ${
+              bonusCredits > 0 ? `+${plural(bonusCredits, 'credit', 'credite')}` : 'fără credite bonus'
+            }).`}
+          </Form.Text>
         </Card.Body>
       </Card>
 

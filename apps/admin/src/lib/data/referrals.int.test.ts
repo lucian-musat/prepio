@@ -2,8 +2,8 @@ import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { accessSource, getAccessEntries, getReferralDetails } from './referrals';
-import { getStudent } from './students';
+import { accessSource, currentAccessContributors, getAccessEntries, getReferralDetails } from './referrals';
+import { getStudent, ledgerDetails } from './students';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
 
@@ -95,9 +95,23 @@ describe.skipIf(!url || !anon || !serviceKey)('student referrals data functions 
 
     const got = await getStudent(db, inviter);
     expect(got!.student.accessUntil).not.toBeNull();
-    expect(accessSource(await getAccessEntries(db, inviter), got!.student.accessUntil, new Date())).toMatchObject({ kind: 'referral_reward' });
+    const source = accessSource(await getAccessEntries(db, inviter), got!.student.accessUntil, new Date());
+    expect(source).toMatchObject({ kind: 'referral_reward' });
+    // The invitee that earned it is linked to that grant.
+    expect(currentAccessContributors(r.invitees, source).map((i) => i.id)).toEqual([r.invitees[0].id]);
+    // The free access includes the access bonus credits, named as such in the credits table.
+    const bonus = got!.ledger.filter((e) => e.kind === 'access_bonus');
+    expect(bonus).toHaveLength(offer.data.bonus_credits > 0 ? 1 : 0);
+    if (bonus.length) {
+      expect(bonus[0].delta).toBe(offer.data.bonus_credits);
+      expect(bonus[0].referralId).toBe(r.invitees[0].id);
+      expect(ledgerDetails(bonus[0])).toBe('Acces gratuit din recomandări');
+    }
     // The invitee bought it themselves.
     const inv = await getStudent(db, invitee);
-        expect(accessSource(await getAccessEntries(db, invitee), inv!.student.accessUntil, new Date()).kind).toBe('purchase');
+    expect(accessSource(await getAccessEntries(db, invitee), inv!.student.accessUntil, new Date()).kind).toBe('purchase');
+    if (offer.data.bonus_credits > 0) {
+      expect(ledgerDetails(inv!.ledger.find((e) => e.kind === 'access_bonus')!)).toBe('Acces cumpărat');
+    }
   });
 });

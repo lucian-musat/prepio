@@ -23,7 +23,12 @@ export type AdminReferralRow = {
   firstPaidAt: string | null;
   rewardCredits: number | null;
   accountDeleted: boolean;
+  /** The free-access grant (access_ledger id) this invitee was consumed by; null otherwise. */
+  accessLedgerId: number | null;
 };
+
+/** Where the current access came from; `entryId` is the access_ledger entry that set it (null for trial). */
+export type AccessSource = { kind: AccessSourceKind; at: string | null; entryId: number | null };
 
 const instant = (iso: string | null) => (iso ? new Date(iso).getTime() : NaN);
 
@@ -35,20 +40,28 @@ export function accessSource(
   entries: AdminAccessLedgerEntry[],
   accessUntil: string | null,
   now: Date,
-): { kind: AccessSourceKind; at: string | null } {
+): AccessSource {
   const end = instant(accessUntil);
-  if (accessUntil === null || !(end > now.getTime())) return { kind: 'trial', at: null };
+  if (accessUntil === null || !(end > now.getTime())) return { kind: 'trial', at: null, entryId: null };
   const latestFirst = [...entries]
     .sort((a, b) => b.id - a.id)
     .filter((e): e is AdminAccessLedgerEntry & { kind: AccessSourceKind } => e.kind !== 'admin_revoke');
   const pick = latestFirst.find((e) => instant(e.untilAfter) === end) ?? latestFirst[0];
-  if (!pick) return { kind: 'trial', at: null };
-  return { kind: pick.kind, at: pick.createdAt };
+  if (!pick) return { kind: 'trial', at: null, entryId: null };
+  return { kind: pick.kind, at: pick.createdAt, entryId: pick.id };
 }
 
 const SOURCE_LABELS: Record<AccessSourceKind, string> = {
   purchase: 'Plătit', referral_reward: 'Recomandări', admin_grant: 'Acordat manual', trial: 'Trial',
 };
+/** The invitees whose free access is the current one (spec: "Recomandări, with the invitees that earned it"). */
+export function currentAccessContributors(
+  invitees: AdminReferralRow[], source: Pick<AccessSource, 'kind' | 'entryId'> | undefined,
+): AdminReferralRow[] {
+  if (source?.kind !== 'referral_reward' || source.entryId === null) return [];
+  return invitees.filter((r) => r.accessLedgerId === source.entryId);
+}
+
 export const accessSourceLabel = (kind: AccessSourceKind): string => SOURCE_LABELS[kind];
 
 export function referralStateLabel(state: string, rewardCredits: number | null): string {
@@ -89,12 +102,15 @@ export type ReferralDetails = { code: string | null; invitedBy: { id: string; na
 
 /** The student's own code, who invited them and the people they invited. */
 export async function getReferralDetails(db: SupabaseClient, userId: string): Promise<ReferralDetails> {
-  const [inviteesRes, contextRes, ownRes] = await Promise.all([
+  const [inviteesRes, contextRes, ownRes, grantsRes] = await Promise.all([
     db.rpc('admin_referrals', { p_user: userId }),
     db.rpc('admin_referral_context', { p_user: userId }),
     db.from('referral_codes').select('code').eq('user_id', userId).maybeSingle(),
+    // Which grant consumed each invitee (admins read every referral row).
+    db.from('referrals').select('id,access_ledger_id').eq('inviter_id', userId),
   ]);
   const invitees = check(inviteesRes) as ReferralDb[];
+  const grants = new Map((check(grantsRes) as { id: string; access_ledger_id: number | null }[]).map((g) => [g.id, g.access_ledger_id]));
   const context = check(contextRes) as { code: string | null; inviter_id: string | null; inviter_name: string | null }[];
   // The context RPC returns the inviter's code; the student's own code is read from the table (admins can select it).
   const own = check(ownRes) as { code: string } | null;
@@ -104,7 +120,7 @@ export async function getReferralDetails(db: SupabaseClient, userId: string): Pr
     invitedBy: inviter ? { id: inviter.inviter_id!, name: inviter.inviter_name ?? 'Coleg' } : null,
     invitees: invitees.map((r) => ({
       id: r.id, firstName: r.first_name, email: r.email, state: r.state, createdAt: r.created_at, firstPaidAt: r.first_paid_at,
-      rewardCredits: r.reward_credits, accountDeleted: r.account_deleted,
+      rewardCredits: r.reward_credits, accountDeleted: r.account_deleted, accessLedgerId: grants.get(r.id) ?? null,
     })),
   };
 }
@@ -115,7 +131,7 @@ export async function getReferralDetails(db: SupabaseClient, userId: string): Pr
  */
 export async function loadAccessSource(
   db: SupabaseClient, userId: string, accessUntil: string | null, now: Date,
-): Promise<{ kind: AccessSourceKind; at: string | null } | undefined> {
+): Promise<AccessSource | undefined> {
   try {
     return accessSource(await getAccessEntries(db, userId), accessUntil, now);
   } catch (e) {

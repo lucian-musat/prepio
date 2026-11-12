@@ -125,7 +125,7 @@ export default async function StudentPage({
           {tab === 'cronologie' && <TimelineTab userId={id} initial={events} pageSize={EVENTS_PAGE_SIZE} />}
           {tab === 'credite' && <LedgerTable ledger={ledger} />}
           {tab === 'comenzi' && <OrdersTable orders={orders} />}
-          {tab === 'recomandari' && <ReferralsSection code={referrals?.code ?? null} invitedBy={referrals?.invitedBy ?? null} invitees={referrals?.invitees ?? []} failed={referrals === null} />}
+          {tab === 'recomandari' && <ReferralsSection code={referrals?.code ?? null} invitedBy={referrals?.invitedBy ?? null} invitees={referrals?.invitees ?? []} failed={referrals === null} currentGrantId={source?.kind === 'referral_reward' ? source.entryId : null} />}
         </div>
       </div>
       </NoticeProvider>

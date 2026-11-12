@@ -17,18 +17,23 @@ const save = () => screen.getByRole('button', { name: 'Salvează recomandările'
 
 describe('ReferralsForm', () => {
   it('shows the current values and the access duration', () => {
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     expect((screen.getByLabelText('Recomandări active') as HTMLInputElement).checked).toBe(false);
     expect((screen.getByLabelText('Invitați pentru acces gratuit') as HTMLInputElement).value).toBe('5');
     expect((screen.getByLabelText('Credite pe invitat (cu acces activ)') as HTMLInputElement).value).toBe('40');
     expect((screen.getByLabelText('Limită de invitați recompensați per elev') as HTMLInputElement).value).toBe('100');
-    expect(screen.getByText(/Durata accesului gratuit este cea de la Acces \(acum 3 luni\)/)).toBeTruthy();
+    expect(screen.getByText('Accesul gratuit are durata și creditele bonus de la Acces (acum 3 luni, +100 de credite).')).toBeTruthy();
+  });
+
+  it('names a free access without bonus credits when Acces has none', () => {
+    render(<ReferralsForm initial={INITIAL} durationMonths={1} bonusCredits={0} />);
+    expect(screen.getByText('Accesul gratuit are durata și creditele bonus de la Acces (acum o lună, fără credite bonus).')).toBeTruthy();
   });
 
   it('toggling the switch saves with the right payload', async () => {
     const user = userEvent.setup();
     actions.saveReferralSettings.mockResolvedValue({ ok: true });
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     await user.click(screen.getByLabelText('Recomandări active'));
     await user.click(save());
     await waitFor(() => expect(actions.saveReferralSettings).toHaveBeenCalledTimes(1));
@@ -39,7 +44,7 @@ describe('ReferralsForm', () => {
   it('editing a field after a successful save clears the saved status', async () => {
     const user = userEvent.setup();
     actions.saveReferralSettings.mockResolvedValue({ ok: true });
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     await user.click(save());
     expect(await screen.findByText('Setările recomandărilor au fost salvate.')).toBeTruthy();
     await user.type(screen.getByLabelText('Invitați pentru acces gratuit'), '1');
@@ -48,7 +53,7 @@ describe('ReferralsForm', () => {
 
   it('blocks invalid input with the message', async () => {
     const user = userEvent.setup();
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     const t = screen.getByLabelText('Invitați pentru acces gratuit');
     await user.clear(t);
     await user.type(t, '101');
@@ -59,7 +64,7 @@ describe('ReferralsForm', () => {
 
   it('blocks an empty field', async () => {
     const user = userEvent.setup();
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     await user.clear(screen.getByLabelText('Limită de invitați recompensați per elev'));
     await user.click(save());
     expect(actions.saveReferralSettings).not.toHaveBeenCalled();
@@ -69,7 +74,7 @@ describe('ReferralsForm', () => {
   it('shows a server error and no saved confirmation', async () => {
     const user = userEvent.setup();
     actions.saveReferralSettings.mockResolvedValue({ ok: false, error: 'Setările recomandărilor nu au putut fi salvate. Încearcă din nou.' });
-    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} bonusCredits={100} />);
     await user.click(save());
     expect(await screen.findByText('Setările recomandărilor nu au putut fi salvate. Încearcă din nou.')).toBeTruthy();
     expect(screen.queryByText('Setările recomandărilor au fost salvate.')).toBeNull();

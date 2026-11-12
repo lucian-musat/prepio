@@ -45,6 +45,10 @@ export type AdminLedgerEntry = {
   adminEmail: string | null;
   /** Set when `target` is `bac:<subject id>`: the subject's title (null when the subject no longer exists). */
   bacSubjectTitle: string | null;
+  /** `referral`: the rewarded invitee; `access_bonus`: set when the bonus came with a free access from referrals. */
+  referralId?: string | null;
+  /** `access_bonus` of a purchase: its access order. */
+  accessOrderId?: string | null;
 };
 
 /** `bac:<uuid>` ledger target -> the subject id. */
@@ -63,10 +67,12 @@ async function subjectTitles(db: SupabaseClient, ids: Iterable<string | null>): 
 
 /** Detail text of a ledger row: a BAC grading names the subject; otherwise the exercise and the reason. */
 export function ledgerDetails(
-  e: Pick<AdminLedgerEntry, 'kind' | 'target' | 'reason' | 'adminEmail' | 'exerciseType' | 'exercisePrompt' | 'bacSubjectTitle'>,
+  e: Pick<AdminLedgerEntry, 'kind' | 'target' | 'reason' | 'adminEmail' | 'exerciseType' | 'exercisePrompt' | 'bacSubjectTitle' | 'referralId' | 'accessOrderId'>,
 ): string {
   if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
   if (e.kind === 'referral') return 'Invitat care a plătit';
+  if (e.kind === 'access_bonus' && e.referralId) return 'Acces gratuit din recomandări';
+  if (e.kind === 'access_bonus' && e.accessOrderId) return 'Acces cumpărat';
   const parts: string[] = [];
   if (bacSubjectOf(e.target)) parts.push(`Corectare subiect · ${e.bacSubjectTitle ?? '(subiect șters)'}`);
   if (e.exerciseType) {
@@ -164,6 +170,7 @@ export async function getStudent(
   const ledgerRows = check(await db.rpc('admin_credit_ledger', { p_user: id, p_limit: HISTORY_LIMIT })) as {
     id: number; delta: number; balance_after: number; kind: string; target: string | null; reason: string | null;
     created_at: string; exercise_id: string | null; exercise_type: string | null; exercise_prompt: string | null; admin_email: string | null;
+    referral_id?: string | null; access_order_id?: string | null;
   }[];
   const orderRows = check(
     await db
@@ -191,6 +198,8 @@ export async function getStudent(
       exerciseType: r.exercise_type,
       exercisePrompt: r.exercise_prompt,
       adminEmail: r.admin_email,
+      referralId: r.referral_id ?? null,
+      accessOrderId: r.access_order_id ?? null,
     })),
     orders: mergeOrders(
       orderRows.map((o): AdminOrder => ({
@@ -404,6 +413,7 @@ export function eventLabel(e: EventInput): string {
       const parts = [
         num('months') > 0 ? monthsLabel(num('months')) : null,
         typeof d.until === 'string' ? `până la ${formatAccessDate(new Date(d.until))}` : null,
+        num('bonus_credits') > 0 ? `+${num('bonus_credits')} ${num('bonus_credits') === 1 ? 'credit inclus' : 'credite incluse'}` : null,
       ].filter(Boolean);
       return `Acces gratuit prin recomandări${parts.length ? ` (${parts.join(', ')})` : ''}`;
     }

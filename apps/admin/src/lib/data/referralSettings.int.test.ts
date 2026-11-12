@@ -14,7 +14,13 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const email = process.env.ADMIN_EMAIL ?? 'admin@prepio.local';
 const password = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
 
-describe.skipIf(!url || !anon || !serviceKey)('referral settings data functions (local Supabase)', () => {
+// Needs the local stack: say which variable is missing instead of skipping silently.
+const missing = Object.entries({ NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: anon, SUPABASE_SERVICE_ROLE_KEY: serviceKey })
+  .filter(([, v]) => !v)
+  .map(([k]) => k);
+if (missing.length) console.warn(`[referralSettings.int] skipped: missing ${missing.join(', ')} (apps/admin/.env.local)`);
+
+describe.skipIf(missing.length > 0)('referral settings data functions (local Supabase)', () => {
   let db: SupabaseClient;
   let service: SupabaseClient;
   let original: ReferralSettings;
@@ -55,6 +61,7 @@ describe.skipIf(!url || !anon || !serviceKey)('referral settings data functions 
     const created = await service.auth.admin.createUser({ email: studentEmail, password: studentPassword, email_confirm: true });
     if (created.error) throw created.error;
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let cleanupError: unknown = null;
     try {
       const studentDb = createClient(url!, anon!, { auth: { persistSession: false } });
       const signIn = await studentDb.auth.signInWithPassword({ email: studentEmail, password: studentPassword });
@@ -66,8 +73,10 @@ describe.skipIf(!url || !anon || !serviceKey)('referral settings data functions 
       expect(await getReferralSettings(db)).toEqual(before);
     } finally {
       spy.mockRestore();
-      await service.auth.admin.deleteUser(created.data.user!.id);
+      // Recorded, not thrown here: a failing assertion above must stay the reported failure.
+      cleanupError = (await service.auth.admin.deleteUser(created.data.user!.id)).error;
     }
+    expect(cleanupError).toBeNull();
   });
 
   it('an anonymous caller is also refused (execute revoked)', async () => {
@@ -76,7 +85,9 @@ describe.skipIf(!url || !anon || !serviceKey)('referral settings data functions 
     try {
       const { error } = await anonDb.rpc('admin_save_referral_settings', { p_enabled: true, p_threshold: 1, p_credits: 1, p_max: 1 });
       expect(error?.code).toBe('42501');
-      await expect(saveReferralSettings(anonDb, original)).rejects.toBeInstanceOf(UserError);
+      const refused = saveReferralSettings(anonDb, original);
+      await expect(refused).rejects.toBeInstanceOf(UserError);
+      await expect(refused).rejects.toThrow('Nu ai permisiunea să modifici setările recomandărilor.');
     } finally {
       spy.mockRestore();
     }

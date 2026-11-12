@@ -197,6 +197,18 @@ describe('referral timeline events', () => {
     expect(eventLabel(ev('referral_access', { months: 1 }))).toBe('Acces gratuit prin recomandări (1 lună)');
     expect(eventLabel(ev('referral_access', null))).toBe('Acces gratuit prin recomandări');
   });
+  it('labels referral_access with the included bonus credits', () => {
+    expect(eventLabel(ev('referral_access', { months: 3, until: '2027-02-08T10:00:00Z', bonus_credits: 100 }))).toBe(
+      'Acces gratuit prin recomandări (3 luni, până la 8 februarie 2027, +100 credite incluse)',
+    );
+    expect(eventLabel(ev('referral_access', { months: 3, bonus_credits: 0 }))).toBe('Acces gratuit prin recomandări (3 luni)');
+  });
+  it('names the bonus row of a free access from referrals', () => {
+    const base = { kind: 'access_bonus', target: null, reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: null };
+    expect(ledgerDetails({ ...base, referralId: 'r1', accessOrderId: null })).toBe('Acces gratuit din recomandări');
+    expect(ledgerDetails({ ...base, referralId: null, accessOrderId: 'o1' })).toBe('Acces cumpărat');
+    expect(ledgerDetails({ ...base, referralId: null, accessOrderId: null })).toBe('');
+  });
   it('labels referral_credits', () => {
     expect(eventLabel(ev('referral_credits', { credits: 40 }))).toBe('Credite din recomandare: +40');
   });

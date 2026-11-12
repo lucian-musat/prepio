@@ -10,7 +10,7 @@ const dateFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyl
 
 const row = (over: Partial<AdminReferralRow>): AdminReferralRow => ({
   id: 'r', firstName: 'Ion', email: 'ion@x.ro', state: 'registered', createdAt: '2026-11-04T10:00:00Z',
-  firstPaidAt: null, rewardCredits: null, accountDeleted: false, ...over,
+  firstPaidAt: null, rewardCredits: null, accountDeleted: false, accessLedgerId: null, ...over,
 });
 
 describe('ReferralsSection', () => {
@@ -52,6 +52,26 @@ describe('ReferralsSection', () => {
     render(<ReferralsSection code={null} invitedBy={null} invitees={[]} failed />);
     expect(screen.getByRole('alert').textContent).toBe('Recomandările nu au putut fi încărcate.');
     expect(screen.queryByText('Nu a invitat pe nimeni.')).toBeNull();
+  });
+
+  it('names and marks the invitees that earned the current free access', () => {
+    const invitees = [
+      row({ id: '1', firstName: 'Ana', state: 'consumed_access', accessLedgerId: 7 }),
+      row({ id: '2', firstName: 'Bia', state: 'consumed_access', accessLedgerId: 3 }),
+      row({ id: '3', firstName: 'Cip', state: 'consumed_access', accessLedgerId: 7 }),
+    ];
+    render(<ReferralsSection code="ABCD2345" invitedBy={null} invitees={invitees} currentGrantId={7} />);
+    expect(screen.getByText('Au contribuit la accesul curent: Ana, Cip')).toBeTruthy();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(within(rows[0]).getByText('acces curent')).toBeTruthy();
+    expect(within(rows[1]).queryByText('acces curent')).toBeNull();
+    expect(within(rows[2]).getByText('acces curent')).toBeTruthy();
+  });
+
+  it('shows no contributors note without a current free access', () => {
+    render(<ReferralsSection code="ABCD2345" invitedBy={null} invitees={[row({ state: 'consumed_access', accessLedgerId: 7 })]} currentGrantId={null} />);
+    expect(screen.queryByText(/Au contribuit/)).toBeNull();
+    expect(screen.queryByText('acces curent')).toBeNull();
   });
 
   it('shows the empty state', () => {
