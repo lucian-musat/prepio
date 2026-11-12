@@ -40,10 +40,13 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
   /** Bumped by every edit and check: a lookup that comes back for an older value is dropped. */
   const seq = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** False once the field is gone: a check that comes back later changes nothing. */
+  const mounted = useRef(true);
 
   // Programme on/off, and a code already pending (the invite link).
   useEffect(() => {
     let live = true;
+    mounted.current = true;
     void (async () => {
       let on = false;
       try {
@@ -74,6 +77,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
     })();
     return () => {
       live = false;
+      mounted.current = false;
       clearTimeout(timer.current);
     };
   }, []);
@@ -86,20 +90,21 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
       setVerdict(null);
       return;
     }
+    const stale = () => !mounted.current || mine !== seq.current;
     try {
       const res = await lookupReferralCode(code);
-      if (mine !== seq.current) return;
+      if (stale()) return;
       if (res.valid) {
         setVerdict({ kind: 'valid', name: res.inviterFirstName });
         await storePendingCode(code);
-        if (mine !== seq.current) return;
+        if (stale()) return;
         onChangeRef.current(code);
       } else {
         setVerdict({ kind: 'invalid' });
         onChangeRef.current(null);
       }
     } catch {
-      if (mine !== seq.current) return;
+      if (stale()) return;
       // Could not check (offline, rate limit): the code is kept, the server decides on attach.
       setVerdict({ kind: 'unreachable' });
       onChangeRef.current(code);

@@ -1,10 +1,17 @@
 import { render, waitFor } from '@testing-library/react-native';
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useNavigation } from 'expo-router';
 import InviteLinkScreen from './InviteLinkScreen';
 import { storePendingCode } from '../lib/referrals';
 import { useAuth } from '../auth/AuthProvider';
 
-jest.mock('expo-router', () => ({ Redirect: jest.fn(() => null), useLocalSearchParams: jest.fn() }));
+jest.mock('expo-router', () => ({ Redirect: jest.fn(() => null), useLocalSearchParams: jest.fn(), useNavigation: jest.fn() }));
+
+/** The screen's navigation, its Stack's route and the root route above it (expo-router puts the link params on both). */
+function navChain() {
+  const root = { setParams: jest.fn(), getParent: () => undefined };
+  const stack = { setParams: jest.fn(), getParent: () => root };
+  return { screen: { setParams: jest.fn(), getParent: () => stack }, stack, root };
+}
 jest.mock('../lib/referrals', () => ({ ...jest.requireActual('../lib/referrals'), storePendingCode: jest.fn() }));
 jest.mock('../auth/AuthProvider', () => ({ useAuth: jest.fn() }));
 
@@ -13,6 +20,17 @@ beforeEach(() => {
   (storePendingCode as jest.Mock).mockResolvedValue(undefined);
   (useLocalSearchParams as jest.Mock).mockReturnValue({ code: 'ab-cd2345' });
   (useAuth as jest.Mock).mockReturnValue({ status: 'signedOut' });
+  (useNavigation as jest.Mock).mockReturnValue(navChain().screen);
+});
+
+it('clears the code from the ancestor routes before redirecting, so the start page URL has no ?code=', async () => {
+  const chain = navChain();
+  (useNavigation as jest.Mock).mockReturnValue(chain.screen);
+  await render(<InviteLinkScreen />);
+  await waitFor(() => expect(Redirect).toHaveBeenCalledWith({ href: '/' }, undefined));
+  expect(chain.stack.setParams).toHaveBeenCalledWith({ code: undefined });
+  expect(chain.root.setParams).toHaveBeenCalledWith({ code: undefined });
+  expect(chain.root.setParams.mock.invocationCallOrder[0]).toBeLessThan((Redirect as jest.Mock).mock.invocationCallOrder[0]);
 });
 
 it('stores the normalized code, then redirects to the start page', async () => {

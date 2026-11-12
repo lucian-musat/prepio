@@ -18,7 +18,7 @@ jest.mock('./AuthProvider', () => ({
 }));
 jest.mock('../lib/referrals', () => ({
   ...jest.requireActual('../lib/referrals'),
-  fetchReferralPublicSettings: jest.fn().mockResolvedValue({ enabled: true, threshold: 5, creditsPerInvitee: 40, durationMonths: 3, maxRewarded: 100 }),
+  fetchReferralPublicSettings: jest.fn().mockResolvedValue({ enabled: true, threshold: 5, creditsPerInvitee: 40, durationMonths: 3, maxRewarded: 100, bonusCredits: 100 }),
 }));
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }));
 

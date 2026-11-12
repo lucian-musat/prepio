@@ -20,6 +20,8 @@ export type ReferralPublicSettings = {
   creditsPerInvitee: number;
   durationMonths: number;
   maxRewarded: number;
+  /** The bonus credits of a paid access; the free access from referrals includes the same. */
+  bonusCredits: number;
 };
 
 export type ReferralSummary = {
@@ -33,6 +35,9 @@ export type ReferralSummary = {
   inviteeCount: number;
   creditsEarned: number;
   freePeriodsEarned: number;
+  maxRewarded: number;
+  /** The student already has as many rewarded invitees as the cap allows: new ones bring no reward. */
+  capReached: boolean;
 };
 
 export type ReferralRow = {
@@ -122,6 +127,7 @@ export async function fetchReferralPublicSettings(): Promise<ReferralPublicSetti
       credits_per_invitee: number;
       duration_months: number;
       max_rewarded: number;
+      bonus_credits: number;
     }> | null
   )?.[0];
   if (!row) throw new Error('referral settings missing');
@@ -131,6 +137,7 @@ export async function fetchReferralPublicSettings(): Promise<ReferralPublicSetti
     creditsPerInvitee: row.credits_per_invitee,
     durationMonths: row.duration_months,
     maxRewarded: row.max_rewarded,
+    bonusCredits: row.bonus_credits ?? 0,
   };
 }
 
@@ -150,6 +157,8 @@ export async function fetchReferralSummary(client: SupabaseClient = getSupabase(
       invitee_count: number;
       credits_earned: number;
       free_periods_earned: number;
+      max_rewarded: number;
+      cap_reached: boolean;
     }> | null
   )?.[0];
   if (!row) throw new Error('referral summary missing');
@@ -164,6 +173,8 @@ export async function fetchReferralSummary(client: SupabaseClient = getSupabase(
     inviteeCount: row.invitee_count,
     creditsEarned: row.credits_earned,
     freePeriodsEarned: row.free_periods_earned,
+    maxRewarded: row.max_rewarded,
+    capReached: !!row.cap_reached,
   };
 }
 

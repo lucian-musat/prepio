@@ -38,6 +38,8 @@ export type StudentLedgerEntry = {
   createdAt: string;
   /** `referral`: the invitee's first name (the snapshot when the account is deleted); null when there is none. */
   referralName?: string | null;
+  /** `access_bonus`: the bonus credits of a free access earned through referrals (not of a purchase). */
+  fromReferral?: boolean;
   /** `lesson`: the title of the exercise's lesson, when the student can read it (published). */
   exercise: { type: ConsolidationType; prompt: string; requirements?: string[]; lesson?: string } | null;
 };
@@ -101,6 +103,7 @@ export async function fetchLedger(
       reason: r.reason,
       createdAt: r.created_at,
       ...(r.kind === 'referral' ? { referralName: (r.referral_id && names.get(r.referral_id)) || null } : {}),
+      ...(r.kind === 'access_bonus' && r.referral_id ? { fromReferral: true } : {}),
       exercise: ex
         ? { type: ex.type, prompt: ex.prompt, ...(reqs ? { requirements: reqs } : {}), ...(lesson ? { lesson } : {}) }
         : null,
@@ -132,7 +135,7 @@ function base(e: StudentLedgerEntry): string {
     case 'purchase':
       return `Pachet ${creditsLabel(e.delta)}`;
     case 'access_bonus':
-      return 'Credite incluse în acces';
+      return e.fromReferral ? 'Credite incluse în accesul gratuit din recomandări' : 'Credite incluse în acces';
     case 'refund':
       return 'Verificare nereușită · returnat';
     case 'referral':

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Redirect, router } from 'expo-router';
-import { color, feedbackText, plural, space } from '@prepio/shared';
+import { color, feedbackText, formatAccessDate, plural, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import { fetchMyReferrals, fetchReferralSummary, inviteUrl, monthsText, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { copyText, shareText } from '../lib/share';
@@ -10,6 +10,7 @@ const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
 const COPIED = 'Copiat ✓';
 const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
+const CAP_REACHED = 'Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.';
 /** Below this width the two copy buttons stack, so their labels fit. */
 const STACK_BELOW = 420;
 
@@ -33,14 +34,27 @@ export function referralStatus(r: ReferralRow): string {
   }
 }
 
+/** Over the cap new invitees bring nothing, so the screen promises nothing per colleague. */
+function CapNote() {
+  return (
+    <AppText role="small" color="textMuted">
+      {CAP_REACHED}
+    </AppText>
+  );
+}
+
 function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: ReferralRow[] }) {
   if (!summary.hasAccess) {
     const left = Math.max(1, summary.threshold - summary.pendingCount);
     return (
       <Surface style={styles.stack}>
-        <AppText role="bodyStrong">
-          {`Încă ${plural(left, 'coleg', 'colegi')} ${left === 1 ? 'care își ia' : 'care își iau'} abonament și primești ${monthsText(summary.durationMonths)} gratis`}
-        </AppText>
+        {summary.capReached ? (
+          <CapNote />
+        ) : (
+          <AppText role="bodyStrong">
+            {`Încă ${plural(left, 'coleg', 'colegi')} ${left === 1 ? 'care își ia' : 'care își iau'} abonament și primești ${monthsText(summary.durationMonths)} gratis`}
+          </AppText>
+        )}
         <ProgressBar
           value={summary.threshold > 0 ? summary.pendingCount / summary.threshold : 0}
           accessibilityLabel="Progres spre abonamentul gratuit"
@@ -61,12 +75,22 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   ];
   return (
     <Surface style={styles.stack}>
-      <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își ia abonament`}</AppText>
+      {summary.capReached ? (
+        <CapNote />
+      ) : (
+        <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își ia abonament`}</AppText>
+      )}
       <AppText role="small" color="textMuted">
         {`Până acum: ${totals.join(' · ')}`}
       </AppText>
     </Surface>
   );
+}
+
+/** „Înregistrat 10 noiembrie 2026 · Abonat din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
+export function inviteeDates(r: ReferralRow): string {
+  const registered = `Înregistrat ${formatAccessDate(new Date(r.createdAt))}`;
+  return r.firstPaidAt ? `${registered} · Abonat din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
 }
 
 function InviteeRow({ r }: { r: ReferralRow }) {
@@ -81,6 +105,9 @@ function InviteeRow({ r }: { r: ReferralRow }) {
       ) : null}
       <AppText role="small" color="textMuted">
         {referralStatus(r)}
+      </AppText>
+      <AppText role="caption" color="textMuted">
+        {inviteeDates(r)}
       </AppText>
     </View>
   );

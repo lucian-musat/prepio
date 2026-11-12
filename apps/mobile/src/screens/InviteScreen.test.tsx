@@ -39,6 +39,8 @@ const summary = (over: Partial<ReferralSummary> = {}): ReferralSummary => ({
   inviteeCount: 2,
   creditsEarned: 0,
   freePeriodsEarned: 0,
+  maxRewarded: 100,
+  capReached: false,
   ...over,
 });
 const row = (id: string, over: Partial<ReferralRow> = {}): ReferralRow => ({
@@ -154,6 +156,45 @@ it('lists invitees with a status each, and marks deleted accounts', async () => 
   expect(screen.getByText('Coleg')).toBeTruthy();
   expect(screen.getByText('Radu · cont șters')).toBeTruthy();
   expect(screen.queryByText('null')).toBeNull();
+});
+
+it('shows when each invitee registered and, once paid, since when they subscribe', async () => {
+  mockedRows.mockResolvedValue([
+    row('1', { state: 'registered', firstName: 'Ion', createdAt: '2026-11-10T10:00:00Z' }),
+    row('2', { state: 'converted_credits', rewardCredits: 40, firstName: 'Eva', createdAt: '2026-11-09T23:30:00Z', firstPaidAt: '2026-11-11T08:00:00Z' }),
+  ]);
+  await mount();
+  expect(await screen.findByText('Înregistrat 10 noiembrie 2026')).toBeTruthy();
+  // 23:30 UTC is already the next day in Bucharest.
+  expect(screen.getByText('Înregistrat 10 noiembrie 2026 · Abonat din 11 noiembrie 2026')).toBeTruthy();
+  expect(screen.queryByText(/Abonat din.*Ion/)).toBeNull();
+});
+
+it('cap reached: a quiet note, and no per-colleague promise', async () => {
+  mockedSummary.mockResolvedValue(summary({ hasAccess: true, creditsEarned: 80, capReached: true, maxRewarded: 2 }));
+  mockedRows.mockResolvedValue([
+    row('1', { state: 'converted_credits', rewardCredits: 40 }),
+    row('2', { state: 'converted_credits', rewardCredits: 40 }),
+  ]);
+  await mount();
+  expect(await screen.findByText('Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.')).toBeTruthy();
+  expect(screen.queryByText(/pentru fiecare coleg care își ia abonament/)).toBeNull();
+  expect(screen.getByText('Până acum: 2 abonați · 80 de credite câștigate')).toBeTruthy();
+});
+
+it('cap reached without access: the note replaces the free-period promise, the progress stays', async () => {
+  mockedSummary.mockResolvedValue(summary({ capReached: true, pendingCount: 2 }));
+  await mount();
+  expect(await screen.findByText('Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.')).toBeTruthy();
+  expect(screen.queryByText(/primești 3 luni gratis/)).toBeNull();
+  expect(screen.getByText('2 din 5')).toBeTruthy();
+});
+
+it('no cap note below the cap', async () => {
+  mockedSummary.mockResolvedValue(summary({ hasAccess: true }));
+  await mount();
+  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își ia abonament')).toBeTruthy();
+  expect(screen.queryByText(/Ai atins limita/)).toBeNull();
 });
 
 it('empty list', async () => {

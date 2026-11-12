@@ -24,6 +24,7 @@ const settings = (over: Partial<ReferralPublicSettings> = {}): ReferralPublicSet
   creditsPerInvitee: 40,
   durationMonths: 3,
   maxRewarded: 100,
+  bonusCredits: 100,
   ...over,
 });
 
@@ -109,11 +110,31 @@ it('follows the settings when they change (other numbers, the "de" rule)', async
   expect(screen.queryByText(/5 colegi/)).toBeNull();
 });
 
-it('says what the free access is: same as a purchase, no bonus credits', async () => {
+it('says what the free access is: same as a purchase, with the same bonus credits (live number)', async () => {
   await mount();
   await screen.findByText('Pe scurt');
-  expect(all(/la fel ca un abonament cumpărat/)).toBe(true);
-  expect(all(/fără credite bonus/)).toBe(true);
+  expect(all(/la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții și aceleași credite bonus incluse \(acum 100 de credite\)/)).toBe(true);
+  expect(all(/cu 100 de credite bonus incluse/)).toBe(true);
+  expect(screen.queryByText(/fără credite bonus/)).toBeNull();
+  expect(screen.queryByText(/nu vine cu credite bonus/)).toBeNull();
+});
+
+it('follows the bonus setting: another number, none, or unknown', async () => {
+  mocked.mockResolvedValue(settings({ bonusCredits: 1 }));
+  const first = await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/aceleași credite bonus incluse \(acum 1 credit\)/)).toBe(true);
+  await first.unmount();
+  mocked.mockResolvedValue(settings({ bonusCredits: 0 }));
+  const second = await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/Acum abonamentul nu include credite bonus, deci nici accesul gratuit/)).toBe(true);
+  expect(screen.queryByText(/credite bonus incluse/)).toBeNull();
+  await second.unmount();
+  mocked.mockRejectedValue(new Error('offline'));
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/aceleași credite bonus incluse ca la o cumpărare/)).toBe(true);
 });
 
 it('covers the rules the database enforces', async () => {
@@ -168,5 +189,10 @@ it('tells what happens to waiting colleagues when the inviter buys, and when the
   ).toBe(true);
   expect(all(/data înregistrării tale, data plății/)).toBe(true);
   expect(all(/nu au fost încă numărați/)).toBe(true);
+  // Every buy-conversion sentence carries the programme-on qualifier.
+  expect(all(/Dacă îți cumperi un abonament nou cât timp recomandările sunt pornite, se transformă în credite/)).toBe(true);
+  expect(all(/până îți cumperi abonament cât timp recomandările sunt pornite/)).toBe(true);
+  expect(all(/Când Ioana își cumpără și ea abonament, cât timp recomandările sunt pornite/)).toBe(true);
+  expect(screen.queryByText(/Dacă îți cumperi un abonament nou, se transformă în credite/)).toBeNull();
   expect(screen.queryByText(/prietenul/)).toBeNull();
 });

@@ -18,7 +18,10 @@ function historyLabel(h: AccessHistoryEntry): string {
       .filter(Boolean)
       .join(' · ');
   }
-  if (h.kind === 'referral_reward') return 'Recomandări';
+  // Read like a purchase row: date · what · months.
+  if (h.kind === 'referral_reward') {
+    return [formatAccessDate(new Date(h.createdAt)), 'Acces gratuit din recomandări', months].filter(Boolean).join(' · ');
+  }
   if (h.kind === 'admin_grant') return months ? `Acces acordat · ${months}` : 'Acces acordat';
   return 'Acces retras';
 }
@@ -157,7 +160,7 @@ export default function AccessScreen() {
             {history.map((h, i) => (
               <View key={`${h.createdAt}-${i}`} style={styles.row}>
                 <AppText role="bodyStrong">{historyLabel(h)}</AppText>
-                {h.kind !== 'purchase' ? (
+                {h.kind !== 'purchase' && h.kind !== 'referral_reward' ? (
                   <AppText role="caption" color="textMuted">
                     {formatAccessDate(new Date(h.createdAt))}
                   </AppText>

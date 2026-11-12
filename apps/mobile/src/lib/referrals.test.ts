@@ -87,7 +87,7 @@ describe('RPCs', () => {
 
   it('reads the public settings', async () => {
     rpc.mockResolvedValue({
-      data: [{ enabled: true, threshold: 3, credits_per_invitee: 50, duration_months: 6, max_rewarded: 10 }],
+      data: [{ enabled: true, threshold: 3, credits_per_invitee: 50, duration_months: 6, max_rewarded: 10, bonus_credits: 100 }],
       error: null,
     });
     expect(await fetchReferralPublicSettings()).toEqual({
@@ -96,6 +96,7 @@ describe('RPCs', () => {
       creditsPerInvitee: 50,
       durationMonths: 6,
       maxRewarded: 10,
+      bonusCredits: 100,
     });
     rpc.mockResolvedValue({ data: [], error: null });
     await expect(fetchReferralPublicSettings()).rejects.toThrow();
@@ -108,14 +109,14 @@ describe('student reads', () => {
       data: [
         {
           code: 'ABCD2345', enabled: true, threshold: 5, credits_per_invitee: 40, duration_months: 3, has_access: false,
-          pending_count: 2, invitee_count: 4, credits_earned: 80, free_periods_earned: 1,
+          pending_count: 2, invitee_count: 4, credits_earned: 80, free_periods_earned: 1, max_rewarded: 100, cap_reached: false,
         },
       ],
       error: null,
     });
     expect(await fetchReferralSummary()).toEqual({
       code: 'ABCD2345', enabled: true, threshold: 5, creditsPerInvitee: 40, durationMonths: 3, hasAccess: false,
-      pendingCount: 2, inviteeCount: 4, creditsEarned: 80, freePeriodsEarned: 1,
+      pendingCount: 2, inviteeCount: 4, creditsEarned: 80, freePeriodsEarned: 1, maxRewarded: 100, capReached: false,
     });
     expect(rpc).toHaveBeenCalledWith('my_referral_summary');
     rpc.mockResolvedValue({ data: [], error: null });

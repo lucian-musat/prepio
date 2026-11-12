@@ -20,7 +20,7 @@ jest.mock('../lib/referrals', () => ({
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
-const SETTINGS = { enabled: true, threshold: 3, creditsPerInvitee: 50, durationMonths: 6, maxRewarded: 10 };
+const SETTINGS = { enabled: true, threshold: 3, creditsPerInvitee: 50, durationMonths: 6, maxRewarded: 10, bonusCredits: 100 };
 const PRIVACY = 'Cel care te-a invitat va vedea prenumele și e-mailul tău.';
 
 beforeEach(() => {
@@ -71,6 +71,21 @@ it('a valid typed code shows the inviter, is stored and reported (upper-cased)',
   expect(lookupReferralCode).toHaveBeenCalledWith('ABCD2345');
   expect(storePendingCode).toHaveBeenCalledWith('ABCD2345');
   expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+});
+
+it('a check that comes back after the field is gone changes nothing', async () => {
+  let resolve!: (v: { valid: boolean; inviterFirstName: string | null }) => void;
+  (lookupReferralCode as jest.Mock).mockReturnValue(new Promise((r) => (resolve = r)));
+  const onChange = jest.fn();
+  const { unmount } = await render(<ReferralCodeField onChange={onChange} />);
+  const input = await open();
+  await fireEvent.changeText(input, 'abcd2345');
+  await fireEvent(input, 'submitEditing');
+  onChange.mockClear();
+  await unmount();
+  await act(async () => resolve({ valid: true, inviterFirstName: 'Ana' }));
+  expect(storePendingCode).not.toHaveBeenCalled();
+  expect(onChange).not.toHaveBeenCalled();
 });
 
 it('an invalid code gets a neutral message and reports null', async () => {

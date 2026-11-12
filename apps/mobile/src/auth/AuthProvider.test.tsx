@@ -817,6 +817,17 @@ describe('referral code after sign-in', () => {
     warn.mockRestore();
   });
 
+  it('a rate-limited attach (server error rate_limited) does not block sign-in and clears the code', async () => {
+    (attachReferralCode as jest.Mock).mockRejectedValue({ code: 'P0001', message: 'rate_limited', details: null, hint: null });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    await storePendingCode('ABCD2345');
+    await signIn();
+    await waitForState('ready|Ana|access-1');
+    expect(attachReferralCode).toHaveBeenCalledTimes(1);
+    expect(await getPendingCode()).toBeNull();
+    warn.mockRestore();
+  });
+
   it('does nothing without a pending code', async () => {
     await signIn();
     await waitForState('ready|Ana|access-1');

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useAuth } from '../auth/AuthProvider';
 import { normalizeCode, storePendingCode } from '../lib/referrals';
 
@@ -12,6 +12,7 @@ export default function InviteLinkScreen() {
   const { code } = useLocalSearchParams<{ code?: string | string[] }>();
   const { status } = useAuth();
   const [stored, setStored] = useState(false);
+  const navigation = useNavigation();
 
   useEffect(() => {
     let live = true;
@@ -19,7 +20,12 @@ export default function InviteLinkScreen() {
     const normalized = normalizeCode(raw ?? '');
     void (async () => {
       if (status === 'signedOut' && normalized) await storePendingCode(normalized);
-      if (live) setStored(true);
+      if (live) {
+        // expo-router also gives the link's `code` to the routes above this screen (the root layout); left there, it
+        // follows into the URL of every later page (`/?code=…`, `/name?code=…`). Cleared before leaving.
+        for (let n = navigation.getParent(); n; n = n.getParent()) n.setParams({ code: undefined } as never);
+        setStored(true);
+      }
     })();
     return () => {
       live = false;

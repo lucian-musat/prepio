@@ -7,7 +7,7 @@ import { signInWithGoogle } from '../../auth/google';
 import { emailAuthEnabled } from '../../lib/flags';
 import { TERMS_VERSION } from '../../lib/legal';
 import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
-import { storePendingCode } from '../../lib/referrals';
+import { clearPendingCode, storePendingCode } from '../../lib/referrals';
 import ReferralCodeField from '../../components/ReferralCodeField';
 import AgeTermsCheckbox, { CONSENT_HINT } from '../../components/AgeTermsCheckbox';
 import AuthHero from './AuthHero';
@@ -53,11 +53,12 @@ export default function WelcomeScreen() {
       // Written before leaving the page (web redirect), whatever happened to the earlier write.
       await storeConsent(TERMS_VERSION);
       if (inviteCode.current) await storePendingCode(inviteCode.current);
-      // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent, but the consent
-      // stored for it goes (a later sign-in, maybe by someone else, must not inherit it); the next press stores it again.
-      if ((await signInWithGoogle()) === 'cancelled') await clearConsent();
+      // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent, but the consent and
+      // the invite code stored for it go (a later sign-in, maybe by someone else, must not inherit them); the next
+      // press stores both again.
+      if ((await signInWithGoogle()) === 'cancelled') await Promise.all([clearConsent(), clearPendingCode()]);
     } catch (e) {
-      await clearConsent();
+      await Promise.all([clearConsent(), clearPendingCode()]);
       setError(e instanceof Error ? e.message : 'Nu am putut face autentificarea. Încearcă din nou.');
     } finally {
       setPending(false);

@@ -54,6 +54,8 @@ const summaryOf = (over: Record<string, unknown> = {}) => ({
   inviteeCount: 0,
   creditsEarned: 0,
   freePeriodsEarned: 0,
+  maxRewarded: 100,
+  capReached: false,
   ...over,
 });
 

@@ -91,6 +91,8 @@ const summaryOf = (over: Record<string, unknown> = {}) => ({
   inviteeCount: 0,
   creditsEarned: 0,
   freePeriodsEarned: 0,
+  maxRewarded: 100,
+  capReached: false,
   ...over,
 });
 
@@ -157,7 +159,7 @@ it('navigates to the lesson when tapped', async () => {
     sections: [{ path: ['A'], lessons: [{ id: 'abc', nodeId: 'a', title: 'Lecția', position: 1 }] }],
   });
   await renderHome();
-  { const el = await screen.findByText('Lecția'); await fireEvent.press(el); }
+  await fireEvent.press(await screen.findByText('Lecția'));
   await waitFor(() => expect(router.push).toHaveBeenCalledWith('/lesson/abc'));
 });
 
@@ -198,7 +200,7 @@ it('opens a lesson on press', async () => {
     sections: [{ path: ['A'], lessons: [lesson('first', 'Prima'), lesson('second', 'A doua', 2)] }],
   });
   await renderHome();
-  { const el = await screen.findByRole('button', { name: 'A doua' }); await fireEvent.press(el); }
+  await fireEvent.press(await screen.findByRole('button', { name: 'A doua' }));
   await waitFor(() => expect(router.push).toHaveBeenCalledWith('/lesson/second'));
   expect(router.push).toHaveBeenCalledTimes(1);
 });
@@ -471,7 +473,7 @@ describe('invite entry points', () => {
     mockResetAccess({ accessUntil: null });
     mockedReferral.mockResolvedValue(summaryOf({ pendingCount: 2 }));
     await renderHome();
-    { const el = await screen.findByText('🎁 Invită colegi, 2/5 ›'); await fireEvent.press(el); }
+    await fireEvent.press(await screen.findByText('🎁 Invită colegi, 2/5 ›'));
     expect(router.push).toHaveBeenCalledWith('/invita');
   });
 
@@ -509,7 +511,7 @@ describe('invite entry points', () => {
     mockedProgress.mockResolvedValue(progressOf('a1'));
     mockedReferral.mockResolvedValue(summaryOf());
     const { unmount } = await renderHome();
-    { const el = await screen.findByRole('button', { name: 'Închide' }); await fireEvent.press(el); }
+    await fireEvent.press(await screen.findByRole('button', { name: 'Închide' }));
     expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
     await unmount();
     await renderHome();

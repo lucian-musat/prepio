@@ -81,10 +81,9 @@ describe('ledgerLabel', () => {
     expect(ledgerLabel(entry({ kind: 'referral', delta: 40, referralName: null }))).toBe('Recomandare');
     expect(ledgerLabel(entry({ kind: 'referral', delta: 40 }))).toBe('Recomandare');
   });
-  it('referral names the invitee, or falls back when they are gone', () => {
-    expect(ledgerLabel(entry({ kind: 'referral', delta: 40, referralName: 'Ana' }))).toBe('Recomandare: Ana');
-    expect(ledgerLabel(entry({ kind: 'referral', delta: 40, referralName: null }))).toBe('Recomandare');
-    expect(ledgerLabel(entry({ kind: 'referral', delta: 40 }))).toBe('Recomandare');
+  it('access bonus: from a purchase, or included in the free access from referrals', () => {
+    expect(ledgerLabel(entry({ kind: 'access_bonus', delta: 100 }))).toBe('Credite incluse în acces');
+    expect(ledgerLabel(entry({ kind: 'access_bonus', delta: 100, fromReferral: true }))).toBe('Credite incluse în accesul gratuit din recomandări');
   });
   it('check and refund rows name the lesson of their exercise', () => {
     const viewpoint = { type: 'viewpoint' as const, prompt: 'p', lesson: 'Cuza' };
@@ -296,6 +295,14 @@ describe('queries', () => {
     });
     const deletedRows = await fetchLedger({}, deleted.client);
     expect(ledgerLabel(deletedRows[0])).toBe('Recomandare: Dan');
+
+    // A bonus row of the free access carries the referral link but needs no name lookup.
+    const bonus = fakeClient({ data: [row(5, 'access_bonus', 'r1'), row(6, 'access_bonus', null)], error: null });
+    const rpc3 = jest.fn();
+    (bonus.client as unknown as { rpc: unknown }).rpc = rpc3;
+    const bonusRows = await fetchLedger({}, bonus.client);
+    expect(rpc3).not.toHaveBeenCalled();
+    expect(bonusRows.map((r) => ledgerLabel(r))).toEqual(['Credite incluse în accesul gratuit din recomandări', 'Credite incluse în acces']);
 
     const plain = fakeClient({ data: [row(3, 'welcome', null)], error: null });
     const rpc2 = jest.fn();

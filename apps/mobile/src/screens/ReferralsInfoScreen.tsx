@@ -15,6 +15,15 @@ function phrases(s: ReferralPublicSettings | null) {
     credits: s ? plural(s.creditsPerInvitee, 'credit', 'credite') : 'numărul de credite stabilit de Prepio',
     duration: s ? monthsText(s.durationMonths) : 'perioada stabilită de Prepio',
     cap: s ? plural(s.maxRewarded, 'coleg', 'colegi') : 'numărul de colegi stabilit de Prepio',
+    /** Owner decision 2026-11-12: the free access includes the bonus credits of a purchase. */
+    bonusIncluded:
+      s == null
+        ? 'Accesul gratuit este la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții și aceleași credite bonus incluse ca la o cumpărare.'
+        : s.bonusCredits > 0
+          ? `Accesul gratuit este la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții și aceleași credite bonus incluse (acum ${plural(s.bonusCredits, 'credit', 'credite')}).`
+          : 'Accesul gratuit este la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții. Acum abonamentul nu include credite bonus, deci nici accesul gratuit.',
+    /** ", cu 100 de credite bonus incluse" after a duration; empty without a bonus or without the numbers. */
+    withBonus: s && s.bonusCredits > 0 ? `, cu ${plural(s.bonusCredits, 'credit', 'credite')} bonus incluse` : '',
   };
 }
 
@@ -83,7 +92,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <AppText role="body">
           Dai codul sau linkul tău unui coleg. Când acel coleg își cumpără abonament la Prepio, tu primești o recompensă.
         </AppText>
-        <Item>{`Dacă nu ai abonament activ (ești în perioada de probă sau abonamentul a expirat): colegii care își iau abonament se adună. Când ai ${p.colleagues}, primești ${p.duration} de acces gratuit.`}</Item>
+        <Item>{`Dacă nu ai abonament activ (ești în perioada de probă sau abonamentul a expirat): colegii care își iau abonament se adună. Când ai ${p.colleagues}, primești ${p.duration} de acces gratuit${p.withBonus}.`}</Item>
         <Item>{`Dacă ai abonament activ: primești ${p.credits} pentru fiecare coleg care își ia abonament, imediat.`}</Item>
       </Section>
 
@@ -95,8 +104,8 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
 
       <Section title="Dacă nu ai abonament activ (probă sau expirat)">
         <Item>{`Fiecare coleg care își ia abonament este numărat. Când ai ${p.colleagues}, primești ${p.duration} de acces gratuit.`}</Item>
-        <Item>Accesul gratuit este la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții. Singura diferență este că nu vine cu credite bonus.</Item>
-        <Item>Colegii care așteaptă rămân numărați până sunt folosiți. Ei nu expiră, nici dacă îți expiră ție accesul.</Item>
+        <Item>{p.bonusIncluded}</Item>
+        <Item>Colegii care așteaptă rămân numărați până sunt folosiți pentru accesul gratuit sau până îți cumperi abonament cât timp recomandările sunt pornite (atunci se transformă în credite). Ei nu expiră, nici dacă îți expiră ție accesul.</Item>
         <Item>Un coleg este folosit o singură dată. După ce primești accesul gratuit, numărătoarea continuă cu colegii care nu au fost încă numărați.</Item>
         <Item>Primești cel mult o perioadă de acces gratuit pentru fiecare coleg care plătește. Dacă mai mulți colegi așteaptă decât este nevoie, ceilalți rămân la rând pentru data viitoare.</Item>
       </Section>
@@ -117,13 +126,13 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         {settings ? (
           <>
             <Question q="Ana nu are abonament">
-              {`Ana este în perioada de probă și invită colegi. Pe rând, colegii ei își iau abonament, iar Prepio îi numără. Când ajung la ${p.colleagues}, Ana primește ${p.duration} de acces gratuit, fără credite bonus. Cei care nu au fost încă numărați se adună pentru perioada următoare.`}
+              {`Ana este în perioada de probă și invită colegi. Pe rând, colegii ei își iau abonament, iar Prepio îi numără. Când ajung la ${p.colleagues}, Ana primește ${p.duration} de acces gratuit${p.withBonus}. Cei care nu au fost încă numărați se adună pentru perioada următoare.`}
             </Question>
             <Question q="Mihai are abonament">
               {`Mihai are abonament activ. Doi colegi de-ai lui își iau abonament. Mihai primește câte ${p.credits} pentru fiecare, adică 2 × ${p.credits} = ${two}, imediat.`}
             </Question>
             <Question q="Ioana își cumpără abonament">
-              {`Ioana nu avea abonament, iar un coleg de-al ei își luase deja abonament și aștepta. Când Ioana își cumpără și ea abonament, colegul care aștepta se transformă în ${p.credits} pentru ea.`}
+              {`Ioana nu avea abonament, iar un coleg de-al ei își luase deja abonament și aștepta. Când Ioana își cumpără și ea abonament, cât timp recomandările sunt pornite, colegul care aștepta se transformă în ${p.credits} pentru ea.`}
             </Question>
           </>
         ) : (
@@ -154,7 +163,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
 
       <Section title="Unde vezi recomandările">
         <Item>Ecranul „Invită colegi” (din pagina principală sau din Profil): codul tău, linkul, colegii invitați și cât mai ai până la accesul gratuit.</Item>
-        <Item>Istoricul creditelor: creditele primite pentru recomandări apar cu prenumele colegului.</Item>
+        <Item>Istoricul creditelor: creditele primite pentru recomandări apar cu prenumele colegului, iar creditele bonus ale accesului gratuit apar ca „Credite incluse în accesul gratuit din recomandări”.</Item>
         <Item>Istoricul accesului: accesul gratuit primit pentru recomandări apare acolo.</Item>
         <Item>Nu trimitem notificări: vezi schimbările data viitoare când deschizi ecranul „Invită colegi”.</Item>
       </Section>
@@ -171,7 +180,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
           {`Cât timp ai acces activ în momentul în care plătește, primești ${p.credits} pentru el, imediat. Nu așteaptă și nu se adună spre acces gratuit.`}
         </Question>
         <Question q="Abonamentul meu a expirat">
-          {`Colegii care plătesc cât timp nu ai acces activ se adună, iar la ${p.colleagues} primești ${p.duration} de acces gratuit. Colegii deja adunați nu dispar. Dacă îți cumperi un abonament nou, se transformă în credite.`}
+          {`Colegii care plătesc cât timp nu ai acces activ se adună, iar la ${p.colleagues} primești ${p.duration} de acces gratuit. Colegii deja adunați nu dispar. Dacă îți cumperi un abonament nou cât timp recomandările sunt pornite, se transformă în credite.`}
         </Question>
         <Question q="Invitatul și-a șters contul">
           Dacă plătise deja, recompensa rămâne și el rămâne în lista ta, cu prenumele și mențiunea „cont șters”. Dacă nu plătise, dispare din listă.
