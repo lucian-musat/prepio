@@ -44,6 +44,7 @@ it('shows the full-access card, progress, what is included and the extension', a
   const until = inDays(34);
   mockResetAccess({ accessUntil: until });
   await mount();
+  expect(screen.getByText('Acces la lecții')).toBeTruthy();
   expect(refresh).toHaveBeenCalled();
   expect(screen.getByText('★ Acces complet')).toBeTruthy();
   expect(screen.getByText(`Activ până la ${formatAccessDate(new Date(until))}`)).toBeTruthy();
@@ -98,7 +99,7 @@ it('shows the purchase error', async () => {
 it('shows the balance and links to the credits screen', async () => {
   await mount();
   expect(screen.getByText('49 de credite')).toBeTruthy();
-  fireEvent.press(screen.getByText('Creditele mele'));
+  fireEvent.press(screen.getByRole('link', { name: '49 de credite · Creditele mele' }));
   expect(router.push).toHaveBeenCalledWith('/credits');
 });
 
@@ -111,13 +112,16 @@ it('lists the history without admin details', async () => {
   ]);
   await mount();
   expect(mockedHistory).toHaveBeenCalledWith('u1');
-  expect(await screen.findByText('8 noiembrie 2026 · Acces 3 luni · 150 lei')).toBeTruthy();
-  expect(screen.getByText('Acces acordat · 2 luni')).toBeTruthy();
+  // Every row reads the same way: what happened, its date under it, the amount on the right.
+  expect(await screen.findByText('Acces 3 luni')).toBeTruthy();
+  expect(screen.getByText('150 lei')).toBeTruthy();
+  expect(screen.getByText('Acces acordat')).toBeTruthy();
   expect(screen.getByText('Acces retras')).toBeTruthy();
-  // A free access from referrals reads like a purchase row: date · what · months.
-  expect(screen.getByText('8 noiembrie 2026 · Acces gratuit din recomandări · 3 luni')).toBeTruthy();
+  expect(screen.getByText('Acces gratuit din recomandări')).toBeTruthy();
+  expect(screen.getAllByText('+3 luni')).toHaveLength(1);
+  expect(screen.getByText('+2 luni')).toBeTruthy();
   expect(screen.queryByText('Recomandări')).toBeNull();
-  expect(screen.getAllByText('8 noiembrie 2026')).toHaveLength(2); // only the admin rows carry a separate date line
+  expect(screen.getAllByText('8 noiembrie 2026')).toHaveLength(4);
   expect(screen.getByText('Istoric')).toBeTruthy();
 });
 

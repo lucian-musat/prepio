@@ -202,7 +202,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <Question q="Invitatul a plătit după ce mi-am cumpărat eu accesul">
           {`Cât timp ai acces activ în momentul în care plătește, primești ${p.credits} pentru el, imediat. Nu așteaptă și nu se adună spre acces gratuit.`}
         </Question>
-        <Question q="Accesul meu a expirat">
+        <Question q="Mi-a expirat accesul">
           {`Colegii care plătesc cât timp nu ai acces activ se adună, iar la ${p.colleagues} primești ${p.duration} de acces gratuit. Colegii deja adunați nu dispar. Dacă îți cumperi acces nou cât timp recomandările sunt pornite, se transformă în credite.`}
         </Question>
         <Question q="Invitatul și-a șters contul">

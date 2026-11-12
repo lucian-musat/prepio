@@ -76,7 +76,7 @@ it('renders nothing while the balance is null', async () => {
   expect(screen.queryByTestId('credit-chip')).toBeNull();
 });
 
-it('opens „Accesul meu” on press', async () => {
+it('opens the access screen on press', async () => {
   await render(<CreditChip />);
   await fireEvent.press(pill());
   expect(router.push).toHaveBeenCalledWith('/abonament');

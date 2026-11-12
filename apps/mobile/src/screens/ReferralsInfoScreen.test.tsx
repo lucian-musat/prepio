@@ -52,7 +52,7 @@ const HEADINGS = [
 ];
 const QUESTIONS = [
   'Invitatul a plătit după ce mi-am cumpărat eu accesul',
-  'Accesul meu a expirat',
+  'Mi-a expirat accesul',
   'Invitatul și-a șters contul',
   'Pot introduce codul după ce m-am înregistrat?',
   'De ce nu apare invitatul în listă?',
