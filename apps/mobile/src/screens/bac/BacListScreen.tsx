@@ -41,23 +41,13 @@ function SubjectRow({ row, locked, onPress, onResult }: { row: BacListRow; locke
   const chip = stateChip(row);
   // A paper in progress hides the last graded one in the chip: keep it reachable.
   const earlier = row.state !== 'completed' && row.lastGrade != null && onResult;
+  // Two siblings in the card, never a button inside a button (invalid HTML on the web).
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={row.title} onPress={onPress}>
-      <Surface style={styles.row}>
+    <Surface style={styles.card}>
+      <Pressable accessibilityRole="button" accessibilityLabel={row.title} onPress={onPress} style={styles.row}>
         <View style={styles.rowText}>
           <AppText role="bodyStrong">{row.title}</AppText>
           <Chip label={chip.label} fg={chip.fg} bg={chip.bg} />
-          {earlier ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Ultima notă: ${formatGrade(row.lastGrade!)}, vezi rezultatul`}
-              onPress={onResult}
-              hitSlop={8}
-              style={styles.earlier}
-            >
-              <AppText role="small" color="primary">{`Ultima notă: ${formatGrade(row.lastGrade!)} ›`}</AppText>
-            </Pressable>
-          ) : null}
           <View style={styles.cost} accessible accessibilityLabel={`Costă ${row.creditCost} credite la predare`}>
             <Coin size={12} />
             <AppText role="caption" color="textMuted" accessible={false}>
@@ -72,8 +62,19 @@ function SubjectRow({ row, locked, onPress, onResult }: { row: BacListRow; locke
             <Icon name="chevron-right" tint={color.textMuted} />
           </View>
         )}
-      </Surface>
-    </Pressable>
+      </Pressable>
+      {earlier ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Ultima notă: ${formatGrade(row.lastGrade!)}, vezi rezultatul`}
+          onPress={onResult}
+          hitSlop={8}
+          style={styles.earlier}
+        >
+          <AppText role="small" color="primary">{`Ultima notă: ${formatGrade(row.lastGrade!)} ›`}</AppText>
+        </Pressable>
+      ) : null}
+    </Surface>
   );
 }
 
@@ -202,7 +203,8 @@ const styles = StyleSheet.create({
   error: { gap: space[3] },
   loader: { marginTop: space[12], alignItems: 'center' },
   group: { gap: space[2.5], marginBottom: space[6] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], borderRadius: radius.lg },
+  card: { gap: space[2], borderRadius: radius.lg },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   rowText: { flex: 1, gap: space[2] },
   cost: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
   earlier: { alignSelf: 'flex-start' },

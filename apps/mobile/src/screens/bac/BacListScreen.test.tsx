@@ -133,3 +133,13 @@ it('a subject in progress still shows its last grade, which opens that result', 
   fireEvent.press(screen.getByRole('button', { name: 'Ultima notă: 1,30, vezi rezultatul' }));
   expect(router.push).toHaveBeenCalledWith('/bac/b/rezultat');
 });
+
+it('the last-grade link is not nested inside the row button (invalid HTML on the web)', async () => {
+  mockedFetch.mockResolvedValue([row({ id: 'b', title: 'Subiect B', state: 'draft', lastGrade: 1.3 })]);
+  await renderList();
+  const link = await screen.findByRole('button', { name: 'Ultima notă: 1,30, vezi rezultatul' });
+  const rowButton = screen.getByRole('button', { name: 'Subiect B' });
+  let inside = false;
+  for (let p = link.parent; p; p = p.parent) if (p === rowButton) inside = true;
+  expect(inside).toBe(false);
+});
