@@ -3,10 +3,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CodeScreen from './CodeScreen';
 import { sendEmailCode, verifyEmailCode } from '../../lib/emailAuth';
+import { setPendingEmail } from "../../lib/pendingEmail";
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true), replace: jest.fn() },
-  useLocalSearchParams: () => ({ email: 'ana@example.com' }),
+
 }));
 jest.mock('../../lib/emailAuth', () => ({
   ...jest.requireActual('../../lib/emailAuth'),
@@ -25,6 +26,7 @@ const renderScreen = async () =>
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
+  setPendingEmail("ana@example.com");
 });
 afterEach(() => jest.useRealTimers());
 
@@ -64,4 +66,12 @@ it('goes back to change the address', async () => {
   await renderScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Schimbă adresa' }));
   expect(router.back).toHaveBeenCalled();
+});
+
+it('without a known address (opened directly), sends the student back to enter it', async () => {
+  setPendingEmail('');
+  await renderScreen();
+  expect(screen.queryByLabelText('Codul din email')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Scrie adresa de email' }));
+  expect(router.replace).toHaveBeenCalledWith('/email');
 });

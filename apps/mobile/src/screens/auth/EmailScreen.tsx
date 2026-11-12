@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../../ui';
 import { EMAIL_AUTH_ERROR, sendEmailCode } from '../../lib/emailAuth';
+import { setPendingEmail } from '../../lib/pendingEmail';
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,7 +25,8 @@ export default function EmailScreen() {
     setSending(true);
     try {
       await sendEmailCode(value);
-      router.push({ pathname: '/code', params: { email: value } });
+      setPendingEmail(value);
+      router.push('/code');
     } catch (e) {
       setError(e instanceof Error ? e.message : EMAIL_AUTH_ERROR.network);
     } finally {
