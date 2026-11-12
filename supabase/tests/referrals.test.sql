@@ -1,5 +1,5 @@
 begin;
-select plan(34);
+select plan(35);
 
 -- Existing profiles (before any fixture): every non-admin one got a code from the migration backfill.
 select is((select count(*)::int from profiles p
@@ -38,7 +38,7 @@ select isnt(private.new_referral_code(), private.new_referral_code(), 'new_refer
 
 -- The backfill skips admins and fills in missing student codes.
 delete from referral_codes where user_id in ('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-0000000000c3');
-select private.backfill_referral_codes();
+select lives_ok($$ select private.backfill_referral_codes() $$, 'the backfill runs again safely');
 select is((select count(*)::int from referral_codes where user_id = '00000000-0000-0000-0000-0000000000c2'), 1,
   'backfill gives an existing student a code');
 select is((select count(*)::int from referral_codes where user_id = '00000000-0000-0000-0000-0000000000c3'), 0,

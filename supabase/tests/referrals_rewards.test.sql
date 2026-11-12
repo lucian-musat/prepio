@@ -73,8 +73,8 @@ select results_eq($$ select months, until_before, until_after, reason, order_id,
   'the grant is duration_months from now, no reason, no order, no admin');
 select is((select access_until from profiles where id = pg_temp.uid('a1')), now() + interval '3 months',
   'the inviter now has access for duration_months');
-select is((select credit_balance from profiles where id = pg_temp.uid('a1')), (select credit_balance from t_a1_bal),
-  'the free access carries no bonus credits');
+select is((select credit_balance from profiles where id = pg_temp.uid('a1')), (select credit_balance + 100 from t_a1_bal),
+  'the free access carries the access bonus credits (owner decision 2026-11-12)');
 select is((select count(*)::int from access_orders where user_id = pg_temp.uid('a1')), 0, 'the grant is not an order');
 select is((select count(*)::int from referrals where inviter_id = pg_temp.uid('a1') and state = 'consumed_access'
              and access_ledger_id = (select id from access_ledger where user_id = pg_temp.uid('a1') and kind = 'referral_reward')),
