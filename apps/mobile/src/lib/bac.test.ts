@@ -208,9 +208,9 @@ describe('answeredCount', () => {
   const letter = item('l', { type: 'source_letter' });
   const info = item('i', { type: 'source_info' });
 
-  it('an essay with one empty requirement is not answered', () => {
+  it('an essay with one empty requirement is partial, not answered', () => {
     const partial = { e: { type: 'essay' as const, parts: { r1: 'text', r2: '  ' } } };
-    expect(answeredCount([essay], partial)).toMatchObject({ answered: 0, total: 1, empty: [essay] });
+    expect(answeredCount([essay], partial)).toMatchObject({ answered: 0, total: 1, empty: [], partial: [essay] });
     const full = { e: { type: 'essay' as const, parts: { r1: 'text', r2: 'more' } } };
     expect(answeredCount([essay], full).answered).toBe(1);
   });

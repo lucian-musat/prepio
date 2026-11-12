@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { color, feedbackText, plural, radius, space, type BacAnswers, type BacItem } from '@prepio/shared';
 import { answeredCount } from '../../lib/bac';
 import { AppText, Button, Surface } from '../../ui';
@@ -30,23 +30,51 @@ type Props = {
   sending: boolean;
   onSend: () => void;
   onBack: () => void;
+  /** An item in the lists was tapped: back to the paper, at that requirement. */
+  onJump?: (item: BacItem) => void;
 };
 
-/** „Trimite la corectat” (mockup screen 3): how much is answered, what is empty, the warning and the two actions. */
-export default function BacSubmitView({ items, answers, cost, error, sending, onSend, onBack }: Props) {
-  const { answered, total, empty } = answeredCount(items, answers);
-  const labels = emptyLabels(empty, answers);
+/** One line of the summary: a heading and a tappable chip per requirement. */
+function ItemList({ heading, kind, items, labels, onJump }: { heading: string; kind: string; items: BacItem[]; labels: string[]; onJump?: (item: BacItem) => void }) {
+  if (!items.length) return null;
+  return (
+    <View style={styles.list}>
+      <AppText role="small" color="textMuted">
+        {heading}
+      </AppText>
+      <View style={styles.chips}>
+        {items.map((item, i) => (
+          <Pressable
+            key={item.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${kind}: ${labels[i]}`}
+            onPress={() => onJump?.(item)}
+            style={styles.chip}
+          >
+            <AppText role="label" color="primary">
+              {labels[i]}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * „Trimite la corectat” (mockup screen 3): how many requirements are answered completely, the partly written and the
+ * empty ones (each opens its requirement), the warning and the two actions.
+ */
+export default function BacSubmitView({ items, answers, cost, error, sending, onSend, onBack, onJump }: Props) {
+  const { answered, total, empty, partial } = answeredCount(items, answers);
   return (
     <View style={styles.root}>
       <Surface style={styles.card}>
         <AppText role="section" accessibilityRole="header">
-          {`Ai răspuns la ${answered} din ${plural(total, 'cerință', 'cerințe')}`}
+          {`Ai răspuns complet la ${answered} din ${plural(total, 'cerință', 'cerințe')}`}
         </AppText>
-        {labels.length ? (
-          <AppText role="small" color="textMuted">
-            {`Necompletate: ${labels.join(', ')}`}
-          </AppText>
-        ) : null}
+        <ItemList heading="Incomplete:" kind="Incomplet" items={partial} labels={emptyLabels(partial, answers)} onJump={onJump} />
+        <ItemList heading="Necompletate:" kind="Necompletat" items={empty} labels={emptyLabels(empty, answers)} onJump={onJump} />
       </Surface>
       <AppText role="note" color="textMuted">
         După trimitere nu mai poți modifica răspunsurile.
@@ -72,4 +100,15 @@ const styles = StyleSheet.create({
   error: { backgroundColor: color.dangerSubtle, borderRadius: radius.md, padding: space[3] },
   errorText: { color: feedbackText.wrong },
   actions: { gap: space[2.5], marginTop: space[2] },
+  list: { gap: space[1.5] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  chip: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: space[3],
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+  },
 });

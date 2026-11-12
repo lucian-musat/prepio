@@ -174,8 +174,9 @@ it('at the last item the primary action says what to do next and opens the submi
   const handIn = screen.getAllByRole('button', { name: 'Predă lucrarea' });
   expect(handIn).toHaveLength(2);
   await act(async () => void fireEvent.press(handIn[handIn.length - 1]!));
-  expect(screen.getByText('Ai răspuns la 8 din 10 cerințe')).toBeTruthy();
-  expect(screen.getByText('Necompletate: I.6, III (cerința 2)')).toBeTruthy();
+  expect(screen.getByText('Ai răspuns complet la 8 din 10 cerințe')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Incomplet: III (cerința 2)' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Necompletat: I.6' })).toBeTruthy();
 });
 
 it('before the last item there is no last-item hint', async () => {
@@ -189,12 +190,21 @@ it('submit shows the answered count and the empty list', async () => {
   mockedOpen.mockResolvedValue(attempt({ answers: MOST }));
   await mount();
   await openSubmit();
-  expect(screen.getByText('Ai răspuns la 8 din 10 cerințe')).toBeTruthy();
-  expect(screen.getByText('Necompletate: I.6, III (cerința 2)')).toBeTruthy();
+  expect(screen.getByText('Ai răspuns complet la 8 din 10 cerințe')).toBeTruthy();
+  expect(screen.getByText('Incomplete:')).toBeTruthy();
+  expect(screen.getByText('Necompletate:')).toBeTruthy();
   expect(screen.getByText('După trimitere nu mai poți modifica răspunsurile.')).toBeTruthy();
   expect(send()).toBeTruthy();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Mai lucrez' })));
   expect(screen.getByText('Cerința I.1')).toBeTruthy();
+});
+
+it('an item in the summary jumps to that requirement', async () => {
+  mockedOpen.mockResolvedValue(attempt({ answers: MOST }));
+  await mount();
+  await openSubmit();
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Necompletat: I.6' })));
+  expect(screen.getByText('Cerința I.6')).toBeTruthy();
 });
 
 it('a successful submit renders the result with „8,40” and the grade note', async () => {
@@ -219,7 +229,7 @@ it('a 402 opens the credits sheet, keeping the answers', async () => {
   const sheet = await screen.findByTestId('buy-credits-sheet');
   expect(within(sheet).getByText(/Corectarea lucrării costă/)).toBeTruthy();
   expect(setBalance).toHaveBeenCalledWith(4);
-  expect(screen.getByText('Ai răspuns la 8 din 10 cerințe')).toBeTruthy();
+  expect(screen.getByText('Ai răspuns complet la 8 din 10 cerințe')).toBeTruthy();
 });
 
 it('too few credits on the client: the sheet opens and nothing is sent', async () => {
