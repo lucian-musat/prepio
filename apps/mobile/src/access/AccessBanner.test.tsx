@@ -27,7 +27,7 @@ const mount = async () => {
 it('trial: the offer and „Vezi oferta · 150 lei”, without a close button', async () => {
   const onOffer = await mount();
   expect(
-    screen.getByText('Ești în perioada de probă. Ai acces la prima lecție. Deblochează toate lecțiile + 100 de credite pentru 3 luni.'),
+    screen.getByText('Ești în perioada de probă. Acum ai deschisă doar prima lecție. Deschide-le pe toate pentru 3 luni, plus 100 de credite.'),
   ).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Vezi oferta · 150 lei' }));
   expect(onOffer).toHaveBeenCalled();

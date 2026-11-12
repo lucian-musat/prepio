@@ -25,7 +25,7 @@ const renderScreen = async () =>
     </SafeAreaProvider>,
   );
 
-const CONFIRM = 'Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.';
+const CONFIRM = 'Ștergi contul definitiv? Se șterg numele, emailul, progresul, creditele și accesul, și nu le mai poți recupera.';
 
 beforeEach(() => {
   jest.clearAllMocks();

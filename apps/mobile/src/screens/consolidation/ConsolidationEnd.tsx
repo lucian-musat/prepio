@@ -22,7 +22,7 @@ function labelOf(ex: ConsolidationExercise) {
 }
 
 /**
- * „Consolidare parcursă” (types mockup flow screen 3): every exercise with its latest verdict, no grade. A row opens
+ * „Ai terminat consolidarea” (types mockup flow screen 3): every exercise with its latest verdict, no grade. A row opens
  * its exercise (with the answer and feedback, if it was checked). The main action follows the result: redo what is
  * not correct yet, or, with everything correct, go on; the full retake is the quiet option.
  */
@@ -31,7 +31,7 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
   const summary =
     left === 0
       ? 'Toate exercițiile sunt corecte. 🎉'
-      : `Mai ai ${plural(left, 'exercițiu', 'exerciții')} de lucrat. Fără note, doar unde mai ai de lucrat.`;
+      : `Mai ai ${plural(left, 'exercițiu', 'exerciții')} de lucrat.`;
   return (
     <ScreenLayout
       title="Consolidare"
@@ -55,7 +55,7 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
     >
       <Enter index={0} style={styles.head}>
         <AppText role="celebrate" accessibilityRole="header" style={styles.centre}>
-          Consolidare parcursă
+          Ai terminat consolidarea
         </AppText>
         <AppText role="lead" color="textMuted" style={styles.centre}>
           {summary}

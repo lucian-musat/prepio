@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import EmailScreen from './EmailScreen';
 import { sendEmailCode } from '../../lib/emailAuth';
+import { getPendingEmail } from "../../lib/pendingEmail";
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true), replace: jest.fn() },
@@ -33,7 +34,8 @@ it('sends the code and goes to the code screen with the trimmed email', async ()
   await fireEvent.changeText(screen.getByLabelText('Adresa de email'), '  ana@example.com ');
   await fireEvent.press(screen.getByRole('button', { name: 'Trimite codul' }));
   expect(sendEmailCode).toHaveBeenCalledWith('ana@example.com');
-  expect(router.push).toHaveBeenCalledWith({ pathname: '/code', params: { email: 'ana@example.com' } });
+  expect(router.push).toHaveBeenCalledWith('/code'); // the email stays out of the URL
+  expect(getPendingEmail()).toBe('ana@example.com');
 });
 
 it('shows the mapped error when sending fails', async () => {

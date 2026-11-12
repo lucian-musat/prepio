@@ -7,11 +7,11 @@ import { AppText, Button, Enter, Icon, Pop, Spinner, easing, feedbackConfig } fr
 const ICON = 24;
 const ICON_GLYPH = 13;
 
-export const AI_NOTE = 'Feedback de la profesorul digital, pe baza indicațiilor profesorului. Poate greși.';
+export const AI_NOTE = 'Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.';
 // Mixed types: say which part the AI judged (types mockup).
 const MIXED_NOTE: Partial<Record<ConsolidationExercise['type'], string>> = {
-  viewpoint: 'Punctul de vedere e evaluat de profesorul digital și poate greși; informațiile sunt verificate exact.',
-  argument: 'Conectorii sunt verificați automat; faptul istoric e evaluat de profesorul digital și poate greși.',
+  viewpoint: 'Punctul de vedere îl evaluează profesorul digital, care poate greși. Informațiile din sursă le verificăm exact.',
+  argument: 'Conectorii îi verificăm automat. Faptul istoric îl evaluează profesorul digital, care poate greși.',
 };
 
 const VERDICT_WORD = { ok: 'Corect', almost: 'Aproape', no: 'Mai lucrează' } as const;

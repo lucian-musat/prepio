@@ -21,7 +21,7 @@ jest.mock('../lib/referrals', () => ({
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
 const SETTINGS = { enabled: true, threshold: 3, creditsPerInvitee: 50, durationMonths: 6, maxRewarded: 10, bonusCredits: 100 };
-const PRIVACY = 'Cel care te-a invitat va vedea prenumele și e-mailul tău.';
+const PRIVACY = 'Cel care te-a invitat va vedea prenumele și emailul tău.';
 
 beforeEach(() => {
   jest.clearAllMocks();

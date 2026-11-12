@@ -64,7 +64,7 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
             <>
               <Button label="Reia subiectul" variant="secondary" onPress={onRedo} />
               <AppText role="caption" color="textMuted" style={styles.center}>
-                Reluarea necesită credite suplimentare.
+                Dacă reiei subiectul, corectarea costă din nou credite.
               </AppText>
             </>
           )}
@@ -105,7 +105,7 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
             return (
               <Surface key={r.itemId} testID="bac-result-row" style={styles.row}>
                 <AppText role="small" style={styles.fill}>
-                  {r.feedback ? `${label} — ${r.feedback}` : label}
+                  {r.feedback ? `${label}: ${r.feedback}` : label}
                 </AppText>
                 <AppText role="label" color="textMuted">
                   {`${r.points} / ${r.max} p`}

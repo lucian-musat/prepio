@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Redirect, router } from 'expo-router';
-import { color, feedbackText, formatAccessDate, plural, space } from '@prepio/shared';
+import { LinearGradient } from 'expo-linear-gradient';
+import { color, feedbackText, formatAccessDate, gradient, plural, radius, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import { fetchMyReferrals, fetchReferralSummary, inviteUrl, monthsText, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { copyText, shareText } from '../lib/share';
@@ -10,28 +11,58 @@ const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
 const COPIED = 'Copiat ✓';
 const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
-const CAP_REACHED = 'Ai atins limita de invitați recompensați; colegii noi nu mai aduc recompense.';
+const CAP_REACHED = 'Ai ajuns la numărul maxim de colegi pentru care primești recompense. Îi poți invita în continuare, dar fără recompensă.';
 /** Below this width the two copy buttons stack, so their labels fit. */
 const STACK_BELOW = 420;
 
-const shareMessage = (link: string) => `Învață pentru BAC cu Prepio. Folosește linkul meu ca să te înregistrezi: ${link}`;
+const shareMessage = (link: string) => `Învăț pentru BAC cu Prepio. Dacă vrei să încerci și tu, fă-ți cont cu linkul meu: ${link}`;
 
 /** What a referral row says about itself, in the student's words. */
 export function referralStatus(r: ReferralRow): string {
   switch (r.state) {
     case 'registered':
-      return 'Cont creat, fără acces';
+      return 'Și-a făcut cont, încă fără acces';
     case 'pending':
-      return 'Cu acces · numără spre accesul gratuit';
+      return 'Are acces · se numără pentru accesul tău gratuit';
     case 'consumed_access':
-      return 'Cu acces · a contribuit la accesul gratuit';
+      return 'Are acces · a contat pentru accesul tău gratuit';
     case 'converted_credits':
-      return `Abonat · +${plural(r.rewardCredits, 'credit', 'credite')}`;
+      return `Are acces · +${plural(r.rewardCredits, 'credit', 'credite')}`;
     case 'over_cap':
-      return 'Abonat, fără recompensă (limita a fost atinsă)';
+      return 'Are acces · fără recompensă (ai atins limita)';
     default:
-      return 'Abonat, fără recompensă';
+      return 'Are acces · fără recompensă';
   }
+}
+
+const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, as the credits card
+
+/** The three steps, with the reward that applies to this student right now. */
+function HowItWorks({ summary }: { summary: ReferralSummary }) {
+  const reward = summary.hasAccess
+    ? `Pentru fiecare coleg care își cumpără acces primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')}.`
+    : `Când ${summary.threshold} dintre ei își cumpără acces, primești ${monthsText(summary.durationMonths)} gratis.`;
+  // Over the cap new invitees bring nothing: the summary below says so, the steps promise nothing.
+  const steps = ['Trimiți linkul tău colegilor.', 'Își fac cont cu el.', ...(summary.capReached ? [] : [reward])];
+  return (
+    <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.hero}>
+      <AppText role="eyebrow" color="onPrimary" accessibilityRole="header">
+        Cum funcționează
+      </AppText>
+      {steps.map((s, i) => (
+        <View key={i} style={styles.step}>
+          <View style={styles.stepNo}>
+            <AppText role="small" style={styles.stepNoText}>
+              {String(i + 1)}
+            </AppText>
+          </View>
+          <AppText role="body" color="onPrimary" style={styles.grow}>
+            {s}
+          </AppText>
+        </View>
+      ))}
+    </LinearGradient>
+  );
 }
 
 /** Over the cap new invitees bring nothing, so the screen promises nothing per colleague. */
@@ -52,7 +83,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
           <CapNote />
         ) : (
           <AppText role="bodyStrong">
-            {`Încă ${plural(left, 'coleg', 'colegi')} care își cumpără acces și primești ${monthsText(summary.durationMonths)} gratis`}
+            {`Mai ai nevoie de ${plural(left, 'coleg', 'colegi')} care să-și cumpere acces și primești ${monthsText(summary.durationMonths)} gratis`}
           </AppText>
         )}
         <ProgressBar
@@ -67,7 +98,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   const earned = summary.creditsEarned;
   const periods = summary.freePeriodsEarned;
   const totals = [
-    plural(subscribed, 'abonat', 'abonați'),
+    `${plural(subscribed, 'coleg', 'colegi')} cu acces`,
     ...(earned > 0 ? [`${plural(earned, 'credit', 'credite')} ${earned === 1 ? 'câștigat' : 'câștigate'}`] : []),
     ...(periods > 0
       ? [periods === 1 ? 'o perioadă de acces gratuit câștigată' : `${periods} perioade de acces gratuit câștigate`]
@@ -75,22 +106,19 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   ];
   return (
     <Surface style={styles.stack}>
-      {summary.capReached ? (
-        <CapNote />
-      ) : (
-        <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își cumpără acces`}</AppText>
-      )}
-      <AppText role="small" color="textMuted">
+      {/* The steps above state the reward; here only the cap note and the totals. */}
+      {summary.capReached ? <CapNote /> : null}
+      <AppText role="body">
         {`Până acum: ${totals.join(' · ')}`}
       </AppText>
     </Surface>
   );
 }
 
-/** „Înregistrat 10 noiembrie 2026 · Abonat din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
+/** „Cont creat pe 10 noiembrie 2026 · acces din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
 export function inviteeDates(r: ReferralRow): string {
-  const registered = `Înregistrat ${formatAccessDate(new Date(r.createdAt))}`;
-  return r.firstPaidAt ? `${registered} · Abonat din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
+  const registered = `Cont creat pe ${formatAccessDate(new Date(r.createdAt))}`;
+  return r.firstPaidAt ? `${registered} · acces din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
 }
 
 function InviteeRow({ r }: { r: ReferralRow }) {
@@ -178,6 +206,7 @@ export default function InviteScreen() {
         </View>
       ) : (
         <View style={styles.page}>
+          <HowItWorks summary={data.summary} />
           <SummaryBlock summary={data.summary} rows={data.rows} />
 
           <Surface style={styles.stack}>
@@ -213,7 +242,7 @@ export default function InviteScreen() {
           </View>
 
           <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.link}>
-            Cum funcționează ›
+            Toate regulile ›
           </AppText>
         </View>
       )}
@@ -223,6 +252,18 @@ export default function InviteScreen() {
 
 const styles = StyleSheet.create({
   page: { gap: space[5] },
+  hero: { borderRadius: radius.lg, padding: space[5], gap: space[3] },
+  step: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
+  stepNo: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: color.onPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNoText: { color: color.primaryStrong, fontWeight: '700' },
+  grow: { flex: 1 },
   stack: { gap: space[3] },
   center: { alignItems: 'center', marginTop: space[12] },
   pair: { flexDirection: 'row', gap: space[2] },

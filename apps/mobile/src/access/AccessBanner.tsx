@@ -101,7 +101,7 @@ export default function AccessBanner({ onOffer }: { onOffer: () => void }) {
           <AppText role="small" style={[styles.onOffer, styles.strong]}>
             Ești în perioada de probă.
           </AppText>
-          {` Ai acces la prima lecție. Deblochează toate lecțiile${bonus > 0 ? ` + ${creditsLabel(bonus)}` : ''} pentru ${months}.`}
+          {` Acum ai deschisă doar prima lecție. Deschide-le pe toate pentru ${months}${bonus > 0 ? `, plus ${creditsLabel(bonus)}` : ''}.`}
         </AppText>
       ) : status.plan === 'expired' ? (
         <AppText role="small" style={[styles.text, styles.onOffer]}>

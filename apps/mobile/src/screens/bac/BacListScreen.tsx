@@ -157,8 +157,8 @@ export default function BacListScreen() {
     const intro = (
       <Surface key="intro" style={styles.intro}>
         <AppText role="small" color="textMuted">
-          Lucrare completă ca la examen: Subiectul I, II și III. Lucrezi în ritmul tău, lucrarea se salvează automat, iar
-          la final primești o notă orientativă și ce mai ai de lucrat.
+          Lucrări complete, ca la examen: Subiectul I, II și III. Lucrezi în ritmul tău și totul se salvează automat. La
+          final primești o notă orientativă și vezi ce mai ai de lucrat.
         </AppText>
       </Surface>
     );

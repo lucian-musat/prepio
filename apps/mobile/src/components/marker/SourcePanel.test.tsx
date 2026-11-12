@@ -351,7 +351,7 @@ describe('numbered banner', () => {
       { sourceId: 'short', from: 3, to: 4, pen: 'info' },
     ];
     await render(<Harness sources={[{ source: short, label: 'A' }]} cfg={numbered} kind="info" marks={marks} />);
-    expect(screen.getByText('Atinge un slot sau un marcaj ca să-l schimbi.')).toBeTruthy();
+    expect(screen.getByText('Ca să schimbi o informație, atinge-i căsuța sau marcajul din text.')).toBeTruthy();
     expect(screen.queryByText('Atinge informația pe care vrei s-o schimbi.')).toBeNull();
   });
 

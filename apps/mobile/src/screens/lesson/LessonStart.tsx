@@ -39,9 +39,9 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
       {hasCards ? <Button label="Începe învățarea" variant={lead ? 'secondary' : 'primary'} onPress={onLearn} /> : null}
       {/* With nothing to learn first, going to the verification is the main action; otherwise a quiet link. */}
       {onRetake && !onResume ? null : lead || hasCards ? (
-        <TextButton label="Știu deja — sari la verificare" onPress={onSkip} />
+        <TextButton label="Știu deja, sari la verificare" onPress={onSkip} />
       ) : (
-        <Button label="Știu deja — sari la verificare" onPress={onSkip} />
+        <Button label="Știu deja, sari la verificare" onPress={onSkip} />
       )}
     </View>
   );
@@ -75,9 +75,9 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
                 icon="🎯"
                 title="Consolidare"
                 subtitle={`${countLabel(consolidation, 'exercițiu', 'exerciții')} tip BAC`}
-                hint={finished ? undefined : 'Se deschide după ce termini verificarea'}
+                hint={finished ? progress.consolidate : 'Se deschide după ce termini verificarea'}
                 tint={CONSOLIDATION_TINT}
-                marker={finished ? 'Începe ›' : undefined}
+                marker={finished ? (progress.consolidate ? 'Continuă ›' : 'Începe ›') : undefined}
                 highlight={finished}
                 dimmed={!finished}
                 onPress={finished ? () => router.push(`/lesson/${lesson.id}/consolidare`) : undefined}

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../../ui';
 import { EMAIL_AUTH_ERROR, RESEND_COOLDOWN_SECONDS, sendEmailCode, verifyEmailCode } from '../../lib/emailAuth';
+import { getPendingEmail, setPendingEmail } from '../../lib/pendingEmail';
 
 const CODE_LENGTH = 6;
 
 /** Enters the emailed code. Signing in changes the auth status, which moves the student on; nothing navigates here. */
 export default function CodeScreen() {
-  const { email: param } = useLocalSearchParams<{ email?: string | string[] }>();
-  const email = (Array.isArray(param) ? param[0] : param) ?? '';
+  // The address comes from the email screen, never from the URL (see pendingEmail).
+  const [email] = useState(getPendingEmail);
 
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function CodeScreen() {
     setVerifying(true);
     try {
       await verifyEmailCode(email, value);
+      setPendingEmail(''); // signed in: a later visit to /code must not offer this address again
     } catch (e) {
       setError(e instanceof Error ? e.message : EMAIL_AUTH_ERROR.wrongCode);
     } finally {
@@ -62,6 +64,20 @@ export default function CodeScreen() {
       setResending(false);
     }
   };
+
+  if (!email) {
+    // Opened directly or in another tab: we don't know where the code went.
+    return (
+      <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label="Scrie adresa de email" onPress={() => router.replace('/email')} />}>
+        <View style={styles.stack}>
+          <AppText role="title" accessibilityRole="header">
+            Verifică-ți emailul
+          </AppText>
+          <AppText color="textMuted">Nu mai știm la ce adresă ți-am trimis codul. Scrie-o din nou și îți trimitem altul.</AppText>
+        </View>
+      </ScreenLayout>
+    );
+  }
 
   return (
     <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label="Continuă" onPress={() => verify(code)} loading={verifying} />}>

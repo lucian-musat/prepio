@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { registerProfileRefresh } from './profileRefresh';
 import {
   countConsolidation,
+  consolidationSummary,
   fetchAttempts,
   fetchConsolidation,
   fetchRun,
@@ -173,6 +174,26 @@ describe('fetchConsolidation', () => {
   it('throws on a query error', async () => {
     const { client } = mockClient({ consolidation_exercises: { error: new Error('boom'), data: null } });
     await expect(fetchConsolidation('l1', client)).rejects.toThrow('boom');
+  });
+
+  it('consolidationSummary counts the exercises and the ones answered correctly', async () => {
+    const { client } = mockClient({
+      consolidation_exercises: { error: null, data: [exRow('e1', 1), exRow('e2', 2), exRow('e3', 3)] },
+      consolidation_attempts: {
+        error: null,
+        data: [
+          { exercise_id: 'e1', answer: { type: 'comparison', text: 'x' }, verdict: 'ok', feedback: null },
+          { exercise_id: 'e2', answer: { type: 'comparison', text: 'x' }, verdict: 'almost', feedback: null },
+        ],
+      },
+    });
+    expect(await consolidationSummary('l1', client)).toEqual({ count: 3, correct: 1, done: 2 });
+  });
+
+  it('consolidationSummary without exercises queries no attempts', async () => {
+    const { client, log } = mockClient({ consolidation_exercises: { error: null, data: [] } });
+    expect(await consolidationSummary('l1', client)).toEqual({ count: 0, correct: 0, done: 0 });
+    expect(log.some((c) => c.table === 'consolidation_attempts')).toBe(false);
   });
 
   it('countConsolidation counts the valid exercises', async () => {

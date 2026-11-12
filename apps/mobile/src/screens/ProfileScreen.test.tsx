@@ -41,7 +41,7 @@ const renderScreen = async () =>
   );
 
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
-const CONFIRM = 'Ștergi contul definitiv? Numele, emailul și tot ce ține de cont se șterg și nu mai pot fi recuperate.';
+const CONFIRM = 'Ștergi contul definitiv? Se șterg numele, emailul, progresul, creditele și accesul, și nu le mai poți recupera.';
 
 const summaryOf = (over: Record<string, unknown> = {}) => ({
   code: 'ABCD2345',
@@ -201,8 +201,8 @@ it('has a „Creditele mele” row with the balance that opens the credits page'
 
 it('shows the subscription row with the plan label above the credits row', async () => {
   await renderScreen();
-  expect(screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' })).toBeTruthy();
-  fireEvent.press(screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' }));
+  expect(screen.getByRole('button', { name: 'Acces la lecții · Perioadă de probă' })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Acces la lecții · Perioadă de probă' }));
   expect(require('expo-router').router.push).toHaveBeenCalledWith('/abonament');
 });
 
@@ -222,11 +222,11 @@ it('labels full and expired plans', async () => {
   const d = new Date(Date.now() + 40 * 86400000);
   mockResetAccess({ accessUntil: d.toISOString() });
   const { unmount } = await renderScreen();
-  expect(screen.getByRole('button', { name: `Accesul meu · Acces până la ${formatAccessDate(d)}` })).toBeTruthy();
+  expect(screen.getByRole('button', { name: `Acces la lecții · Activ până la ${formatAccessDate(d)}` })).toBeTruthy();
   await unmount();
   mockResetAccess({ accessUntil: new Date(Date.now() - 86400000).toISOString() });
   await renderScreen();
-  expect(screen.getByRole('button', { name: 'Accesul meu · Expirat' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Acces la lecții · Expirat' })).toBeTruthy();
 });
 
 describe('invite row', () => {
@@ -275,8 +275,8 @@ it('„Salvează” waits for a changed name', async () => {
 
 it('account rows put the value on its own line, so nothing is cut at 360 px', async () => {
   await renderScreen();
-  const row = screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' });
-  expect(row).toHaveTextContent(/Accesul meu/);
+  const row = screen.getByRole('button', { name: 'Acces la lecții · Perioadă de probă' });
+  expect(row).toHaveTextContent(/Acces la lecții/);
   expect(screen.getByText('Perioadă de probă')).toBeTruthy();
-  expect(screen.queryByText('Accesul meu · Perioadă de probă')).toBeNull();
+  expect(screen.queryByText('Acces la lecții · Perioadă de probă')).toBeNull();
 });

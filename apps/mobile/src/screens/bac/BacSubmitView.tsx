@@ -77,7 +77,7 @@ export default function BacSubmitView({ items, answers, cost, error, sending, on
         <ItemList heading="Necompletate:" kind="Necompletat" items={empty} labels={emptyLabels(empty, answers)} onJump={onJump} />
       </Surface>
       <AppText role="note" color="textMuted">
-        După trimitere nu mai poți modifica răspunsurile.
+        După ce predai lucrarea, nu mai poți schimba răspunsurile.
       </AppText>
       {error ? (
         <View style={styles.error} accessibilityLiveRegion="polite">

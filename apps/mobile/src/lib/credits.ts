@@ -24,9 +24,9 @@ export class CreditsApiError extends Error {
 }
 
 export const PURCHASE_TIMEOUT_MS = 15_000;
-export const PURCHASE_FAILED = 'Achiziția nu a reușit. Încearcă din nou.';
-const PURCHASE_TIMEOUT = 'Achiziția durează prea mult. Încearcă din nou.';
-const PURCHASE_NOT_CONFIGURED = 'Achiziția nu este disponibilă momentan. Încearcă din nou mai târziu.';
+export const PURCHASE_FAILED = 'Cumpărarea nu a reușit. Încearcă din nou.';
+const PURCHASE_TIMEOUT = 'Cumpărarea durează prea mult. Încearcă din nou.';
+const PURCHASE_NOT_CONFIGURED = 'Cumpărarea nu e disponibilă acum. Încearcă mai târziu.';
 
 export type StudentLedgerEntry = {
   id: number;

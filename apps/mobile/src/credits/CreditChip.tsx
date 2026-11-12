@@ -46,7 +46,7 @@ function usePlan(): Plan {
 
 /**
  * The top-bar pill: plan + coin + balance in one element („Probă · 🪙 12”, „★ Acces · 🪙 112”, „⏳ 5 zile · 🪙 40”),
- * red when the balance is below `need`; floats „−2” / „+50” on balance changes; opens „Accesul meu”.
+ * red when the balance is below `need`; floats „−2” / „+50” on balance changes; opens „Acces la lecții”.
  */
 export default function CreditChip({ need }: { need?: number }) {
   const { balance, change } = useCredits();

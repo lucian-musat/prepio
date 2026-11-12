@@ -60,10 +60,10 @@ it('lists only the items below full marks, by section and number, with their poi
   expect(screen.getByText(BAC_GRADE_NOTE)).toBeTruthy();
   expect(screen.getByText('De lucrat')).toBeTruthy();
   expect(screen.getAllByTestId('bac-result-row')).toHaveLength(3);
-  expect(screen.getByText('I.5 — Ai inversat cauza cu efectul.')).toBeTruthy();
+  expect(screen.getByText('I.5: Ai inversat cauza cu efectul.')).toBeTruthy();
   expect(screen.getByText('3 / 7 p')).toBeTruthy();
-  expect(screen.getByText('II.6 — Lipsesc conectorii de concluzie.')).toBeTruthy();
-  expect(screen.getByText('III — Punctul de vedere nu e susținut de un fapt istoric.')).toBeTruthy();
+  expect(screen.getByText('II.6: Lipsesc conectorii de concluzie.')).toBeTruthy();
+  expect(screen.getByText('III: Punctul de vedere nu e susținut de un fapt istoric.')).toBeTruthy();
   expect(screen.queryByText(/^I\.1 —/)).toBeNull();
   expect(screen.queryByText(/Felicitări/)).toBeNull();
 });
@@ -79,7 +79,7 @@ it('full marks everywhere: „Felicitări! …”', async () => {
 it('„Reia subiectul” says it needs more credits and opens an empty paper', async () => {
   mockedGraded.mockResolvedValue(graded([r(1, 5, 3, 7, 'Ai inversat cauza cu efectul.')]));
   await mount();
-  expect(await screen.findByText('Reluarea necesită credite suplimentare.')).toBeTruthy();
+  expect(await screen.findByText('Dacă reiei subiectul, corectarea costă din nou credite.')).toBeTruthy();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Reia subiectul' })));
   expect(router.replace).toHaveBeenCalledWith('/bac/s1');
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Înapoi la subiecte' })));
@@ -117,7 +117,7 @@ it('with a paper already in progress it offers to continue it, not a new retake'
   await mount();
   await screen.findByText('8,40');
   expect(screen.queryByRole('button', { name: 'Reia subiectul' })).toBeNull();
-  expect(screen.queryByText('Reluarea necesită credite suplimentare.')).toBeNull();
+  expect(screen.queryByText('Dacă reiei subiectul, corectarea costă din nou credite.')).toBeNull();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Continuă lucrarea începută' })));
   expect(router.replace).toHaveBeenCalledWith('/bac/s1');
 });

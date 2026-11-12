@@ -245,7 +245,7 @@ export class BacApiError extends Error {
 
 const GRADING_FAILED = 'Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
 const TIMEOUT = 'Corectarea durează prea mult. Încearcă din nou.';
-const NOT_CONFIGURED = 'Corectarea nu este disponibilă momentan. Încearcă din nou mai târziu.';
+const NOT_CONFIGURED = 'Corectarea nu e disponibilă acum. Încearcă mai târziu.';
 
 export async function submitBac(req: BacSubmitRequest): Promise<BacSubmitResponse> {
   const base = apiUrl();

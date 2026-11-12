@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BAC_GRADE_NOTE, type BacAnswers, type BacItem } from '@prepio/shared';
 import {
@@ -152,6 +153,27 @@ it('the hint opens on tap and is collapsed again on the next item', async () => 
   expect(screen.queryByText(HINT)).toBeNull();
 });
 
+const tabTexts = async (width: number) => {
+  const spy = jest.spyOn(Dimensions, 'get').mockReturnValue({ width, height: 800, scale: 1, fontScale: 1 });
+  try {
+    await mount();
+    await screen.findByText('Cerința I.1');
+    return screen.getAllByRole('tab').map((t) => within(t).getByText(/./).props.children);
+  } finally {
+    spy.mockRestore();
+  }
+};
+
+it('on a phone the section tabs are short, so tabs and map share one row', async () => {
+  expect(await tabTexts(360)).toEqual(['I', 'II', 'III']);
+  expect(screen.getByRole('tab', { name: 'Subiectul I' })).toBeTruthy();
+  expect(screen.getByTestId('bac-paper-nav').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ flexDirection: 'row' })]));
+});
+
+it('on a wide screen the tabs keep their full names', async () => {
+  expect(await tabTexts(1000)).toEqual(['Subiectul I', 'Subiectul II', 'Subiectul III']);
+});
+
 it('next moves from I.7 to II.1', async () => {
   mockedOpen.mockResolvedValue(attempt({ position: { section: 1, index: 6 } }));
   await mount();
@@ -193,7 +215,7 @@ it('submit shows the answered count and the empty list', async () => {
   expect(screen.getByText('Ai răspuns complet la 8 din 10 cerințe')).toBeTruthy();
   expect(screen.getByText('Incomplete:')).toBeTruthy();
   expect(screen.getByText('Necompletate:')).toBeTruthy();
-  expect(screen.getByText('După trimitere nu mai poți modifica răspunsurile.')).toBeTruthy();
+  expect(screen.getByText('După ce predai lucrarea, nu mai poți schimba răspunsurile.')).toBeTruthy();
   expect(send()).toBeTruthy();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Mai lucrez' })));
   expect(screen.getByText('Cerința I.1')).toBeTruthy();
@@ -215,7 +237,7 @@ it('a successful submit renders the result with „8,40” and the grade note', 
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText('8,40')).toBeTruthy();
   expect(screen.getByText(BAC_GRADE_NOTE)).toBeTruthy();
-  expect(screen.getByText('I.5 — Ai inversat cauza cu efectul.')).toBeTruthy();
+  expect(screen.getByText('I.5: Ai inversat cauza cu efectul.')).toBeTruthy();
   expect(mockedSubmit).toHaveBeenCalledWith({ subjectId: 's1', answers: MOST });
   expect(setBalance).toHaveBeenCalledWith(35);
 });

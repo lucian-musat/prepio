@@ -23,7 +23,7 @@ export const BAC_TOTAL_POINTS = 90;
 /** Total words of the essay (all requirements together) that earn the length point. */
 export const BAC_ESSAY_WORDS = { min: 300, max: 900 } as const;
 export const DEFAULT_ESSAY_STYLE: BacEssayStyle = { language: 2, structure: 1, order: 2, length: 1 };
-export const BAC_GRADE_NOTE = 'Notă orientativă — poate diferi de corectarea unui profesor.';
+export const BAC_GRADE_NOTE = 'Notă orientativă. Un profesor te-ar putea nota diferit.';
 
 const MAX_ITEM_POINTS = 30;
 const NOT_FILLED = 'Necompletat.';

@@ -66,10 +66,10 @@ it('offer_changed shows the new offer and asks again', async () => {
 });
 
 it('any other failure shows its message', async () => {
-  mockedPurchase.mockRejectedValue(new AccessApiError('server_error', 'Achiziția nu a reușit. Încearcă din nou.'));
+  mockedPurchase.mockRejectedValue(new AccessApiError('server_error', 'Cumpărarea nu a reușit. Încearcă din nou.'));
   const { result } = await renderHook(() => useAccessPurchase());
   await act(async () => void (await result.current.purchase()));
-  expect(result.current.error).toBe('Achiziția nu a reușit. Încearcă din nou.');
+  expect(result.current.error).toBe('Cumpărarea nu a reușit. Încearcă din nou.');
   expect(result.current.offerChanged).toBe(false);
 });
 

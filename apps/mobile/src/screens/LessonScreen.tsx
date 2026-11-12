@@ -7,7 +7,7 @@ import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { useAuth } from '../auth/AuthProvider';
 import { useAccess } from '../access/AccessProvider';
 import { fetchHome, fetchLesson } from '../lib/content';
-import { countConsolidation } from '../lib/consolidation';
+import { consolidationSummary, type ConsolidationSummary } from '../lib/consolidation';
 import { modeOf } from '../lib/learningMode';
 import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type AttemptOutcome } from '../lib/lessonFlow';
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
@@ -83,7 +83,14 @@ function Loading() {
   );
 }
 
-type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress; consolidation: number; lastTest: LastTest | null };
+type Loaded = {
+  lesson: Lesson;
+  order: LessonSummary[];
+  progress: Progress;
+  consolidation: number;
+  consolidationScore: ConsolidationSummary | null;
+  lastTest: LastTest | null;
+};
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
 type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error' };
 
@@ -109,8 +116,8 @@ function useWriteQueue() {
 /** What skipping the cards means, per mode: shown before the student goes straight to the test. */
 export const SKIP_MESSAGE = {
   guided:
-    'Treci peste carduri și începi direct verificarea. Ca să termini lecția și să o deblochezi pe următoarea, ' +
-    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cardurile, apoi reiei verificarea de la început.',
+    'Treci peste carduri și începi direct verificarea. Ca să treci la lecția următoare, trebuie să răspunzi corect la ' +
+    'toate întrebările. Dacă greșești, revezi cardurile și reiei verificarea.',
   free: 'Treci peste carduri și începi direct verificarea. Lecția e terminată când ajungi la final. Poți reveni oricând la carduri.',
 } as const;
 export const SKIP_CONFIRM = 'Da, sari la verificare';
@@ -150,13 +157,18 @@ export default function LessonScreen() {
     setPhase('start');
     setEnd(null);
     // A failed consolidation count only hides that zone: it never blocks the lesson.
-    const count = countConsolidation(String(id)).catch((e) => {
+    const summary = consolidationSummary(String(id)).catch((e): ConsolidationSummary | null => {
       console.warn('Could not count the consolidation exercises', e);
-      return 0;
+      return null;
     });
-    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress(), count, readLastTest(String(id))]).then(
-      ([lesson, home, progress, consolidation, lastTest]) =>
-        !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress, consolidation, lastTest } : null),
+    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress(), summary, readLastTest(String(id))]).then(
+      ([lesson, home, progress, score, lastTest]) =>
+        !cancelled &&
+        setData(
+          lesson
+            ? { lesson, order: orderedLessons(home.sections), progress, consolidation: score?.count ?? 0, consolidationScore: score, lastTest }
+            : null,
+        ),
       () => !cancelled && setFailed(true),
     );
     return () => {
@@ -244,7 +256,7 @@ export default function LessonScreen() {
           guided={mode === 'guided'}
           finished={finished}
           consolidation={consolidation}
-          progress={describeProgress(resume, finished ? null : data.lastTest, counts)}
+          progress={describeProgress(resume, finished ? null : data.lastTest, counts, data.consolidationScore)}
           onRetake={!resume && !finished && data.lastTest && lesson.questions.length ? startTest : undefined}
           onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
           onLearn={startCards}

@@ -111,7 +111,7 @@ function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true
   const benefits = [
     `📚 ${lessonCount !== undefined && lessonCount > 1 ? `Toate cele ${lessonsLabel(lessonCount)}` : 'Toate lecțiile'}, în orice mod de învățare`,
     offer.bonusCredits > 0 ? `🪙 +${creditsLabel(offer.bonusCredits)} pentru profesorul digital` : null,
-    `📅 Acces ${plural(offer.durationMonths, 'lună', 'luni')} — până la ${end}`,
+    `📅 Acces ${plural(offer.durationMonths, 'lună', 'luni')}, până la ${end}`,
     '🎁 Îți păstrezi creditele pe care le ai deja',
   ].filter((b): b is string => b !== null);
 

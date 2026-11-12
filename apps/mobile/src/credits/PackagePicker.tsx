@@ -6,7 +6,7 @@ import { AppText, Button, Spinner } from '../ui';
 import Coin from './Coin';
 import { useCredits } from './CreditsProvider';
 
-export const PAYMENT_FOOTNOTE = 'Plata nu e încă activă — cererea a fost aprobată automat.';
+export const PAYMENT_FOOTNOTE = 'Plățile nu sunt active încă, așa că pachetul ți se adaugă gratuit.';
 
 type Phase = 'loading' | 'loadFailed' | 'choose' | 'buying';
 

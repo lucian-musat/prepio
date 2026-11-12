@@ -59,7 +59,7 @@ export default function WelcomeScreen() {
       if ((await signInWithGoogle()) === 'cancelled') await Promise.all([clearConsent(), clearPendingCode()]);
     } catch (e) {
       await Promise.all([clearConsent(), clearPendingCode()]);
-      setError(e instanceof Error ? e.message : 'Nu am putut face autentificarea. Încearcă din nou.');
+      setError(e instanceof Error ? e.message : 'Nu ai putut intra în cont. Încearcă din nou.');
     } finally {
       setPending(false);
     }

@@ -4,7 +4,7 @@ import type { Lesson, LessonSummary } from '@prepio/shared';
 import LessonScreen, { SKIP_CONFIRM, SKIP_MESSAGE, lessonProgress } from './LessonScreen';
 import { fetchHome, fetchLesson } from '../lib/content';
 import { fetchProgress, markFinished, savePosition, type LessonPosition } from '../lib/progress';
-import { countConsolidation } from '../lib/consolidation';
+import { consolidationSummary } from '../lib/consolidation';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +15,7 @@ jest.mock('../lib/content', () => ({
   imageUrl: (p: string) => `http://x/${p}`,
 }));
 jest.mock('../lib/progress', () => ({ fetchProgress: jest.fn(), savePosition: jest.fn(), markFinished: jest.fn() }));
-jest.mock('../lib/consolidation', () => ({ countConsolidation: jest.fn() }));
+jest.mock('../lib/consolidation', () => ({ consolidationSummary: jest.fn() }));
 jest.mock('../lib/activity', () => ({ logTestFailed: jest.fn() }));
 let mockCanOpen = (_id: string) => true;
 jest.mock('../access/AccessProvider', () => ({
@@ -47,7 +47,12 @@ const mockedHome = fetchHome as jest.Mock;
 const mockedProgress = fetchProgress as jest.Mock;
 const mockedSave = savePosition as jest.Mock;
 const mockedFinish = markFinished as jest.Mock;
-const mockedCount = countConsolidation as jest.Mock;
+const mockedSummary = consolidationSummary as jest.Mock;
+// Most tests only care about the number of exercises.
+const mockedCount = {
+  mockResolvedValue: (count: number) => mockedSummary.mockResolvedValue({ count, correct: 0, done: 0 }),
+  mockRejectedValue: (e: unknown) => mockedSummary.mockRejectedValue(e),
+};
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 
 const question = (n: number) => ({
@@ -95,7 +100,7 @@ const press = async (name: string) => {
   await screen.findByTestId('action-bar');
   await fireEvent.press(actionBar().getByRole('button', { name }));
 };
-const SKIP = 'Știu deja — sari la verificare';
+const SKIP = 'Știu deja, sari la verificare';
 /** Presses a skip link (start screen or cards) and confirms the dialog. */
 const skip = async (name: string = SKIP) => {
   await press(name);
@@ -159,7 +164,7 @@ describe('loading', () => {
     await renderLesson(lesson());
     expect(await screen.findByText('Nu am putut încărca lecția')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Reîncearcă' }));
-    expect(await screen.findByText('Știu deja — sari la verificare')).toBeTruthy();
+    expect(await screen.findByText('Știu deja, sari la verificare')).toBeTruthy();
     expect(mockedProgress).toHaveBeenCalledTimes(2);
   });
 
@@ -192,7 +197,7 @@ describe('start screen', () => {
     expect(content.queryByText('Consolidare')).toBeNull(); // no consolidation exercises
     expect(content.getByText('Dacă răspunzi corect la toate, treci la lecția următoare.')).toBeTruthy();
     expect(actionBar().getByRole('button', { name: 'Începe învățarea' })).toBeTruthy();
-    expect(actionBar().getByRole('button', { name: 'Știu deja — sari la verificare' })).toBeTruthy();
+    expect(actionBar().getByRole('button', { name: 'Știu deja, sari la verificare' })).toBeTruthy();
     expect(screen.queryByText('Continuă de unde ai rămas')).toBeNull();
   });
 
@@ -231,7 +236,7 @@ describe('start screen', () => {
   });
 
   it('skipping goes straight to question 1', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
     expect(screen.getByText('Întrebarea 1 din 1')).toBeTruthy();
   });
@@ -268,7 +273,7 @@ describe('start screen', () => {
 
   it('a lesson without cards hides Începe învățarea', async () => {
     await renderLesson(lesson({ cards: [] }));
-    expect(await screen.findByText('Știu deja — sari la verificare')).toBeTruthy();
+    expect(await screen.findByText('Știu deja, sari la verificare')).toBeTruthy();
     expect(screen.queryByText('Începe învățarea')).toBeNull();
   });
 });
@@ -287,14 +292,14 @@ describe('free mode', () => {
   });
 
   it('a wrong answer in free mode logs no failed test', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
     expect(logTestFailed).not.toHaveBeenCalled();
   });
 
   it('a wrong answer still finishes the lesson', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
     expect(screen.getByText('0 din 1 întrebări corecte')).toBeTruthy();
@@ -314,7 +319,7 @@ describe('free mode', () => {
   });
 
   it('done shows the score and goes home', async () => {
-    await openLesson(lesson({ cards: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [] }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     const content = within(await screen.findByTestId('screen-content'));
     expect(await content.findByText('Ai terminat lecția!')).toBeTruthy();
@@ -333,13 +338,13 @@ describe('free mode', () => {
   });
 
   it('does not crash on a lesson with nothing in it', async () => {
-    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
   });
 
   it('a failed markFinished shows the error and Reîncearcă retries the write', async () => {
     mockedFinish.mockRejectedValueOnce(new Error('Progresul nu a putut fi salvat. Încearcă din nou.'));
-    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Progresul nu a putut fi salvat. Încearcă din nou.')).toBeTruthy();
     expect(screen.queryByText('Ai terminat lecția!')).toBeNull();
     await press('Reîncearcă');
@@ -356,7 +361,7 @@ describe('stalled progress writes', () => {
   it('a markFinished that never settles shows the save error after the timeout', async () => {
     jest.useFakeTimers();
     mockedFinish.mockReturnValueOnce(new Promise(() => {}));
-    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [], questions: [] }), 'Știu deja, sari la verificare');
     expect(screen.queryByText('Ai terminat lecția!')).toBeNull();
     await act(async () => {
       jest.advanceTimersByTime(AUTH_TIMEOUT_MS);
@@ -373,7 +378,7 @@ describe('stalled progress writes', () => {
     mockedSave
       .mockResolvedValueOnce(undefined) // entering question 1
       .mockReturnValueOnce(new Promise(() => {})); // the „Verifică” save hangs
-    await openLesson(lesson({ cards: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [] }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(mockedFinish).not.toHaveBeenCalled();
     await act(async () => {
@@ -397,7 +402,7 @@ describe('back', () => {
 
   it('back from a question goes back when there is history', async () => {
     mockCanGoBack = true;
-    await openLesson(lesson({ cards: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [] }), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
     await fireEvent.press(within(screen.getByTestId('top-bar')).getByRole('button', { name: 'Înapoi' }));
     expect(mockBack).toHaveBeenCalledTimes(1);
@@ -439,7 +444,7 @@ describe('guided mode', () => {
   });
 
   it('all correct finishes the lesson, unlocks the next one and opens it', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
@@ -450,7 +455,7 @@ describe('guided mode', () => {
 
   it('trial: passing the free lesson claims no unlock and offers no button into the paywalled lesson', async () => {
     mockCanOpen = (id) => id === 'l1';
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.queryByText(/Ai deblocat/)).toBeNull();
@@ -459,14 +464,14 @@ describe('guided mode', () => {
   });
 
   it('Înapoi acasă goes home from the passed screen', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     await press('Înapoi acasă');
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
   it('a wrong answer fails: lists the question, clears the position, does not finish', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Aproape!')).toBeTruthy();
     expect(screen.getByText('Rezultatul testului')).toBeTruthy();
@@ -488,7 +493,7 @@ describe('guided mode', () => {
   });
 
   it('a failed attempt logs the failed test once, after the position is cleared; a second failed attempt logs again', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Aproape!')).toBeTruthy();
     await waitFor(() => expect(logTestFailed).toHaveBeenCalledTimes(1));
@@ -501,14 +506,14 @@ describe('guided mode', () => {
   });
 
   it('a passed attempt does not log a failed test', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(logTestFailed).not.toHaveBeenCalled();
   });
 
   it('Reia testul acum shows question 1 unanswered', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     await press('Reia testul acum');
     expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
@@ -520,7 +525,7 @@ describe('guided mode', () => {
   });
 
   it('Revezi cardurile shows card 1', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     await press('Revezi cardurile');
     expect(await screen.findByText('Corp card')).toBeTruthy();
@@ -567,7 +572,7 @@ describe('guided mode', () => {
   });
 
   it('Revezi cardurile, then skipping from the cards starts a fresh test', async () => {
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     await press('Revezi cardurile');
     expect(await screen.findByText('Corp card')).toBeTruthy();
@@ -582,7 +587,7 @@ describe('guided mode', () => {
     mockedSave
       .mockResolvedValueOnce(undefined) // entering question 1
       .mockReturnValueOnce(new Promise<void>((r) => (settle = r))); // the „Verifică” save, still in flight
-    await openLesson(lesson({ cards: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ cards: [] }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(mockedFinish).not.toHaveBeenCalled();
     await act(async () => settle());
@@ -599,7 +604,7 @@ describe('guided mode', () => {
         <LessonScreen />
       </SafeAreaProvider>,
     );
-    await screen.findByText('Știu deja — sari la verificare');
+    await screen.findByText('Știu deja, sari la verificare');
     await skip();
     await answer('Da', 'Continuă');
     await press('Mergi la lecția următoare');
@@ -621,7 +626,7 @@ describe('guided mode', () => {
 
   it('the last lesson passed only offers Home', async () => {
     mockedHome.mockResolvedValue(homeOf(summary('l1', 'Lecția test', 1)));
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.queryByText('Mergi la lecția următoare')).toBeNull();
@@ -631,7 +636,7 @@ describe('guided mode', () => {
 
   it('redoing a finished lesson: no unlock line, but the next lesson is offered', async () => {
     mockedProgress.mockResolvedValue(progressOf(['l1']));
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.queryByText(/Ai deblocat/)).toBeNull();
@@ -640,7 +645,7 @@ describe('guided mode', () => {
 
   it('redoing a finished lesson and failing shows the failed screen and un-finishes nothing', async () => {
     mockedProgress.mockResolvedValue(progressOf(['l1']));
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Nu', 'Continuă');
     expect(await screen.findByText('Aproape!')).toBeTruthy();
     expect(mockedFinish).not.toHaveBeenCalled();
@@ -649,7 +654,7 @@ describe('guided mode', () => {
 
   it('a failed markFinished waits on the passed screen and Reîncearcă retries', async () => {
     mockedFinish.mockRejectedValueOnce(new Error('Progresul nu a putut fi salvat. Încearcă din nou.'));
-    await openLesson(lesson(), 'Știu deja — sari la verificare');
+    await openLesson(lesson(), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Progresul nu a putut fi salvat. Încearcă din nou.')).toBeTruthy();
     expect(screen.queryByText('Lecție terminată! 🎉')).toBeNull();
@@ -665,7 +670,7 @@ describe('guided mode', () => {
     mockedHome.mockResolvedValue(fiveLessons);
     mockedProgress.mockResolvedValue(progressOf(['l1', 'l3']));
     mockId = 'l2';
-    await openLesson(lesson({ id: 'l2', title: 'Lecția 2' }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ id: 'l2', title: 'Lecția 2' }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.getByText('Ai deblocat: Lecția 4')).toBeTruthy();
@@ -677,7 +682,7 @@ describe('guided mode', () => {
     mockedHome.mockResolvedValue(fiveLessons);
     mockedProgress.mockResolvedValue(progressOf(['l1', 'l4']));
     mockId = 'l4';
-    await openLesson(lesson({ id: 'l4', title: 'Lecția 4' }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ id: 'l4', title: 'Lecția 4' }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.queryByText(/Ai deblocat/)).toBeNull();
@@ -688,7 +693,7 @@ describe('guided mode', () => {
   it('passing the only unfinished lesson after a switch offers only Home', async () => {
     mockedHome.mockResolvedValue(homeOf(summary('l1', 'Lecția 1', 1), summary('l2', 'Lecția 2', 2)));
     mockedProgress.mockResolvedValue(progressOf(['l2']));
-    await openLesson(lesson({ title: 'Lecția 1' }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ title: 'Lecția 1' }), 'Știu deja, sari la verificare');
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(screen.queryByText(/Ai deblocat/)).toBeNull();
@@ -710,7 +715,7 @@ describe('guided mode', () => {
   });
 
   it('a lesson without questions passes at its end', async () => {
-    await openLesson(lesson({ questions: [] }), 'Știu deja — sari la verificare');
+    await openLesson(lesson({ questions: [] }), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
   });
@@ -750,6 +755,15 @@ describe('zones and consolidation', () => {
     expect(content.getAllByText('✓')).toHaveLength(2);
     await fireEvent.press(content.getByRole('button', { name: /Consolidare/ }));
     expect(mockPush).toHaveBeenCalledWith('/lesson/l1/consolidare');
+  });
+
+  it('a started consolidation shows its score and continues', async () => {
+    mockedSummary.mockResolvedValue({ count: 4, correct: 3, done: 3 });
+    mockedProgress.mockResolvedValue(progressOf(['l1']));
+    await renderLesson(lesson());
+    const content = await zones();
+    expect(content.getByText('3 din 4 rezolvate corect')).toBeTruthy();
+    expect(content.getByText('Continuă ›')).toBeTruthy();
   });
 
   it('the Consolidare zone is hidden when there are no exercises', async () => {

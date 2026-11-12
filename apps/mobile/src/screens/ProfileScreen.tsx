@@ -30,7 +30,7 @@ export default function ProfileScreen() {
   const { status } = useAccess();
   const referral = useReferralSummary();
   const badge = referral ? progressBadge(referral) : null;
-  const planLabel = status.plan === 'trial' ? 'Perioadă de probă' : status.plan === 'expired' ? 'Expirat' : `Acces până la ${formatAccessDate(status.until)}`;
+  const planLabel = status.plan === 'trial' ? 'Perioadă de probă' : status.plan === 'expired' ? 'Expirat' : `Activ până la ${formatAccessDate(status.until)}`;
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
         </View>
 
         <Surface radius="lg" style={styles.group}>
-          <SettingsRow label="Accesul meu" value={planLabel} onPress={() => router.push('/abonament')} disabled={busy} />
+          <SettingsRow label="Acces la lecții" value={planLabel} onPress={() => router.push('/abonament')} disabled={busy} />
           <SettingsRow label="Creditele mele" value={String(balance ?? 0)} onPress={() => router.push('/credits')} disabled={busy} divider />
           {referral ? (
             <SettingsRow
