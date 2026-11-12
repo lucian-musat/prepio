@@ -339,3 +339,46 @@ describe('chronological order', () => {
     expect(screen.getByLabelText('1. Al treilea, poziție greșită')).toBeTruthy();
   });
 });
+
+describe('keyboard on the web', () => {
+  const { Platform } = require('react-native');
+  const original = Platform.OS;
+  let listeners: ((e: unknown) => void)[] = [];
+  beforeEach(() => {
+    listeners = [];
+    Platform.OS = 'web';
+    (globalThis as unknown as { window: unknown }).window = {
+      addEventListener: (_: string, l: (e: unknown) => void) => listeners.push(l),
+      removeEventListener: (_: string, l: (e: unknown) => void) => (listeners = listeners.filter((x) => x !== l)),
+    };
+  });
+  afterEach(() => {
+    Platform.OS = original;
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+  const key = (k: string) =>
+    act(async () => listeners.forEach((l) => l({ key: k, ctrlKey: false, metaKey: false, altKey: false, target: null, preventDefault: () => {} })));
+
+  it('B picks the second option, Enter checks, Enter again goes on', async () => {
+    const { onAnswered, onNext } = await renderQ(single);
+    await key('b');
+    await key('Enter');
+    expect(onAnswered).toHaveBeenCalledWith(true);
+    await key('Enter');
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('number keys toggle multiple-choice options', async () => {
+    const { onAnswered } = await renderQ(multi);
+    await key('1');
+    await key('3');
+    await key('Enter');
+    expect(onAnswered).toHaveBeenCalledWith(true);
+  });
+
+  it('Enter does nothing before an option is picked', async () => {
+    const { onAnswered } = await renderQ(single);
+    await key('Enter');
+    expect(onAnswered).not.toHaveBeenCalled();
+  });
+});

@@ -16,6 +16,7 @@ import {
   type Question,
 } from '@prepio/shared';
 import { AppText, Button, Confetti, Enter, Icon, Pop, SCREEN_CONTENT_TOP, ScreenLayout, Surface, easing, feedbackConfig } from '../ui';
+import { choiceKey, useWebKeys } from '../lib/keys';
 import ChoiceQuestion from './ChoiceQuestion';
 import DifficultyBadge from './DifficultyBadge';
 import OrderQuestion, { CorrectOrder } from './OrderQuestion';
@@ -145,6 +146,16 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
     nextRef.current = true;
     onNext?.();
   };
+
+  // Desktop: 1–9 / A–I pick an option (choice questions), Enter checks, then goes on.
+  useWebKeys((e) => {
+    const k = choiceKey(e, isOrder ? 0 : question.options.length);
+    if (!k) return;
+    e.preventDefault();
+    if ('pick' in k) return toggle(question.options[k.pick]!.id);
+    if (answered) next();
+    else if (isOrder || selected.length > 0) submit();
+  });
 
   // Bring the revealed answer / explanation into view (only the content scroll view moves).
   const onRevealLayout = (e: LayoutChangeEvent) => {

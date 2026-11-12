@@ -245,3 +245,33 @@ it('shows the skip action only when onSkip is given', async () => {
   );
   expect(bar().queryByRole('button', { name: 'Sari la verificare' })).toBeNull();
 });
+
+describe('keyboard on the web', () => {
+  const original = Platform.OS;
+  let listeners: ((e: unknown) => void)[] = [];
+  beforeEach(() => {
+    listeners = [];
+    Platform.OS = 'web';
+    (globalThis as unknown as { window: unknown }).window = {
+      addEventListener: (_: string, l: (e: unknown) => void) => listeners.push(l),
+      removeEventListener: (_: string, l: (e: unknown) => void) => (listeners = listeners.filter((x) => x !== l)),
+    };
+  });
+  afterEach(() => {
+    Platform.OS = original;
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+  const key = (k: string) =>
+    act(async () => listeners.forEach((l) => l({ key: k, ctrlKey: false, metaKey: false, altKey: false, target: null, preventDefault: () => {} })));
+
+  it('→ goes to the next card and ← back; → on the last card finishes', async () => {
+    const { onFinish } = await renderStepper([card(1), card(2)]);
+    await key('ArrowRight');
+    expect(screen.getByText('Card 2 din 2')).toBeTruthy();
+    await key('ArrowLeft');
+    expect(screen.getByText('Card 1 din 2')).toBeTruthy();
+    await key('ArrowRight');
+    await key('ArrowRight');
+    expect(onFinish).toHaveBeenCalledTimes(1);
+  });
+});

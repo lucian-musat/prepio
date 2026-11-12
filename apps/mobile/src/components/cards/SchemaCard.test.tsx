@@ -90,3 +90,14 @@ it('a box keeps its size until the detail opens (no flex gap reserved for the hi
   await render(<SchemaCard content={schema()} />);
   expect(StyleSheet.flatten(screen.getByTestId('schema-box').props.style).gap).toBeUndefined();
 });
+
+it('the central box keeps its „+” badge inside its edges (it spans the full width)', async () => {
+  const { StyleSheet } = require('react-native');
+  const { emptyCardContent } = require('@prepio/shared');
+  const content = emptyCardContent('schema', () => 'x');
+  content.central = { ...content.central, text: 'Centru', detail: 'Detaliu' };
+  await render(<SchemaCard content={content} />);
+  const badges = screen.getAllByTestId('schema-badge', { includeHiddenElements: true });
+  const right = StyleSheet.flatten(badges[badges.length - 1].props.style).right;
+  expect(right).toBeGreaterThanOrEqual(0);
+});

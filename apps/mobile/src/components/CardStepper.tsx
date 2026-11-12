@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTimin
 import { scheduleOnRN } from 'react-native-worklets';
 import { color, motion, radius, space, type Card } from '@prepio/shared';
 import { Button, CardTransition, ScreenLayout, TextButton, easing, timing } from '../ui';
+import { cardKey, useWebKeys } from '../lib/keys';
 import CardView from './cards/CardView';
 import type { LessonFrame } from './QuestionView';
 import { swipeOffset, swipeTarget, swipeTilt } from './swipeMath';
@@ -103,6 +104,14 @@ export default function CardStepper({
     onIndexChange?.(to);
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
+  // Desktop: ← / → move like the buttons (→ on the last card finishes).
+  useWebKeys((e) => {
+    const k = cardKey(e);
+    if (!k) return;
+    e.preventDefault();
+    if (k === 'next') return index + 1 < cards.length ? go(index + 1) : onFinish();
+    if (index > 0) go(index - 1);
+  });
   // Stable entry point for the gesture worklets, always calling the latest render's `go` (current index).
   const latest = useRef({ go, index });
   latest.current = { go, index };

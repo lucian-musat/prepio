@@ -22,20 +22,21 @@ export default function VideoCard({ content }: { content: Extract<CardContent, {
 
   return (
     <View style={styles.root}>
-      <View style={styles.frame}>
+      <View testID="video-frame" style={styles.frame}>
         {live ? (
           <YouTubePlayer videoId={youtubeId} start={startSeconds} end={endSeconds} muted={muted} onError={() => setFailed(true)} />
         ) : youtubeId ? (
           <Image testID="video-thumbnail" source={{ uri: thumbnailUrl(youtubeId) }} resizeMode="cover" accessible={false} style={StyleSheet.absoluteFill} />
         ) : null}
-        {live && muted ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Pornește sunetul" hitSlop={PILL_SLOP} onPress={() => setMuted(false)} style={styles.pill}>
-            <AppText role="caption" color="surface">
-              🔇 Atinge pentru sunet
-            </AppText>
-          </Pressable>
-        ) : null}
       </View>
+      {/* Under the player, not over it: on top it covered YouTube's own title bar. */}
+      {live && muted ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Pornește sunetul" hitSlop={PILL_SLOP} onPress={() => setMuted(false)} style={styles.pill}>
+          <AppText role="caption" color="surface">
+            🔇 Atinge pentru sunet
+          </AppText>
+        </Pressable>
+      ) : null}
       {failed && youtubeId ? <Button variant="secondary" label="Deschide pe YouTube" onPress={() => openExternal(watchUrl(youtubeId))} /> : null}
       {text ? <RichText source={text} /> : null}
     </View>
@@ -49,9 +50,8 @@ const styles = StyleSheet.create({
   root: { gap: space[3] },
   frame: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.md, overflow: 'hidden', backgroundColor: color.surfaceMuted },
   pill: {
-    position: 'absolute',
-    top: space[2],
-    left: space[2],
+    alignSelf: 'flex-start',
+    marginTop: -space[1.5],
     paddingVertical: space[1],
     paddingHorizontal: space[2.5],
     borderRadius: radius.pill,
