@@ -69,6 +69,8 @@ it('renders rows grouped by year with each state chip', async () => {
   expect(screen.getByText('Corectarea nu a reușit')).toBeTruthy();
   expect(screen.getByText('✓ Completat · 8,40')).toBeTruthy();
   expect(screen.queryByText('🔒')).toBeNull();
+  // Every openable row ends in a chevron, like the lesson rows.
+  expect(screen.getAllByTestId('bac-row-chevron')).toHaveLength(ROWS.length);
 });
 
 it('opens the subject for a student with full access', async () => {

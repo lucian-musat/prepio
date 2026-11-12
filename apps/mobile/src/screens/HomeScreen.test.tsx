@@ -461,6 +461,7 @@ it('has a Subiecte BAC card above the lessons that opens the BAC list', async ()
   mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
   await renderHome();
   expect(await screen.findByText('Exersează lucrarea completă')).toBeTruthy();
+  expect(screen.getByTestId('bac-card-chevron')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: /Subiecte BAC/ }));
   expect(router.push).toHaveBeenCalledWith('/bac');
 });

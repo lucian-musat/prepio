@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { color, feedbackText, markerPen, radius, space } from '@prepio/shared';
 import RichText from '../../components/cards/RichText';
-import { AppText } from '../../ui';
+import { AppText, Icon } from '../../ui';
 
 /**
  * „💡 Cum rezolv” on a BAC item: the solution template's body in a collapsible block, collapsed by default (owner,
@@ -22,9 +22,9 @@ export default function BacHint({ body }: { body: string }) {
         <AppText role="label" style={styles.title}>
           💡 Cum rezolv
         </AppText>
-        <AppText role="label" style={styles.title} accessible={false}>
-          {open ? '▲' : '▼'}
-        </AppText>
+        <View testID={open ? 'bac-hint-chevron-up' : 'bac-hint-chevron-down'} accessible={false}>
+          <Icon name={open ? 'up' : 'down'} tint={feedbackText.almost} />
+        </View>
       </Pressable>
       {open ? (
         <View style={styles.body}>

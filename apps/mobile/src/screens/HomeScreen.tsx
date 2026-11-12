@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { border, color, layout, radius, space } from '@prepio/shared';
-import { AppText, Button, Chip, Enter, Hero, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
+import { AppText, Button, Chip, Enter, Hero, Icon, LessonListItem, ScreenLayout, Spinner, Surface } from '../ui';
 import { fetchHome, type HomeData } from '../lib/content';
 import { lessonCount } from '../lib/lessonCount';
 import { lessonAccess, orderedLessons, type LessonState } from '../lib/lessonFlow';
@@ -231,6 +231,9 @@ export default function HomeScreen() {
             <AppText role="small" color="textMuted">
               Exersează lucrarea completă
             </AppText>
+          </View>
+          <View testID="bac-card-chevron" accessible={false}>
+            <Icon name="chevron-right" tint={color.textMuted} />
           </View>
         </Surface>
       </Pressable>

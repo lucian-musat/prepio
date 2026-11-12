@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { color, feedbackText, formatGrade, hasFullAccess, radius, space } from '@prepio/shared';
-import { AppText, Button, Chip, ScreenLayout, Spinner, Surface, goBackOrHome } from '../../ui';
+import { AppText, Button, Chip, Icon, ScreenLayout, Spinner, Surface, goBackOrHome } from '../../ui';
 import { useAccess } from '../../access/AccessProvider';
 import PaywallSheet from '../../access/PaywallSheet';
 import Coin from '../../credits/Coin';
@@ -52,7 +52,13 @@ function SubjectRow({ row, locked, onPress }: { row: BacListRow; locked: boolean
             </AppText>
           </View>
         </View>
-        {locked ? <AppText role="section">🔒</AppText> : null}
+        {locked ? (
+          <AppText role="section">🔒</AppText>
+        ) : (
+          <View testID="bac-row-chevron" accessible={false}>
+            <Icon name="chevron-right" tint={color.textMuted} />
+          </View>
+        )}
       </Surface>
     </Pressable>
   );
