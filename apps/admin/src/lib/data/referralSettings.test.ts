@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { UserError } from './db';
-import { validateReferralSettings } from './referralSettings';
+import { monthsText, validateReferralSettings } from './referralSettings';
 
 const ok = { enabled: true, threshold: 5, creditsPerInvitee: 40, maxRewarded: 100 };
 
@@ -28,5 +28,11 @@ describe('validateReferralSettings', () => {
   });
   it.each([0, 10001, 1.5, NaN])('rejects max %s', (maxRewarded) => {
     expect(() => validateReferralSettings({ ...ok, maxRewarded })).toThrow(UserError);
+  });
+});
+
+describe('monthsText', () => {
+  it('uses Romanian plurals', () => {
+    expect([1, 3, 12, 20].map(monthsText)).toEqual(['o lună', '3 luni', '12 luni', '20 de luni']);
   });
 });

@@ -66,6 +66,7 @@ export function ledgerDetails(
   e: Pick<AdminLedgerEntry, 'kind' | 'target' | 'reason' | 'adminEmail' | 'exerciseType' | 'exercisePrompt' | 'bacSubjectTitle'>,
 ): string {
   if (e.kind === 'admin') return [e.reason, e.adminEmail].filter(Boolean).join(' · ');
+  if (e.kind === 'referral') return 'Invitat care a plătit';
   const parts: string[] = [];
   if (bacSubjectOf(e.target)) parts.push(`Corectare subiect · ${e.bacSubjectTitle ?? '(subiect șters)'}`);
   if (e.exerciseType) {

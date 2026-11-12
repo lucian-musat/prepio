@@ -52,7 +52,7 @@ describe('labels', () => {
     expect(referralStateLabel('registered', null)).toBe('Cont creat, fără abonament');
     expect(referralStateLabel('pending', null)).toBe('Abonat · în așteptare (numără spre abonamentul gratuit)');
     expect(referralStateLabel('consumed_access', null)).toBe('Abonat · a contribuit la abonamentul gratuit');
-    expect(referralStateLabel('converted_credits', 40)).toBe('Abonat · +40 credite');
+    expect(referralStateLabel('converted_credits', 40)).toBe('Abonat · +40 de credite');
     expect(referralStateLabel('over_cap', null)).toBe('Abonat · fără recompensă (limită atinsă)');
     expect(referralStateLabel('not_rewarded_disabled', null)).toBe('Abonat · fără recompensă (recomandările erau oprite)');
   });

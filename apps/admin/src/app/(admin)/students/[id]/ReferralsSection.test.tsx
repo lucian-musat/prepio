@@ -34,7 +34,7 @@ describe('ReferralsSection', () => {
     expect(within(rows[0]).getByText('ion@x.ro')).toBeTruthy();
     expect(within(rows[0]).getByText('Cont creat, fără abonament')).toBeTruthy();
     expect(within(rows[0]).getByText('—')).toBeTruthy();
-    expect(within(rows[3]).getByText('Abonat · +40 credite')).toBeTruthy();
+    expect(within(rows[3]).getByText('Abonat · +40 de credite')).toBeTruthy();
     expect(within(rows[1]).getByText(/în așteptare/)).toBeTruthy();
     expect(within(rows[4]).getByText(/limită atinsă/)).toBeTruthy();
     expect(within(rows[5]).getByText(/erau oprite/)).toBeTruthy();

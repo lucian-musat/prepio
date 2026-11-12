@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { plural } from '@prepio/shared';
 import { check, UserError } from './db';
+
+/** „o lună”, „3 luni”, „12 luni”. */
+export const monthsText = (n: number): string => (n === 1 ? 'o lună' : plural(n, 'lună', 'luni'));
 
 export type ReferralSettings = { enabled: boolean; threshold: number; creditsPerInvitee: number; maxRewarded: number };
 

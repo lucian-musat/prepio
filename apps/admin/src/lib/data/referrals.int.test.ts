@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { accessSource, getStudentReferrals } from './referrals';
+import { accessSource, getAccessEntries, getReferralDetails } from './referrals';
 import { getStudent } from './students';
 
 config({ path: [resolve(__dirname, '../../../.env.local'), resolve(__dirname, '../../../../../.env')], quiet: true });
@@ -71,14 +71,14 @@ describe.skipIf(!url || !anon || !serviceKey)('student referrals data functions 
     expect(attached.error).toBeNull();
     expect(attached.data).toBe('attached');
 
-    let r = await getStudentReferrals(db, inviter);
+    let r = await getReferralDetails(db, inviter);
     expect(r.code).toBe(code.data.code);
     expect(r.invitedBy).toBeNull();
     expect(r.invitees).toHaveLength(1);
     expect(r.invitees[0]).toMatchObject({
       state: 'registered', email: `test-ref9-invitee-${tag}@test.local`, accountDeleted: false, firstPaidAt: null,
     });
-    const asInvitee = await getStudentReferrals(db, invitee);
+    const asInvitee = await getReferralDetails(db, invitee);
     expect(asInvitee.invitedBy?.id).toBe(inviter);
     expect(asInvitee.invitees).toEqual([]);
 
@@ -89,16 +89,15 @@ describe.skipIf(!url || !anon || !serviceKey)('student referrals data functions 
     });
     expect(bought.error).toBeNull();
 
-    r = await getStudentReferrals(db, inviter);
+    r = await getReferralDetails(db, inviter);
     expect(r.invitees[0].state).toBe('consumed_access');
     expect(r.invitees[0].firstPaidAt).not.toBeNull();
 
     const got = await getStudent(db, inviter);
     expect(got!.student.accessUntil).not.toBeNull();
-    expect(accessSource(r.accessEntries, got!.student.accessUntil, new Date())).toMatchObject({ kind: 'referral_reward' });
+    expect(accessSource(await getAccessEntries(db, inviter), got!.student.accessUntil, new Date())).toMatchObject({ kind: 'referral_reward' });
     // The invitee bought it themselves.
     const inv = await getStudent(db, invitee);
-    const invRefs = await getStudentReferrals(db, invitee);
-    expect(accessSource(invRefs.accessEntries, inv!.student.accessUntil, new Date()).kind).toBe('purchase');
+        expect(accessSource(await getAccessEntries(db, invitee), inv!.student.accessUntil, new Date()).kind).toBe('purchase');
   });
 });

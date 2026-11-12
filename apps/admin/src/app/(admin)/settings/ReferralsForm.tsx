@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Card, Form } from 'react-bootstrap';
 import { useRunner } from '@/components/editor/common';
 import { UserError } from '@/lib/data/db';
-import { validateReferralSettings } from '@/lib/data/referralSettings';
+import { monthsText, validateReferralSettings } from '@/lib/data/referralSettings';
 import type { ReferralSettings } from '@/lib/data/referralSettings';
 import { saveReferralSettings } from './actions';
 
@@ -74,7 +74,7 @@ export default function ReferralsForm({ initial, durationMonths }: { initial: Re
               <Form.Control type="number" min={1} max={10000} step={1} value={maxRewarded} onChange={(e) => change(() => setMaxRewarded(e.target.value))} />
             </Form.Group>
           </div>
-          <Form.Text muted>Durata accesului gratuit este cea de la Acces (acum {durationMonths} luni).</Form.Text>
+          <Form.Text muted>Durata accesului gratuit este cea de la Acces (acum {monthsText(durationMonths)}).</Form.Text>
         </Card.Body>
       </Card>
 

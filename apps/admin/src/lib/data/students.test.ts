@@ -205,6 +205,6 @@ describe('referral timeline events', () => {
     expect(eventIcon('referral_access', null)).toBeTruthy();
     expect(eventIcon('referral_credits', null)).toBeTruthy();
     expect(LEDGER_KIND_LABELS.referral).toBe('Recomandare');
-    expect(ledgerDetails({ kind: 'referral', target: null, reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: null })).toBe('');
+    expect(ledgerDetails({ kind: 'referral', target: null, reason: null, adminEmail: null, exerciseType: null, exercisePrompt: null, bacSubjectTitle: null })).toBe('Invitat care a plătit');
   });
 });

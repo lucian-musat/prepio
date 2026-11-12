@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { plural } from '@prepio/shared';
 import { check } from './db';
 
 export type AccessSourceKind = 'trial' | 'purchase' | 'referral_reward' | 'admin_grant';
@@ -55,7 +56,7 @@ export function referralStateLabel(state: string, rewardCredits: number | null):
     case 'registered': return 'Cont creat, fără abonament';
     case 'pending': return 'Abonat · în așteptare (numără spre abonamentul gratuit)';
     case 'consumed_access': return 'Abonat · a contribuit la abonamentul gratuit';
-    case 'converted_credits': return `Abonat · +${rewardCredits ?? 0} credite`;
+    case 'converted_credits': return `Abonat · +${plural(rewardCredits ?? 0, 'credit', 'credite')}`;
     case 'over_cap': return 'Abonat · fără recompensă (limită atinsă)';
     case 'not_rewarded_disabled': return 'Abonat · fără recompensă (recomandările erau oprite)';
     default: return state;
@@ -106,11 +107,6 @@ export async function getReferralDetails(db: SupabaseClient, userId: string): Pr
       rewardCredits: r.reward_credits, accountDeleted: r.account_deleted,
     })),
   };
-}
-
-export async function getStudentReferrals(db: SupabaseClient, userId: string): Promise<ReferralDetails & { accessEntries: AdminAccessLedgerEntry[] }> {
-  const [details, accessEntries] = await Promise.all([getReferralDetails(db, userId), getAccessEntries(db, userId)]);
-  return { ...details, accessEntries };
 }
 
 /**
