@@ -191,7 +191,7 @@ The block fingerprint reuses the welcome-grant pepper, so there is no env var or
 
 Spec `docs/superpowers/specs/2026-11-12-referrals-design.md`. Everything ships dark: `referrals_enabled` defaults to off, so pushing the migrations changes nothing for students.
 
-1. `pnpm db:cloud:push:dry`, then `pnpm db:cloud:push` (the referral migrations; the flag stays off). Safe before the code: the old admin and web simply don't call the new functions.
+1. `pnpm db:cloud:push:dry`, then `pnpm db:cloud:push` (the referral migrations up to `20261112121359_referral_bonus_and_followups`; the flag stays off). Safe before the code: the old admin and web simply don't call the new functions. The last one changes the return shape of `my_referral_summary`, `referral_public_settings` and `admin_credit_ledger` by adding columns only (clients read by name), and `purchase_access` keeps its signature.
 2. Merge the PR, which deploys admin and web through Vercel (the settings card and the student page tab appear; the student screens stay hidden while the flag is off).
 3. Build and ship an APK from this branch. Old APKs render new referral rows wrongly: `AccessScreen.historyLabel` labels unknown access kinds „Acces retras”, and the old `credits.ts` has no label for the `referral` ledger kind.
 4. Only then switch `referrals_enabled` on in admin Settings → Recomandări.
@@ -200,7 +200,7 @@ Keep it off until:
 - real payments exist (purchases are simulated, `provider='none'`, so a „paying” invitee costs nothing);
 - the explainer copy and the Terms/Privacy sentences have the owner's (and the lawyer's) review.
 
-Two follow-ups to do before real payments (STATUS backlog): an invitee deleting their account while a purchase runs can deadlock (lock the profile first in the delete trigger), and referral errors must never roll back a captured payment.
+The free access earned through referrals includes the access bonus credits (`access_settings.bonus_credits` at grant time, owner decision 2026-11-12). After switching the flag on, check once: an inviter who reaches the threshold gets the access and a „Credite incluse în accesul gratuit din recomandări” row of that size in the credit history. A referral-step error never rolls back a purchase; it shows as a `purchase_access: referral step skipped` warning in the database logs (STATUS backlog has what to do then).
 
 ## Local APK builds
 

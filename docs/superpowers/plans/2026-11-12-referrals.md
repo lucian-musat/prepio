@@ -14,7 +14,7 @@
 
 - Code and docs in English; all student/admin UI copy in Romanian.
 - Migrations: new file via `pnpm db:new referrals`, never edit an applied one; RLS on every new table; clients only read, all writes through security-definer functions with `set search_path = ''` and explicit `revoke`/`grant` (follow `20261108091845_paid_access.sql`).
-- Settings defaults: `enabled=false`, `threshold=5`, `credits_per_invitee=40`, `max_rewarded=100`. Free access length is `access_settings.duration_months` (no new setting). Free access gives no bonus credits.
+- Settings defaults: `enabled=false`, `threshold=5`, `credits_per_invitee=40`, `max_rewarded=100`. Free access length is `access_settings.duration_months` (no new setting). Free access includes `access_settings.bonus_credits` like a purchase (changed by owner 2026-11-12; it first said: no bonus credits).
 - Code: 8 chars from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, case-insensitive input, spaces and dashes ignored.
 - Link: `https://prepio.ro/invita/<CODE>`. "New account" for attaching: younger than 24 h, onboarding (terms, name, mode) incomplete, no purchase, no lesson activity, no inviter yet.
 - Do not bump `TERMS_VERSION`; add the privacy sentence to the Terms/Privacy text only.
