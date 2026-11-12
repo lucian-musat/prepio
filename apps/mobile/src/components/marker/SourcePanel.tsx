@@ -30,6 +30,8 @@ type Props = {
   header?: ReactNode;
   /** The answer area (slots / fields). */
   children: ReactNode;
+  /** The source to show first (the one the requirement names); default the first long source. */
+  preferredLabel?: SourceLabel;
 };
 
 /**
@@ -39,7 +41,7 @@ type Props = {
  * - from 900 px wide, the long source in a left column beside the prompt and the answer.
  * Answer slots inside `children` open the source with their pen through `useSourcePanel`.
  */
-export default function SourcePanel({ sources, prompt, promptLead, promptTail, marker, header, children }: Props) {
+export default function SourcePanel({ sources, prompt, promptLead, promptTail, marker, header, children, preferredLabel }: Props) {
   const { width } = useWindowDimensions();
   const isLong = useMemo(() => new Map(sources.map((s) => [s.label, !isShortSource(s.source.body)])), [sources]);
   const longSources = sources.filter((s) => isLong.get(s.label));
@@ -47,7 +49,8 @@ export default function SourcePanel({ sources, prompt, promptLead, promptTail, m
 
   const [readerOpen, setReaderOpen] = useState(false);
   // The source shown in the reader / the split's left column, and a mark to bring into view there.
-  const [label, setLabel] = useState<SourceLabel>((longSources[0] ?? sources[0])?.label ?? 'A');
+  const preferred = preferredLabel && sources.some((x) => x.label === preferredLabel) ? preferredLabel : undefined;
+  const [label, setLabel] = useState<SourceLabel>(preferred ?? (longSources[0] ?? sources[0])?.label ?? 'A');
   const [scrollTo, setScrollTo] = useState<Mark | null>(null);
 
   const showSource = (l: SourceLabel, mark: Mark | null) => {

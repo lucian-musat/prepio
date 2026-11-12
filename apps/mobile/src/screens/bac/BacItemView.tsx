@@ -1,12 +1,13 @@
 import { useMemo, useReducer, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { plural, space, type BacItem, type ExerciseAnswer } from '@prepio/shared';
+import { space, type BacItem, type ExerciseAnswer } from '@prepio/shared';
 import ExerciseInput from '../../components/consolidation/ExerciseInput';
 import { initialMarker, markerReducer, type MarkerConfig } from '../../components/marker/markerReducer';
 import SourcePanel from '../../components/marker/SourcePanel';
 import type { PanelMarker, PanelSource } from '../../components/marker/SourceReader';
 import { emptyAnswer, markerConfig, markerMarks, restorable } from '../consolidation/checking';
 import BacHint from './BacHint';
+import { pointsTail, sourcesNamedIn } from '../../lib/sourcesNamed';
 
 const NO_PENS: MarkerConfig = { pens: [], limits: {} };
 
@@ -43,7 +44,8 @@ export default function BacItemView({ item, sources, value, onChange, hint, temp
       sources={sources}
       prompt={item.prompt}
       promptLead={`${item.number}.`}
-      promptTail={`· ${plural(item.points, 'punct', 'puncte')}`}
+      promptTail={pointsTail(item.points)}
+      preferredLabel={sourcesNamedIn(item.prompt)[0]}
       marker={marker}
     >
       <View style={styles.answer}>
