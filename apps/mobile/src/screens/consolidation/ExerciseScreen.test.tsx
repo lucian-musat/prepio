@@ -176,3 +176,25 @@ it('a cause-effect exercise shows the step banner with the signal words (consoli
   expect(screen.getByTestId('ce-banner')).toBeTruthy();
   expect(screen.getByText('fiindcă')).toBeTruthy();
 });
+
+describe('after a check', () => {
+  const checked = async (verdict: 'ok' | 'almost') => {
+    mockedEvaluate.mockResolvedValue({ items: [{ ...ok, verdict }], credits: { spent: 2, balance: 5 } });
+    await mount(comparison);
+    await typeAnswer();
+    await fireEvent.press(verify());
+    await screen.findByText('Deosebire corectă');
+  };
+
+  it('„Încearcă din nou” on an AI exercise shows that it costs again', async () => {
+    await checked('almost');
+    expect(screen.getByRole('button', { name: 'Încearcă din nou, costă 2 credite' })).toBeTruthy();
+  });
+
+  it('after „Corect” the retry is a quiet link, not a full button', async () => {
+    await checked('ok');
+    const bar = within(screen.getByTestId('action-bar'));
+    expect(bar.queryByTestId('retry-button')).toBeNull();
+    expect(bar.getByTestId('retry-link')).toBeTruthy();
+  });
+});

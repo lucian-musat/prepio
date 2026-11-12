@@ -14,12 +14,23 @@ const MIXED_NOTE: Partial<Record<ConsolidationExercise['type'], string>> = {
   argument: 'Conectorii sunt verificați automat; faptul istoric e evaluat de profesorul digital și poate greși.',
 };
 
-/** One verdict box (types mockup `.fb`): the icon, the title, then what was good and what to improve. */
-export function FeedbackBox({ item, children }: { item: FeedbackItem; children?: React.ReactNode }) {
+const VERDICT_WORD = { ok: 'Corect', almost: 'Aproape', no: 'Mai lucrează' } as const;
+
+/**
+ * One verdict box (types mockup `.fb`): the icon, the title, then what was good and what to improve. An AI item's
+ * title is the model's summary, so its verdict word comes first; its bullets are in the text colour for contrast.
+ */
+export function FeedbackBox({ item, children, showVerdict = true }: { item: FeedbackItem; children?: React.ReactNode; showVerdict?: boolean }) {
   const tone = VERDICT_TONE[item.verdict];
   const ink = { color: tone.fg };
+  const body = { color: color.text };
   return (
     <Enter config={feedbackConfig} curve={easing.standard} style={[styles.box, { backgroundColor: tone.bg }]}>
+      {item.ai && showVerdict ? (
+        <AppText role="eyebrow" style={ink}>
+          {VERDICT_WORD[item.verdict]}
+        </AppText>
+      ) : null}
       <View style={styles.head} accessibilityRole="header">
         <Pop duration={motion.duration.slow} style={[styles.icon, { backgroundColor: tone.edge }]}>
           {item.verdict === 'almost' ? (
@@ -36,8 +47,8 @@ export function FeedbackBox({ item, children }: { item: FeedbackItem; children?:
       </View>
       {item.ai ? (
         <>
-          {item.good.length ? <Lines heading="Bine:" lines={item.good} ink={ink} /> : null}
-          {item.improve.length ? <Lines heading="Ce poți îmbunătăți" lines={item.improve} ink={ink} /> : null}
+          {item.good.length ? <Lines heading="Bine:" lines={item.good} ink={ink} body={body} /> : null}
+          {item.improve.length ? <Lines heading="Ce poți îmbunătăți" lines={item.improve} ink={ink} body={body} /> : null}
         </>
       ) : (
         [...item.good, ...item.improve].map((line, i) => (
@@ -51,7 +62,7 @@ export function FeedbackBox({ item, children }: { item: FeedbackItem; children?:
   );
 }
 
-function Lines({ heading, lines, ink }: { heading: string; lines: string[]; ink: { color: string } }) {
+function Lines({ heading, lines, ink, body }: { heading: string; lines: string[]; ink: { color: string }; body: { color: string } }) {
   return (
     <View style={styles.lines}>
       <AppText role="eyebrow" style={ink}>
@@ -62,7 +73,7 @@ function Lines({ heading, lines, ink }: { heading: string; lines: string[]; ink:
           <AppText role="note" style={ink}>
             •
           </AppText>
-          <AppText role="note" style={[styles.fill, ink]}>
+          <AppText role="note" style={[styles.fill, body]}>
             {l}
           </AppText>
         </View>
