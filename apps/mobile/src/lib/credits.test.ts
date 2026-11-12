@@ -289,6 +289,14 @@ describe('queries', () => {
     expect(rows.map((r) => r.referralName)).toEqual(['Ana', null]);
     expect(ledgerLabel(rows[0])).toBe('Recomandare: Ana');
 
+    const deleted = fakeClient({ data: [row(4, 'referral', 'r2')], error: null });
+    (deleted.client as unknown as { rpc: unknown }).rpc = jest.fn().mockResolvedValue({
+      data: [{ id: 'r2', first_name: 'Dan', email: null, state: 'converted_credits', created_at: 't', first_paid_at: null, reward_credits: 40, account_deleted: true }],
+      error: null,
+    });
+    const deletedRows = await fetchLedger({}, deleted.client);
+    expect(ledgerLabel(deletedRows[0])).toBe('Recomandare: Dan');
+
     const plain = fakeClient({ data: [row(3, 'welcome', null)], error: null });
     const rpc2 = jest.fn();
     (plain.client as unknown as { rpc: unknown }).rpc = rpc2;

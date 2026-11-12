@@ -36,7 +36,7 @@ export type StudentLedgerEntry = {
   target: string | null;
   reason: string | null;
   createdAt: string;
-  /** `referral`: the invitee's first name; null when the invitee is gone (account deleted). */
+  /** `referral`: the invitee's first name (the snapshot when the account is deleted); null when there is none. */
   referralName?: string | null;
   /** `lesson`: the title of the exercise's lesson, when the student can read it (published). */
   exercise: { type: ConsolidationType; prompt: string; requirements?: string[]; lesson?: string } | null;
@@ -81,7 +81,7 @@ export async function fetchLedger(
   const names = new Map<string, string | null>();
   if ((data ?? []).some((r) => r.kind === 'referral' && r.referral_id)) {
     try {
-      for (const ref of await fetchMyReferrals(client)) names.set(ref.id, ref.accountDeleted ? null : ref.firstName || 'Coleg');
+      for (const ref of await fetchMyReferrals(client)) names.set(ref.id, ref.firstName || null);
     } catch (e) {
       console.warn('[credits] referral names could not be loaded:', e); // the rows keep the plain label
     }

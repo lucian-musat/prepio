@@ -97,6 +97,7 @@ function HomeTrailing() {
 
 export default function HomeScreen() {
   const referral = useReferralSummary();
+  const referralBadge = referral ? progressBadge(referral) : null;
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   const [data, setData] = useState<HomeData | null>(null);
   const [failed, setFailed] = useState(false);
@@ -250,9 +251,9 @@ export default function HomeScreen() {
         );
       })}
       {referral ? (
-        <Pressable accessibilityRole="link" onPress={() => router.push('/invita')} style={styles.invite}>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/invita')} style={styles.invite} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}>
           <AppText role="small" color="textMuted">
-            {`🎁 Invită colegi${progressBadge(referral) ? `, ${progressBadge(referral)}` : ''} ›`}
+            {`🎁 Invită colegi${referralBadge ? `, ${referralBadge}` : ''} ›`}
           </AppText>
         </Pressable>
       ) : null}

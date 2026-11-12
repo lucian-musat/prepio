@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { color, feedbackText, plural, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
@@ -10,6 +10,8 @@ const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
 const COPIED = 'Copiat ✓';
 const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
+/** Below this width the two copy buttons stack, so their labels fit. */
+const STACK_BELOW = 420;
 
 const shareMessage = (link: string) => `Învață pentru BAC cu Prepio. Folosește linkul meu ca să te înregistrezi: ${link}`;
 
@@ -49,11 +51,19 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   }
   const subscribed = rows.filter((r) => r.state !== 'registered').length;
   const earned = summary.creditsEarned;
+  const periods = summary.freePeriodsEarned;
+  const totals = [
+    plural(subscribed, 'abonat', 'abonați'),
+    ...(earned > 0 ? [`${plural(earned, 'credit', 'credite')} ${earned === 1 ? 'câștigat' : 'câștigate'}`] : []),
+    ...(periods > 0
+      ? [periods === 1 ? 'o perioadă de acces gratuit câștigată' : `${periods} perioade de acces gratuit câștigate`]
+      : []),
+  ];
   return (
     <Surface style={styles.stack}>
       <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își ia abonament`}</AppText>
       <AppText role="small" color="textMuted">
-        {`Până acum: ${plural(subscribed, 'abonat', 'abonați')} · ${plural(earned, 'credit', 'credite')} ${earned === 1 ? 'câștigat' : 'câștigate'}`}
+        {`Până acum: ${totals.join(' · ')}`}
       </AppText>
     </Surface>
   );
@@ -83,6 +93,7 @@ export default function InviteScreen() {
   const [feedback, setFeedback] = useState('');
   const mounted = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const stacked = useWindowDimensions().width < STACK_BELOW;
 
   const load = useCallback(async () => {
     setError(false);
@@ -150,9 +161,9 @@ export default function InviteScreen() {
               {code}
             </AppText>
             <Button label="Trimite linkul" onPress={() => void send()} />
-            <View style={styles.pair}>
-              <Button label="Copiază linkul" variant="secondary" flex onPress={() => void copy(link)} />
-              <Button label={web ? 'Copiază codul' : 'Trimite codul'} variant="secondary" flex onPress={() => void copy(code)} />
+            <View style={stacked ? styles.stack : styles.pair} testID="invite-copy-buttons">
+              <Button label="Copiază linkul" variant="secondary" flex={!stacked} onPress={() => void copy(link)} />
+              <Button label={web ? 'Copiază codul' : 'Trimite codul'} variant="secondary" flex={!stacked} onPress={() => void copy(code)} />
             </View>
             {feedback ? (
               <AppText role="small" accessibilityRole="alert" style={feedback === COPIED ? styles.ok : styles.error}>
@@ -192,5 +203,5 @@ const styles = StyleSheet.create({
   row: { gap: 2, borderBottomWidth: 1, borderBottomColor: color.border, paddingVertical: space[2.5] },
   error: { color: feedbackText.wrong },
   ok: { color: feedbackText.good },
-  link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
+  link: { textDecorationLine: 'underline', alignSelf: 'flex-start', minHeight: 44, paddingVertical: space[3], paddingRight: space[3] },
 });

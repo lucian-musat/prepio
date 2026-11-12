@@ -25,9 +25,9 @@ type Verdict = { kind: 'valid'; name: string | null } | { kind: 'invalid' } | { 
 
 /**
  * "Ai un cod de invitație?" on Welcome: shown only while the referral programme is on. A code that came with the
- * invite link and is valid shows who invited the student; otherwise the link expands to a text field. A valid
- * code is stored on this device (it survives the Google redirect) and reported through `onChange`; anything else
- * reports null. It never blocks signing in.
+ * invite link and is valid shows who invited the student; otherwise the link expands to a text field. The typed
+ * code is reported through `onChange` at once and again after each check (null once found invalid; kept when the
+ * check could not run); a valid one is also stored on this device (it survives the Google redirect). It never blocks signing in.
  */
 export default function ReferralCodeField({ onChange, disabled = false }: Props) {
   const [enabled, setEnabled] = useState(false);
@@ -92,6 +92,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
       if (res.valid) {
         setVerdict({ kind: 'valid', name: res.inviterFirstName });
         await storePendingCode(code);
+        if (mine !== seq.current) return;
         onChangeRef.current(code);
       } else {
         setVerdict({ kind: 'invalid' });
@@ -99,8 +100,9 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
       }
     } catch {
       if (mine !== seq.current) return;
+      // Could not check (offline, rate limit): the code is kept, the server decides on attach.
       setVerdict({ kind: 'unreachable' });
-      onChangeRef.current(null);
+      onChangeRef.current(code);
     }
   }, []);
 
@@ -109,9 +111,10 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
     setText(next);
     seq.current += 1;
     setVerdict(null);
-    // An edited code is no longer the one that was checked.
+    // An edited code is no longer the one that was checked; the typed text is still what the student means, so it is
+    // reported at once (Welcome stores it on submit) unless a check later finds it invalid.
     void clearPendingCode();
-    onChangeRef.current(null);
+    onChangeRef.current(normalizeCode(next) || null);
     clearTimeout(timer.current);
     if (normalizeCode(next)) timer.current = setTimeout(() => void check(next), DEBOUNCE_MS);
   };

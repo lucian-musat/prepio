@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Platform, Share } from 'react-native';
+import { Dimensions, Platform, Share, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fetchMyReferrals, fetchReferralSummary, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { router } from 'expo-router';
@@ -97,6 +97,40 @@ it('active access: credits per colleague and totals', async () => {
   expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își ia abonament')).toBeTruthy();
   expect(screen.getByText('Până acum: 3 abonați · 120 de credite câștigate')).toBeTruthy();
   expect(screen.queryByRole('progressbar')).toBeNull();
+});
+
+it('active access: totals leave out zero credits and count one free period', async () => {
+  mockedRows.mockResolvedValue([row('1', { state: 'consumed_access' }), row('2', { state: 'consumed_access' })]);
+  mockedSummary.mockResolvedValue(summary({ hasAccess: true, creditsEarned: 0, freePeriodsEarned: 1 }));
+  await mount();
+  expect(await screen.findByText('Până acum: 2 abonați · o perioadă de acces gratuit câștigată')).toBeTruthy();
+});
+
+it('active access: totals with credits and several free periods', async () => {
+  mockedRows.mockResolvedValue([row('1', { state: 'consumed_access' }), row('2', { state: 'converted_credits', rewardCredits: 40 })]);
+  mockedSummary.mockResolvedValue(summary({ hasAccess: true, creditsEarned: 40, freePeriodsEarned: 2 }));
+  await mount();
+  expect(await screen.findByText('Până acum: 2 abonați · 40 de credite câștigate · 2 perioade de acces gratuit câștigate')).toBeTruthy();
+});
+
+const copyButtonsStyle = async (width: number) => {
+  mockedSummary.mockResolvedValue(summary());
+  mockedRows.mockResolvedValue([]);
+  const spy = jest.spyOn(Dimensions, 'get').mockReturnValue({ width, height: 800, scale: 1, fontScale: 1 });
+  try {
+    await mount();
+    return StyleSheet.flatten((await screen.findByTestId('invite-copy-buttons')).props.style);
+  } finally {
+    spy.mockRestore();
+  }
+};
+
+it('on a narrow screen the copy buttons stack so their labels fit', async () => {
+  expect((await copyButtonsStyle(360)).flexDirection).toBeUndefined();
+});
+
+it('on a wide screen the copy buttons sit side by side', async () => {
+  expect((await copyButtonsStyle(1000)).flexDirection).toBe('row');
 });
 
 it('lists invitees with a status each, and marks deleted accounts', async () => {

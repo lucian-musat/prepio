@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import ReferralCodeField from './ReferralCodeField';
 import {
@@ -84,7 +84,7 @@ it('an invalid code gets a neutral message and reports null', async () => {
   expect(onChange).toHaveBeenLastCalledWith(null);
 });
 
-it('a failed lookup never blocks: no message of an error kind, no code reported', async () => {
+it('a failed lookup never blocks: neutral message, the typed code is kept for the sign-in', async () => {
   (lookupReferralCode as jest.Mock).mockRejectedValue(new Error('offline'));
   const onChange = jest.fn();
   await render(<ReferralCodeField onChange={onChange} />);
@@ -92,7 +92,46 @@ it('a failed lookup never blocks: no message of an error kind, no code reported'
   await fireEvent.changeText(input, 'ABCD2345');
   await fireEvent(input, 'submitEditing');
   expect(await screen.findByText('Nu am putut verifica codul acum.')).toBeTruthy();
+  expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+});
+
+it('a rate-limited lookup is not "invalid": no invalid message, the code is kept', async () => {
+  (lookupReferralCode as jest.Mock).mockRejectedValue({ message: 'rate_limited' });
+  const onChange = jest.fn();
+  await render(<ReferralCodeField onChange={onChange} />);
+  const input = await open();
+  await fireEvent.changeText(input, 'ABCD2345');
+  await fireEvent(input, 'submitEditing');
+  await screen.findByText('Nu am putut verifica codul acum.');
+  expect(screen.queryByText('Codul nu este valid.')).toBeNull();
+  expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+});
+
+it('typing reports the normalized text at once, before any check finishes', async () => {
+  const onChange = jest.fn();
+  await render(<ReferralCodeField onChange={onChange} />);
+  const input = await open();
+  await fireEvent.changeText(input, 'ab-cd 2345');
+  expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+  expect(lookupReferralCode).not.toHaveBeenCalled();
+  await fireEvent.changeText(input, '');
   expect(onChange).toHaveBeenLastCalledWith(null);
+});
+
+it('a stale valid lookup does not call onChange after a newer edit', async () => {
+  (lookupReferralCode as jest.Mock).mockResolvedValue({ valid: true, inviterFirstName: 'Ana' });
+  let release!: () => void;
+  (storePendingCode as jest.Mock).mockImplementation(() => new Promise<void>((r) => (release = r)));
+  const onChange = jest.fn();
+  await render(<ReferralCodeField onChange={onChange} />);
+  const input = await open();
+  await fireEvent.changeText(input, 'ABCD2345');
+  await fireEvent(input, 'submitEditing');
+  await waitFor(() => expect(storePendingCode).toHaveBeenCalled());
+  await fireEvent.changeText(input, 'ABCD234');
+  onChange.mockClear();
+  await act(async () => release());
+  expect(onChange).not.toHaveBeenCalledWith('ABCD2345');
 });
 
 it('editing a code clears the stored one', async () => {
@@ -115,6 +154,17 @@ it('a valid pending code from the link shows the inviter instead of the collapse
   expect(screen.queryByText('Ai un cod de invitație?')).toBeNull();
   expect(screen.getByText(PRIVACY)).toBeTruthy();
   expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+});
+
+it('a pending code that cannot be checked (rate limit, offline) is kept and reported', async () => {
+  (getPendingCode as jest.Mock).mockResolvedValue('ABCD2345');
+  (lookupReferralCode as jest.Mock).mockRejectedValue({ message: 'rate_limited' });
+  const onChange = jest.fn();
+  await render(<ReferralCodeField onChange={onChange} />);
+  expect(await screen.findByText('Ai un cod de invitație?')).toBeTruthy();
+  expect(onChange).toHaveBeenLastCalledWith('ABCD2345');
+  expect(clearPendingCode).not.toHaveBeenCalled();
+  expect(screen.queryByText('Codul nu este valid.')).toBeNull();
 });
 
 it('an invalid pending code is dropped and the field stays collapsed', async () => {

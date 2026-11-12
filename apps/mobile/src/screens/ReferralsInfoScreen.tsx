@@ -160,7 +160,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
       </Section>
 
       <Section title="Dacă Prepio oprește recomandările">
-        <Item>Cât timp sunt oprite, nu se mai primesc recompense și codurile noi nu sunt acceptate.</Item>
+        <Item>Cât timp sunt oprite, nu se mai primesc recompense și codurile nu mai sunt acceptate.</Item>
         <Item>Recompensele deja primite rămân. Istoricul tău rămâne vizibil.</Item>
         <Item>Un coleg care plătește cât timp recomandările sunt oprite nu este recompensat, nici dacă ele sunt pornite din nou mai târziu.</Item>
         <Item>Dacă îți cumperi abonament cât timp recomandările sunt oprite, colegii care așteaptă nu se transformă în credite; rămân la rând și se transformă la o cumpărare următoare, făcută cât timp recomandările sunt pornite.</Item>
