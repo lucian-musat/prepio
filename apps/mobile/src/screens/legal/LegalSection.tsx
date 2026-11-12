@@ -3,7 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText } from '../../ui';
-import { CONTACT_EMAIL, OPERATOR_ADDRESS, OPERATOR_CUI, OPERATOR_NAME } from '../../lib/legal';
+import { OPERATOR_ADDRESS, OPERATOR_CUI, OPERATOR_NAME } from '../../lib/legal';
+import EmailLink from '../../components/EmailLink';
 
 /** Shared building blocks of the public legal pages (privacy policy, terms of use). */
 
@@ -18,7 +19,7 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export function Item({ children }: { children: string }) {
+export function Item({ children }: { children: ReactNode }) {
   return (
     <View style={styles.item}>
       <AppText role="body" color="textMuted">
@@ -46,7 +47,7 @@ export function OperatorDetails() {
       <Item>{`Denumire: ${OPERATOR_NAME}`}</Item>
       <Item>{`Cod de identificare fiscală (CUI): ${OPERATOR_CUI}`}</Item>
       <Item>{`Sediu: ${OPERATOR_ADDRESS}`}</Item>
-      <Item>{`Email: ${CONTACT_EMAIL}`}</Item>
+      <Item>{`Email: `}<EmailLink /></Item>
     </>
   );
 }

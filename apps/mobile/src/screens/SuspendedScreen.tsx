@@ -2,9 +2,9 @@ import { StyleSheet, View } from 'react-native';
 import { border, color, radius, space } from '@prepio/shared';
 import { AppText, Button, Icon, ScreenLayout, Surface, TextButton } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { CONTACT_EMAIL } from '../lib/legal';
 import { fontFamily } from '../theme/fonts';
 import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
+import EmailLink from '../components/EmailLink';
 
 const LOCK_TILE = space[8] * 2; // 64 px
 const LOCK_GLYPH = space[8];
@@ -34,7 +34,7 @@ export default function SuspendedScreen() {
           </AppText>
         </Surface>
         <AppText role="small" color="textMuted" style={styles.centre}>
-          {`Dacă crezi că e o greșeală, scrie-ne la ${CONTACT_EMAIL}.`}
+          {`Dacă crezi că e o greșeală, scrie-ne la `}<EmailLink />{`.`}
         </AppText>
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={deletion.deleting} />
         {deletion.confirming ? (

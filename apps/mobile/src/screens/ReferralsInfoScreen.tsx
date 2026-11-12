@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { color, plural, space } from '@prepio/shared';
 import { AppText, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
-import { CONTACT_EMAIL } from '../lib/legal';
 import { fetchReferralPublicSettings, monthsText, type ReferralPublicSettings } from '../lib/referrals';
 import { Item, Section, legalStyles } from './legal/LegalSection';
+import EmailLink from '../components/EmailLink';
 
 type State = { status: 'loading' } | { status: 'failed' } | { status: 'ready'; settings: ReferralPublicSettings };
 
@@ -197,7 +197,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
       </Section>
 
       <Section title="Cui te adresezi">
-        <AppText role="body">{`Pentru întrebări sau dacă ți se pare că ceva nu s-a calculat corect, scrie-ne la ${CONTACT_EMAIL}.`}</AppText>
+        <AppText role="body">{`Pentru întrebări sau dacă ți se pare că ceva nu s-a calculat corect, scrie-ne la `}<EmailLink />{`.`}</AppText>
       </Section>
     </View>
   );

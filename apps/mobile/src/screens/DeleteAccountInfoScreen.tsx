@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { CONTACT_EMAIL } from '../lib/legal';
+import EmailLink from '../components/EmailLink';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -76,7 +76,7 @@ export default function DeleteAccountInfoScreen() {
           ) : (
             <AppText role="body">După ce completezi numele, mergi la Profil → Șterge contul.</AppText>
           )}
-          <AppText role="body">{`Sau scrie-ne la ${CONTACT_EMAIL}.`}</AppText>
+          <AppText role="body">{`Sau scrie-ne la `}<EmailLink />{`.`}</AppText>
         </Section>
       </View>
     </ScreenLayout>
