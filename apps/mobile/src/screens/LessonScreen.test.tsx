@@ -7,6 +7,7 @@ import { fetchProgress, markFinished, savePosition, type LessonPosition } from '
 import { countConsolidation } from '../lib/consolidation';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('../lib/content', () => ({
   fetchLesson: jest.fn(),
@@ -112,7 +113,8 @@ const answer = async (text: 'Da' | 'Nu', next: string) => {
   await press(next);
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.clear();
   jest.clearAllMocks();
   mockCanOpen = () => true;
   mockCanGoBack = false;
@@ -824,5 +826,51 @@ describe('free mode with a paywall', () => {
     expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
     expect(actionBar().getByRole('button', { name: 'Începe consolidarea' })).toBeTruthy();
     expect(actionBar().queryByRole('button', { name: 'Mergi la lecția următoare' })).toBeNull();
+  });
+});
+
+describe('start screen progress', () => {
+  beforeEach(() => {
+    mockMode = 'guided';
+  });
+  const threeCards = () =>
+    lesson({ cards: [1, 2, 3].map((n) => ({ id: `c${n}`, position: n, title: null, type: 'text' as const, text: `Corp ${n}` })) });
+
+  it('shows the card the student left on', async () => {
+    mockedProgress.mockResolvedValue(progressOf([], { l1: { phase: 'cards', index: 1, results: {} } }));
+    await renderLesson(threeCards());
+    expect(await screen.findByText('Ai rămas la cardul 2 din 3')).toBeTruthy();
+  });
+
+  it('after a failed test the start screen shows the score and offers „Reia testul” first', async () => {
+    await openLesson(lesson(), SKIP);
+    await answer('Nu', 'Continuă');
+    expect(await screen.findByText('Aproape!')).toBeTruthy();
+    await waitFor(async () => expect(await AsyncStorage.getItem('prepio.lastTest.l1')).toBe('{"correct":0,"total":1}'));
+    await screen.unmount();
+    await renderLesson(lesson());
+    expect(await screen.findByText('Ultima încercare: 0 din 1 corecte')).toBeTruthy();
+    await press('Reia testul');
+    // Straight to question 1, no skip confirmation.
+    expect(await screen.findByText('Prima întrebare?')).toBeTruthy();
+  });
+
+  it('a passed test forgets the last failed score', async () => {
+    await AsyncStorage.setItem('prepio.lastTest.l1', '{"correct":0,"total":1}');
+    await renderLesson(lesson());
+    // After a failure „Reia testul” replaces the skip link: same test, no confirmation.
+    expect(await screen.findByText('Reia testul')).toBeTruthy();
+    expect(screen.queryByText(SKIP)).toBeNull();
+    await press('Reia testul');
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
+    await waitFor(async () => expect(await AsyncStorage.getItem('prepio.lastTest.l1')).toBeNull());
+  });
+
+  it('a finished lesson says so and drops the guided rule', async () => {
+    mockedProgress.mockResolvedValue(progressOf(['l1']));
+    await renderLesson(lesson());
+    expect(await screen.findByText('✓ Lecție terminată')).toBeTruthy();
+    expect(screen.queryByText('Dacă răspunzi corect la toate, treci la lecția următoare.')).toBeNull();
   });
 });
