@@ -97,7 +97,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <Item>{`Fiecare coleg care își ia abonament este numărat. Când ai ${p.colleagues}, primești ${p.duration} de acces gratuit.`}</Item>
         <Item>Accesul gratuit este la fel ca un abonament cumpărat: aceleași lecții, aceleași funcții. Singura diferență este că nu vine cu credite bonus.</Item>
         <Item>Colegii care așteaptă rămân numărați până sunt folosiți. Ei nu expiră, nici dacă îți expiră ție accesul.</Item>
-        <Item>Un coleg este folosit o singură dată. După ce primești accesul gratuit, numărătoarea începe de la zero cu colegii noi.</Item>
+        <Item>Un coleg este folosit o singură dată. După ce primești accesul gratuit, numărătoarea continuă cu colegii care nu au fost încă numărați.</Item>
         <Item>Primești cel mult o perioadă de acces gratuit pentru fiecare coleg care plătește. Dacă mai mulți colegi așteaptă decât este nevoie, ceilalți rămân la rând pentru data viitoare.</Item>
       </Section>
 
@@ -108,7 +108,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
       </Section>
 
       <Section title="Dacă îți cumperi tu abonament">
-        <Item>{`Colegii care așteaptă la tine se transformă în credite: primești ${p.credits} pentru fiecare.`}</Item>
+        <Item>{`Cât timp recomandările sunt pornite, colegii care așteaptă la tine se transformă în credite: primești ${p.credits} pentru fiecare.`}</Item>
         <Item>Nu primești și acces gratuit pentru aceiași colegi: un coleg aduce fie acces gratuit, fie credite, niciodată amândouă.</Item>
         <Item>Accesul oferit de un administrator nu transformă colegii în credite; doar cumpărarea ta o face.</Item>
       </Section>
@@ -117,7 +117,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         {settings ? (
           <>
             <Question q="Ana nu are abonament">
-              {`Ana este în perioada de probă și invită colegi. Pe rând, colegii ei își iau abonament, iar Prepio îi numără. Când ajung la ${p.colleagues}, Ana primește ${p.duration} de acces gratuit, fără credite bonus. Colegii următori se numără din nou de la zero.`}
+              {`Ana este în perioada de probă și invită colegi. Pe rând, colegii ei își iau abonament, iar Prepio îi numără. Când ajung la ${p.colleagues}, Ana primește ${p.duration} de acces gratuit, fără credite bonus. Cei care nu au fost încă numărați se adună pentru perioada următoare.`}
             </Question>
             <Question q="Mihai are abonament">
               {`Mihai are abonament activ. Doi colegi de-ai lui își iau abonament. Mihai primește câte ${p.credits} pentru fiecare, adică 2 × ${p.credits} = ${two}, imediat.`}
@@ -140,14 +140,14 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
       </Section>
 
       <Section title="Reguli importante">
-        <Item>Nu pierzi recompensa dacă prietenul tău anulează abonamentul sau îi este returnat banii mai târziu: ce ai primit rămâne al tău.</Item>
+        <Item>Nu pierzi recompensa dacă colegul tău anulează abonamentul sau i se returnează banii mai târziu: ce ai primit rămâne al tău.</Item>
         <Item>{`Poți primi recompense pentru cel mult ${p.cap} (limita se verifică la prima plată a fiecărui coleg). Un coleg care plătește după ce limita a fost atinsă apare în listă ca „Abonat, fără recompensă (limita a fost atinsă)”.`}</Item>
         <Item>Un coleg nu aduce recompensă de două ori.</Item>
         <Item>Valorile (colegi necesari, credite, durata accesului) se pot schimba. Ce ai primit deja nu se modifică; la recompensele următoare se aplică valorile din acel moment.</Item>
       </Section>
 
       <Section title="Ce vede cel care te-a invitat">
-        <Item>Cel care te-a invitat vede prenumele și adresa de e-mail, și dacă ai cumpărat abonament sau nu. Nu vede altceva despre contul tău.</Item>
+        <Item>Cel care te-a invitat vede prenumele și adresa de e-mail, și dacă ai cumpărat abonament sau nu. Mai vede data înregistrării tale, data plății și dacă ai adus recompensă; nu vede altceva despre contul tău.</Item>
         <Item>Tu vezi doar prenumele celui care te-a invitat, când te înregistrezi.</Item>
         <Item>Dacă îți ștergi contul după ce ai cumpărat abonament, în lista celui care te-a invitat rămâne doar prenumele tău, marcat „cont șters”; adresa de e-mail este ștearsă. Dacă nu ai cumpărat nimic, dispari din listă.</Item>
       </Section>
@@ -163,6 +163,7 @@ function Page({ settings }: { settings: ReferralPublicSettings | null }) {
         <Item>Cât timp sunt oprite, nu se mai primesc recompense și codurile noi nu sunt acceptate.</Item>
         <Item>Recompensele deja primite rămân. Istoricul tău rămâne vizibil.</Item>
         <Item>Un coleg care plătește cât timp recomandările sunt oprite nu este recompensat, nici dacă ele sunt pornite din nou mai târziu.</Item>
+        <Item>Dacă îți cumperi abonament cât timp recomandările sunt oprite, colegii care așteaptă nu se transformă în credite; rămân la rând și se transformă la o cumpărare următoare, făcută cât timp recomandările sunt pornite.</Item>
       </Section>
 
       <Section title="Întrebări frecvente">

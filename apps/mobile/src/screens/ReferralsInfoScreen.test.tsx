@@ -130,7 +130,7 @@ it('covers the rules the database enforces', async () => {
   expect(all(/prenumele și adresa de e-mail/)).toBe(true);
   expect(all(/Istoricul creditelor/)).toBe(true);
   expect(all(/Istoricul accesului/)).toBe(true);
-  expect(all(new RegExp(CONTACT_EMAIL.replace('.', '\.')))).toBe(true);
+  expect(all(new RegExp(CONTACT_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBe(true);
 });
 
 it('is graceful when the settings cannot be read: no numbers, no crash', async () => {
@@ -157,4 +157,16 @@ it('does not show the off notice while the programme is on', async () => {
   await mount();
   await screen.findByText('Pe scurt');
   expect(screen.queryByText('Recomandările nu sunt active acum.')).toBeNull();
+});
+
+it('tells what happens to waiting colleagues when the inviter buys, and when the programme is off', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/Cât timp recomandările sunt pornite, colegii care așteaptă la tine se transformă în credite/)).toBe(true);
+  expect(
+    all(/Dacă îți cumperi abonament cât timp recomandările sunt oprite, colegii care așteaptă nu se transformă în credite; rămân la rând și se transformă la o cumpărare următoare, făcută cât timp recomandările sunt pornite\./),
+  ).toBe(true);
+  expect(all(/data înregistrării tale, data plății/)).toBe(true);
+  expect(all(/nu au fost încă numărați/)).toBe(true);
+  expect(screen.queryByText(/prietenul/)).toBeNull();
 });
