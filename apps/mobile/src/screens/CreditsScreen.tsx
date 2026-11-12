@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, creditsLabel, feedbackText, gradient, radius, space } from '@prepio/shared';
+import { color, creditsLabel, feedbackText, formatAccessDate, gradient, radius, space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Spinner, goBackOrHome } from '../ui';
 import Coin from '../credits/Coin';
 import { useCredits } from '../credits/CreditsProvider';
@@ -11,10 +11,20 @@ import { fetchLedger, ledgerLabel, type StudentLedgerEntry } from '../lib/credit
 const PAGE = 30; // fetchLedger's default page size: a full page means there may be more
 const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, as the top bar logo
 const LOAD_FAILED = 'Nu am putut încărca istoricul.';
-const dateFormat = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
+/** The day a row belongs to, as its group header: „3 noiembrie 2026” (Bucharest time). */
+const dayOf = (iso: string) => formatAccessDate(new Date(iso));
 
-/** „3 nov.” */
-const formatDay = (iso: string) => dateFormat.format(new Date(iso));
+/** Consecutive rows of the same day under one header (the ledger is newest first). */
+function byDay(entries: StudentLedgerEntry[]): Array<{ day: string; rows: StudentLedgerEntry[] }> {
+  const groups: Array<{ day: string; rows: StudentLedgerEntry[] }> = [];
+  for (const e of entries) {
+    const day = dayOf(e.createdAt);
+    const last = groups[groups.length - 1];
+    if (last?.day === day) last.rows.push(e);
+    else groups.push({ day, rows: [e] });
+  }
+  return groups;
+}
 
 function HistoryRow({ entry }: { entry: StudentLedgerEntry }) {
   const gain = entry.delta > 0;
@@ -23,7 +33,7 @@ function HistoryRow({ entry }: { entry: StudentLedgerEntry }) {
       <View style={styles.rowText}>
         <AppText role="bodyStrong">{ledgerLabel(entry)}</AppText>
         <AppText role="caption" color="textMuted">
-          {formatDay(entry.createdAt)}
+          {`sold ${entry.balanceAfter}`}
         </AppText>
       </View>
       <AppText
@@ -134,8 +144,15 @@ export default function CreditsScreen() {
           <AppText role="section" accessibilityRole="header">
             Istoric
           </AppText>
-          {entries.map((e) => (
-            <HistoryRow key={e.id} entry={e} />
+          {byDay(entries).map((g) => (
+            <View key={g.day} style={styles.day}>
+              <AppText role="eyebrow" color="textMuted" accessibilityRole="header">
+                {g.day}
+              </AppText>
+              {g.rows.map((e) => (
+                <HistoryRow key={e.id} entry={e} />
+              ))}
+            </View>
           ))}
           {loading ? (
             <View style={styles.center}>
@@ -171,6 +188,7 @@ const styles = StyleSheet.create({
   balance: { flexDirection: 'row', alignItems: 'center', gap: space[2.5] },
   big: { fontSize: 40, lineHeight: 48 },
   section: { gap: space[3] },
+  day: { gap: space[1] },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

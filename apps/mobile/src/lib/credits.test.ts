@@ -70,9 +70,11 @@ describe('ledgerLabel', () => {
     expect(ledgerLabel(entry({ target: 'req:r2', exercise }))).toBe('Eseu · cerința 2');
     expect(ledgerLabel(entry({ target: 'whole', exercise }))).toBe('Eseu · eseul întreg');
   });
-  it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare'));
+  it('check of a deleted exercise', () => expect(ledgerLabel(entry({ target: 'exercise' }))).toBe('Verificare cu profesorul digital'));
   it('BAC grading rows', () => {
     expect(ledgerLabel(entry({ kind: 'check', delta: -10, target: 'bac:s1' }))).toBe('Corectare subiect');
+    expect(ledgerLabel(entry({ kind: 'check', delta: -10, target: 'bac:s1', bacTitle: 'Istorie 2026 · Varianta 3' }))).toBe('Corectare subiect · Istorie 2026 · Varianta 3');
+    expect(ledgerLabel(entry({ kind: 'refund', delta: 10, target: 'bac:s1', bacTitle: 'Varianta 3' }))).toBe('Corectare nereușită · returnat · Varianta 3');
     expect(ledgerLabel(entry({ kind: 'refund', delta: 10, target: 'bac:s1' }))).toBe('Corectare nereușită · returnat');
   });
   it('refund', () => expect(ledgerLabel(entry({ kind: 'refund' }))).toBe('Verificare nereușită · returnat'));
@@ -325,5 +327,22 @@ describe('queries', () => {
   it('fetchCreditBalance reads profiles.credit_balance', async () => {
     const { client } = fakeClient({ data: { credit_balance: 3 }, error: null });
     await expect(fetchCreditBalance('u1', client)).resolves.toBe(3);
+  });
+});
+
+describe('fetchLedger names the BAC subject of a grading row', () => {
+  it('reads the titles of the subjects in the rows', async () => {
+    const ledger = [{ id: 3, delta: -10, balance_after: 2, kind: 'check', target: 'bac:s1', reason: null, created_at: 't', consolidation_exercises: null }];
+    const chain = (data: unknown) => {
+      const b: Record<string, unknown> = {};
+      for (const m of ['select', 'eq', 'order', 'limit', 'lt', 'in']) b[m] = () => b;
+      b.then = (res: (v: unknown) => unknown) => Promise.resolve({ data, error: null }).then(res);
+      return b;
+    };
+    const from = jest.fn((t: string) => chain(t === 'bac_subjects' ? [{ id: 's1', title: 'Istorie 2026 · Varianta 3' }] : ledger));
+    const auth = { getSession: () => Promise.resolve({ data: { session: { user: { id: 'me' } } }, error: null }) };
+    const [row] = await fetchLedger({}, { from, auth } as unknown as SupabaseClient);
+    expect(from).toHaveBeenCalledWith('bac_subjects');
+    expect(row).toMatchObject({ bacTitle: 'Istorie 2026 · Varianta 3' });
   });
 });

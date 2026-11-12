@@ -18,7 +18,7 @@ type Props = {
 };
 
 /**
- * The package rows (credits, price, price per credit, „CEL MAI ALES” on the featured one) with the error line and
+ * The package rows (credits, price, price per credit, „CEL MAI POPULAR” on the featured one) with the error line and
  * the buy button. Loads the active packages itself and buys the selected one; the balance is updated here, the host
  * only reacts through `onBought`. Shared by the „Îți mai trebuie” sheet and the credits page.
  */
@@ -120,7 +120,7 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
                 {p.featured ? (
                   <View style={styles.badge}>
                     <AppText role="badge" style={styles.badgeText}>
-                      CEL MAI ALES
+                      CEL MAI POPULAR
                     </AppText>
                   </View>
                 ) : null}
