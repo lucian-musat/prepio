@@ -55,7 +55,9 @@ it('an AI exercise shows the cost tag, the balance chip and „Verifică” with
   expect(screen.getByLabelText('Profesorul digital, costă 2 credite')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Verifică, costă 2 credite' })).toBeTruthy();
   expect(screen.getByLabelText('Perioadă de probă, 7 credite, deschide accesul')).toBeTruthy();
-  expect(screen.getByText('3/10')).toBeTruthy();
+  // One progress indicator: the exercise map (not a bar and an „n/10” too).
+  expect(screen.queryByText('3/10')).toBeNull();
+  expect(within(screen.getByTestId('top-bar')).queryByRole('progressbar')).toBeNull();
 });
 
 it('a deterministic exercise shows neither the tag nor a cost', async () => {
@@ -175,4 +177,26 @@ it('a cause-effect exercise shows the step banner with the signal words (consoli
   await mount(causeEffect);
   expect(screen.getByTestId('ce-banner')).toBeTruthy();
   expect(screen.getByText('fiindcă')).toBeTruthy();
+});
+
+describe('after a check', () => {
+  const checked = async (verdict: 'ok' | 'almost') => {
+    mockedEvaluate.mockResolvedValue({ items: [{ ...ok, verdict }], credits: { spent: 2, balance: 5 } });
+    await mount(comparison);
+    await typeAnswer();
+    await fireEvent.press(verify());
+    await screen.findByText('Deosebire corectă');
+  };
+
+  it('„Încearcă din nou” on an AI exercise shows that it costs again', async () => {
+    await checked('almost');
+    expect(screen.getByRole('button', { name: 'Încearcă din nou, costă 2 credite' })).toBeTruthy();
+  });
+
+  it('after „Corect” the retry is a quiet link, not a full button', async () => {
+    await checked('ok');
+    const bar = within(screen.getByTestId('action-bar'));
+    expect(bar.queryByTestId('retry-button')).toBeNull();
+    expect(bar.getByTestId('retry-link')).toBeTruthy();
+  });
 });

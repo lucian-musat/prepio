@@ -43,6 +43,14 @@ describe('normalizeAiOutput', () => {
     expect(out.items[0]!.improve).toHaveLength(5);
   });
 
+  it('writes ș and ț with the comma below in every text it keeps', () => {
+    const out = normalizeAiOutput(
+      { items: [item({ title: 'Ţara şi menţiunea', good: ['Ai menţionat corect şi data.'], improve: ['Adaugă ştirea.'] })] },
+      ['k'],
+    );
+    expect(out.items[0]).toMatchObject({ title: 'Țara și mențiunea', good: ['Ai menționat corect și data.'], improve: ['Adaugă știrea.'] });
+  });
+
   it('leaves short values untouched', () => {
     const i = item();
     expect(normalizeAiOutput({ items: [i] }, ['k'])).toEqual({ items: [i] });

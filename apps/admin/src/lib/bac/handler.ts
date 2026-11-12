@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AI_TYPES, BAC_ESSAY_WORDS, BAC_TOTAL_POINTS, DEFAULT_ESSAY_STYLE, MAX_ANSWER_CHARS, allowedSteps, bacGrade, bacItemFromRow, clampToStep,
-  detectConnectors, essayLengthPoints, firstSentence, sanitizeAnswers, scoreDeterministic, sourceFromRow,
+  detectConnectors, essayLengthPoints, firstSentence, fixRomanianDiacritics, sanitizeAnswers, scoreDeterministic, sourceFromRow,
   type BacAnswers, type BacEssayStyle, type BacItem, type BacItemResult, type BacPartResult, type BacSection, type BacStepRule,
   type BacSubmitError, type BacSubmitErrorCode, type BacSubmitResponse, type ExerciseAnswer, type Mark,
   type Source, type SourceLabel, type SourceRef,
@@ -324,7 +324,7 @@ const connectorFact = (text: string) => {
 const MAX_FEEDBACK_CHARS = 300;
 /** One sentence for the student; none on full points. */
 const studentFeedback = (feedback: string, points: number, max: number) =>
-  points >= max ? '' : [...firstSentence(feedback)].slice(0, MAX_FEEDBACK_CHARS).join('');
+  points >= max ? '' : [...firstSentence(fixRomanianDiacritics(feedback))].slice(0, MAX_FEEDBACK_CHARS).join('');
 /** Long feedback is cut, never a reason to fail the paper. */
 const capFeedback = (raw: unknown) =>
   isObj(raw) && typeof raw.feedback === 'string' ? { ...raw, feedback: [...raw.feedback].slice(0, MAX_FEEDBACK_CHARS).join('') } : raw;

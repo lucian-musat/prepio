@@ -176,7 +176,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                 </View>
                 {busy[r.id] ? <Analyzing /> : null}
                 {errors[r.id] ? <CheckError message={errors[r.id]!} onRetry={() => check(r)} /> : null}
-                {item && !busy[r.id] ? <FeedbackBox item={item} /> : null}
+                {item && !busy[r.id] ? <FeedbackBox showVerdict={false} item={item} /> : null}
                 {item && r.modelAnswer ? <Disclosure label="Vezi un răspuns model" lines={[r.modelAnswer]} /> : null}
               </View>
             ) : null}

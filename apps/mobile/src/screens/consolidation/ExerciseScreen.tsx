@@ -29,7 +29,7 @@ import SourcePanel, { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePane
 import { NO_MARKS, noop, type PanelMarker, type PanelSource } from '../../components/marker/SourceReader';
 import { evaluateConsolidation } from '../../lib/api';
 import type { Attempt } from '../../lib/consolidation';
-import { AppText, Button, ScreenLayout } from '../../ui';
+import { AppText, Button, ScreenLayout, TextButton } from '../../ui';
 import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, markerMarks, mergeAiFeedback, restorable } from './checking';
 import FeedbackView, { Analyzing, CheckError } from './FeedbackView';
 import TemplateSheet from './TemplateSheet';
@@ -38,9 +38,9 @@ type Props = {
   exercise: ConsolidationExercise;
   sources: Map<string, Source>;
   templates: Map<string, SolutionTemplate>;
-  /** Position in the run (0-based) and the run's length. */
-  index: number;
-  total: number;
+  /** Position in the run (0-based) and the run's length; the exercise map shows them, the screen no longer does. */
+  index?: number;
+  total?: number;
   onBack: () => void;
   /** A check finished: the attempt to save (the screen saves it; a failure is only logged). */
   onChecked: (attempt: Attempt) => void;
@@ -90,8 +90,6 @@ export default function ExerciseScreen({
   exercise,
   sources,
   templates,
-  index,
-  total,
   onBack,
   onChecked,
   onContinue,
@@ -257,13 +255,25 @@ export default function ExerciseScreen({
   const skip = (flex: boolean) => (
     <Button flex={flex} compact={!flex} label="Sari peste" accessibilityLabel="Sari peste, exercițiul următor" variant="secondary" disabled={moving} onPress={onSkip} />
   );
+  // A retry pays again on an AI exercise; after „Corect” it is only a quiet link.
+  const retry =
+    feedback?.verdict === 'ok' ? (
+      <View testID="retry-link" style={styles.retryLink}>
+        <TextButton label={ai && exerciseCost ? `Încearcă din nou · 🪙 ${exerciseCost}` : 'Încearcă din nou'} onPress={onRetry} />
+      </View>
+    ) : (
+      <View testID="retry-button">
+        <Button label="Încearcă din nou" variant="secondary" cost={ai && exerciseCost ? exerciseCost : undefined} onPress={onRetry} />
+      </View>
+    );
   const actions = checked ? (
     <View style={styles.stack}>
-      <Button label="Încearcă din nou" variant="secondary" onPress={onRetry} />
+      {feedback?.verdict === 'ok' ? null : retry}
       <View style={styles.row}>
         {prev}
         <Button flex label="Continuă" onPress={onContinue} />
       </View>
+      {feedback?.verdict === 'ok' ? retry : null}
     </View>
   ) : essay ? (
     <View style={styles.stack}>
@@ -290,16 +300,7 @@ export default function ExerciseScreen({
     <View style={styles.fill}>
       <ScreenLayout
         title="Consolidare"
-        progress={(index + 1) / total}
-        progressLabel="Progres consolidare"
-        trailing={
-          <View style={styles.trailing}>
-            <CreditChip need={ai ? exercise.creditCost : undefined} />
-            <AppText role="label" color="textMuted">
-              {index + 1}/{total}
-            </AppText>
-          </View>
-        }
+        trailing={<CreditChip need={ai ? exercise.creditCost : undefined} />}
         subheader={map?.(moving)}
         onBack={onBack}
         actions={actions}
@@ -328,6 +329,7 @@ export default function ExerciseScreen({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   stack: { flex: 1, gap: space[2.5] },
+  retryLink: { alignSelf: 'center' },
   row: { flexDirection: 'row', gap: space[2.5] },
   answer: { gap: space[3] },
   trailing: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
