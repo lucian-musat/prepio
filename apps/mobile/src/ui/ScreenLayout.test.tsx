@@ -45,6 +45,35 @@ it('renders actions outside the scroll view', async () => {
   expect(isInside(screen.getByText('Verifică'), screen.getByTestId('action-bar'))).toBe(true);
 });
 
+describe('document title (web)', () => {
+  const { Platform } = require('react-native');
+  const original = Platform.OS;
+  const doc = globalThis as unknown as { document?: { title: string } };
+  beforeEach(() => {
+    Platform.OS = 'web';
+    doc.document = { title: '' };
+  });
+  afterEach(() => {
+    Platform.OS = original;
+    delete doc.document;
+  });
+
+  it('names the tab after the screen title', async () => {
+    await renderLayout({ title: 'Creditele mele' });
+    expect(doc.document?.title).toBe('Creditele mele · Prepio');
+  });
+
+  it('pageTitle overrides the bar title', async () => {
+    await renderLayout({ title: 'Lecție', pageTitle: 'Constituția din 1866' });
+    expect(doc.document?.title).toBe('Constituția din 1866 · Prepio');
+  });
+
+  it('the logo screen is just Prepio', async () => {
+    await renderLayout({ title: undefined, logo: true });
+    expect(doc.document?.title).toBe('Prepio');
+  });
+});
+
 it('no action bar when actions is undefined', async () => {
   await renderLayout();
   expect(screen.queryByTestId('action-bar')).toBeNull();

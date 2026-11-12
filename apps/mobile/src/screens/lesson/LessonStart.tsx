@@ -24,6 +24,7 @@ export default function LessonStart({ lesson, guided, finished, consolidation, o
   return (
     <ScreenLayout
       title="Lecție"
+      pageTitle={lesson.title}
       onBack={goBackOrHome}
       actions={
         <View style={styles.stack}>

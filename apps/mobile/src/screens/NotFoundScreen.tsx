@@ -6,7 +6,7 @@ import { AppText, Button, ScreenLayout } from '../ui';
 /** Unknown route (Expo Router `+not-found`). Public: needs no session. */
 export default function NotFoundScreen() {
   return (
-    <ScreenLayout logo>
+    <ScreenLayout logo pageTitle="Pagina nu există">
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header" style={styles.centre}>
           Pagina nu există
