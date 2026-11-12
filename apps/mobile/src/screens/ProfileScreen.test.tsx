@@ -200,8 +200,8 @@ it('has a „Creditele mele” row with the balance that opens the credits page'
 
 it('shows the subscription row with the plan label above the credits row', async () => {
   await renderScreen();
-  expect(screen.getByRole('button', { name: 'Abonamentul meu · Trial' })).toBeTruthy();
-  fireEvent.press(screen.getByRole('button', { name: 'Abonamentul meu · Trial' }));
+  expect(screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' })).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' }));
   expect(require('expo-router').router.push).toHaveBeenCalledWith('/abonament');
 });
 
@@ -221,11 +221,11 @@ it('labels full and expired plans', async () => {
   const d = new Date(Date.now() + 40 * 86400000);
   mockResetAccess({ accessUntil: d.toISOString() });
   const { unmount } = await renderScreen();
-  expect(screen.getByRole('button', { name: `Abonamentul meu · Acces până la ${formatAccessDate(d)}` })).toBeTruthy();
+  expect(screen.getByRole('button', { name: `Accesul meu · Acces până la ${formatAccessDate(d)}` })).toBeTruthy();
   await unmount();
   mockResetAccess({ accessUntil: new Date(Date.now() - 86400000).toISOString() });
   await renderScreen();
-  expect(screen.getByRole('button', { name: 'Abonamentul meu · Expirat' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Accesul meu · Expirat' })).toBeTruthy();
 });
 
 describe('invite row', () => {

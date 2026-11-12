@@ -4,6 +4,7 @@ import { color, space, type Lesson } from '@prepio/shared';
 import { AppText, Button, Enter, ScreenLayout, Surface, TextButton, goBackOrHome } from '../../ui';
 import { countLabel } from '../../lib/lessonCount';
 import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
+import CreditChip from '../../credits/CreditChip';
 
 type Props = {
   lesson: Lesson;
@@ -26,6 +27,7 @@ export default function LessonStart({ lesson, guided, finished, consolidation, o
       title="Lecție"
       pageTitle={lesson.title}
       onBack={goBackOrHome}
+      trailing={<CreditChip />}
       actions={
         <View style={styles.stack}>
           {onResume ? <Button label="Continuă de unde ai rămas" onPress={onResume} /> : null}

@@ -26,7 +26,7 @@ function historyLabel(h: AccessHistoryEntry): string {
   return 'Acces retras';
 }
 
-/** „Abonamentul meu” (paid-access mockup, step 3): the plan, what it includes, renewing and the access history. */
+/** „Accesul meu” (paid-access mockup, step 3): the plan, what it includes, renewing and the access history. */
 export default function AccessScreen() {
   const { status, offer, refresh } = useAccess();
   const { purchase, pending, error } = useAccessPurchase();
@@ -77,7 +77,7 @@ export default function AccessScreen() {
     .join(' · ');
 
   return (
-    <ScreenLayout title="Abonamentul meu" onBack={goBackOrHome}>
+    <ScreenLayout title="Accesul meu" onBack={goBackOrHome}>
       <View style={styles.stack}>
         <View style={[styles.card, full && styles.cardFull]}>
           {full ? (
@@ -96,7 +96,7 @@ export default function AccessScreen() {
             </>
           ) : trial ? (
             <>
-              <AppText role="section">Trial</AppText>
+              <AppText role="section">Perioadă de probă</AppText>
               <AppText role="body" color="textMuted">
                 Ai deschisă doar lecția gratuită. Restul se deblochează cu accesul complet.
               </AppText>

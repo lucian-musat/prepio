@@ -27,26 +27,26 @@ const renderStepper = async (cards: Card[], props: { onFinish?: jest.Mock; finis
 };
 
 const bar = () => within(screen.getByTestId('action-bar'));
-const PREV = 'Înapoi la cartonașul anterior';
+const PREV = 'Înapoi la cardul anterior';
 const isDisabled = (el: any) => !!el.props.accessibilityState?.disabled || !!el.props['aria-disabled'];
 
 it('shows the first card with a counter and steps through the cards within bounds', async () => {
   const { onFinish, onIndexChange } = await renderStepper([card(1), card(2), card(3)], { finishLabel: 'La verificare' });
   expect(screen.getByText('Titlu 1')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 1 din 3')).toBeTruthy();
+  expect(screen.getByText('Card 1 din 3')).toBeTruthy();
 
   await fireEvent.press(bar().getByRole('button', { name: 'Continuă' }));
   expect(screen.getByText('Corp 2')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 2 din 3')).toBeTruthy();
+  expect(screen.getByText('Card 2 din 3')).toBeTruthy();
   expect(onIndexChange).toHaveBeenLastCalledWith(1);
 
   await fireEvent.press(bar().getByRole('button', { name: PREV }));
-  expect(screen.getByText('Cartonaș 1 din 3')).toBeTruthy();
+  expect(screen.getByText('Card 1 din 3')).toBeTruthy();
   expect(onIndexChange).toHaveBeenLastCalledWith(0);
 
   await fireEvent.press(bar().getByRole('button', { name: 'Continuă' }));
   await fireEvent.press(bar().getByRole('button', { name: 'Continuă' }));
-  expect(screen.getByText('Cartonaș 3 din 3')).toBeTruthy();
+  expect(screen.getByText('Card 3 din 3')).toBeTruthy();
   expect(onFinish).not.toHaveBeenCalled();
   await fireEvent.press(bar().getByRole('button', { name: 'La verificare' }));
   expect(onFinish).toHaveBeenCalledTimes(1);
@@ -76,7 +76,7 @@ it('renders the frame: title, progress and the top bar back button', async () =>
 it('renders the type chip and eyebrow with the title and body', async () => {
   await renderStepper([card(1), card(2)]);
   expect(screen.getByText('Text')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 1 din 2')).toBeTruthy();
+  expect(screen.getByText('Card 1 din 2')).toBeTruthy();
   expect(screen.getByText('Titlu 1')).toBeTruthy();
   expect(screen.getByText('Corp 1')).toBeTruthy();
 });
@@ -134,10 +134,10 @@ describe('swipe between cards', () => {
     const { onIndexChange } = await renderStepper([card(1), card(2), card(3)]);
     await layout();
     await swipe(-250);
-    counter('Cartonaș 2 din 3');
+    counter('Card 2 din 3');
     expect(onIndexChange).toHaveBeenLastCalledWith(1);
     await swipe(250);
-    counter('Cartonaș 1 din 3');
+    counter('Card 1 din 3');
     expect(onIndexChange).toHaveBeenLastCalledWith(0);
   });
 
@@ -145,22 +145,22 @@ describe('swipe between cards', () => {
     const { onIndexChange } = await renderStepper([card(1), card(2)]);
     await layout();
     await swipe(-30);
-    counter('Cartonaș 1 din 2');
+    counter('Card 1 din 2');
     expect(onIndexChange).not.toHaveBeenCalled();
     await swipe(-30, -900);
-    counter('Cartonaș 2 din 2');
+    counter('Card 2 din 2');
   });
 
   it('never goes past the ends: no previous card on the first, no finishing on the last', async () => {
     const { onIndexChange, onFinish } = await renderStepper([card(1), card(2)]);
     await layout();
     await swipe(300, 900);
-    counter('Cartonaș 1 din 2');
+    counter('Card 1 din 2');
     expect(onIndexChange).not.toHaveBeenCalled();
     await swipe(-300);
-    counter('Cartonaș 2 din 2');
+    counter('Card 2 din 2');
     await swipe(-300, -900);
-    counter('Cartonaș 2 din 2');
+    counter('Card 2 din 2');
     expect(onFinish).not.toHaveBeenCalled();
     expect(onIndexChange).toHaveBeenCalledTimes(1);
   });
@@ -185,7 +185,7 @@ describe('swipe between cards', () => {
     const { onIndexChange } = await renderStepper([card(1), card(2)]);
     await layout();
     await swipe(-300, -900, TOUCH, true);
-    counter('Cartonaș 1 din 2');
+    counter('Card 1 din 2');
     expect(onIndexChange).not.toHaveBeenCalled();
   });
 
@@ -208,7 +208,7 @@ describe('swipe between cards', () => {
       expect(pan).toMatchObject({ touchAction: 'pan-y', userSelect: 'auto' });
       // A mouse drag on a touch device is ignored.
       await swipe(-300, -900, MOUSE);
-      counter('Cartonaș 1 din 2');
+      counter('Card 1 din 2');
     } finally {
       Platform.OS = os;
       window.matchMedia = matchMedia;
@@ -223,7 +223,7 @@ it('starts on initialIndex', async () => {
     </SafeAreaProvider>,
   );
   expect(screen.getByText('Corp 2')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 2 din 3')).toBeTruthy();
+  expect(screen.getByText('Card 2 din 3')).toBeTruthy();
   expect(isDisabled(bar().getByRole('button', { name: PREV }))).toBe(false);
 });
 

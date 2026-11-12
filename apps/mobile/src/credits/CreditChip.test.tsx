@@ -22,28 +22,28 @@ beforeEach(() => {
 const pill = () => screen.getByTestId('credit-chip');
 const bg = () => StyleSheet.flatten(pill().props.style).backgroundColor;
 
-it('trial: „Trial · 12” in the neutral tone, with the label', async () => {
+it('trial: „Probă · 12” in the neutral tone, with the label', async () => {
   await render(<CreditChip />);
-  expect(screen.getByRole('button', { name: 'Trial, 12 credite, deschide abonamentul' })).toBeTruthy();
-  expect(screen.getByText('Trial ·')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Perioadă de probă, 12 credite, deschide accesul' })).toBeTruthy();
+  expect(screen.getByText('Probă ·')).toBeTruthy();
   expect(screen.getByText('12')).toBeTruthy();
   expect(bg()).toBe(planTone.trial.bg);
 });
 
-it('expired looks like the trial', async () => {
+it('expired: „Expirat · 12” in the warning tone', async () => {
   mockResetAccess({ accessUntil: inDays(-3) });
   await render(<CreditChip />);
-  expect(screen.getByText('Trial ·')).toBeTruthy();
-  expect(bg()).toBe(planTone.trial.bg);
-  expect(screen.getByLabelText('Trial, 12 credite, deschide abonamentul')).toBeTruthy();
+  expect(screen.getByText('Expirat ·')).toBeTruthy();
+  expect(bg()).toBe(planTone.expiring.bg);
+  expect(screen.getByLabelText('Acces expirat, 12 credite, deschide accesul')).toBeTruthy();
 });
 
-it('full access: „★ · 12” in green', async () => {
+it('full access: „★ Acces · 12” in green', async () => {
   mockResetAccess({ accessUntil: inDays(40) });
   await render(<CreditChip />);
-  expect(screen.getByText('★ ·')).toBeTruthy();
+  expect(screen.getByText('★ Acces ·')).toBeTruthy();
   expect(bg()).toBe(planTone.full.bg);
-  expect(screen.getByLabelText('Acces complet, 12 credite, deschide abonamentul')).toBeTruthy();
+  expect(screen.getByLabelText('Acces complet, 12 credite, deschide accesul')).toBeTruthy();
 });
 
 it('expiring: „⏳ 5 zile · 12” in orange; one day is „1 zi”', async () => {
@@ -51,7 +51,7 @@ it('expiring: „⏳ 5 zile · 12” in orange; one day is „1 zi”', async ()
   await render(<CreditChip />);
   expect(screen.getByText('⏳ 5 zile ·')).toBeTruthy();
   expect(bg()).toBe(planTone.expiring.bg);
-  expect(screen.getByLabelText('Acces complet încă 5 zile, 12 credite, deschide abonamentul')).toBeTruthy();
+  expect(screen.getByLabelText('Acces complet încă 5 zile, 12 credite, deschide accesul')).toBeTruthy();
   await act(async () => mockResetAccess({ accessUntil: inDays(1) }));
   expect(screen.getByText('⏳ 1 zi ·')).toBeTruthy();
 });
@@ -59,7 +59,7 @@ it('expiring: „⏳ 5 zile · 12” in orange; one day is „1 zi”', async ()
 it('an admin sees the full style', async () => {
   mockResetAccess({ isAdmin: true });
   await render(<CreditChip />);
-  expect(screen.getByText('★ ·')).toBeTruthy();
+  expect(screen.getByText('★ Acces ·')).toBeTruthy();
   expect(bg()).toBe(planTone.full.bg);
 });
 
@@ -76,7 +76,7 @@ it('renders nothing while the balance is null', async () => {
   expect(screen.queryByTestId('credit-chip')).toBeNull();
 });
 
-it('opens „Abonamentul meu” on press', async () => {
+it('opens „Accesul meu” on press', async () => {
   await render(<CreditChip />);
   await fireEvent.press(pill());
   expect(router.push).toHaveBeenCalledWith('/abonament');

@@ -32,20 +32,21 @@ function Floating({ delta }: { delta: number }) {
 
 type Plan = { tone: keyof typeof planTone; text: string; label: string };
 
-/** The plan half of the pill (mockup option B): trial and expired „Trial”, full „★”, the last 7 days „⏳ n zile”. */
+/** The plan half of the pill, always a word: „Probă”, „★ Acces”, the last 7 days „⏳ n zile”, „Expirat”. */
 function usePlan(): Plan {
   const { status, isAdmin } = useAccess();
-  if (isAdmin || status.plan === 'full') return { tone: 'full', text: '★ ·', label: 'Acces complet' };
+  if (isAdmin || status.plan === 'full') return { tone: 'full', text: '★ Acces ·', label: 'Acces complet' };
   if (status.plan === 'expiring') {
     const days = plural(status.daysLeft, 'zi', 'zile');
     return { tone: 'expiring', text: `⏳ ${days} ·`, label: `Acces complet încă ${days}` };
   }
-  return { tone: 'trial', text: 'Trial ·', label: 'Trial' };
+  if (status.plan === 'expired') return { tone: 'expiring', text: 'Expirat ·', label: 'Acces expirat' };
+  return { tone: 'trial', text: 'Probă ·', label: 'Perioadă de probă' };
 }
 
 /**
- * The top-bar pill: plan + coin + balance in one element („Trial · 🪙 12”, „★ · 🪙 112”, „⏳ 5 zile · 🪙 40”),
- * red when the balance is below `need`; floats „−2” / „+50” on balance changes; opens „Abonamentul meu”.
+ * The top-bar pill: plan + coin + balance in one element („Probă · 🪙 12”, „★ Acces · 🪙 112”, „⏳ 5 zile · 🪙 40”),
+ * red when the balance is below `need`; floats „−2” / „+50” on balance changes; opens „Accesul meu”.
  */
 export default function CreditChip({ need }: { need?: number }) {
   const { balance, change } = useCredits();
@@ -70,7 +71,7 @@ export default function CreditChip({ need }: { need?: number }) {
       <Pressable
         testID="credit-chip"
         accessibilityRole="button"
-        accessibilityLabel={`${plan.label}, ${creditsLabel(balance)}, deschide abonamentul`}
+        accessibilityLabel={`${plan.label}, ${creditsLabel(balance)}, deschide accesul`}
         onPress={() => router.push('/abonament')}
         hitSlop={8}
         style={[styles.chip, low ? styles.low : { backgroundColor: tone.bg, borderColor: tone.border }]}

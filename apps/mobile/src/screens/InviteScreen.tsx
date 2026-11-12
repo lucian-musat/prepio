@@ -20,11 +20,11 @@ const shareMessage = (link: string) => `Învață pentru BAC cu Prepio. Foloseș
 export function referralStatus(r: ReferralRow): string {
   switch (r.state) {
     case 'registered':
-      return 'Cont creat, fără abonament';
+      return 'Cont creat, fără acces';
     case 'pending':
-      return 'Abonat · numără spre abonamentul gratuit';
+      return 'Cu acces · numără spre accesul gratuit';
     case 'consumed_access':
-      return 'Abonat · a contribuit la abonamentul gratuit';
+      return 'Cu acces · a contribuit la accesul gratuit';
     case 'converted_credits':
       return `Abonat · +${plural(r.rewardCredits, 'credit', 'credite')}`;
     case 'over_cap':
@@ -52,12 +52,12 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
           <CapNote />
         ) : (
           <AppText role="bodyStrong">
-            {`Încă ${plural(left, 'coleg', 'colegi')} ${left === 1 ? 'care își ia' : 'care își iau'} abonament și primești ${monthsText(summary.durationMonths)} gratis`}
+            {`Încă ${plural(left, 'coleg', 'colegi')} ${left === 1 ? 'care își cumpără' : 'care își cumpără'} acces și primești ${monthsText(summary.durationMonths)} gratis`}
           </AppText>
         )}
         <ProgressBar
           value={summary.threshold > 0 ? summary.pendingCount / summary.threshold : 0}
-          accessibilityLabel="Progres spre abonamentul gratuit"
+          accessibilityLabel="Progres spre accesul gratuit"
         />
         <AppText role="caption" color="textMuted">{`${summary.pendingCount} din ${summary.threshold}`}</AppText>
       </Surface>
@@ -78,7 +78,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
       {summary.capReached ? (
         <CapNote />
       ) : (
-        <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își ia abonament`}</AppText>
+        <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își cumpără acces`}</AppText>
       )}
       <AppText role="small" color="textMuted">
         {`Până acum: ${totals.join(' · ')}`}

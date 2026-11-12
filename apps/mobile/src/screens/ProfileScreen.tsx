@@ -30,7 +30,7 @@ export default function ProfileScreen() {
   const { status } = useAccess();
   const referral = useReferralSummary();
   const badge = referral ? progressBadge(referral) : null;
-  const planLabel = status.plan === 'trial' ? 'Trial' : status.plan === 'expired' ? 'Expirat' : `Acces până la ${formatAccessDate(status.until)}`;
+  const planLabel = status.plan === 'trial' ? 'Perioadă de probă' : status.plan === 'expired' ? 'Expirat' : `Acces până la ${formatAccessDate(status.until)}`;
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -141,7 +141,7 @@ export default function ProfileScreen() {
           {modeSaved ? <AppText role="small" color="success">{modeSaved}</AppText> : null}
         </View>
 
-        <Button label={`Abonamentul meu · ${planLabel}`} variant="secondary" onPress={() => router.push('/abonament')} disabled={busy} />
+        <Button label={`Accesul meu · ${planLabel}`} variant="secondary" onPress={() => router.push('/abonament')} disabled={busy} />
 
         <Button
           label={`Creditele mele · ${balance ?? 0}`}

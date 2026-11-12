@@ -107,9 +107,9 @@ function useWriteQueue() {
 /** What skipping the cards means, per mode: shown before the student goes straight to the test. */
 export const SKIP_MESSAGE = {
   guided:
-    'Treci peste cartonașe și începi direct verificarea. Ca să termini lecția și să o deblochezi pe următoarea, ' +
-    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cartonașele, apoi reiei verificarea de la început.',
-  free: 'Treci peste cartonașe și începi direct verificarea. Lecția e terminată când ajungi la final. Poți reveni oricând la cartonașe.',
+    'Treci peste carduri și începi direct verificarea. Ca să termini lecția și să o deblochezi pe următoarea, ' +
+    'trebuie să răspunzi corect la toate. Dacă greșești, îți recomandăm să revezi cardurile, apoi reiei verificarea de la început.',
+  free: 'Treci peste carduri și începi direct verificarea. Lecția e terminată când ajungi la final. Poți reveni oricând la carduri.',
 } as const;
 export const SKIP_CONFIRM = 'Da, sari la verificare';
 
