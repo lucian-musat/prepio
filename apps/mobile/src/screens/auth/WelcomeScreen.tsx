@@ -7,6 +7,8 @@ import { signInWithGoogle } from '../../auth/google';
 import { emailAuthEnabled } from '../../lib/flags';
 import { TERMS_VERSION } from '../../lib/legal';
 import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
+import { storePendingCode } from '../../lib/referrals';
+import ReferralCodeField from '../../components/ReferralCodeField';
 import AgeTermsCheckbox, { CONSENT_HINT } from '../../components/AgeTermsCheckbox';
 import AuthHero from './AuthHero';
 
@@ -23,6 +25,8 @@ export default function WelcomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [consented, setConsented] = useState(false);
   const touched = useRef(false);
+  /** A valid invite code (link or typed), reported by the field; written to storage before leaving the page. */
+  const inviteCode = useRef<string | null>(null);
 
   // Back on Welcome with a consent given on this device minutes ago (getStoredConsent drops a stale one).
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function WelcomeScreen() {
     try {
       // Written before leaving the page (web redirect), whatever happened to the earlier write.
       await storeConsent(TERMS_VERSION);
+      if (inviteCode.current) await storePendingCode(inviteCode.current);
       // 'ok' needs nothing here: the status change swaps the route group. 'cancelled' is silent, but the consent
       // stored for it goes (a later sign-in, maybe by someone else, must not inherit it); the next press stores it again.
       if ((await signInWithGoogle()) === 'cancelled') await clearConsent();
@@ -62,6 +67,7 @@ export default function WelcomeScreen() {
   const email = () => {
     if (pending || !consented) return;
     void storeConsent(TERMS_VERSION);
+    if (inviteCode.current) void storePendingCode(inviteCode.current);
     router.push('/email');
   };
 
@@ -74,7 +80,10 @@ export default function WelcomeScreen() {
         <Enter index={1}>
           <AgeTermsCheckbox checked={consented} onChange={toggle} disabled={pending} />
         </Enter>
-        <Enter index={2} style={styles.buttons}>
+        <Enter index={2}>
+          <ReferralCodeField onChange={(c) => (inviteCode.current = c)} disabled={pending} />
+        </Enter>
+        <Enter index={3} style={styles.buttons}>
           <Button
             label="Continuă cu Google"
             onPress={google}

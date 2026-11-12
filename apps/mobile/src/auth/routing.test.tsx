@@ -7,6 +7,7 @@ import SuspendedLayout from '../../app/(suspended)/_layout';
 import PrivacyRoute from '../../app/confidentialitate';
 import DeleteAccountRoute from '../../app/sterge-cont';
 import PreviewRoute from '../../app/preview';
+import InviteRoute from '../../app/invita/[code]';
 import type { AuthStatus } from './AuthProvider';
 
 let mockStatus: AuthStatus = 'signedOut';
@@ -32,6 +33,7 @@ const routes = {
   confidentialitate: PrivacyRoute,
   'sterge-cont': DeleteAccountRoute,
   preview: PreviewRoute,
+  'invita/[code]': InviteRoute,
 };
 
 // Jest runs as native: the preview page shows its web-only notice, which is enough to prove the route renders.
@@ -63,6 +65,9 @@ it.each([
   ['signedOut', '/sterge-cont', 'Ștergerea contului'],
   ['needsName', '/sterge-cont', 'Ștergerea contului'],
   ['ready', '/sterge-cont', 'Ștergerea contului'],
+  ['signedOut', '/invita/ABCD2345', 'welcome'],
+  ['needsName', '/invita/ABCD2345', 'name'],
+  ['ready', '/invita/ABCD2345', 'home'],
   ['signedOut', '/preview', PREVIEW],
   ['needsName', '/preview', PREVIEW],
   ['ready', '/preview', PREVIEW],
