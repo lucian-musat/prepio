@@ -65,6 +65,23 @@ Last updated: 2026-11-12
     - a deterministic check: „Corect!” with the retry as a link
     - the end screen
   - **Not browser-checked:** the AI feedback view (the verdict word, the retry cost). It needs the admin API with an OpenAI mock; unit tests only.
+- **Batch E — BAC (`feat/ux-bac`):**
+  - **List:** an intro, „10 credite la predare”, and „Ultima notă: x ›” to the earlier result while a paper is open.
+  - **Result:** the subtotal per Subiect, „Corectată pe … · include 10 puncte din oficiu”, and „Continuă lucrarea începută” instead of a paid retake when a paper is open.
+  - **Completeness follows the grader:** a viewpoint needs its text and every mark, all facts, both cause-effect roles, every essay requirement.
+    - The hand-in summary says „Ai răspuns complet la x din y”.
+    - It lists „Incomplete:” / „Necompletate:” as chips that open the requirement.
+    - The map shows partly written requirements in yellow.
+  - **Paper:** a requirement opens on the source it names („…în sursa B”), and the points tail never wraps alone.
+  - Tests: mobile 1317.
+  - Browser walk (Chrome, local, `[test]` full-access student with a seeded graded attempt, 1280 + 360):
+    - the list with the intro and the last grade
+    - the result with subtotals and „Continuă lucrarea începută”
+    - I.1 opening on Sursa B
+    - one mark of two → „Incomplete: II.4” and a yellow dot
+    - the summary chips jumping to the requirement
+  - The walk caught a button nested in a button (a console error on web), now fixed with a regression test; console clean.
+  - Deferred: the compact phone header of the paper (B9).
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
   - the referral flag looks ON in production — check it
