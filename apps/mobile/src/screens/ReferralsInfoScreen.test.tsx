@@ -1,0 +1,160 @@
+import { act, render, screen } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import ReferralsInfoScreen from './ReferralsInfoScreen';
+import { CONTACT_EMAIL } from '../lib/legal';
+import { fetchReferralPublicSettings, type ReferralPublicSettings } from '../lib/referrals';
+
+jest.mock('../lib/referrals', () => ({
+  ...jest.requireActual('../lib/referrals'),
+  fetchReferralPublicSettings: jest.fn(),
+}));
+jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true } }));
+const mocked = fetchReferralPublicSettings as jest.Mock;
+
+const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
+const mount = async () =>
+  await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <ReferralsInfoScreen />
+    </SafeAreaProvider>,
+  );
+const settings = (over: Partial<ReferralPublicSettings> = {}): ReferralPublicSettings => ({
+  enabled: true,
+  threshold: 5,
+  creditsPerInvitee: 40,
+  durationMonths: 3,
+  maxRewarded: 100,
+  ...over,
+});
+
+const HEADINGS = [
+  'Pe scurt',
+  'Cine este un coleg care a plătit',
+  'Dacă nu ai abonament activ (probă sau expirat)',
+  'Dacă ai abonament activ',
+  'Dacă îți cumperi tu abonament',
+  'Exemple',
+  'Cum se folosește codul',
+  'Reguli importante',
+  'Ce vede cel care te-a invitat',
+  'Unde vezi recomandările',
+  'Dacă Prepio oprește recomandările',
+  'Întrebări frecvente',
+  'Cui te adresezi',
+];
+const QUESTIONS = [
+  'Invitatul a plătit după ce mi-am cumpărat eu abonamentul',
+  'Abonamentul meu a expirat',
+  'Invitatul și-a șters contul',
+  'Pot introduce codul după ce m-am înregistrat?',
+  'De ce nu apare invitatul în listă?',
+];
+const all = (re: RegExp) => screen.getAllByText(re).length > 0;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mocked.mockResolvedValue(settings());
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+it('shows a spinner while the numbers load, then the page', async () => {
+  let resolve!: (s: ReferralPublicSettings) => void;
+  mocked.mockReturnValue(new Promise((r) => (resolve = r)));
+  await mount();
+  expect(screen.getByLabelText('Se încarcă')).toBeTruthy();
+  await act(async () => resolve(settings()));
+  expect(await screen.findByText('Pe scurt')).toBeTruthy();
+  expect(screen.queryByLabelText('Se încarcă')).toBeNull();
+});
+
+it('has every required topic heading, in order, and the FAQ questions', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  const headers = screen.getAllByRole('header').map((h) => h.props.children);
+  expect(headers.filter((h) => HEADINGS.includes(h))).toEqual(HEADINGS);
+  for (const q of QUESTIONS) expect(screen.getByText(q)).toBeTruthy();
+});
+
+it('renders the live numbers (5 colleagues, 40 credits, 3 months, cap 100)', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/5 colegi/)).toBe(true);
+  expect(all(/40 de credite/)).toBe(true);
+  expect(all(/3 luni/)).toBe(true);
+  expect(all(/cel mult 100 de colegi/)).toBe(true);
+  expect(all(/2 × 40 de credite = 80 de credite/)).toBe(true);
+});
+
+it('uses the singular forms (1 colleague, 1 credit, one month, cap 1)', async () => {
+  mocked.mockResolvedValue(settings({ threshold: 1, creditsPerInvitee: 1, durationMonths: 1, maxRewarded: 1 }));
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/1 coleg\b/)).toBe(true);
+  expect(all(/1 credit\b/)).toBe(true);
+  expect(all(/o lună/)).toBe(true);
+  expect(all(/cel mult 1 coleg\b/)).toBe(true);
+  expect(screen.queryByText(/1 colegi/)).toBeNull();
+  expect(screen.queryByText(/1 credite/)).toBeNull();
+  expect(screen.queryByText(/1 luni/)).toBeNull();
+});
+
+it('follows the settings when they change (other numbers, the "de" rule)', async () => {
+  mocked.mockResolvedValue(settings({ threshold: 20, creditsPerInvitee: 21, durationMonths: 12, maxRewarded: 25 }));
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/20 de colegi/)).toBe(true);
+  expect(all(/21 de credite/)).toBe(true);
+  expect(all(/12 luni/)).toBe(true);
+  expect(all(/cel mult 25 de colegi/)).toBe(true);
+  expect(screen.queryByText(/5 colegi/)).toBeNull();
+});
+
+it('says what the free access is: same as a purchase, no bonus credits', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/la fel ca un abonament cumpărat/)).toBe(true);
+  expect(all(/fără credite bonus/)).toBe(true);
+});
+
+it('covers the rules the database enforces', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/Accesul primit de la un administrator nu contează/)).toBe(true);
+  expect(all(/doar prima cumpărare/i)).toBe(true);
+  expect(all(/nu expiră/)).toBe(true);
+  expect(all(/O singură persoană te poate invita/)).toBe(true);
+  expect(all(/în ultimele 24 de ore/)).toBe(true);
+  expect(all(/mai vechi decât/)).toBe(true);
+  expect(all(/Nu pierzi recompensa/)).toBe(true);
+  expect(all(/limita a fost atinsă/)).toBe(true);
+  expect(all(/prenumele și adresa de e-mail/)).toBe(true);
+  expect(all(/Istoricul creditelor/)).toBe(true);
+  expect(all(/Istoricul accesului/)).toBe(true);
+  expect(all(new RegExp(CONTACT_EMAIL.replace('.', '\.')))).toBe(true);
+});
+
+it('is graceful when the settings cannot be read: no numbers, no crash', async () => {
+  mocked.mockRejectedValue(new Error('offline'));
+  await mount();
+  expect(await screen.findByText('Pe scurt')).toBeTruthy();
+  expect(all(/numărul de colegi stabilit de Prepio/)).toBe(true);
+  expect(all(/numărul de credite stabilit de Prepio/)).toBe(true);
+  expect(all(/perioada stabilită de Prepio/)).toBe(true);
+  expect(screen.queryByText(/\d+ colegi/)).toBeNull();
+  expect(all(/Exemplele cu cifre apar când/)).toBe(true);
+  expect(screen.queryByText('Recomandările nu sunt active acum.')).toBeNull();
+});
+
+it('when the programme is off: a notice at the top, the page stays readable', async () => {
+  mocked.mockResolvedValue(settings({ enabled: false }));
+  await mount();
+  expect(await screen.findByText('Recomandările nu sunt active acum.')).toBeTruthy();
+  expect(screen.getByText('Pe scurt')).toBeTruthy();
+  expect(all(/5 colegi/)).toBe(true);
+});
+
+it('does not show the off notice while the programme is on', async () => {
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(screen.queryByText('Recomandările nu sunt active acum.')).toBeNull();
+});

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { color, feedbackText, plural, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
-import { fetchMyReferrals, fetchReferralSummary, inviteUrl, type ReferralRow, type ReferralSummary } from '../lib/referrals';
+import { fetchMyReferrals, fetchReferralSummary, inviteUrl, monthsText, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { copyText, shareText } from '../lib/share';
 
 const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
@@ -12,7 +12,6 @@ const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
 
 const shareMessage = (link: string) => `Învață pentru BAC cu Prepio. Folosește linkul meu ca să te înregistrezi: ${link}`;
-const monthsText = (n: number) => (n === 1 ? 'o lună' : plural(n, 'lună', 'luni'));
 
 /** What a referral row says about itself, in the student's words. */
 export function referralStatus(r: ReferralRow): string {
@@ -175,7 +174,9 @@ export default function InviteScreen() {
             )}
           </View>
 
-          {/* TODO(Task 7): add the „Cum funcționează” link to /recomandari here once the explainer page exists (no dead link before). */}
+          <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.link}>
+            Cum funcționează ›
+          </AppText>
         </View>
       )}
     </ScreenLayout>
@@ -191,4 +192,5 @@ const styles = StyleSheet.create({
   row: { gap: 2, borderBottomWidth: 1, borderBottomColor: color.border, paddingVertical: space[2.5] },
   error: { color: feedbackText.wrong },
   ok: { color: feedbackText.good },
+  link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });

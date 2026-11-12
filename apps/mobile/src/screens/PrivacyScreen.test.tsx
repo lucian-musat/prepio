@@ -133,3 +133,12 @@ it('explains the fingerprint kept when a suspended account is deleted or re-regi
     ),
   ).toBeTruthy();
 });
+
+it('discloses that an inviter sees the first name and e-mail of the invited student', async () => {
+  await renderScreen();
+  expect(
+    screen.getByText(
+      'Dacă te-ai înregistrat cu codul de invitație al unui coleg, acel coleg vede prenumele și adresa ta de email în aplicația lui; dacă ți-ai șters contul după ce ai cumpărat acces, rămâne vizibil doar prenumele.',
+    ),
+  ).toBeTruthy();
+});

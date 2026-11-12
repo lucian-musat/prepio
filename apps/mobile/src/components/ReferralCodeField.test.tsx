@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import ReferralCodeField from './ReferralCodeField';
 import {
   clearPendingCode,
@@ -16,6 +17,8 @@ jest.mock('../lib/referrals', () => ({
   storePendingCode: jest.fn(),
   clearPendingCode: jest.fn(),
 }));
+
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
 const SETTINGS = { enabled: true, threshold: 3, creditsPerInvitee: 50, durationMonths: 6, maxRewarded: 10 };
 const PRIVACY = 'Cel care te-a invitat va vedea prenumele și e-mailul tău.';
@@ -121,4 +124,20 @@ it('an invalid pending code is dropped and the field stays collapsed', async () 
   expect(await screen.findByText('Ai un cod de invitație?')).toBeTruthy();
   expect(clearPendingCode).toHaveBeenCalled();
   expect(onChange).not.toHaveBeenCalledWith('OLD00000');
+});
+
+it('links to the explainer page under the privacy line (open field)', async () => {
+  await render(<ReferralCodeField onChange={jest.fn()} />);
+  expect(screen.queryByText('Cum funcționează recomandările?')).toBeNull();
+  await open();
+  await fireEvent.press(screen.getByText('Cum funcționează recomandările?'));
+  expect(router.push).toHaveBeenCalledWith('/recomandari');
+});
+
+it('links to the explainer page when the code came with the link', async () => {
+  (getPendingCode as jest.Mock).mockResolvedValue('ABCD2345');
+  (lookupReferralCode as jest.Mock).mockResolvedValue({ valid: true, inviterFirstName: 'Ana' });
+  await render(<ReferralCodeField onChange={jest.fn()} />);
+  await fireEvent.press(await screen.findByText('Cum funcționează recomandările?'));
+  expect(router.push).toHaveBeenCalledWith('/recomandari');
 });

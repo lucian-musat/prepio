@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, TextField } from '../ui';
 import {
@@ -13,6 +14,7 @@ import {
 
 const LINK = 'Ai un cod de invitație?';
 const PRIVACY = 'Cel care te-a invitat va vedea prenumele și e-mailul tău.';
+const HOW = 'Cum funcționează recomandările?';
 const INVALID = 'Codul nu este valid.';
 const UNREACHABLE = 'Nu am putut verifica codul acum.';
 /** Typing pauses this long start the check (the keyboard's submit checks at once). */
@@ -123,6 +125,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
         <AppText role="caption" color="textMuted">
           {PRIVACY}
         </AppText>
+        <HowLink />
       </View>
     );
   }
@@ -158,6 +161,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
           <AppText role="caption" color="textMuted">
             {PRIVACY}
           </AppText>
+          <HowLink />
         </>
       ) : (
         <AppText
@@ -185,4 +189,14 @@ function Invited({ name }: { name: string | null }) {
 const styles = StyleSheet.create({
   stack: { gap: space[2] },
   link: { textDecorationLine: 'underline', textAlign: 'center' },
+  howLink: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });
+
+/** Public explainer page: reachable from Welcome, so it must work signed out. */
+function HowLink() {
+  return (
+    <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.howLink}>
+      {HOW}
+    </AppText>
+  );
+}

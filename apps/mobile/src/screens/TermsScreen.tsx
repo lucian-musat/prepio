@@ -54,6 +54,9 @@ export default function TermsScreen() {
           <Item>Intri în aplicație cu contul Google sau cu un cod trimis pe adresa ta de email.</Item>
           <Item>Un cont este pentru o singură persoană. Fiecare persoană are un singur cont.</Item>
           <Item>
+            Dacă te-ai înregistrat cu codul de invitație al unui coleg, acel coleg vede prenumele și adresa ta de email în aplicația lui.
+          </Item>
+          <Item>
             Ai grijă de adresa de email și de contul Google cu care intri: cine are acces la ele poate intra și în contul
             tău Prepio.
           </Item>

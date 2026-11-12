@@ -76,6 +76,8 @@ function RootNavigator() {
         <Stack.Screen name="sterge-cont" options={{ title: 'Ștergerea contului' }} />
         {/* Invite link: stores the code, then replaces to "/" (the guard picks the screen); a signed-out visitor must reach it. */}
         <Stack.Screen name="invita/[code]" options={{ title: 'Invitație' }} />
+        {/* Referral rules page (linked from the invite screen and the Welcome code field): public like the legal pages. */}
+        <Stack.Screen name="recomandari" options={{ title: 'Cum funcționează recomandările' }} />
         {/* Admin card preview (iframe): needs no session and reads no data, the card arrives by postMessage. */}
         <Stack.Screen name="preview" options={{ title: 'Previzualizare' }} />
       </Stack>

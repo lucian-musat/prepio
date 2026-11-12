@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { plural } from '@prepio/shared';
 import { getSupabase } from './supabase';
 
 /**
@@ -191,4 +192,9 @@ export async function fetchMyReferrals(client: SupabaseClient = getSupabase()): 
     rewardCredits: r.reward_credits ?? 0,
     accountDeleted: r.account_deleted,
   }));
+}
+
+/** „o lună”, „3 luni”, „12 luni”: a duration in months, in Romanian. */
+export function monthsText(n: number): string {
+  return n === 1 ? 'o lună' : plural(n, 'lună', 'luni');
 }

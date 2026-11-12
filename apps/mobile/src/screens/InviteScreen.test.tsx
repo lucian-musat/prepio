@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { Platform, Share } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fetchMyReferrals, fetchReferralSummary, type ReferralRow, type ReferralSummary } from '../lib/referrals';
+import { router } from 'expo-router';
 import InviteScreen from './InviteScreen';
 
 jest.mock('../lib/referrals', () => ({
@@ -193,4 +194,10 @@ it('web: a cancelled share is not an error and a failed copy says so', async () 
   nav.navigator = {};
   await fireEvent.press(screen.getByRole('button', { name: 'Copiază codul' }));
   expect(await screen.findByText('Nu am putut copia.')).toBeTruthy();
+});
+
+it('links to the explainer page', async () => {
+  await mount();
+  await fireEvent.press(await screen.findByText('Cum funcționează ›'));
+  expect(router.push).toHaveBeenCalledWith('/recomandari');
 });

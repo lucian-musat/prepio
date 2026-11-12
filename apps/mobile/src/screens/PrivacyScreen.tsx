@@ -42,6 +42,9 @@ export default function PrivacyScreen() {
           <Item>Lucrările BAC: răspunsurile, eseurile și notele primite.</Item>
           <Item>Accesul complet: perioadele și istoricul obținerii lui.</Item>
           <Item>
+            Dacă te-ai înregistrat cu codul de invitație al unui coleg, acel coleg vede prenumele și adresa ta de email în aplicația lui; dacă ți-ai șters contul după ce ai cumpărat acces, rămâne vizibil doar prenumele.
+          </Item>
+          <Item>
             Un istoric al activității tale în aplicație (de exemplu când ai deschis aplicația sau ai terminat o lecție),
             folosit pentru suport și pentru siguranța contului.
           </Item>
