@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View, type ImageLoadEvent } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageLoadEvent } from 'react-native';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { color, radius, space, type CardContent, type CardImage } from '@prepio/shared';
 import { AppText } from '../../ui';
@@ -9,13 +9,19 @@ import ImageViewer from './ImageViewer';
 
 const FALLBACK_RATIO = 16 / 9;
 const THUMB = 64;
+// A portrait photo at full width fills the screen; capped, its caption and the card's text stay in view.
+const MAX_IMAGE_SHARE = 0.45;
 // Native: the gesture-handler scroll view, so scrolling the thumbnails wins over the card stepper's swipe.
 // Web: the browser's own horizontal scroll already takes the touch over (pointercancel).
 const ThumbStrip = Platform.OS === 'web' ? ScrollView : GestureScrollView;
 
-/** A tappable image at its natural aspect ratio (16:9 until loaded). A failed image is reported to the parent, which drops it with its credit. */
+/**
+ * A tappable image at its natural aspect ratio (16:9 until loaded), at most 45 % of the screen height (letterboxed
+ * inside). A failed image is reported to the parent, which drops it with its credit.
+ */
 function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; testID: string; onPress: () => void; onFail: () => void }) {
   const [ratio, setRatio] = useState(FALLBACK_RATIO);
+  const maxHeight = Math.round(useWindowDimensions().height * MAX_IMAGE_SHARE);
   const uri = imageUrl(image.path);
 
   const onLoad = (e: ImageLoadEvent) => {
@@ -40,7 +46,7 @@ function CardImageView({ image, testID, onPress, onFail }: { image: CardImage; t
         onLoad={onLoad}
         onError={onFail}
         accessible={false}
-        style={[styles.image, { aspectRatio: ratio }]}
+        style={[styles.image, { aspectRatio: ratio, maxHeight }]}
       />
     </Pressable>
   );

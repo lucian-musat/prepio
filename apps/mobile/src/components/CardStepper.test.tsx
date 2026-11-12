@@ -73,9 +73,9 @@ it('renders the frame: title, progress and the top bar back button', async () =>
   expect(frame.onBack).toHaveBeenCalled();
 });
 
-it('renders the type chip and eyebrow with the title and body', async () => {
+it('renders the eyebrow with the title and body, without the type chip', async () => {
   await renderStepper([card(1), card(2)]);
-  expect(screen.getByText('Text')).toBeTruthy();
+  expect(screen.queryByText('Text')).toBeNull();
   expect(screen.getByText('Card 1 din 2')).toBeTruthy();
   expect(screen.getByText('Titlu 1')).toBeTruthy();
   expect(screen.getByText('Corp 1')).toBeTruthy();

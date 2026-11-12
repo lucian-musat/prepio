@@ -4,21 +4,26 @@ import CardView from './CardView';
 
 const make = (content: ReturnType<typeof emptyCardContent>, title: string | null = null): Card => ({ id: 'c1', position: 1, title, ...content });
 
-it('shows the type label and the eyebrow for a timeline card', async () => {
-  await render(<CardView card={make(emptyCardContent('timeline', () => 'x'))} eyebrow="Cartonaș 2 din 7" />);
+it('students see the position, not the card type', async () => {
+  await render(<CardView card={make(emptyCardContent('timeline', () => 'x'))} eyebrow="Card 2 din 7" />);
+  expect(screen.queryByText('Axă cronologică')).toBeNull();
+  expect(screen.getByText('Card 2 din 7')).toBeTruthy();
+});
+
+it('the admin preview keeps the type label', async () => {
+  await render(<CardView card={make(emptyCardContent('timeline', () => 'x'))} eyebrow="Card 2 din 7" showType />);
   expect(screen.getByText('Axă cronologică')).toBeTruthy();
-  expect(screen.getByText('Cartonaș 2 din 7')).toBeTruthy();
 });
 
 it('renders a text card with title and formatted body', async () => {
-  await render(<CardView card={make({ type: 'text', text: 'Corp **important**' }, 'Titlu')} eyebrow="Cartonaș 1 din 1" />);
+  await render(<CardView card={make({ type: 'text', text: 'Corp **important**' }, 'Titlu')} eyebrow="Card 1 din 1" />);
   expect(screen.getByText('Titlu')).toBeTruthy();
   expect(screen.getByText('important')).toBeTruthy();
 });
 
 it('renders every type from emptyCardContent without crashing', async () => {
   for (const type of CARD_TYPES) {
-    const view = await render(<CardView card={make(emptyCardContent(type, () => 'x'))} eyebrow="Cartonaș 1 din 1" />);
+    const view = await render(<CardView card={make(emptyCardContent(type, () => 'x'))} eyebrow="Card 1 din 1" />);
     view.unmount();
   }
 });

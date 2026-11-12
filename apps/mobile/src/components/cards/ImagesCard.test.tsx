@@ -166,3 +166,10 @@ it('renders nothing for an empty list', async () => {
   await render(<ImagesCard content={make('gallery', { images: [] })} />);
   expect(screen.toJSON()).toBeNull();
 });
+
+it('caps an image at 45 % of the screen height, so a portrait photo leaves room for its caption and text', async () => {
+  const { Dimensions } = require('react-native');
+  await render(<ImagesCard content={make('single')} />);
+  const style = StyleSheet.flatten(screen.getByTestId('card-image-0').props.style);
+  expect(style.maxHeight).toBe(Math.round(Dimensions.get('window').height * 0.45));
+});
