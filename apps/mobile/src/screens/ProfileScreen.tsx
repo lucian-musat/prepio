@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { color, formatAccessDate, radius, space } from '@prepio/shared';
-import { AppText, Button, Chip, ScreenLayout, TextField, goBackOrHome } from '../ui';
+import { color, formatAccessDate, space } from '@prepio/shared';
+import { AppText, Button, Chip, ScreenLayout, SettingsRow, Surface, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import { OFFLINE } from '../lib/api';
 import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
@@ -42,6 +42,10 @@ export default function ProfileScreen() {
   const [modeError, setModeError] = useState<string | null>(null);
   const [modeSaved, setModeSaved] = useState<string | null>(null);
   const busy = saving || deleting;
+  const unchanged = name.trim() === (profile?.displayName ?? '').trim();
+  const email = session?.user.email;
+  const provider = (session?.user as { app_metadata?: { provider?: string } } | undefined)?.app_metadata?.provider;
+  const account = email ? `${email} · ${provider === 'google' ? 'Google' : 'cod pe email'}` : null;
 
   // Saves right away (no button); on failure the picker goes back to the stored mode.
   const changeMode = async (next: LearningMode) => {
@@ -125,8 +129,13 @@ export default function ProfileScreen() {
           ) : null}
           {saved ? <AppText role="small" color="success">Numele a fost salvat.</AppText> : null}
           <AppText role="caption" color="textMuted">{`Cel mult ${MAX_DISPLAY_NAME_CHARS} de caractere.`}</AppText>
+          {account ? (
+            <AppText role="caption" color="textMuted">
+              {account}
+            </AppText>
+          ) : null}
         </View>
-        <Button label="Salvează" onPress={save} loading={saving} disabled={deleting} />
+        <Button label="Salvează" onPress={save} loading={saving} disabled={deleting || unchanged} />
 
         <View style={styles.field}>
           <AppText role="small" color="textMuted">
@@ -141,27 +150,20 @@ export default function ProfileScreen() {
           {modeSaved ? <AppText role="small" color="success">{modeSaved}</AppText> : null}
         </View>
 
-        <Button label={`Accesul meu · ${planLabel}`} variant="secondary" onPress={() => router.push('/abonament')} disabled={busy} />
-
-        <Button
-          label={`Creditele mele · ${balance ?? 0}`}
-          variant="secondary"
-          onPress={() => router.push('/credits')}
-          disabled={busy}
-        />
-
-        {referral ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={badge ? `Invită colegi, ${badge}` : 'Invită colegi'}
-            disabled={busy}
-            onPress={() => router.push('/invita')}
-            style={styles.inviteRow}
-          >
-            <AppText role="bodyStrong">Invită colegi</AppText>
-            {badge ? <Chip label={badge} fg={color.primaryStrong} bg={color.primarySubtle} size="badge" /> : null}
-          </Pressable>
-        ) : null}
+        <Surface radius="lg" style={styles.group}>
+          <SettingsRow label="Accesul meu" value={planLabel} onPress={() => router.push('/abonament')} disabled={busy} />
+          <SettingsRow label="Creditele mele" value={String(balance ?? 0)} onPress={() => router.push('/credits')} disabled={busy} divider />
+          {referral ? (
+            <SettingsRow
+              label="Invită colegi"
+              accessibilityLabel={badge ? `Invită colegi, ${badge}` : 'Invită colegi'}
+              badge={badge ? <Chip label={badge} fg={color.primaryStrong} bg={color.primarySubtle} size="badge" /> : null}
+              onPress={() => router.push('/invita')}
+              disabled={busy}
+              divider
+            />
+          ) : null}
+        </Surface>
 
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 
@@ -198,16 +200,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   stack: { gap: space[4] },
   field: { gap: space[2] },
-  inviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: space[4],
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.lg,
-    backgroundColor: color.surface,
-  },
+  group: { padding: 0, overflow: 'hidden' },
   link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });

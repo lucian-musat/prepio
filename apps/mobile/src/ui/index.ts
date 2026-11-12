@@ -24,3 +24,4 @@ export { default as Pop, POP, popSequence } from './Pop';
 export { default as LessonListItem } from './LessonListItem';
 export { type } from './typography';
 export * from './motion';
+export { default as SettingsRow } from './SettingsRow';

@@ -10,7 +10,7 @@ import { router } from 'expo-router';
 const mockRefresh = jest.fn();
 const mockSignOut = jest.fn();
 let mockMode = 'guided';
-let mockSession: { user: { id: string } } | null = { user: { id: 'u1' } };
+let mockSession: { user: { id: string; email?: string; app_metadata?: { provider?: string } } } | null = { user: { id: 'u1' } };
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
     session: mockSession,
@@ -93,6 +93,7 @@ it('rejects an empty name without saving', async () => {
 it('shows the offline message when renaming without a session', async () => {
   mockSession = null;
   await renderScreen();
+  await fireEvent.changeText(screen.getByLabelText('Nume'), 'Maria');
   await fireEvent.press(screen.getByRole('button', { name: 'Salvează' }));
   expect(await screen.findByText(OFFLINE)).toBeTruthy();
   expect(updateDisplayName).not.toHaveBeenCalled();
@@ -255,4 +256,27 @@ describe('invite row', () => {
     await waitFor(() => expect(mockedReferral).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /Invită colegi/ })).toBeNull();
   });
+});
+
+const isDisabled = (el: any) => !!el.props.accessibilityState?.disabled || !!el.props['aria-disabled'];
+
+it('shows which account is signed in', async () => {
+  mockSession = { user: { id: 'u1', email: 'ana@exemplu.ro', app_metadata: { provider: 'google' } } };
+  await renderScreen();
+  expect(screen.getByText('ana@exemplu.ro · Google')).toBeTruthy();
+});
+
+it('„Salvează” waits for a changed name', async () => {
+  await renderScreen();
+  expect(isDisabled(screen.getByRole('button', { name: 'Salvează' }))).toBe(true);
+  await fireEvent.changeText(screen.getByLabelText('Nume'), 'Maria');
+  expect(isDisabled(screen.getByRole('button', { name: 'Salvează' }))).toBe(false);
+});
+
+it('account rows put the value on its own line, so nothing is cut at 360 px', async () => {
+  await renderScreen();
+  const row = screen.getByRole('button', { name: 'Accesul meu · Perioadă de probă' });
+  expect(row).toHaveTextContent(/Accesul meu/);
+  expect(screen.getByText('Perioadă de probă')).toBeTruthy();
+  expect(screen.queryByText('Accesul meu · Perioadă de probă')).toBeNull();
 });
