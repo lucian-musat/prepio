@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Redirect, router } from 'expo-router';
-import { color, feedbackText, formatAccessDate, plural, space } from '@prepio/shared';
+import { LinearGradient } from 'expo-linear-gradient';
+import { color, feedbackText, formatAccessDate, gradient, plural, radius, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import { fetchMyReferrals, fetchReferralSummary, inviteUrl, monthsText, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { copyText, shareText } from '../lib/share';
@@ -32,6 +33,36 @@ export function referralStatus(r: ReferralRow): string {
     default:
       return 'Abonat, fără recompensă';
   }
+}
+
+const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, as the credits card
+
+/** The three steps, with the reward that applies to this student right now. */
+function HowItWorks({ summary }: { summary: ReferralSummary }) {
+  const reward = summary.hasAccess
+    ? `Pentru fiecare coleg care își cumpără acces primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')}.`
+    : `Când ${summary.threshold} dintre ei își cumpără acces, primești ${monthsText(summary.durationMonths)} gratis.`;
+  // Over the cap new invitees bring nothing: the summary below says so, the steps promise nothing.
+  const steps = ['Trimiți linkul tău colegilor.', 'Își fac cont cu el.', ...(summary.capReached ? [] : [reward])];
+  return (
+    <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.hero}>
+      <AppText role="eyebrow" color="onPrimary" accessibilityRole="header">
+        Cum funcționează
+      </AppText>
+      {steps.map((s, i) => (
+        <View key={i} style={styles.step}>
+          <View style={styles.stepNo}>
+            <AppText role="small" style={styles.stepNoText}>
+              {String(i + 1)}
+            </AppText>
+          </View>
+          <AppText role="body" color="onPrimary" style={styles.grow}>
+            {s}
+          </AppText>
+        </View>
+      ))}
+    </LinearGradient>
+  );
 }
 
 /** Over the cap new invitees bring nothing, so the screen promises nothing per colleague. */
@@ -178,6 +209,7 @@ export default function InviteScreen() {
         </View>
       ) : (
         <View style={styles.page}>
+          <HowItWorks summary={data.summary} />
           <SummaryBlock summary={data.summary} rows={data.rows} />
 
           <Surface style={styles.stack}>
@@ -223,6 +255,18 @@ export default function InviteScreen() {
 
 const styles = StyleSheet.create({
   page: { gap: space[5] },
+  hero: { borderRadius: radius.lg, padding: space[5], gap: space[3] },
+  step: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
+  stepNo: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: color.onPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNoText: { color: color.primaryStrong, fontWeight: '700' },
+  grow: { flex: 1 },
   stack: { gap: space[3] },
   center: { alignItems: 'center', marginTop: space[12] },
   pair: { flexDirection: 'row', gap: space[2] },

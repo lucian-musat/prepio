@@ -81,6 +81,19 @@ it('trial: tells how many more colleagues earn the free period, with progress', 
   expect(screen.getByText('ABCD2345')).toBeTruthy();
 });
 
+it('explains the three steps, with the reward that applies to this student', async () => {
+  await mount();
+  expect(await screen.findByText('Trimiți linkul tău colegilor.')).toBeTruthy();
+  expect(screen.getByText('Își fac cont cu el.')).toBeTruthy();
+  expect(screen.getByText('Când 5 dintre ei își cumpără acces, primești 3 luni gratis.')).toBeTruthy();
+});
+
+it('explains the credits reward when the student has access', async () => {
+  mockedSummary.mockResolvedValue(summary({ hasAccess: true }));
+  await mount();
+  expect(await screen.findByText('Pentru fiecare coleg care își cumpără acces primești 40 de credite.')).toBeTruthy();
+});
+
 it('trial: singular colleague and one month', async () => {
   mockedSummary.mockResolvedValue(summary({ pendingCount: 4, durationMonths: 1 }));
   await mount();
