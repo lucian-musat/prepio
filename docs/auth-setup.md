@@ -88,6 +88,10 @@ select id from auth.users where email = '<email>'
 on conflict do nothing;
 ```
 
+## Turning an admin into a student (or the reverse)
+
+One Supabase user is one e-mail: signing in with Google on an admin's e-mail links to the same user, so that account stays an admin. To use one person as both an admin and a student, give the admin role to a separate e-mail (create the user in the dashboard, then grant admin with a migration as above) and take the role away from the other account with `private.demote_admin_to_student(<email>, <replacement admin email>)` in a new migration (see `20261112131424_demote_owner_admin`). The helper refuses unless the replacement exists and is an admin, and gives the demoted account its referral code.
+
 ## When the domain is ready
 
 - [ ] Configure Resend (or other) SMTP in Supabase.
