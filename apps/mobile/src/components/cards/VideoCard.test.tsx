@@ -136,3 +136,10 @@ it('renders the optional text', async () => {
   await render(<VideoCard content={video({ text: 'Despre video' })} />);
   expect(screen.getByText('Despre video')).toBeTruthy();
 });
+
+it('the sound pill sits under the video, off the player’s own title bar', async () => {
+  await render(<VideoCard content={video()} />);
+  const frame = screen.getByTestId('video-frame');
+  expect(within(frame).queryByLabelText('Pornește sunetul')).toBeNull();
+  expect(screen.getByLabelText('Pornește sunetul')).toBeTruthy();
+});

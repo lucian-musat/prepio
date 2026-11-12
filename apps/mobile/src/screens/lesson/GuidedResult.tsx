@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { color, feedbackText, radius, space } from '@prepio/shared';
-import { AppText, Button, Confetti, Enter, ScoreRing, ScreenLayout, goBackOrHome } from '../../ui';
+import { color, feedbackText, radius, space, type Question } from '@prepio/shared';
+import { AppText, Button, Confetti, Enter, Icon, ScoreRing, ScreenLayout, goBackOrHome } from '../../ui';
 import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
 import type { AttemptOutcome } from '../../lib/lessonFlow';
 
@@ -27,7 +27,7 @@ function Score({ outcome }: { outcome: AttemptOutcome }) {
   return (
     <>
       <Enter index={0}>
-        <ScoreRing value={outcome.correct} min={0} max={outcome.total} />
+        <ScoreRing value={outcome.correct} min={0} max={outcome.total} showMax label={`${outcome.correct} din ${outcome.total} întrebări corecte`} />
       </Enter>
       <Enter index={1}>
         <AppText role="bodyStrong" color="textMuted" style={styles.centre}>
@@ -101,18 +101,56 @@ export function GuidedPassed({ outcome, unlocked, nextId, consolidation }: Passe
   );
 }
 
+/** The right answer of a question, as one line: the correct options, or the order. */
+export function correctAnswerText(q: Question): string {
+  if (q.type === 'chronological_order') return q.options.map((o) => o.text).join(' → ');
+  const right = q.options.filter((o) => o.correct).map((o) => o.text);
+  return `${right.length === 1 ? 'Răspuns corect' : 'Răspunsuri corecte'}: ${right.join('; ')}`;
+}
+
+/** A missed question that opens in place: its prompt, then the right answer and the explanation. */
+function Mistake({ number, question }: { number: number; question: Question }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.mistake}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Întrebarea ${number} · ${question.prompt}`}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((o) => !o)}
+        style={styles.mistakeHead}
+      >
+        <AppText role="bodyStrong" style={styles.mistakeTitle}>
+          {`Întrebarea ${number} · ${question.prompt}`}
+        </AppText>
+        <Icon name={open ? 'up' : 'down'} tint={color.textMuted} />
+      </Pressable>
+      {open ? (
+        <View style={styles.mistakeBody}>
+          <AppText role="small" style={styles.right}>
+            {question.type === 'chronological_order' ? `Ordinea corectă: ${correctAnswerText(question)}` : correctAnswerText(question)}
+          </AppText>
+          {question.explanation ? <AppText role="small">{question.explanation}</AppText> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 type FailedProps = {
   outcome: AttemptOutcome;
+  /** The lesson's questions, in order: the missed ones open to show the right answer. */
+  questions?: Question[];
   /** Undefined when the lesson has no cards to review. */
   onReviewCards?: () => void;
   onRetake: () => void;
 };
 
 /** Mockup screen 4, left: not every answer correct; the whole test is taken again. */
-export function GuidedFailed({ outcome, onReviewCards, onRetake }: FailedProps) {
+export function GuidedFailed({ outcome, questions = [], onReviewCards, onRetake }: FailedProps) {
   return (
     <ScreenLayout
-      title="Rezultat"
+      title="Rezultatul testului"
       progress={1}
       onBack={goBackOrHome}
       actions={
@@ -136,8 +174,15 @@ export function GuidedFailed({ outcome, onReviewCards, onRetake }: FailedProps) 
         </Enter>
         <Enter index={4} style={styles.note}>
           <AppText role="label" style={styles.noteText}>
-            {`Ai greșit la: ${outcome.wrong.map((n) => `întrebarea ${n}`).join(', ')}`}
+            Ai greșit la:
           </AppText>
+          {outcome.wrong.map((n) =>
+            questions[n - 1] ? (
+              <Mistake key={n} number={n} question={questions[n - 1]!} />
+            ) : (
+              <AppText key={n} role="small" style={styles.noteText}>{`Întrebarea ${n}`}</AppText>
+            ),
+          )}
         </Enter>
       </View>
     </ScreenLayout>
@@ -157,6 +202,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
   },
   noteText: { color: feedbackText.wrong, textAlign: 'center' },
+  mistake: { backgroundColor: color.surface, borderRadius: radius.md, marginTop: space[2] },
+  mistakeHead: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44, paddingHorizontal: space[3], paddingVertical: space[2] },
+  mistakeTitle: { flex: 1 },
+  mistakeBody: { gap: space[2], paddingHorizontal: space[3], paddingBottom: space[3] },
+  right: { color: feedbackText.good, fontWeight: '700' },
   stack: { flex: 1, gap: space[2.5] },
   unlocked: { alignSelf: 'stretch', marginTop: space[3] },
 });

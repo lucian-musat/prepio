@@ -3,17 +3,22 @@ import { CARD_TYPE_LABELS, color, radius, space, type Card } from '@prepio/share
 import { AppText, Icon, Surface } from '../../ui';
 import CardContentView from './CardContentView';
 
-/** One learning card: eyebrow row (type chip + position), optional title, then the typed content. */
-export default function CardView({ card, eyebrow }: { card: Card; eyebrow: string }) {
+/**
+ * One learning card: eyebrow row (position; the type chip only in the admin preview, `showType`), optional title,
+ * then the typed content.
+ */
+export default function CardView({ card, eyebrow, showType = false }: { card: Card; eyebrow: string; showType?: boolean }) {
   return (
     <Surface padding={5} radius="xl">
       <View style={styles.eyebrowRow}>
-        <View style={styles.chip}>
-          <Icon name={card.type} size={14} tint={color.primary} />
-          <AppText role="chip" color="primary">
-            {CARD_TYPE_LABELS[card.type]}
-          </AppText>
-        </View>
+        {showType ? (
+          <View style={styles.chip}>
+            <Icon name={card.type} size={14} tint={color.primary} />
+            <AppText role="chip" color="primary">
+              {CARD_TYPE_LABELS[card.type]}
+            </AppText>
+          </View>
+        ) : null}
         <AppText role="eyebrow" color="primary">
           {eyebrow}
         </AppText>

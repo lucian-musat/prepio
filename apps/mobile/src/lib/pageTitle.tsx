@@ -14,7 +14,7 @@ export function pageTitle(name?: string): string {
  * Focus of the enclosing route; outside a route tree (component tests, or a mocked expo-router without the hook)
  * the screen counts as focused. useIsFocused throws right after reading its context, so the hook order is stable.
  */
-function useFocused(): boolean {
+export function useFocused(): boolean {
   const hook = (ExpoRouter as { useIsFocused?: () => boolean }).useIsFocused;
   if (typeof hook !== 'function') return true;
   try {

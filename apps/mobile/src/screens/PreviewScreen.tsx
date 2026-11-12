@@ -59,7 +59,7 @@ export default function PreviewScreen() {
         </>
       }
     >
-      <CardView card={card} eyebrow={`Card ${index + 1} din ${total}`} />
+      <CardView card={card} eyebrow={`Card ${index + 1} din ${total}`} showType />
     </ScreenLayout>
   );
 }

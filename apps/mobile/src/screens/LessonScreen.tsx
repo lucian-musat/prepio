@@ -13,6 +13,8 @@ import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type Attempt
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
+import { clearLastTest, readLastTest, saveLastTest, type LastTest } from '../lib/lastTest';
+import { describeProgress } from '../lib/lessonProgressLabel';
 import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import LessonStart from './lesson/LessonStart';
 import { ConsolidationUnlocked, GuidedFailed, GuidedPassed, startConsolidation } from './lesson/GuidedResult';
@@ -81,7 +83,7 @@ function Loading() {
   );
 }
 
-type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress; consolidation: number };
+type Loaded = { lesson: Lesson; order: LessonSummary[]; progress: Progress; consolidation: number; lastTest: LastTest | null };
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
 type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error' };
 
@@ -152,9 +154,9 @@ export default function LessonScreen() {
       console.warn('Could not count the consolidation exercises', e);
       return 0;
     });
-    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress(), count]).then(
-      ([lesson, home, progress, consolidation]) =>
-        !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress, consolidation } : null),
+    Promise.all([fetchLesson(String(id)), fetchHome(), fetchProgress(), count, readLastTest(String(id))]).then(
+      ([lesson, home, progress, consolidation, lastTest]) =>
+        !cancelled && setData(lesson ? { lesson, order: orderedLessons(home.sections), progress, consolidation, lastTest } : null),
       () => !cancelled && setFailed(true),
     );
     return () => {
@@ -195,10 +197,13 @@ export default function LessonScreen() {
       // Not finished (and a finished lesson stays finished): only the attempt is cleared.
       setEnd({ outcome, status: 'saved' });
       save(lesson.id, null);
+      // The server keeps no failed attempt: its score stays on this device for the start screen.
+      void saveLastTest(lesson.id, { correct: outcome.correct, total: outcome.total });
       // For the admin timeline; queued after the position write, since the server needs the progress row.
       // Best-effort: logTestFailed never throws, only the queue's timeout can reject.
       enqueue(() => logTestFailed(lesson.id)).catch(() => undefined);
     } else {
+      void clearLastTest(lesson.id);
       commit(outcome);
     }
   };
@@ -230,13 +235,17 @@ export default function LessonScreen() {
 
   if (phase === 'start') {
     const resume = resumePoint(lesson, progress.positions.get(lesson.id) ?? null);
+    const finished = progress.finished.has(lesson.id);
+    const counts = { cards: lesson.cards.length, questions: lesson.questions.length };
     return (
       <>
         <LessonStart
           lesson={lesson}
           guided={mode === 'guided'}
-          finished={progress.finished.has(lesson.id)}
+          finished={finished}
           consolidation={consolidation}
+          progress={describeProgress(resume, finished ? null : data.lastTest, counts)}
+          onRetake={!resume && !finished && data.lastTest && lesson.questions.length ? startTest : undefined}
           onResume={resume ? () => goTo(resume.phase, resume.index, resume.results) : undefined}
           onLearn={startCards}
           onSkip={requestSkip}
@@ -338,7 +347,7 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
     );
   }
   if (!outcome.passed) {
-    return <GuidedFailed outcome={outcome} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
+    return <GuidedFailed outcome={outcome} questions={lesson.questions} onReviewCards={lesson.cards.length > 0 ? onReviewCards : undefined} onRetake={onRetake} />;
   }
   // Go on to the lesson that is current once this pass counts: after a free → guided switch the finished
   // lessons need not be a prefix of the order, so it is not always the next one. "Ai deblocat" only when this

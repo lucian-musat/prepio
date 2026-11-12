@@ -32,7 +32,7 @@ function Badge({ tone, turn }: { tone: Tone; turn: SharedValue<number> }) {
   return (
     <Animated.View
       testID="schema-badge"
-      style={[styles.badge, { backgroundColor: look.bg }, style]}
+      style={[styles.badge, tone === 'central' && styles.badgeInside, { backgroundColor: look.bg }, style]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
@@ -154,5 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // The central box spans the whole card: a badge over its corner would be cut by the card's edge.
+  badgeInside: { top: space[1], right: space[1] },
   arrow: { lineHeight: 16 },
 });

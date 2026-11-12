@@ -86,24 +86,25 @@ describe('single choice', () => {
     expect(isDisabled(verify())).toBe(false);
   });
 
-  it('correct answer shows Corect, bravo! with the first sentence of the explanation', async () => {
+  it('correct answer shows Corect, bravo! and the explanation once, in the content', async () => {
     const { onAnswered, onNext } = await renderQ(single);
     await fireEvent.press(screen.getByText('Varianta B'));
     await fireEvent.press(verify());
     expect(bar().getByText('Corect, bravo!')).toBeTruthy();
-    expect(bar().getByText('Explicația pe larg aici.')).toBeTruthy();
-    expect(screen.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
+    expect(bar().queryByText(/Explicația/)).toBeNull();
+    expect(screen.getAllByText(/Explicația pe larg aici/)).toHaveLength(1);
     expect(onAnswered).toHaveBeenCalledWith(true);
     await fireEvent.press(bar().getByRole('button', { name: 'Următoarea întrebare' }));
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('wrong answer shows Nu chiar., the correct answer and explanation', async () => {
+  it('wrong answer shows Nu chiar., the correct answer once in the bar (the option is marked) and the explanation', async () => {
     const { onAnswered } = await renderQ(single);
     await fireEvent.press(screen.getByText('Varianta A'));
     await fireEvent.press(verify());
     expect(screen.getByText('Nu chiar.')).toBeTruthy();
-    expect(within(screen.getByTestId('screen-content')).getByText('Răspuns corect: Varianta B')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-content')).queryByText('Răspuns corect: Varianta B')).toBeNull();
+    expect(bar().getByText('Răspuns corect: Varianta B')).toBeTruthy();
     expect(screen.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(onAnswered).toHaveBeenCalledWith(false);
   });
@@ -153,22 +154,6 @@ describe('single choice', () => {
     }
   });
 
-  it('the bar line does not cut the explanation at abbreviations', async () => {
-    const explanation = 'Al. I. Cuza a fost ales în ian. 1859. Apoi a urmat Unirea.';
-    await renderQ({ ...single, explanation });
-    await fireEvent.press(screen.getByText('Varianta B'));
-    await fireEvent.press(verify());
-    expect(bar().getByText('Al. I. Cuza a fost ales în ian. 1859.')).toBeTruthy();
-  });
-
-  it('the bar line uses the whole explanation when no sentence end leaves 20 characters', async () => {
-    const explanation = 'Vezi Al. Cuza. Atât.';
-    await renderQ({ ...single, explanation });
-    await fireEvent.press(screen.getByText('Varianta B'));
-    await fireEvent.press(verify());
-    expect(bar().getByText('Vezi Al. Cuza. Atât.')).toBeTruthy();
-  });
-
   it('explanation and correct answers render in the content, verdict in the action bar', async () => {
     await renderQ(single);
     await fireEvent.press(screen.getByText('Varianta A'));
@@ -177,9 +162,19 @@ describe('single choice', () => {
     expect(bar().queryByText('Explicația pe larg aici. A doua frază.')).toBeNull();
     const content = within(screen.getByTestId('screen-content'));
     expect(content.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
-    expect(content.getByText('Răspuns corect: Varianta B')).toBeTruthy();
-    // A short single correct answer is repeated in the bar, in the same words.
+    // A short single correct answer is named in the bar only; the content marks the option.
+    expect(content.queryByText('Răspuns corect: Varianta B')).toBeNull();
     expect(bar().getByText('Răspuns corect: Varianta B')).toBeTruthy();
+  });
+
+  it('the next button keeps the primary colour after a wrong answer', async () => {
+    const { StyleSheet } = require('react-native');
+    const { color } = require('@prepio/shared');
+    await renderQ(single);
+    await fireEvent.press(screen.getByText('Varianta A'));
+    await fireEvent.press(verify());
+    const face = within(bar().getByRole('button', { name: 'Următoarea întrebare' })).getByTestId('button-face');
+    expect(StyleSheet.flatten(face.props.style).backgroundColor).toBe(color.primary);
   });
 
   it('long correct answer shows the short hint in the bar', async () => {
@@ -249,7 +244,7 @@ describe('reveal and verdict edge cases', () => {
       await renderQ(single);
       await fireEvent.press(screen.getByText('Varianta A'));
       await fireEvent.press(verify());
-      let node: any = within(screen.getByTestId('screen-content')).getByText('Răspuns corect: Varianta B');
+      let node: any = within(screen.getByTestId('screen-content')).getByText('Explicația pe larg aici. A doua frază.');
       while (node && typeof node.props.onLayout !== 'function') node = node.parent;
       await fireEvent(node, 'layout', { nativeEvent: { layout: { x: 0, y: 300, width: 320, height: 100 } } });
       expect(scrollTo).toHaveBeenCalledWith({ y: 300, animated: true });
@@ -283,8 +278,17 @@ describe('multiple choice', () => {
     await fireEvent.press(screen.getByRole('checkbox', { name: 'Alfa' }));
     await fireEvent.press(verify());
     expect(screen.getByText('Nu chiar.')).toBeTruthy();
-    expect(screen.getByText('Răspunsuri corecte: Alfa; Gama')).toBeTruthy();
+    // The correct options are marked in the list; the bar points at them.
+    expect(screen.queryByText('Răspunsuri corecte: Alfa; Gama')).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Gama, corect' })).toBeTruthy();
     expect(bar().getByText('Vezi răspunsul corect mai sus.')).toBeTruthy();
+  });
+
+  it('tells the student to pick every correct option', async () => {
+    await renderQ(multi);
+    expect(screen.getByText('Alege toate variantele corecte.')).toBeTruthy();
+    await screen.rerender(wrap(<QuestionView question={single} onAnswered={jest.fn()} frame={frame} />));
+    expect(screen.queryByText('Alege toate variantele corecte.')).toBeNull();
   });
 });
 
@@ -331,5 +335,50 @@ describe('chronological order', () => {
     expect(content.getByText('1200')).toBeTruthy();
     expect(content.getByText('Explicația pe larg aici. A doua frază.')).toBeTruthy();
     expect(onAnswered).toHaveBeenCalledWith(false);
+    // Each row says whether it is in place.
+    expect(screen.getByLabelText('1. Al treilea, poziție greșită')).toBeTruthy();
+  });
+});
+
+describe('keyboard on the web', () => {
+  const { Platform } = require('react-native');
+  const original = Platform.OS;
+  let listeners: ((e: unknown) => void)[] = [];
+  beforeEach(() => {
+    listeners = [];
+    Platform.OS = 'web';
+    (globalThis as unknown as { window: unknown }).window = {
+      addEventListener: (_: string, l: (e: unknown) => void) => listeners.push(l),
+      removeEventListener: (_: string, l: (e: unknown) => void) => (listeners = listeners.filter((x) => x !== l)),
+    };
+  });
+  afterEach(() => {
+    Platform.OS = original;
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+  const key = (k: string) =>
+    act(async () => listeners.forEach((l) => l({ key: k, ctrlKey: false, metaKey: false, altKey: false, target: null, preventDefault: () => {} })));
+
+  it('B picks the second option, Enter checks, Enter again goes on', async () => {
+    const { onAnswered, onNext } = await renderQ(single);
+    await key('b');
+    await key('Enter');
+    expect(onAnswered).toHaveBeenCalledWith(true);
+    await key('Enter');
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('number keys toggle multiple-choice options', async () => {
+    const { onAnswered } = await renderQ(multi);
+    await key('1');
+    await key('3');
+    await key('Enter');
+    expect(onAnswered).toHaveBeenCalledWith(true);
+  });
+
+  it('Enter does nothing before an option is picked', async () => {
+    const { onAnswered } = await renderQ(single);
+    await key('Enter');
+    expect(onAnswered).not.toHaveBeenCalled();
   });
 });

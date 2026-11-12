@@ -22,7 +22,11 @@ export default function OrderQuestion({ order, items, answered, onMove }: Props)
         const inPlace = items[i]?.id === item.id;
         return (
           <Enter key={item.id} index={i}>
-            <View style={[styles.row, answered && (inPlace ? styles.rowOk : styles.rowBad)]}>
+            <View
+              style={[styles.row, answered && (inPlace ? styles.rowOk : styles.rowBad)]}
+              accessible={answered}
+              accessibilityLabel={answered ? `${i + 1}. ${item.text}, ${inPlace ? 'poziție corectă' : 'poziție greșită'}` : undefined}
+            >
               <AppText role="bodyStrong" color="textMuted" style={styles.index}>
                 {i + 1}.
               </AppText>

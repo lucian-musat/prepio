@@ -14,12 +14,21 @@ const FILL_MS = 1100;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-type Props = { value: number; min: number; max: number; size?: number };
+type Props = {
+  value: number;
+  min: number;
+  max: number;
+  size?: number;
+  /** Shows „7/9” instead of „7” (a count, not a grade). */
+  showMax?: boolean;
+  /** Accessible name; default „Nota <value> din <max>”. */
+  label?: string;
+};
 
 export const fraction = (value: number, min: number, max: number) => (max > min ? Math.min(1, Math.max(0, (value - min) / (max - min))) : 1);
 
 /** Grade ring: the arc and the number count up from `min` to `value` on mount (instantly with reduce motion). */
-export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE }: Props) {
+export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE, showMax = false, label }: Props) {
   const reduced = useReducedMotion();
   const target = fraction(value, min, max);
   const fill = useSharedValue(reduced ? target : 0);
@@ -56,7 +65,7 @@ export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE }: Prop
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`Nota ${value} din ${max}`}
+      accessibilityLabel={label ?? `Nota ${value} din ${max}`}
       style={[styles.ring, { width: size, height: size }]}
     >
       <Svg width={size} height={size} style={styles.svg}>
@@ -74,7 +83,7 @@ export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE }: Prop
         />
       </Svg>
       <View style={styles.centre}>
-        <AppText role="display" style={styles.number}>{shown}</AppText>
+        <AppText role="display" style={styles.number}>{showMax ? `${shown}/${max}` : shown}</AppText>
       </View>
     </View>
   );
