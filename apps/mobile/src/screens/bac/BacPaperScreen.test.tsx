@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BAC_GRADE_NOTE, type BacAnswers, type BacItem } from '@prepio/shared';
 import {
@@ -150,6 +151,27 @@ it('the hint opens on tap and is collapsed again on the next item', async () => 
   await act(async () => void next());
   expect(screen.getByText('Cerința I.2')).toBeTruthy();
   expect(screen.queryByText(HINT)).toBeNull();
+});
+
+const tabTexts = async (width: number) => {
+  const spy = jest.spyOn(Dimensions, 'get').mockReturnValue({ width, height: 800, scale: 1, fontScale: 1 });
+  try {
+    await mount();
+    await screen.findByText('Cerința I.1');
+    return screen.getAllByRole('tab').map((t) => within(t).getByText(/./).props.children);
+  } finally {
+    spy.mockRestore();
+  }
+};
+
+it('on a phone the section tabs are short, so tabs and map share one row', async () => {
+  expect(await tabTexts(360)).toEqual(['I', 'II', 'III']);
+  expect(screen.getByRole('tab', { name: 'Subiectul I' })).toBeTruthy();
+  expect(screen.getByTestId('bac-paper-nav').props.style).toEqual(expect.arrayContaining([expect.objectContaining({ flexDirection: 'row' })]));
+});
+
+it('on a wide screen the tabs keep their full names', async () => {
+  expect(await tabTexts(1000)).toEqual(['Subiectul I', 'Subiectul II', 'Subiectul III']);
 });
 
 it('next moves from I.7 to II.1', async () => {

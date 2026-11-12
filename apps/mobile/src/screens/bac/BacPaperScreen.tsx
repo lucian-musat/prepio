@@ -300,8 +300,11 @@ export default function BacPaperScreen() {
     );
   }
 
+  // On a phone the full header (title, tabs, map) took about a third of the screen: short tab names and the map
+  // beside them keep it to one row.
+  const compact = width < COMPACT_BELOW;
   const tabs = (
-    <View style={styles.tabs} accessibilityRole="tablist">
+    <View style={[styles.tabs, compact && styles.tabsCompact]} accessibilityRole="tablist">
       {SECTIONS.map((s) => {
         const on = s === position.section;
         const has = items.some((i) => i.section === s);
@@ -316,7 +319,7 @@ export default function BacPaperScreen() {
             style={[styles.tab, on && styles.tabOn]}
           >
             <AppText role="label" color={on ? 'primary' : 'textMuted'} numberOfLines={1}>
-              {`Subiectul ${ROMAN[s]}`}
+              {compact ? ROMAN[s] : `Subiectul ${ROMAN[s]}`}
             </AppText>
           </Pressable>
         );
@@ -371,7 +374,7 @@ export default function BacPaperScreen() {
           </Pressable>
         }
         subheader={
-          <View style={styles.sub}>
+          <View testID="bac-paper-nav" style={[styles.sub, compact && styles.subCompact]}>
             {tabs}
             {map}
           </View>
@@ -427,6 +430,8 @@ export default function BacPaperScreen() {
 }
 
 const DOT = 28;
+/** Below this width the section tabs show only the numeral and sit beside the map. */
+const COMPACT_BELOW = 480;
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   gap: { gap: space[3] },
@@ -436,10 +441,12 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: space[2.5] },
   submit: { minHeight: layout.minTouch, justifyContent: 'center', paddingHorizontal: space[1] },
   sub: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', gap: space[1], paddingHorizontal: space[4] },
+  subCompact: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[3] },
   tabs: { flexDirection: 'row', backgroundColor: color.surfaceMuted, borderRadius: radius.pill, padding: space[1] },
+  tabsCompact: { width: 128 },
   tab: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, paddingHorizontal: space[1] },
   tabOn: { backgroundColor: color.surface },
-  mapRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  mapRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   map: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
   slot: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
   dot: {

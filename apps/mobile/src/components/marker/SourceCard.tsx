@@ -58,7 +58,7 @@ export default function SourceCard({ source, label, marking, onPress }: Props) {
         <LinearGradient colors={[`${consolidationColor.paper}00`, consolidationColor.paper]} style={styles.fade} pointerEvents="none" />
       </View>
       <View style={styles.open}>
-        <AppText role="button" color="onPrimary">
+        <AppText role="button" color="primaryStrong">
           {action}
         </AppText>
       </View>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     margin: space[3],
     padding: space[2.5],
     borderRadius: radius.sm,
-    backgroundColor: color.primary,
-    boxShadow: solidShadow(3, color.primaryStrong),
+    // Secondary: on a paper the filled primary belongs to „Următorul”, not to every source card.
+    backgroundColor: color.primarySubtle,
   },
 });
