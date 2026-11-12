@@ -52,7 +52,7 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
           <CapNote />
         ) : (
           <AppText role="bodyStrong">
-            {`Încă ${plural(left, 'coleg', 'colegi')} ${left === 1 ? 'care își cumpără' : 'care își cumpără'} acces și primești ${monthsText(summary.durationMonths)} gratis`}
+            {`Încă ${plural(left, 'coleg', 'colegi')} care își cumpără acces și primești ${monthsText(summary.durationMonths)} gratis`}
           </AppText>
         )}
         <ProgressBar
