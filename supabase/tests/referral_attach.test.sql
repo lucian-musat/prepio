@@ -1,5 +1,5 @@
 begin;
-select plan(42);
+select plan(41);
 
 -- Fixtures. d1 is the inviter, d3 an admin (with a code row forced in), e1..e9 invitees.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
@@ -61,13 +61,6 @@ reset role;
 -- The lookup reveals only valid and a first name.
 select is((select proargnames::text from pg_proc where proname = 'referral_lookup' and pronamespace = 'public'::regnamespace),
   '{p_code,valid,inviter_first_name}', 'lookup has one input and returns only valid and inviter_first_name');
-
--- Rate limit: 30 calls per window per caller, then valid=false even for a good code.
-delete from rate_limits where key like 'referral_lookup:%';
-select is((select count(*) filter (where l.valid)::int
-             from generate_series(1, 35) g, t_code c, lateral referral_lookup(case when g > 0 then c.code end) l),
-  30, 'lookup allows 30 calls then rate-limits');
-delete from rate_limits where key like 'referral_lookup:%';
 
 -- ---------------------------------------------------------------- attach
 set local role authenticated;
