@@ -15,6 +15,10 @@ type Props = {
   state?: LessonState;
   /** Only for `paywall`: the lesson was finished before the plan lost it, so the check stays next to the lock. */
   finished?: boolean;
+  /** The number on the tile (the lesson's place in the whole Home order); default `index + 1`. */
+  number?: number;
+  /** Why a locked or paywall lesson can't be opened, shown under the title and read with it. */
+  reason?: string | null;
   onPress: () => void;
 };
 
@@ -35,7 +39,7 @@ const tiles = [
  * One lesson on Home (prototype B `.lesson`): number tile, title, chevron; lifts on hover, shrinks on press.
  * `state` adds the learning-mode look: finished (check tile), current (primary border), locked (dimmed, inert).
  */
-export default function LessonListItem({ index, title, state = 'open', finished = false, onPress }: Props) {
+export default function LessonListItem({ index, title, state = 'open', finished = false, number, reason, onPress }: Props) {
   const [hovered, setHovered] = useState(false);
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -43,7 +47,10 @@ export default function LessonListItem({ index, title, state = 'open', finished 
   const tile = tiles[index % 2];
   const locked = state === 'locked';
   const paywall = state === 'paywall';
-  const caption = state === 'finished' ? 'Terminată' : state === 'current' ? 'Continuă' : null;
+  const caption = state === 'finished' ? 'Terminată' : state === 'current' ? 'Continuă' : (locked || paywall) && reason ? reason : null;
+  // „Disponibilă cu acces complet” → „disponibilă cu acces complet”, after the title.
+  const why = reason ? reason.charAt(0).toLowerCase() + reason.slice(1) : null;
+  const lockedLabel = paywall ? `${title}, blocată, ${why ?? 'face parte din accesul complet'}` : `${title}, blocată${why ? `, ${why}` : ''}`;
 
   // CSS: `:active` replaces the hover transform, so pressing drops the lift while it shrinks.
   const t = () => timing(motion.duration.base);
@@ -67,7 +74,7 @@ export default function LessonListItem({ index, title, state = 'open', finished 
     // re-applies its React style when its pressed state re-renders, wiping the animated transform.
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={paywall ? `${title}, blocată, face parte din accesul complet` : locked ? `${title}, blocată` : title}
+      accessibilityLabel={locked || paywall ? lockedLabel : title}
       accessibilityState={{ disabled: locked }}
       aria-disabled={locked}
       disabled={locked}
@@ -85,7 +92,7 @@ export default function LessonListItem({ index, title, state = 'open', finished 
           </View>
         ) : (
           <View style={[styles.tile, { backgroundColor: tile.bg }]}>
-            <AppText style={[styles.num, { color: tile.fg }]}>{index + 1}</AppText>
+            <AppText style={[styles.num, { color: tile.fg }]}>{number ?? index + 1}</AppText>
           </View>
         )}
         <View style={styles.text}>

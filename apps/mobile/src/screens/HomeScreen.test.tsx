@@ -138,7 +138,10 @@ it('renders the welcome message and lessons grouped under section headers', asyn
   await renderHome();
   expect(await screen.findByText('Bun venit la Prepio!')).toBeTruthy();
   expect(screen.getByText('A. Evul Mediu')).toBeTruthy();
-  expect(screen.getByText('C. Statul › Instituții')).toBeTruthy();
+  // A two-level path: the parent as a small overline, the last level as the title.
+  expect(screen.getByText('C. Statul')).toBeTruthy();
+  expect(screen.getByText('Instituții')).toBeTruthy();
+  expect(screen.queryByText('C. Statul › Instituții')).toBeNull();
   expect(screen.getByText('Lecția zero')).toBeTruthy();
   expect(screen.getByText('Lecția unu')).toBeTruthy();
 });
@@ -257,7 +260,8 @@ describe('lesson states', () => {
     expect(await screen.findByText('🧭 Traseu ghidat · 1 din 3 terminate')).toBeTruthy();
     expect(screen.getByText('Terminată')).toBeTruthy();
     expect(screen.getByText('Continuă')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Trei, blocată' }));
+    expect(screen.getByText('Se deschide după lecția 2')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Trei, blocată, se deschide după lecția 2' }));
     expect(router.push).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByRole('button', { name: 'Doi' }));
     expect(router.push).toHaveBeenCalledWith('/lesson/l2');
@@ -278,7 +282,7 @@ describe('lesson states', () => {
     threeLessons();
     await renderHome();
     expect(await screen.findByText('🧭 Traseu ghidat · 0 din 3 terminate')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Doi, blocată' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Doi, blocată, se deschide după lecția 1' })).toBeTruthy();
   });
 
   it('shows the error surface when progress fails and retry reloads both', async () => {
@@ -336,9 +340,10 @@ describe('plan paywall', () => {
     await renderHome();
     await screen.findByText('Prima');
     expect(screen.getByRole('button', { name: 'Prima' })).toBeTruthy();
-    const second = screen.getByRole('button', { name: 'A doua, blocată, face parte din accesul complet' });
+    const second = screen.getByRole('button', { name: 'A doua, blocată, disponibilă cu acces complet' });
+    expect(screen.getAllByText('Disponibilă cu acces complet')).toHaveLength(2);
     expect(screen.getByText('✓ 🔒')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'A treia, blocată, face parte din accesul complet' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'A treia, blocată, disponibilă cu acces complet' })).toBeTruthy();
     await fireEvent.press(second);
     expect(router.push).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByRole('button', { name: 'Prima' }));
@@ -364,7 +369,7 @@ describe('plan paywall', () => {
     });
     await trialHome();
     expect(screen.queryByTestId('paywall-sheet')).toBeNull();
-    await fireEvent.press(screen.getByRole('button', { name: 'A doua, blocată, face parte din accesul complet' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'A doua, blocată, disponibilă cu acces complet' }));
     expect(screen.getByTestId('paywall-sheet')).toBeTruthy();
     expect(screen.getByText('„A doua” face parte din accesul complet.')).toBeTruthy();
     expect(screen.getByText('📚 Toate cele 3 lecții, în orice mod de învățare')).toBeTruthy();
@@ -385,7 +390,7 @@ describe('plan paywall', () => {
 
   it('guided, lesson 1 unfinished: after buying lesson 2 stays in order -> „Înapoi la lecții”, no navigation', async () => {
     await trialHome();
-    await buyFrom('A doua, blocată, face parte din accesul complet');
+    await buyFrom('A doua, blocată, disponibilă cu acces complet');
     expect(screen.getByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Deschide lecția' })).toBeNull();
     await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Înapoi la lecții' })));
@@ -396,7 +401,7 @@ describe('plan paywall', () => {
   it('free mode: after buying the tapped lesson opens', async () => {
     mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free', creditBalance: 5 };
     await trialHome();
-    await buyFrom('A doua, blocată, face parte din accesul complet');
+    await buyFrom('A doua, blocată, disponibilă cu acces complet');
     expect(screen.queryByText('Lecțiile se deschid în ordine, pe traseul ghidat.')).toBeNull();
     await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
     expect(router.push).toHaveBeenCalledWith('/lesson/b');
@@ -405,14 +410,14 @@ describe('plan paywall', () => {
   it('guided, lesson 1 finished: lesson 2 becomes current -> „Deschide lecția”', async () => {
     mockedProgress.mockResolvedValue(progressOf('a'));
     await trialHome();
-    await buyFrom('A doua, blocată, face parte din accesul complet');
+    await buyFrom('A doua, blocată, disponibilă cu acces complet');
     await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Deschide lecția' })));
     expect(router.push).toHaveBeenCalledWith('/lesson/b');
   });
 
   it('„Mai târziu” closes the sheet', async () => {
     await trialHome();
-    await fireEvent.press(screen.getByRole('button', { name: 'A treia, blocată, face parte din accesul complet' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'A treia, blocată, disponibilă cu acces complet' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Mai târziu' }));
     expect(screen.queryByTestId('paywall-sheet')).toBeNull();
   });
@@ -466,6 +471,8 @@ it('has a Subiecte BAC card above the lessons that opens the BAC list', async ()
   expect(router.push).toHaveBeenCalledWith('/bac');
 });
 
+const NOTE = 'Ai terminat prima lecție! Invită un coleg și primești credite.';
+
 describe('invite entry points', () => {
   const home = () => mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [{ path: ['A'], lessons: [lesson('a1', 'Prima')] }] });
 
@@ -512,12 +519,22 @@ describe('invite entry points', () => {
     mockedProgress.mockResolvedValue(progressOf('a1'));
     mockedReferral.mockResolvedValue(summaryOf());
     const { unmount } = await renderHome();
-    await fireEvent.press(await screen.findByRole('button', { name: 'Închide' }));
-    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    expect(await screen.findByText('Ai terminat prima lecție! Invită un coleg și primești credite.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Închide' }));
+    expect(screen.queryByText(NOTE)).toBeNull();
     await unmount();
     await renderHome();
     await screen.findByText('Prima');
-    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    expect(screen.queryByText(NOTE)).toBeNull();
+  });
+
+  it('the note\'s „Invită” button opens the invite screen', async () => {
+    home();
+    mockedProgress.mockResolvedValue(progressOf('a1'));
+    mockedReferral.mockResolvedValue(summaryOf());
+    await renderHome();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Invită' }));
+    expect(router.push).toHaveBeenCalledWith('/invita');
   });
 
   it('shows no note without a finished lesson or when the feature is off', async () => {
@@ -525,12 +542,77 @@ describe('invite entry points', () => {
     mockedReferral.mockResolvedValue(summaryOf());
     const { unmount } = await renderHome();
     await screen.findByText('Prima');
-    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    expect(screen.queryByText(NOTE)).toBeNull();
     await unmount();
     mockedProgress.mockResolvedValue(progressOf('a1'));
     mockedReferral.mockResolvedValue(summaryOf({ enabled: false }));
     await renderHome();
     await screen.findByText('Prima');
-    expect(screen.queryByText('Ai terminat prima lecție. Invită un coleg')).toBeNull();
+    expect(screen.queryByText(NOTE)).toBeNull();
+  });
+});
+
+describe('continue card and hero', () => {
+  const threeLessons = () =>
+    mockedFetch.mockResolvedValue({
+      welcomeMessage: 'Bun venit la Prepio!',
+      sections: [
+        { path: ['A'], lessons: [lesson('l1', 'Unu')] },
+        { path: ['B'], lessons: [lesson('l2', 'Doi'), lesson('l3', 'Trei', 2)] },
+      ],
+    });
+  const positions = (entries: Record<string, { phase: 'cards' | 'questions'; index: number }>) =>
+    new Map(Object.entries(entries).map(([id, p]) => [id, { ...p, results: {} }]));
+
+  it('a new student sees the full welcome and „Începe lecția” on the first lesson', async () => {
+    threeLessons();
+    await renderHome();
+    expect(await screen.findByTestId('hero-welcome')).toBeTruthy();
+    const card = screen.getByTestId('continue-card');
+    expect(card).toContainElement(screen.getByText('Începe de aici'));
+    expect(card).toContainElement(screen.getByText('Lecția 1 · Unu'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Începe lecția' }));
+    expect(router.push).toHaveBeenCalledWith('/lesson/l1');
+  });
+
+  it('a returning student gets a compact greeting and resumes where they left', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue({ finished: new Set(['l1']), positions: positions({ l2: { phase: 'cards', index: 3 } }) });
+    await renderHome();
+    expect(await screen.findByText('Bine ai revenit, ana!')).toBeTruthy();
+    expect(screen.queryByTestId('hero-welcome')).toBeNull();
+    expect(screen.queryByText('Pregătește BAC-ul, pas cu pas.')).toBeNull();
+    const card = screen.getByTestId('continue-card');
+    expect(card).toContainElement(screen.getByText('Continuă de unde ai rămas'));
+    expect(card).toContainElement(screen.getByText('Lecția 2 · Doi'));
+    expect(card).toContainElement(screen.getByText('Ai rămas la cardul 4'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continuă lecția' }));
+    expect(router.push).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('after a finished lesson the card offers the next one', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    await renderHome();
+    expect(await screen.findByText('Următoarea lecție')).toBeTruthy();
+    expect(screen.getByText('Lecția 2 · Doi')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Începe lecția' })).toBeTruthy();
+  });
+
+  it('no card when every lesson is finished; the greeting has no name without one', async () => {
+    mockProfile = { id: 'u1', displayName: null, learningMode: 'guided', creditBalance: 5 };
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1', 'l2', 'l3'));
+    await renderHome();
+    expect(await screen.findByText('Bine ai revenit!')).toBeTruthy();
+    expect(screen.queryByTestId('continue-card')).toBeNull();
+  });
+
+  it('numbers lessons in the Home order across sections', async () => {
+    threeLessons();
+    await renderHome();
+    await screen.findByText('Trei');
+    expect(screen.getByRole('button', { name: 'Trei, blocată, se deschide după lecția 2' })).toBeTruthy();
+    for (const n of ['1', '2', '3']) expect(screen.getByText(n)).toBeTruthy();
   });
 });

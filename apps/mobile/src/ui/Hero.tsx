@@ -20,7 +20,12 @@ import Chip from './Chip';
 import { withAlpha } from './elevation';
 import { type } from './typography';
 
-type Props = { welcomeMessage: string; lessonCount: number };
+type Props = {
+  welcomeMessage: string;
+  lessonCount: number;
+  /** A returning student: one greeting line instead of the welcome title and text. */
+  greeting?: string;
+};
 
 // Prototype `.hero` text opacities and `.hero .chip` background.
 const LABEL_ALPHA = 0.85;
@@ -56,8 +61,11 @@ function cssAnglePoints(angle: number, w: number, h: number) {
   return { start: { x: 0.5 - dx, y: 0.5 - dy }, end: { x: 0.5 + dx, y: 0.5 + dy } };
 }
 
-/** Home hero (prototype B `.hero`): gradient card with greeting, title, welcome text and lesson count. */
-export default function Hero({ welcomeMessage, lessonCount: count }: Props) {
+/**
+ * Home hero (prototype B `.hero`): gradient card with greeting, title, welcome text and lesson count. With `greeting`
+ * (a returning student) it is compact: that line and the count, so the continue card stays above the fold.
+ */
+export default function Hero({ welcomeMessage, lessonCount: count, greeting }: Props) {
   const reduced = useReducedMotion();
   const [size, setSize] = useState({ w: 1, h: 1 });
   const float = useSharedValue(0);
@@ -93,18 +101,26 @@ export default function Hero({ welcomeMessage, lessonCount: count }: Props) {
       start={points.start}
       end={points.end}
       onLayout={onLayout}
-      style={styles.hero}
+      style={[styles.hero, greeting ? styles.compact : null]}
     >
-      <AppText style={styles.label}>Bine ai venit!</AppText>
-      <AppText role="display" accessibilityRole="header" style={styles.title}>
-        Pregătește BAC-ul, pas cu pas.
-      </AppText>
-      {welcomeMessage ? (
-        <AppText testID="hero-welcome" role="small" style={styles.body}>
-          {welcomeMessage}
+      {greeting ? (
+        <AppText role="title" accessibilityRole="header" style={styles.greeting}>
+          {greeting}
         </AppText>
-      ) : null}
-      <View style={styles.chip}>
+      ) : (
+        <>
+          <AppText style={styles.label}>Bine ai venit!</AppText>
+          <AppText role="display" accessibilityRole="header" style={styles.title}>
+            Pregătește BAC-ul, pas cu pas.
+          </AppText>
+          {welcomeMessage ? (
+            <AppText testID="hero-welcome" role="small" style={styles.body}>
+              {welcomeMessage}
+            </AppText>
+          ) : null}
+        </>
+      )}
+      <View style={greeting ? styles.chipCompact : styles.chip}>
         <Chip label={`📚 ${lessonCount(count)}`} fg={color.onPrimary} bg={withAlpha(color.onPrimary, CHIP_ALPHA)} />
       </View>
       {/* Last child, like `::after`: it floats over the text too. */}
@@ -132,6 +148,9 @@ const styles = StyleSheet.create({
   title: { color: color.onPrimary, marginTop: space[1.5], marginBottom: space[2] },
   body: { color: withAlpha(color.onPrimary, BODY_ALPHA), maxWidth: BODY_MAX_WIDTH },
   chip: { marginTop: space[3.5] },
+  compact: { paddingVertical: space[4], marginBottom: space[4] },
+  greeting: { color: color.onPrimary },
+  chipCompact: { marginTop: space[2] },
   circle: {
     position: 'absolute',
     width: CIRCLE,

@@ -5,7 +5,7 @@ import InviteNote, { INVITE_NOTE_KEY } from './InviteNote';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
-const TEXT = 'Ai terminat prima lecție. Invită un coleg';
+const TEXT = 'Ai terminat prima lecție! Invită un coleg și primești credite.';
 const mount = async (props: { finishedCount?: number; enabled?: boolean } = {}) =>
   await render(<InviteNote finishedCount={props.finishedCount ?? 1} enabled={props.enabled ?? true} />);
 
@@ -45,7 +45,7 @@ it('dismiss hides it and remembers it', async () => {
 
 it('opening it goes to the invite screen and counts as seen', async () => {
   await mount();
-  { const el = await screen.findByText(TEXT); await fireEvent.press(el); }
+  { const el = await screen.findByRole('button', { name: 'Invită' }); await fireEvent.press(el); }
   expect(router.push).toHaveBeenCalledWith('/invita');
   expect(await AsyncStorage.getItem(INVITE_NOTE_KEY)).toBe('1');
   expect(screen.queryByText(TEXT)).toBeNull();

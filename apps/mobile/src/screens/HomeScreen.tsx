@@ -14,6 +14,8 @@ import { useAccess } from '../access/AccessProvider';
 import AccessBanner from '../access/AccessBanner';
 import PaywallSheet from '../access/PaywallSheet';
 import InviteNote from '../components/InviteNote';
+import ContinueCard from './home/ContinueCard';
+import { continueTarget, lockedReason } from '../lib/homeContinue';
 import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
@@ -34,26 +36,36 @@ function LessonList({
   wide,
   access,
   finished,
+  numbers,
   onPaywall,
 }: {
   lessons: Lesson[];
   wide: boolean;
   access: Map<string, LessonState>;
   finished: Set<string>;
+  /** Each lesson's 1-based place in the whole Home order (guided mode is one order across sections). */
+  numbers: Map<string, number>;
   onPaywall: (lessonId: string) => void;
 }) {
-  const item = (lesson: Lesson, i: number) => (
-    <Enter key={lesson.id} testID={`enter-lesson-${lesson.id}`} index={stagger(i)} style={wide ? styles.cell : undefined}>
-      <LessonListItem
-        index={i}
-        title={lesson.title}
-        state={access.get(lesson.id)}
-        finished={finished.has(lesson.id)}
-        onPress={() => (access.get(lesson.id) === 'paywall' ? onPaywall(lesson.id) : router.push(`/lesson/${lesson.id}`))}
-      />
-    </Enter>
-  );
-  if (!wide) return <View style={styles.lessons}>{lessons.map(item)}</View>;
+  const item = (lesson: Lesson, i: number) => {
+    const number = numbers.get(lesson.id) ?? i + 1;
+    const state = access.get(lesson.id);
+    return (
+      <Enter key={lesson.id} testID={`enter-lesson-${lesson.id}`} index={stagger(i)} style={wide ? styles.cell : undefined}>
+        <LessonListItem
+          index={number - 1}
+          number={number}
+          title={lesson.title}
+          state={state}
+          reason={lockedReason(state, number)}
+          finished={finished.has(lesson.id)}
+          onPress={() => (state === 'paywall' ? onPaywall(lesson.id) : router.push(`/lesson/${lesson.id}`))}
+        />
+      </Enter>
+    );
+  };
+  // A one-lesson section takes the full width instead of half a grid row.
+  if (!wide || lessons.length === 1) return <View style={styles.lessons}>{lessons.map(item)}</View>;
   return (
     <View style={styles.lessons}>
       {pairs(lessons).map((row, r) => (
@@ -202,7 +214,13 @@ export default function HomeScreen() {
 
   const total = data.sections.reduce((sum, s) => sum + s.lessons.length, 0);
   const mode = modeOf(profile);
-  const access = lessonAccess(orderedLessons(data.sections), progress.finished, mode, canOpen);
+  const order = orderedLessons(data.sections);
+  const numbers = new Map(order.map((l, i) => [l.id, i + 1]));
+  const access = lessonAccess(order, progress.finished, mode, canOpen);
+  const target = continueTarget(order, access, progress);
+  const returning = progress.finished.size > 0 || progress.positions.size > 0;
+  const name = profile?.displayName?.trim();
+  const greeting = returning ? (name ? `Bine ai revenit, ${name}!` : 'Bine ai revenit!') : undefined;
   // Lessons finished before the plan lost them still count as done.
   const done = orderedLessons(data.sections).filter((l) => progress.finished.has(l.id)).length;
   // Would the tapped lesson be playable with full access? (guided order may still lock it)
@@ -213,7 +231,7 @@ export default function HomeScreen() {
     <ScreenLayout logo trailing={<HomeTrailing />}>
       <AccessBanner onOffer={() => setSheet({ lessonId: null })} />
       <Enter testID="enter-hero" index={0}>
-        <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} />
+        <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} greeting={greeting} />
       </Enter>
       <View style={styles.modeChip}>
         <Chip
@@ -222,6 +240,9 @@ export default function HomeScreen() {
           bg={color.primarySubtle}
         />
       </View>
+      {target ? (
+        <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={() => router.push(`/lesson/${target.lesson.id}`)} />
+      ) : null}
       <InviteNote enabled={referral !== null} finishedCount={done} />
       <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>
         <Surface style={styles.bacRow}>
@@ -239,17 +260,26 @@ export default function HomeScreen() {
       </Pressable>
       {data.sections.map((section, s) => {
         const title = section.path.join(' › ');
+        // The last level is the title; the levels above it sit over it as a small line.
+        const parents = section.path.slice(0, -1).join(' › ');
         return (
           <View key={`${s}:${title}`}>
             <Enter testID={`enter-section-${s}`} index={stagger(1 + 2 * s)} style={styles.header}>
-              <AppText role="section" accessibilityRole="header" style={styles.headerTitle}>
-                {title}
-              </AppText>
+              <View style={styles.headerTitle}>
+                {parents ? (
+                  <AppText role="caption" color="textMuted">
+                    {parents}
+                  </AppText>
+                ) : null}
+                <AppText role="section" accessibilityRole="header" accessibilityLabel={title}>
+                  {section.path[section.path.length - 1]}
+                </AppText>
+              </View>
               <AppText role="caption" color="textMuted" style={styles.headerCount}>
                 {lessonCount(section.lessons.length)}
               </AppText>
             </Enter>
-            <LessonList lessons={section.lessons} wide={wide} access={access} finished={progress.finished} onPaywall={openPaywall} />
+            <LessonList lessons={section.lessons} wide={wide} access={access} finished={progress.finished} numbers={numbers} onPaywall={openPaywall} />
           </View>
         );
       })}
@@ -287,7 +317,7 @@ const styles = StyleSheet.create({
   // Prototype `.sec-title`: baseline-aligned title and count, 10 px above the list.
   header: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: space[3],
     marginBottom: space[2.5],

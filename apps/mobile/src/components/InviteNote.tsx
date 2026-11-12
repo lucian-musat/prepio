@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { color, radius, space } from '@prepio/shared';
-import { AppText } from '../ui';
+import { AppText, Button, IconButton } from '../ui';
 
 export const INVITE_NOTE_KEY = 'prepio.inviteNoteSeen';
 
@@ -34,25 +34,21 @@ export default function InviteNote({ finishedCount, enabled }: Props) {
     AsyncStorage.setItem(INVITE_NOTE_KEY, '1').catch(() => {}); // not remembered; hidden for this visit anyway
   };
 
+  const open = () => {
+    markSeen();
+    router.push('/invita');
+  };
+
   return (
     <View style={styles.note}>
-      <Pressable
-        accessibilityRole="link"
-        onPress={() => {
-          markSeen();
-          router.push('/invita');
-        }}
-        style={styles.text}
-      >
-        <AppText role="small" color="primaryStrong">
-          Ai terminat prima lecție. Invită un coleg
-        </AppText>
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Închide" onPress={markSeen} hitSlop={8} style={styles.close}>
-        <AppText role="small" color="textMuted">
-          Închide
-        </AppText>
-      </Pressable>
+      <AppText role="section" accessible={false}>
+        🎁
+      </AppText>
+      <AppText role="small" color="primaryStrong" style={styles.text}>
+        Ai terminat prima lecție! Invită un coleg și primești credite.
+      </AppText>
+      <Button label="Invită" variant="secondary" compact onPress={open} />
+      <IconButton icon="close" accessibilityLabel="Închide" onPress={markSeen} />
     </View>
   );
 }
@@ -68,6 +64,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[3],
     marginBottom: space[4],
   },
-  text: { flex: 1, minHeight: 32, justifyContent: 'center' },
-  close: { minHeight: 32, justifyContent: 'center' },
+  text: { flex: 1 },
 });
