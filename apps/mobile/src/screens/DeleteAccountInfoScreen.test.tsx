@@ -36,6 +36,14 @@ it('renders without querying Supabase and shows the contact address', async () =
   expect(getSupabase).not.toHaveBeenCalled();
 });
 
+it('lists everything the deletion removes, including progress, credits and access', async () => {
+  await renderScreen();
+  expect(screen.getByText('Progresul la lecții, exercițiile de consolidare și lucrările BAC, cu notele lor.')).toBeTruthy();
+  expect(screen.getByText('Creditele și accesul rămase. Banii pentru ele nu se returnează.')).toBeTruthy();
+  expect(screen.getByText('Istoricul creditelor și al plăților.')).toBeTruthy();
+  expect(screen.getByText(/amprentă ireversibilă a adresei de email/)).toBeTruthy();
+});
+
 it('signed out: offers sign-in (to the welcome screen) and explains where deletion is', async () => {
   mockStatus = 'signedOut';
   await renderScreen();

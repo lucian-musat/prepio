@@ -45,11 +45,11 @@ export default function DeleteAccountInfoScreen() {
       onBack={goBackOrHome}
       actions={
         signedOut ? (
-          <Button label="Intră în cont" onPress={() => router.push('/')} />
+          <Button label="Intră în cont" flex onPress={() => router.push('/')} />
         ) : ready ? (
-          <Button label="Mergi la profil" onPress={() => router.push('/profile')} />
+          <Button label="Mergi la profil" flex onPress={() => router.push('/profile')} />
         ) : (
-          <Button label="Continuă" onPress={() => router.push('/')} />
+          <Button label="Continuă" flex onPress={() => router.push('/')} />
         )
       }
     >
@@ -61,11 +61,21 @@ export default function DeleteAccountInfoScreen() {
         <Section title="Ce se șterge">
           <Item>Numele și adresa de email din cont.</Item>
           <Item>Contul de autentificare, fie cel Google, fie cel cu cod trimis pe email.</Item>
-          <Item>Celelalte date legate de cont.</Item>
+          <Item>Progresul la lecții, exercițiile de consolidare și lucrările BAC, cu notele lor.</Item>
+          <Item>Creditele și accesul rămase. Banii pentru ele nu se returnează.</Item>
+          <Item>Istoricul creditelor și al plăților.</Item>
+          <Item>Codul tău de invitație. Colegii pe care i-ai invitat își păstrează conturile.</Item>
         </Section>
 
         <Section title="Ce nu se șterge">
-          <AppText role="body">Lecțiile și exercițiile sunt conținutul Prepio, nu datele tale, așa că nu se șterg.</AppText>
+          <AppText role="body">Lecțiile și exercițiile sunt conținutul Prepio, nu datele tale, așa că rămân.</AppText>
+          <AppText role="body">
+            Păstrăm doar o amprentă ireversibilă a adresei de email, ca să știm că ai primit deja creditele de bun venit. Din ea nu se poate afla adresa.
+          </AppText>
+          <AppText role="body">
+            Dacă ți-ai făcut cont cu linkul unui coleg și ți-ai cumpărat acces, colegul îți vede în continuare prenumele în lista lui, cu
+            mențiunea „cont șters”.
+          </AppText>
         </Section>
 
         <Section title="Cum îl ștergi">
