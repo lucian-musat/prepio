@@ -129,7 +129,7 @@ it('a lesson that is not finished shows the lock message and leads back to the l
 it('a new run starts at 1/N and is saved', async () => {
   await open();
   expect(await screen.findByText('Numiți noua constituție precizată în sursa B.')).toBeTruthy();
-  expect(screen.getByText('1/2')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Exercițiul 1, /, selected: true })).toBeTruthy();
   expect(mocked.saveRun).toHaveBeenCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 0, finished: false });
   expect(bar().getByRole('button', { name: 'Verifică' })).toBeDisabled();
 });
@@ -173,7 +173,7 @@ describe('AI types', () => {
       ],
     });
     await open();
-    expect(await screen.findByText('2/2')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^Exercițiul 2, /, selected: true })).toBeTruthy();
     await fill();
     await press('Verifică, costă 1 credit');
     expect(mocked.evaluate).toHaveBeenCalledWith({ exerciseId: 'e2', target: 'exercise', answer: { type: 'facts', texts: [FACT_1, FACT_2] } });
@@ -232,7 +232,7 @@ it('„Reia doar ce nu a fost corect” builds a run of the exercises not yet co
   await press('Reia doar ce nu a fost corect');
   expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e2'], index: 0, finished: false });
   expect(await screen.findByText('Prezentați două fapte istorice din perioada 1866-1886.')).toBeTruthy();
-  expect(screen.getByText('1/1')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Exercițiul 1, /, selected: true })).toBeTruthy();
 });
 
 it('reopening with a finished run lands on the end screen; with all correct only the full retake is offered', async () => {
@@ -300,7 +300,7 @@ describe('navigation', () => {
     expect(bar().getByRole('button', { name: 'Exercițiul anterior' })).toBeDisabled();
     await press('Sari peste, exercițiul următor');
     expect(await screen.findByText(prompt2)).toBeTruthy();
-    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Exercițiul 2, /, selected: true })).toBeTruthy();
     expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
     await press('Sari peste, exercițiul următor');
     expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
@@ -316,7 +316,7 @@ describe('navigation', () => {
     expect(await screen.findByText(prompt2)).toBeTruthy();
     await press('Exercițiul anterior');
     expect(await screen.findByText(prompt1)).toBeTruthy();
-    expect(screen.getByText('1/2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Exercițiul 1, /, selected: true })).toBeTruthy();
     expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 0, finished: false });
   });
 
@@ -366,7 +366,7 @@ describe('navigation', () => {
     expect(await screen.findByText('Consolidare parcursă')).toBeTruthy();
     await tap('Exercițiul 2, Prezentare fapte, Nerezolvat');
     expect(await screen.findByText(prompt2)).toBeTruthy();
-    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Exercițiul 2, /, selected: true })).toBeTruthy();
     expect(mocked.saveRun).toHaveBeenLastCalledWith('l1', { exerciseIds: ['e1', 'e2'], index: 1, finished: false });
     await press('Exercițiul anterior');
     expect(await screen.findByText('Corect!')).toBeTruthy();

@@ -55,7 +55,9 @@ it('an AI exercise shows the cost tag, the balance chip and „Verifică” with
   expect(screen.getByLabelText('Profesorul digital, costă 2 credite')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Verifică, costă 2 credite' })).toBeTruthy();
   expect(screen.getByLabelText('Perioadă de probă, 7 credite, deschide accesul')).toBeTruthy();
-  expect(screen.getByText('3/10')).toBeTruthy();
+  // One progress indicator: the exercise map (not a bar and an „n/10” too).
+  expect(screen.queryByText('3/10')).toBeNull();
+  expect(within(screen.getByTestId('top-bar')).queryByRole('progressbar')).toBeNull();
 });
 
 it('a deterministic exercise shows neither the tag nor a cost', async () => {

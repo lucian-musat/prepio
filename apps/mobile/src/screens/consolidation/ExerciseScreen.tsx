@@ -38,9 +38,9 @@ type Props = {
   exercise: ConsolidationExercise;
   sources: Map<string, Source>;
   templates: Map<string, SolutionTemplate>;
-  /** Position in the run (0-based) and the run's length. */
-  index: number;
-  total: number;
+  /** Position in the run (0-based) and the run's length; the exercise map shows them, the screen no longer does. */
+  index?: number;
+  total?: number;
   onBack: () => void;
   /** A check finished: the attempt to save (the screen saves it; a failure is only logged). */
   onChecked: (attempt: Attempt) => void;
@@ -90,8 +90,6 @@ export default function ExerciseScreen({
   exercise,
   sources,
   templates,
-  index,
-  total,
   onBack,
   onChecked,
   onContinue,
@@ -302,16 +300,7 @@ export default function ExerciseScreen({
     <View style={styles.fill}>
       <ScreenLayout
         title="Consolidare"
-        progress={(index + 1) / total}
-        progressLabel="Progres consolidare"
-        trailing={
-          <View style={styles.trailing}>
-            <CreditChip need={ai ? exercise.creditCost : undefined} />
-            <AppText role="label" color="textMuted">
-              {index + 1}/{total}
-            </AppText>
-          </View>
-        }
+        trailing={<CreditChip need={ai ? exercise.creditCost : undefined} />}
         subheader={map?.(moving)}
         onBack={onBack}
         actions={actions}

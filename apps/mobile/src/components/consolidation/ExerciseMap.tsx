@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { color, layout, radius, space } from '@prepio/shared';
-import type { StatusTone } from '../../screens/consolidation/status';
+import { MUTED, type StatusTone } from '../../screens/consolidation/status';
 import { AppText } from '../../ui';
+import { VERDICT_TONE } from './verdictTone';
+
+const LEGEND: Array<[string, StatusTone]> = [
+  ['corect', VERDICT_TONE.ok],
+  ['aproape', VERDICT_TONE.almost],
+  ['mai lucrează', VERDICT_TONE.no],
+  ['nerezolvat', MUTED],
+];
 
 export type MapItem = { id: string; chip: string; tone: StatusTone };
 
@@ -62,6 +70,16 @@ export default function ExerciseMap({ items, current, onJump, disabled = false }
           );
         })}
       </ScrollView>
+      <View testID="map-legend" style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {LEGEND.map(([label, tone]) => (
+          <View key={label} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: tone.bg, borderColor: tone.edge }]} />
+            <AppText role="caption" color="textMuted">
+              {label}
+            </AppText>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -73,4 +91,8 @@ const styles = StyleSheet.create({
   dot: { width: DOT, height: DOT, borderRadius: radius.pill, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   // The current exercise: a primary ring around the dot (its state colours stay inside).
   here: { borderWidth: 2.5, borderColor: color.primary, transform: [{ scale: 1.1 }] },
+  // What the dot colours mean (each dot's own label already says it to screen readers).
+  legend: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: space[3], rowGap: space[1], marginTop: 2 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  legendDot: { width: 10, height: 10, borderRadius: radius.pill, borderWidth: 1.5 },
 });
