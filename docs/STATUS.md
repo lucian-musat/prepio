@@ -14,6 +14,23 @@ Last updated: 2026-11-12
   - Chevrons on the BAC card and BAC rows; the „Cum rezolv” chevron is an icon.
   - Tests: mobile 1252, tsc clean.
   - Browser walk in Claude in Chrome against the local stack, with a `[test]` full-access and a `[test]` trial student: titles, `lang`, OG tags, the pill in both plans, chevrons, the new terms, 360 px with no horizontal scroll, console clean.
+- **Batch B — Home (`feat/ux-home`):**
+  - **Continue card** above the sections, with three cases:
+    - „Începe de aici” for a new student
+    - „Continuă de unde ai rămas” with „Ai rămas la cardul n”
+    - „Următoarea lecție”
+    - Buttons „Începe lecția” / „Continuă lecția”. The button sits beside the text on desktop.
+  - **Compact hero**: a returning student sees „Bine ai revenit, <nume>!” and the lesson count. At 360 px the continue card is above the fold, even with the trial banner.
+  - **Lessons** are numbered in the whole Home order.
+  - **Section headers** have the parent levels as a small line and the last level as the title. A one-lesson section is full width on desktop.
+  - **Locked lessons** say why: „Se deschide după lecția n” or „Disponibilă cu acces complet”.
+  - **The invite note** has 🎁, an „Invită” button and a close icon.
+  - Tests: mobile 1270.
+  - Browser walk (Chrome, local, `[test]` trial student):
+    - new and returning states, and resuming at card 3
+    - the paywall reasons
+    - the invite note, with the local referral flag on for the check and back off afterwards
+    - 1280 and 360, console clean
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
   - the referral flag looks ON in production — check it
