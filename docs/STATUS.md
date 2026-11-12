@@ -31,6 +31,28 @@ Last updated: 2026-11-12
     - the paywall reasons
     - the invite note, with the local referral flag on for the check and back off afterwards
     - 1280 and 360, console clean
+- **Batch C — Lesson (`feat/ux-lesson`):**
+  - **Start screen:** the zone rows say where the student left („Ai rămas la cardul n din m”, „…la întrebarea n din m”) and show the last failed score („Ultima încercare: x din y corecte”). The score is kept on the device, because the server keeps no failed attempt.
+    - After a failed test „Reia testul” is the main action.
+    - A finished lesson shows „✓ Lecție terminată” instead of the guided rule.
+    - On desktop the buttons sit under the card.
+  - **Cards:** images are at most 45 % of the screen height, so the caption and the text stay in view. Students no longer see the type chip; the admin preview keeps it.
+  - **Test feedback says each thing once:**
+    - a correct answer has the explanation only under the options
+    - a wrong choice marks the option and names a short answer in the bar
+    - the next button stays primary
+    - multi-select says „Alege toate variantele corecte.”
+    - order rows read „poziție corectă / greșită”
+  - **Failed result „Rezultatul testului”**: the score reads „7/9”, and each missed question opens in place with the right answer and the explanation.
+  - **Desktop keyboard:** ← / → move between cards; 1–9 / A–I pick an option; Enter checks and goes on.
+  - **Small fixes:** the schema's central „+” sits inside the bar, and the video's sound pill sits under the player.
+  - Tests: mobile 1294.
+  - Browser walk (Chrome, local, `[test]` trial student, 1280 + 360, console clean):
+    - start screen before and after a failed test
+    - image cap, keyboard through the cards and the whole test
+    - feedback, the per-row order result and the expandable mistakes
+    - schema and video
+  - **Native:** the image cap and the sound pill change on the phone too; check them on the next APK.
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
   - the referral flag looks ON in production — check it
