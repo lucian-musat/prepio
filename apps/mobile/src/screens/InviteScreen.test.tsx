@@ -109,8 +109,9 @@ it('active access: credits per colleague and totals', async () => {
     row('4', { state: 'registered' }),
   ]);
   await mount();
-  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își cumpără acces')).toBeTruthy();
-  expect(screen.getByText('Până acum: 3 colegi cu acces · 120 de credite câștigate')).toBeTruthy();
+  // The steps above already state the reward: the summary only counts.
+  expect(await screen.findByText('Până acum: 3 colegi cu acces · 120 de credite câștigate')).toBeTruthy();
+  expect(screen.getAllByText(/primești 40 de credite/i)).toHaveLength(1);
   expect(screen.queryByRole('progressbar')).toBeNull();
 });
 
@@ -206,8 +207,8 @@ it('cap reached without access: the note replaces the free-period promise, the p
 it('no cap note below the cap', async () => {
   mockedSummary.mockResolvedValue(summary({ hasAccess: true }));
   await mount();
-  expect(await screen.findByText('Primești 40 de credite pentru fiecare coleg care își cumpără acces')).toBeTruthy();
-  expect(screen.queryByText(/Ai atins limita/)).toBeNull();
+  expect(await screen.findByText('Pentru fiecare coleg care își cumpără acces primești 40 de credite.')).toBeTruthy();
+  expect(screen.queryByText(/numărul maxim de colegi/)).toBeNull();
 });
 
 it('empty list', async () => {

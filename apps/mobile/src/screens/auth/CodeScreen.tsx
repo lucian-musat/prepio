@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../../ui';
 import { EMAIL_AUTH_ERROR, RESEND_COOLDOWN_SECONDS, sendEmailCode, verifyEmailCode } from '../../lib/emailAuth';
-import { getPendingEmail } from '../../lib/pendingEmail';
+import { getPendingEmail, setPendingEmail } from '../../lib/pendingEmail';
 
 const CODE_LENGTH = 6;
 
@@ -36,6 +36,7 @@ export default function CodeScreen() {
     setVerifying(true);
     try {
       await verifyEmailCode(email, value);
+      setPendingEmail(''); // signed in: a later visit to /code must not offer this address again
     } catch (e) {
       setError(e instanceof Error ? e.message : EMAIL_AUTH_ERROR.wrongCode);
     } finally {

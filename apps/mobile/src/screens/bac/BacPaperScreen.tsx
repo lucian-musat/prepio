@@ -326,6 +326,8 @@ export default function BacPaperScreen() {
       })}
     </View>
   );
+  // On a phone „Salvat” would push the map onto a second row; only a failure is worth the space there.
+  const saveText = draft.saveState === 'saved' && !compact ? 'Salvat' : draft.saveState === 'error' ? 'Nu s-a putut salva' : '';
   const map = (
     <View style={styles.mapRow}>
       <View style={styles.map}>
@@ -340,9 +342,9 @@ export default function BacPaperScreen() {
               accessibilityLabel={`Cerința ${it.number}${done ? ', completată' : partly ? ', incompletă' : ''}`}
               accessibilityState={{ selected: here }}
               onPress={() => !here && go(position.section, i)}
-              style={styles.slot}
+              style={[styles.slot, compact && styles.slotCompact]}
             >
-              <View style={[styles.dot, done && styles.dotDone, partly && styles.dotPartial, here && styles.dotHere]}>
+              <View style={[styles.dot, compact && styles.dotCompact, done && styles.dotDone, partly && styles.dotPartial, here && styles.dotHere]}>
                 <AppText role="badge" style={{ color: done ? feedbackText.good : partly ? feedbackText.almost : color.textMuted }}>
                   {it.number}
                 </AppText>
@@ -351,8 +353,14 @@ export default function BacPaperScreen() {
           );
         })}
       </View>
-      <AppText role="caption" color={draft.saveState === 'error' ? 'danger' : 'textMuted'} accessibilityLiveRegion="polite">
-        {draft.saveState === 'saved' ? 'Salvat' : draft.saveState === 'error' ? 'Nu s-a putut salva' : ''}
+      {/* The live region stays mounted (so the change is announced) but takes no room while empty. */}
+      <AppText
+        role="caption"
+        color={draft.saveState === 'error' ? 'danger' : 'textMuted'}
+        accessibilityLiveRegion="polite"
+        style={saveText ? styles.saveText : null}
+      >
+        {saveText}
       </AppText>
     </View>
   );
@@ -441,12 +449,16 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: space[2.5] },
   submit: { minHeight: layout.minTouch, justifyContent: 'center', paddingHorizontal: space[1] },
   sub: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', gap: space[1], paddingHorizontal: space[4] },
-  subCompact: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[3] },
+  subCompact: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[1] },
   tabs: { flexDirection: 'row', backgroundColor: color.surfaceMuted, borderRadius: radius.pill, padding: space[1] },
-  tabsCompact: { width: 128 },
+  tabsCompact: { width: 104 },
+  // Seven requirements fit beside the tabs at 360 px.
+  slotCompact: { width: 28 },
+  dotCompact: { width: 24, height: 24 },
   tab: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, paddingHorizontal: space[1] },
   tabOn: { backgroundColor: color.surface },
-  mapRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  mapRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  saveText: { marginLeft: space[2] },
   map: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
   slot: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
   dot: {

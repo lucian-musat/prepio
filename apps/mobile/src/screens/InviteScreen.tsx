@@ -106,12 +106,9 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   ];
   return (
     <Surface style={styles.stack}>
-      {summary.capReached ? (
-        <CapNote />
-      ) : (
-        <AppText role="bodyStrong">{`Primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')} pentru fiecare coleg care își cumpără acces`}</AppText>
-      )}
-      <AppText role="small" color="textMuted">
+      {/* The steps above state the reward; here only the cap note and the totals. */}
+      {summary.capReached ? <CapNote /> : null}
+      <AppText role="body">
         {`Până acum: ${totals.join(' · ')}`}
       </AppText>
     </Surface>

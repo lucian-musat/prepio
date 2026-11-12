@@ -3,11 +3,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CodeScreen from './CodeScreen';
 import { sendEmailCode, verifyEmailCode } from '../../lib/emailAuth';
-import { setPendingEmail } from "../../lib/pendingEmail";
+import { getPendingEmail, setPendingEmail } from '../../lib/pendingEmail';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true), replace: jest.fn() },
-
 }));
 jest.mock('../../lib/emailAuth', () => ({
   ...jest.requireActual('../../lib/emailAuth'),
@@ -66,6 +65,15 @@ it('goes back to change the address', async () => {
   await renderScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Schimbă adresa' }));
   expect(router.back).toHaveBeenCalled();
+});
+
+it('forgets the address once the code is accepted', async () => {
+  (verifyEmailCode as jest.Mock).mockResolvedValue(undefined);
+  await renderScreen();
+  await fireEvent.changeText(screen.getByLabelText('Codul din email'), '123456');
+  await act(async () => {});
+  expect(verifyEmailCode).toHaveBeenCalledWith('ana@example.com', '123456');
+  expect(getPendingEmail()).toBe('');
 });
 
 it('without a known address (opened directly), sends the student back to enter it', async () => {

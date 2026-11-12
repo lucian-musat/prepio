@@ -96,20 +96,21 @@ Last updated: 2026-11-12
   - **/recomandari:** „Pe scurt” stays open and the other sections start closed.
   - Tests: mobile 1325.
   - Browser walk (Chrome, local, `[test]` full-access student, 360 + 1280, console clean): profile, credits, /recomandari folds, the /sterge-cont link.
-- **Deferred from the plan** (still open):
-  - restyling the Access screen like the Credits card (P3)
-  - an invite hero with three steps (P6)
-  - /sterge-cont: full-width button and the „Ce se șterge” list (P8; legal wording, waits for the lawyer)
-  - the compact phone header of the BAC paper (B9)
-  - the consolidation „Cum rezolv” sheet vs BAC's inline block, and the icon-only back button (C6/C7, owner decision)
-  - consolidation progress on the lesson start screen
-  - the email in the `/code?email=` URL
+- **Batch G — the deferred items and a copy pass (`feat/ux-deferred`, 2026-11-12):**
+  - **Access screen („Acces la lecții”, was „Accesul meu”):** a gradient card like Credits for full access, a plain card for trial/expired, the balance as a row with the coin, and history rows like credit rows (what, the date under it, the amount on the right). The Profile row is „Acces la lecții · Activ până la …”.
+  - **Invite:** a „Cum funcționează” card with three steps; step 3 is the reward that applies now (credits with access, free months without), and it is left out over the cap. The summary card no longer repeats the reward. Statuses say „Are acces” instead of „Abonat”.
+  - **/sterge-cont:** full-width action; „Ce se șterge” lists progress, BAC papers, credits and access (not refunded), the credit/payment history and the invite code; „Ce nu se șterge” adds the email fingerprint (as in /confidentialitate) and that an inviter keeps a paying invitee's first name marked „cont șters”. **Legal wording: for the lawyer review**, together with the Terms/Privacy.
+  - **Email sign-in:** the address no longer goes in the URL. It travels in memory and, on web, in sessionStorage (survives a reload of `/code`, cleared after sign-in); `/code` without an address asks for it again.
+  - **BAC paper on phones (< 480 px):** tabs „I / II / III” and the map share one row (seven requirements fit at 360 px), „Salvat” shows only on desktop (a save error still shows). Source cards have a secondary „Citește sursa” button, so „Următorul” is the only filled button.
+  - **Lesson start:** the Consolidare zone shows „3 din 10 rezolvate corect” and „Continuă ›” once an exercise was tried (`consolidationSummary` reads the exercises and the student's attempts).
+  - **Copy pass over the student app:** no em dashes in UI text (BAC grade note, payment footnote, paywall, „Știu deja, sari la verificare”, BAC result rows „I.5: …”); „Cumpărarea” instead of „Achiziția”; „nu e disponibilă acum. Încearcă mai târziu.”; plainer consolidation notes, BAC intro, skip message, delete confirm, trial banner, error screen and share message; „slot” replaced; one spelling „email” (Terms/Privacy untouched).
+  - Tests: mobile 1340, shared 392, admin unit 523; tsc clean.
+  - Browser walk (Chrome, local, `[test]` full-access and trial students, 1280 + 360 iframes, console clean on fresh pages): access (full, trial), invite (with/without access), profile, /sterge-cont, `/code` without the address in the URL and without a stored address, trial Home banner, lesson start with a started consolidation, BAC paper tabs and map at 360 and 1280. Not walked: the access history rows (needs a purchase through the admin API) and the cap-reached invite state (unit tests only).
+  - Kept as they are (owner decision): C6/C7 — consolidation „Cum rezolv” stays a sheet (it carries the template title and the BAC points, which BAC's inline block does not), and the consolidation back button stays icon-only (its row also holds „Verifică” and „Sari peste”, which do not fit at 360 px with a labelled back button).
 - Owner items:
   - delete the „card test” card in „Constituția din 1866”
-  - the referral flag looks ON in production — check it
   - the Home welcome text (Admin → Setări) still says „cartonașele”
-  - a decision is needed: keep the consolidation „Cum rezolv” as a sheet (approved mockup) while BAC uses an inline block?
-- Found during the walk, for a later batch: the email-code screen puts the email in the URL (`/code?email=…`).
+  - the referral flag is ON in production (checked 2026-11-12: `enabled = true`, threshold 5, 40 credits, cap 100), as the owner wants; the explainer and Terms/Privacy sentences still wait for the lawyer.
 
 **Launch readiness (2026-11-10 →) — in progress, five PRs, each on its own branch (see CLAUDE.md "Branches and PRs").** Spec `docs/superpowers/specs/2026-11-10-launch-readiness-design.md`, plan `docs/superpowers/plans/2026-11-10-launch-readiness.md`, audit `docs/audits/2026-11-10-production-readiness.md`.
 
@@ -177,7 +178,7 @@ Last updated: 2026-11-12
 - DB: migrations `20261112101546_referrals` … `20261112104253_referral_reads` and `20261112113911_referral_hardening` (lookup raises `rate_limited` instead of answering „invalid”, bounded rate-limit key, no code for admins). Tests: pgTAP all green; mobile 1225, admin 513 unit + 132 integration.
 - Browser walk (headless Chromium, 360 touch and 1280): 8/8 checks, then a final-review fix wave (typed code kept on submit, 360px button wrap, totals phrase, tap targets). Native-only behaviour is listed in the owner checklist below.
 - **Rule change (owner, 2026-11-12): the free access earned through referrals includes the same bonus credits as a paid access** (`access_settings.bonus_credits`, today 100, read at grant time). Fix wave 2, migration `20261112121359_referral_bonus_and_followups`: the grant credits the bonus as an `access_bonus` ledger row whose `referral_id` points at the oldest invitee consumed by that grant (that referral row's `access_ledger_id` points at the grant), and the `referral_access` event carries `bonus_credits`; `purchase_access` runs the referral step in a subtransaction (a failure there is logged as a warning and never rolls back the purchase); `referral_attach` is rate limited per user (30 / 10 min); the invitee-delete trigger locks the profile first; `my_referral_summary` gains `max_rewarded` / `cap_reached`, `referral_public_settings` gains `bonus_credits`, `admin_credit_ledger` gains `referral_id` / `access_order_id`. App side: explainer states the included bonus with the live number, invite screen cap note and invitee dates, Access history „Acces gratuit din recomandări · N luni”, credit history „Credite incluse în accesul gratuit din recomandări”, clean URL after `/invita/<CODE>`, admin „Au contribuit la accesul curent: …”. Tests: pgTAP 904 (25 files), mobile 1237, admin 521 unit + 132 integration.
-- **Rollout order matters, see `docs/deploy.md` "Referrals rollout".** The flag stays off until real payments exist.
+- **Rollout order matters, see `docs/deploy.md` "Referrals rollout".** Update 2026-11-12: the flag is ON in production (owner's choice while production is test-only; purchases are still simulated, so a „paying” invitee costs nothing).
 
 **Admins in the student list (2026-11-11, `feat/admins-in-students`).** Small change, agreed in chat, no separate spec. Migration `20261111120000_admins_in_students`:
 - `admin_students` lists an admin once they have a lesson, a consolidation run or a BAC subject started, and returns `is_admin`. The Trial filter leaves admins out; Acces complet lists them.
@@ -509,7 +510,7 @@ Local stack (Supabase + student web :8081), headless Playwright Chromium in WSL,
 - [ ] Admin preview of draft lessons (spec: publish to preview in the POC).
 - [x] AI grading per BAC barem criteria instead of a single grade (spec: later step): done for full papers in „Subiecte BAC” (2026-11-09); consolidation checks stay grade-free.
 - [ ] Referrals follow-ups:
-  - turn `referrals_enabled` on later, in the order of `docs/deploy.md` "Referrals rollout", and only once real payments exist (purchases are still simulated);
+  - `referrals_enabled` is ON in production (owner, 2026-11-12, test-only production); before launch, check again that the rewards behave with real payments and that the explainer and Terms/Privacy passed the lawyer;
   - **before real payments:** an account deletion running at the same moment as that account's own purchase can still deadlock (40P01) at the purchase's foreign-key check on `auth.users` (the deletion holds that row, the purchase holds the profile). This exists for every purchase, not only referrals; one of the two is rolled back cleanly. The referral part is fixed (the delete trigger locks the profile first; a referral-step error never rolls back the purchase). Decide with the payment provider whether a purchase must refuse an account being deleted;
   - a referral step that fails (logged as a `purchase_access: referral step skipped` warning) loses that invitee's reward: the row stays „registered” and later purchases are not first purchases. Correct by hand (admin grant / credit adjustment) if it ever shows up in the logs;
   - consciously left: no dblink-based concurrency test for the reward path (the admin integration test covers parallel calls); `referral_lookup` keys on the last `x-forwarded-for` entry (no further IP-source hardening); no native clipboard module (needs a new APK, „Trimite codul” opens the share sheet on native);
