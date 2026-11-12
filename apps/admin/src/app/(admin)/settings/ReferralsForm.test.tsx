@@ -36,6 +36,16 @@ describe('ReferralsForm', () => {
     expect(await screen.findByText('Setările recomandărilor au fost salvate.')).toBeTruthy();
   });
 
+  it('editing a field after a successful save clears the saved status', async () => {
+    const user = userEvent.setup();
+    actions.saveReferralSettings.mockResolvedValue({ ok: true });
+    render(<ReferralsForm initial={INITIAL} durationMonths={3} />);
+    await user.click(save());
+    expect(await screen.findByText('Setările recomandărilor au fost salvate.')).toBeTruthy();
+    await user.type(screen.getByLabelText('Invitați pentru acces gratuit'), '1');
+    expect(screen.queryByText('Setările recomandărilor au fost salvate.')).toBeNull();
+  });
+
   it('blocks invalid input with the message', async () => {
     const user = userEvent.setup();
     render(<ReferralsForm initial={INITIAL} durationMonths={3} />);

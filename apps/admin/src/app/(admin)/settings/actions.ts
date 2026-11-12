@@ -6,7 +6,7 @@ import { GENERIC_ERROR, UserError } from '@/lib/data/db';
 import * as access from '@/lib/data/accessSettings';
 import type { AccessSettingsInput } from '@/lib/data/accessSettings';
 import * as referrals from '@/lib/data/referralSettings';
-import type { ReferralSettingsInput } from '@/lib/data/referralSettings';
+import type { ReferralSettings } from '@/lib/data/referralSettings';
 import * as credits from '@/lib/data/credits';
 import type { CreditSettingsInput } from '@/lib/data/credits';
 import * as settings from '@/lib/data/settings';
@@ -57,7 +57,7 @@ export async function saveAccessSettings(input: AccessSettingsInput): Promise<Ac
   }
 }
 
-export async function saveReferralSettings(input: ReferralSettingsInput): Promise<ActionResult> {
+export async function saveReferralSettings(input: ReferralSettings): Promise<ActionResult> {
   try {
     const db = await createServerClient();
     await referrals.saveReferralSettings(db, input);

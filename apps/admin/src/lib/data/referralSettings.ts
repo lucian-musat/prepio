@@ -2,7 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { check, UserError } from './db';
 
 export type ReferralSettings = { enabled: boolean; threshold: number; creditsPerInvitee: number; maxRewarded: number };
-export type ReferralSettingsInput = ReferralSettings;
 
 export async function getReferralSettings(db: SupabaseClient): Promise<ReferralSettings> {
   const r = check(
@@ -14,7 +13,7 @@ export async function getReferralSettings(db: SupabaseClient): Promise<ReferralS
 const isInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n);
 
 /** Same ranges as the referral_settings checks. */
-export function validateReferralSettings(i: ReferralSettingsInput): ReferralSettings {
+export function validateReferralSettings(i: ReferralSettings): ReferralSettings {
   if (!isInt(i.threshold) || i.threshold < 1 || i.threshold > 100) {
     throw new UserError('Numărul de invitați trebuie să fie un număr întreg între 1 și 100.');
   }
@@ -27,7 +26,7 @@ export function validateReferralSettings(i: ReferralSettingsInput): ReferralSett
   return { enabled: Boolean(i.enabled), threshold: i.threshold, creditsPerInvitee: i.creditsPerInvitee, maxRewarded: i.maxRewarded };
 }
 
-export async function saveReferralSettings(db: SupabaseClient, input: ReferralSettingsInput): Promise<void> {
+export async function saveReferralSettings(db: SupabaseClient, input: ReferralSettings): Promise<void> {
   const v = validateReferralSettings(input);
   const { error } = await db.rpc('admin_save_referral_settings', {
     p_enabled: v.enabled,
