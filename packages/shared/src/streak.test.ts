@@ -49,41 +49,75 @@ describe('parseStreak', () => {
     expect(parseStreak({})).toBeNull();
     expect(parseStreak(null)).toBeNull();
     expect(parseStreak({ current: 1, record: 1, today_done: 'x', week: [] })).toBeNull();
+    expect(parseStreak({ current: NaN, record: 1, today_done: true, week: [] })).toBeNull();
+    expect(parseStreak({ current: 1, record: -1, today_done: true, week: [] })).toBeNull();
+    expect(parseStreak({ current: 1.5, record: 1, today_done: true, week: [] })).toBeNull();
   });
 });
+
+function plusDay(day: string, n: number): string {
+  const [y = 0, m = 1, d = 1] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** Expected reminders, derived from the Bucharest date of each local trigger instant (any machine TZ). */
+function expectedFor(now: Date, s: StreakSummary, days = 7) {
+  const today = bucharestDay(now);
+  const out: { at: Date; alive: boolean }[] = [];
+  for (let i = 0; i < days; i++) {
+    const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 19, 0);
+    if (at.getTime() <= now.getTime()) continue;
+    const day = bucharestDay(at);
+    if (day === today && s.todayDone) continue;
+    // streak alive iff the day before this reminder's Bucharest date was worked
+    const alive = s.todayDone ? day === plusDay(today, 1) : s.current > 0 && day === today;
+    out.push({ at, alive });
+  }
+  return out;
+}
+
+function expectTexts(r: ReturnType<typeof planReminders>, now: Date, s: StreakSummary) {
+  const exp = expectedFor(now, s);
+  expect(r.map((p) => p.at)).toEqual(exp.map((e) => e.at));
+  r.forEach((p, i) => {
+    if (exp[i]?.alive) {
+      expect(p.title).toBe(`🔥 Seria ta de ${s.current === 1 ? '1 zi' : `${s.current} zile`} te așteaptă`);
+      expect(p.body).toBe(ALIVE_BODY);
+    } else {
+      expect(p.title).toBe(NEW_SERIES);
+      expect(p.body).toBe('Rezolvă un exercițiu azi.');
+    }
+  });
+}
 
 describe('planReminders', () => {
   const now = new Date(2026, 10, 13, 10, 0);
 
-  it('plans 7 evenings starting today when not done', () => {
+  it('plans evenings at the local hour over a 7-day window, texts per Bucharest date', () => {
     const r = planReminders(now, DEFAULT_REMINDER, base);
-    expect(r).toHaveLength(7);
-    expect(r[0]?.at).toEqual(new Date(2026, 10, 13, 19, 0));
-    expect(r[0]?.title).toBe('🔥 Seria ta de 5 zile te așteaptă');
-    expect(r[0]?.body).toBe(ALIVE_BODY);
-    expect(r[1]?.at).toEqual(new Date(2026, 10, 14, 19, 0));
-    expect(r[1]?.title).toBe(NEW_SERIES);
-    expect(r[1]?.body).toBe('Rezolvă un exercițiu azi.');
+    expectTexts(r, now, base);
+    expect(r.length).toBeGreaterThanOrEqual(6);
+    r.forEach((p) => expect([p.at.getHours(), p.at.getMinutes()]).toEqual([19, 0]));
   });
 
-  it('skips today when already done', () => {
-    const r = planReminders(now, DEFAULT_REMINDER, { ...base, todayDone: true });
-    expect(r).toHaveLength(6);
-    expect(r[0]?.at).toEqual(new Date(2026, 10, 14, 19, 0));
-    expect(r[0]?.title).toBe('🔥 Seria ta de 5 zile te așteaptă');
-    expect(r[1]?.title).toBe(NEW_SERIES);
+  it('skips the reminder on the Bucharest date of today when already done', () => {
+    const s = { ...base, todayDone: true };
+    const r = planReminders(now, DEFAULT_REMINDER, s);
+    expectTexts(r, now, s);
+    expect(r.some((p) => bucharestDay(p.at) === bucharestDay(now))).toBe(false);
   });
 
   it('skips today when the time has passed', () => {
-    const r = planReminders(new Date(2026, 10, 13, 20, 0), DEFAULT_REMINDER, base);
+    const late = new Date(2026, 10, 13, 20, 0);
+    const r = planReminders(late, DEFAULT_REMINDER, base);
+    expectTexts(r, late, base);
     expect(r[0]?.at).toEqual(new Date(2026, 10, 14, 19, 0));
-    expect(r).toHaveLength(6);
-    expect(r[0]?.title).toBe(NEW_SERIES);
   });
 
   it('uses the new-series text when there is no streak', () => {
-    const r = planReminders(now, DEFAULT_REMINDER, { ...base, current: 0 });
-    expect(r).toHaveLength(7);
+    const s = { ...base, current: 0 };
+    const r = planReminders(now, DEFAULT_REMINDER, s);
+    expect(r.length).toBeGreaterThanOrEqual(6);
     for (const p of r) {
       expect(p.title).toBe(NEW_SERIES);
       expect(p.body).toBe('Rezolvă un exercițiu azi.');
@@ -91,7 +125,25 @@ describe('planReminders', () => {
   });
 
   it('uses singular for a 1-day streak', () => {
-    const r = planReminders(now, DEFAULT_REMINDER, { ...base, current: 1 });
-    expect(r[0]?.title).toBe('🔥 Seria ta de 1 zi te așteaptă');
+    const s = { ...base, current: 1, todayDone: true };
+    const r = planReminders(now, DEFAULT_REMINDER, s);
+    expectTexts(r, now, s);
+    expect(r.some((p) => p.title === '🔥 Seria ta de 1 zi te așteaptă')).toBe(true);
+  });
+
+  it('student abroad: rings at the local hour, alive/skip decided by the Bucharest date of the trigger', () => {
+    // Fixed instant: 2026-11-13 08:00Z = 10:00 in Bucharest, a different wall clock elsewhere.
+    const abroad = new Date('2026-11-13T08:00:00Z');
+    const s = { ...base, todayDone: true };
+    const r = planReminders(abroad, DEFAULT_REMINDER, s);
+    expect(r.length).toBeGreaterThan(0);
+    for (const p of r) {
+      expect(p.at.getHours()).toBe(19); // local hour, whatever the machine TZ
+      expect(p.at.getTime()).toBeGreaterThan(abroad.getTime());
+      expect(bucharestDay(p.at)).not.toBe(bucharestDay(abroad)); // today's skipped by Bucharest date
+    }
+    const first = r[0]!;
+    const alive = bucharestDay(first.at) === '2026-11-14';
+    expect(first.title).toBe(alive ? '🔥 Seria ta de 5 zile te așteaptă' : NEW_SERIES);
   });
 });

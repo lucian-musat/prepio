@@ -5,19 +5,20 @@ export type StreakSummary = { current: number; record: number; todayDone: boolea
 export function parseStreak(json: unknown): StreakSummary | null {
   if (!json || typeof json !== 'object') return null;
   const j = json as Record<string, unknown>;
+  const count = (x: unknown) => typeof x === 'number' && Number.isInteger(x) && x >= 0;
   if (
-    typeof j.current !== 'number' ||
-    typeof j.record !== 'number' ||
+    !count(j.current) ||
+    !count(j.record) ||
     typeof j.today_done !== 'boolean' ||
     !Array.isArray(j.week) ||
     !j.week.every((d) => typeof d === 'string')
   ) {
     return null;
   }
-  return { current: j.current, record: j.record, todayDone: j.today_done, week: j.week as string[] };
+  return { current: j.current as number, record: j.record as number, todayDone: j.today_done, week: j.week as string[] };
 }
 
-const dayFormat = new Intl.DateTimeFormat('en-CA', {
+const dayFormat = new Intl.DateTimeFormat('en-US', {
   timeZone: 'Europe/Bucharest',
   year: 'numeric',
   month: '2-digit',
@@ -26,7 +27,9 @@ const dayFormat = new Intl.DateTimeFormat('en-CA', {
 
 /** The calendar day (YYYY-MM-DD) of an instant in Europe/Bucharest. */
 export function bucharestDay(d: Date): string {
-  return dayFormat.format(d);
+  const parts = dayFormat.formatToParts(d);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year').padStart(4, '0')}-${part('month').padStart(2, '0')}-${part('day').padStart(2, '0')}`;
 }
 
 function parseDay(day: string): Date {
