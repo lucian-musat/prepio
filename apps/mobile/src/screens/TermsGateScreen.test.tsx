@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -118,4 +119,13 @@ it('says the app is for high-school students aged 14 or more', async () => {
   await renderGate();
   expect(screen.getByText(/elevii de liceu care au cel puțin 14 ani/)).toBeTruthy();
   expect(screen.getByText(/dacă ai sub 18 ani, acordul părintelui/)).toBeTruthy();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title', async () => {
+    applyOverrides({ 'onboarding.terms.title': '[override]' });
+    await renderGate();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

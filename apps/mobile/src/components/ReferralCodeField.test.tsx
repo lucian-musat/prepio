@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import ReferralCodeField from './ReferralCodeField';
@@ -205,4 +206,13 @@ it('links to the explainer page when the code came with the link', async () => {
   await render(<ReferralCodeField onChange={jest.fn()} />);
   await fireEvent.press(await screen.findByText('Cum funcționează recomandările?'));
   expect(router.push).toHaveBeenCalledWith('/recomandari');
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the link', async () => {
+    applyOverrides({ 'auth.referral.link': '[override]' });
+    await render(<ReferralCodeField onChange={jest.fn()} />);
+    expect(await screen.findByText('[override]')).toBeTruthy();
+  });
 });

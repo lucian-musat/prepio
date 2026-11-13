@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { border, color, radius, space } from '@prepio/shared';
 import { AppText } from '../ui';
+import { t } from '../texts/store';
 import { MODE_INFO, type LearningMode } from '../lib/learningMode';
 
 type Props = { value: LearningMode; onChange: (mode: LearningMode) => void; disabled?: boolean };
@@ -29,7 +30,7 @@ export default function LearningModePicker({ value, onChange, disabled = false }
           >
             {mode === 'guided' ? (
               <AppText role="eyebrow" color="primaryStrong">
-                Recomandat
+                {t('onboarding.mode.recommended')}
               </AppText>
             ) : null}
             <AppText role="bodyStrong">{`${info.icon} ${info.name}`}</AppText>

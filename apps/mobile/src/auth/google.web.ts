@@ -1,7 +1,7 @@
 import { getSupabase } from '../lib/supabase';
-import { GOOGLE_SIGN_IN_ERROR, type GoogleSignInResult } from './googleCommon';
+import { googleSignInError, type GoogleSignInResult } from './googleCommon';
 
-export { GOOGLE_SIGN_IN_ERROR } from './googleCommon';
+export { googleSignInError } from './googleCommon';
 export type { GoogleSignInResult } from './googleCommon';
 
 /** Redirects to Google; on return Supabase (`detectSessionInUrl`) stores the session and emits SIGNED_IN. */
@@ -14,7 +14,7 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     if (error) throw error;
   } catch (e) {
     console.warn('[google] sign-in could not start:', e);
-    throw new Error(GOOGLE_SIGN_IN_ERROR);
+    throw new Error(googleSignInError());
   }
   return 'ok';
 }

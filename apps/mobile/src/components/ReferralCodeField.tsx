@@ -11,12 +11,8 @@ import {
   normalizeCode,
   storePendingCode,
 } from '../lib/referrals';
+import { t } from '../texts/store';
 
-const LINK = 'Ai un cod de invitație?';
-const PRIVACY = 'Cel care te-a invitat va vedea prenumele și emailul tău.';
-const HOW = 'Cum funcționează recomandările?';
-const INVALID = 'Codul nu este valid.';
-const UNREACHABLE = 'Nu am putut verifica codul acum.';
 /** Typing pauses this long start the check (the keyboard's submit checks at once). */
 const DEBOUNCE_MS = 700;
 
@@ -131,7 +127,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
       <View style={styles.stack}>
         <Invited name={verdict.name} />
         <AppText role="caption" color="textMuted">
-          {PRIVACY}
+          {t('auth.referral.privacy')}
         </AppText>
         <HowLink />
       </View>
@@ -145,8 +141,8 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
           <TextField
             value={text}
             onChangeText={edit}
-            accessibilityLabel="Cod de invitație"
-            placeholder="Codul de invitație"
+            accessibilityLabel={t('auth.referral.codeLabel')}
+            placeholder={t('auth.referral.codePlaceholder')}
             autoCapitalize="characters"
             autoCorrect={false}
             autoComplete="off"
@@ -158,16 +154,16 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
           {verdict?.kind === 'valid' ? <Invited name={verdict.name} /> : null}
           {verdict?.kind === 'invalid' ? (
             <AppText role="small" color="textMuted">
-              {INVALID}
+              {t('auth.referral.invalid')}
             </AppText>
           ) : null}
           {verdict?.kind === 'unreachable' ? (
             <AppText role="small" color="textMuted">
-              {UNREACHABLE}
+              {t('auth.referral.unreachable')}
             </AppText>
           ) : null}
           <AppText role="caption" color="textMuted">
-            {PRIVACY}
+            {t('auth.referral.privacy')}
           </AppText>
           <HowLink />
         </>
@@ -179,7 +175,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
           onPress={disabled ? undefined : () => setOpen(true)}
           style={styles.link}
         >
-          {LINK}
+          {t('auth.referral.link')}
         </AppText>
       )}
     </View>
@@ -189,7 +185,7 @@ export default function ReferralCodeField({ onChange, disabled = false }: Props)
 function Invited({ name }: { name: string | null }) {
   return (
     <AppText role="small" color="success" accessibilityRole="text">
-      {name ? `Invitat de ${name} ✓` : 'Invitat ✓'}
+      {name ? t('auth.referral.invitedBy', { nume: name }) : t('auth.referral.invited')}
     </AppText>
   );
 }
@@ -204,7 +200,7 @@ const styles = StyleSheet.create({
 function HowLink() {
   return (
     <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.howLink}>
-      {HOW}
+      {t('auth.referral.how')}
     </AppText>
   );
 }

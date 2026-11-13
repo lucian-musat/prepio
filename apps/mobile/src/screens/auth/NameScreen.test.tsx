@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../../texts/store';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import NameScreen from './NameScreen';
@@ -60,4 +61,13 @@ it('shows a save failure and does not refresh', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Continuă' }));
   expect(await screen.findByText('Numele nu a putut fi salvat. Încearcă din nou.')).toBeTruthy();
   expect(mockRefresh).not.toHaveBeenCalled();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title', async () => {
+    applyOverrides({ 'onboarding.name.title': '[override]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

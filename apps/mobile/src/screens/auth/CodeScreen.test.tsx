@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../../texts/store';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -82,4 +83,13 @@ it('without a known address (opened directly), sends the student back to enter i
   expect(screen.queryByLabelText('Codul din email')).toBeNull();
   await fireEvent.press(screen.getByRole('button', { name: 'Scrie adresa de email' }));
   expect(router.replace).toHaveBeenCalledWith('/email');
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title', async () => {
+    applyOverrides({ 'auth.code.title': '[override]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

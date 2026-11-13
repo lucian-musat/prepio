@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../../texts/store';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -280,4 +281,14 @@ it('the sign-in buttons carry the hint to tick the consent only while they are d
   await tick();
   expect(google().props.accessibilityHint).toBeUndefined();
   expect(email().props.accessibilityHint).toBeUndefined();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title and of the consent link', async () => {
+    applyOverrides({ 'auth.welcome.title': '[override]', 'auth.consent.termsLink': '[link]' });
+    await renderWelcome();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[link]')).toBeTruthy();
+  });
 });

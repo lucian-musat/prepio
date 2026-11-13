@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../../texts/store';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ModeScreen from './ModeScreen';
@@ -75,4 +76,13 @@ it('shows a save failure as an alert and stays on the screen', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Modul nu a putut fi salvat. Încearcă din nou.');
   expect(mockRefresh).not.toHaveBeenCalled();
   expect(screen.getByText('Cum vrei să înveți?')).toBeTruthy();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title', async () => {
+    applyOverrides({ 'onboarding.mode.title': '[override]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

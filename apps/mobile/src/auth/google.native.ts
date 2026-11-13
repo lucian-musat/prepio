@@ -5,9 +5,9 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { getSupabase, withTimeout } from '../lib/supabase';
-import { GOOGLE_SIGN_IN_ERROR, type GoogleSignInResult } from './googleCommon';
+import { googleSignInError, type GoogleSignInResult } from './googleCommon';
 
-export { GOOGLE_SIGN_IN_ERROR } from './googleCommon';
+export { googleSignInError } from './googleCommon';
 export type { GoogleSignInResult } from './googleCommon';
 
 let configured = false;
@@ -33,7 +33,7 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
   } catch (e) {
     if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return 'cancelled';
     console.warn('[google] sign-in failed:', e);
-    throw new Error(GOOGLE_SIGN_IN_ERROR);
+    throw new Error(googleSignInError());
   }
 }
 

@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import LearningModePicker from './LearningModePicker';
 import { MODE_INFO } from '../lib/learningMode';
@@ -29,4 +30,14 @@ it('ignores presses while disabled', async () => {
   await render(<LearningModePicker value="guided" onChange={onChange} disabled />);
   await fireEvent.press(screen.getByRole('radio', { name: /Explorare liberă/ }));
   expect(onChange).not.toHaveBeenCalled();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows admin overrides of the mode name and points', async () => {
+    applyOverrides({ 'onboarding.mode.guided.name': '[override]', 'onboarding.mode.free.point1': '[point]' });
+    await render(<LearningModePicker value="guided" onChange={jest.fn()} />);
+    expect(screen.getByText('[override]', { exact: false })).toBeTruthy();
+    expect(screen.getByText('[point]')).toBeTruthy();
+  });
 });

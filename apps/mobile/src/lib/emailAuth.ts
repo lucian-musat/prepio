@@ -1,12 +1,21 @@
 import { getSupabase } from './supabase';
+import { t } from '../texts/store';
 
+/** The sign-in error texts (read at use time, so admin overrides apply). A network failure is the shared offline text. */
 export const EMAIL_AUTH_ERROR = {
-  invalidEmail: 'Adresa de email nu pare corectă.',
-  wrongCode: 'Codul nu este corect sau a expirat.',
-  rateLimit: 'Prea multe încercări. Așteaptă puțin și încearcă din nou.',
-  network: 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.',
-} as const;
-
+  get invalidEmail() {
+    return t('errors.auth.invalidEmail');
+  },
+  get wrongCode() {
+    return t('errors.auth.wrongCode');
+  },
+  get rateLimit() {
+    return t('errors.auth.rateLimit');
+  },
+  get network() {
+    return t('errors.offline');
+  },
+};
 /** Seconds before the student may ask for another code. */
 export const RESEND_COOLDOWN_SECONDS = 60;
 
