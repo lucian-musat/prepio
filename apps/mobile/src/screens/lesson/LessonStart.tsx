@@ -5,7 +5,7 @@ import { AppText, Button, Enter, ScreenLayout, Surface, TextButton, goBackOrHome
 import { countLabel } from '../../lib/lessonCount';
 import type { ZoneProgress } from '../../lib/lessonProgressLabel';
 import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
-import CreditChip from '../../credits/CreditChip';
+import HeaderPills from '../../streak/HeaderPills';
 
 type Props = {
   lesson: Lesson;
@@ -46,7 +46,7 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
     </View>
   );
   return (
-    <ScreenLayout title="Lecție" pageTitle={lesson.title} onBack={goBackOrHome} trailing={<CreditChip />} actions={wide ? undefined : buttons}>
+    <ScreenLayout title="Lecție" pageTitle={lesson.title} onBack={goBackOrHome} trailing={<HeaderPills />} actions={wide ? undefined : buttons}>
       <Surface style={styles.card}>
         <Enter index={0}>
           <AppText role="title" accessibilityRole="header">

@@ -15,7 +15,7 @@ import {
 } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePanel';
 import type { PanelSource } from '../../components/marker/SourceReader';
-import CreditChip from '../../credits/CreditChip';
+import HeaderPills from '../../streak/HeaderPills';
 import { useCredits } from '../../credits/CreditsProvider';
 import { useCreditGate } from '../../credits/useCreditGate';
 import { useMarkActive } from '../../streak/StreakProvider';
@@ -286,7 +286,7 @@ export default function BacPaperScreen() {
   if (mode === 'submit') {
     return (
       <View style={styles.fill}>
-        <ScreenLayout title={title} onBack={() => setMode('paper')} trailing={<CreditChip need={paper.subject.creditCost} />}>
+        <ScreenLayout title={title} onBack={() => setMode('paper')} trailing={<HeaderPills need={paper.subject.creditCost} />}>
           <BacSubmitView
             items={items}
             answers={draft.answers}

@@ -20,6 +20,7 @@ jest.mock('../access/AccessProvider', () => {
   };
 });
 jest.mock('../credits/CreditsProvider');
+jest.mock('../streak/StreakProvider');
 jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn() }));
 const { mockResetAccess } = jest.requireMock<typeof import('../access/__mocks__/AccessProvider')>('../access/AccessProvider');
 const { mockResetCredits } = jest.requireMock<typeof import('../credits/__mocks__/CreditsProvider')>('../credits/CreditsProvider');

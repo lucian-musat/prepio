@@ -21,7 +21,7 @@ import {
   type Source,
 } from '@prepio/shared';
 import CostTag from '../../credits/CostTag';
-import CreditChip from '../../credits/CreditChip';
+import HeaderPills from '../../streak/HeaderPills';
 import { useCreditGate } from '../../credits/useCreditGate';
 import { useMarkActive } from '../../streak/StreakProvider';
 import ExerciseInput from '../../components/consolidation/ExerciseInput';
@@ -303,7 +303,7 @@ export default function ExerciseScreen({
     <View style={styles.fill}>
       <ScreenLayout
         title="Consolidare"
-        trailing={<CreditChip need={ai ? exercise.creditCost : undefined} />}
+        trailing={<HeaderPills need={ai ? exercise.creditCost : undefined} />}
         subheader={map?.(moving)}
         onBack={onBack}
         actions={actions}

@@ -6,7 +6,7 @@ import { AppText, Button, Chip, Icon, ScreenLayout, Spinner, Surface, goBackOrHo
 import { useAccess } from '../../access/AccessProvider';
 import PaywallSheet from '../../access/PaywallSheet';
 import Coin from '../../credits/Coin';
-import CreditChip from '../../credits/CreditChip';
+import HeaderPills from '../../streak/HeaderPills';
 import { fetchBacList, type BacListRow } from '../../lib/bac';
 
 const ROMAN = ['', 'I', 'II', 'III'];
@@ -186,7 +186,7 @@ export default function BacListScreen() {
   };
 
   return (
-    <ScreenLayout title="Subiecte BAC" onBack={goBackOrHome} trailing={<CreditChip />}>
+    <ScreenLayout title="Subiecte BAC" onBack={goBackOrHome} trailing={<HeaderPills />}>
       {body()}
       <PaywallSheet
         visible={paywall}
