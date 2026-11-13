@@ -25,6 +25,7 @@ jest.mock('../lib/profile', () => ({
   updateLearningMode: jest.fn(),
 }));
 jest.mock('../credits/CreditsProvider');
+jest.mock('../streak/StreakProvider');
 jest.mock('../lib/referrals', () => ({ ...jest.requireActual('../lib/referrals'), fetchReferralSummary: jest.fn() }));
 const mockedReferral = fetchReferralSummary as jest.Mock;
 jest.mock('../access/AccessProvider');
@@ -280,3 +281,79 @@ it('account rows put the value on its own line, so nothing is cut at 360 px', as
   expect(screen.getByText('Perioadă de probă')).toBeTruthy();
   expect(screen.queryByText('Acces la lecții · Perioadă de probă')).toBeNull();
 });
+
+describe('daily reminder settings', () => {
+  const RN = jest.requireActual<typeof import('react-native')>('react-native');
+  const { reminderState, setEnabled, setTime } = jest.requireMock<typeof import('../streak/__mocks__/StreakProvider')>('../streak/StreakProvider');
+  const platform = RN.Platform.OS;
+  beforeEach(() => {
+    (RN.Platform as { OS: string }).OS = 'android';
+    reminderState.settings = { enabled: true, time: { hour: 19, minute: 0 }, asked: false };
+    reminderState.status = 'granted';
+  });
+  afterEach(() => {
+    (RN.Platform as { OS: string }).OS = platform;
+  });
+
+  it('shows the eyebrow, the switch, the time and the note', async () => {
+    await renderScreen();
+    expect(screen.getByText('Memento zilnic')).toBeTruthy();
+    expect(screen.getByText('Notificare seara')).toBeTruthy();
+    expect(screen.getByRole('switch')).toBeChecked();
+    expect(screen.getByLabelText('Ora · 19:00')).toBeTruthy();
+    expect(screen.getByText('Primești notificarea doar în zilele în care n-ai rezolvat încă niciun exercițiu.')).toBeTruthy();
+    expect(screen.queryByText('Deschide setările')).toBeNull();
+  });
+
+  it('the switch is on while undetermined and off when the wish is off', async () => {
+    reminderState.status = 'undetermined';
+    const { unmount } = await renderScreen();
+    expect(screen.getByRole('switch')).toBeChecked();
+    await unmount();
+    reminderState.settings = { ...reminderState.settings, enabled: false };
+    await renderScreen();
+    expect(screen.getByRole('switch')).not.toBeChecked();
+  });
+
+  it('toggling calls setEnabled', async () => {
+    await renderScreen();
+    await fireEvent(screen.getByRole('switch'), 'valueChange', false);
+    expect(setEnabled).toHaveBeenCalledWith(false);
+  });
+
+  it('when denied the switch is off, a hint and a settings link show, and toggling on still saves the wish', async () => {
+    reminderState.status = 'denied';
+    const open = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
+    await renderScreen();
+    expect(screen.getByRole('switch')).not.toBeChecked();
+    expect(screen.getByText('Notificările sunt oprite din setările telefonului.')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Deschide setările'));
+    expect(open).toHaveBeenCalled();
+    await fireEvent(screen.getByRole('switch'), 'valueChange', true);
+    expect(setEnabled).toHaveBeenCalledWith(true);
+    expect(screen.getByText('Notificările sunt oprite din setările telefonului.')).toBeTruthy();
+    open.mockRestore();
+  });
+
+  it('the Ora row opens the time sheet; choosing 20:30 saves it and closes', async () => {
+    await renderScreen();
+    await fireEvent.press(screen.getByLabelText('Ora · 19:00'));
+    expect(screen.getByText('Ora mementoului')).toBeTruthy();
+    expect(screen.getAllByRole('button', { selected: true })[0].props.accessibilityLabel).toBe('19:00');
+    await fireEvent.press(screen.getByLabelText('20:30'));
+    expect(setTime).toHaveBeenCalledWith({ hour: 20, minute: 30 });
+    expect(screen.queryByText('Ora mementoului')).toBeNull();
+  });
+
+  it('is hidden on web and when unsupported', async () => {
+    (RN.Platform as { OS: string }).OS = 'web';
+    const { unmount } = await renderScreen();
+    expect(screen.queryByText('Memento zilnic')).toBeNull();
+    await unmount();
+    (RN.Platform as { OS: string }).OS = 'android';
+    reminderState.status = 'unsupported';
+    await renderScreen();
+    expect(screen.queryByText('Memento zilnic')).toBeNull();
+  });
+});
+
