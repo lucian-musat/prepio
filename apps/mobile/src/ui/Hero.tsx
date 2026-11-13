@@ -18,10 +18,10 @@ import { fontFamily } from '../theme/fonts';
 import AppText from './AppText';
 import Chip from './Chip';
 import { withAlpha } from './elevation';
+import { t } from '../texts/store';
 import { type } from './typography';
 
 type Props = {
-  welcomeMessage: string;
   lessonCount: number;
   /** A returning student: one greeting line instead of the welcome title and text. */
   greeting?: string;
@@ -65,8 +65,9 @@ function cssAnglePoints(angle: number, w: number, h: number) {
  * Home hero (prototype B `.hero`): gradient card with greeting, title, welcome text and lesson count. With `greeting`
  * (a returning student) it is compact: that line and the count, so the continue card stays above the fold.
  */
-export default function Hero({ welcomeMessage, lessonCount: count, greeting }: Props) {
+export default function Hero({ lessonCount: count, greeting }: Props) {
   const reduced = useReducedMotion();
+  const welcome = t('home.hero.welcome');
   const [size, setSize] = useState({ w: 1, h: 1 });
   const float = useSharedValue(0);
 
@@ -113,9 +114,9 @@ export default function Hero({ welcomeMessage, lessonCount: count, greeting }: P
           <AppText role="display" accessibilityRole="header" style={styles.title}>
             Pregătește BAC-ul, pas cu pas.
           </AppText>
-          {welcomeMessage ? (
+          {welcome ? (
             <AppText testID="hero-welcome" role="small" style={styles.body}>
-              {welcomeMessage}
+              {welcome}
             </AppText>
           ) : null}
         </>

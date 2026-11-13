@@ -4,6 +4,21 @@ Last updated: 2026-11-13
 
 ## Where we are
 
+**Editable UI texts (2026-11-13, in progress, `feat/ui-texts-foundation`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- Foundation done: a text catalog in `@prepio/shared` (`TEXTS`, `{vars}` formatting, validation), the `ui_texts` table (public read, admin write, RLS + pgTAP), the student text store (`t`, `tPlural`, cached start-up, web boot loader, the app waits for the texts) and admin → „Texte” (edit, reset, optional texts). The Home welcome paragraph moved from Setări to the catalog (`home.hero.welcome`, empty = hidden) and the returning-student greeting is editable.
+- Guard: `apps/mobile/src/texts/noLiterals.test.ts` fails on literal UI copy outside the catalog; `PENDING_FILES` lists the files not migrated yet (each batch PR removes its files). The Terms and Privacy pages are excluded for good.
+- An edit shows on the second opening (cache); a fresh install waits at most ~1.5 s, then uses the defaults.
+- Admin „Texte” checks admin rights (`is_admin`) before it looks up editor emails; a whitespace-only optional text counts as empty (hidden).
+- Tests: mobile 1449, shared 422, admin unit 536 + int 140, content 88, db 942, e2e `texts.spec`; typecheck clean.
+- Browser walk (Claude in Chrome, local stack, `[test]` trial student + local admin, console clean in both apps):
+  - first opening with no cache: the boot loader, then Home with the default welcome; the cache is written
+  - admin edit of the welcome text to `[test] …`: „modificat” badge, editor email and date; the student's first reload still shows the old text, the second the new one
+  - empty welcome → the paragraph is hidden; „Revino la implicit” restores it
+  - the greeting with `{Nume}` → inline error naming the missing and the unknown variable, save blocked; a valid `{nume}` saves; reset
+  - 360 px (iframe) with no horizontal scroll, and desktop
+  - test data removed afterwards (no `ui_texts` rows, the `[test]` student deleted)
+- Not walked in the browser: the offline first opening (≤ 1.5 s, then defaults); covered by unit tests. Native (next APK): the splash waits for the texts on a fresh install (airplane mode → ≤ 1.5 s, then defaults); the cache survives a restart; an edit shows on the second opening.
+
 **Daily streak and evening reminder (2026-11-13, `feat/daily-streak`).** Spec `docs/superpowers/specs/2026-11-13-daily-streak-design.md`, plan `docs/superpowers/plans/2026-11-13-daily-streak.md`, rollout `docs/deploy.md` „Daily streak rollout”.
 - A day counts when the student submits at least one exercise for checking, right or wrong: a lesson question, a consolidation check (including one essay requirement) or a BAC submit (even if the grading then fails). Day = Europe/Bucharest; a missed day resets the streak; the record is kept. Stored on the server (`student_active_days`, RPCs `my_streak` / `mark_active_today`), so web and phone agree. Existing students start at 0.
 - „🔥 n” pill next to the credit pill (yellow while alive, grey at 0) on Home, lesson start, consolidation and the BAC screens; tapping opens a sheet with the streak, the record, the Monday–Sunday week and „Rezolvă un exercițiu” (Home only, same target as the continue card). The first exercise of the day shows a toast under the top bar.
@@ -388,6 +403,10 @@ Local stack (Supabase + student web :8081), headless Playwright Chromium in WSL,
 - Referral lookup (anon) is rate limited per bucketed client address (120 calls per 60 s) and raises `rate_limited` when exceeded; the client treats any lookup failure as „could not verify” and keeps the typed or link code, the server decides at attach.
 
 ## Backlog (known follow-ups, prioritised)
+
+- [ ] **Editable UI texts, batches 2–7** (plan Tasks 7–13, one PR each, `feat/ui-texts-<batch>`): move the remaining screens' literals into the catalog and remove their files from `PENDING_FILES`; the last batch leaves it empty.
+- [ ] **Drop `settings.welcome_message`** (column, admin field, content default) after the next APK is in use: the welcome text now lives in `ui_texts` (`home.hero.welcome`).
+- [ ] **Editable UI texts: checks on the phone with the next APK** (new start-up path, JS only): on a fresh install the splash stays until the texts are ready (airplane mode: at most ~1.5 s, then defaults); the cache survives an app restart; an edit in admin → Texte shows on the second opening.
 
 ### Owner actions
 - [ ] **Daily streak: checks on the phone with the next APK** (mandatory APK: new native module `expo-notifications`): after the first exercise of the day the permission prompt appears (not at launch); the reminder arrives at the chosen time and not on a day already worked; changing the time and turning the switch off take effect; refusing then turning the switch on asks again (or shows „Deschide setările” when Android no longer prompts, and that link opens the app's settings); tapping the notification opens Home, also when the app was closed; reminders survive a phone reboot; the notification icon (monochrome P, teal) and the text with diacritics and 🔥; the toast position under the top bar and the bottom sheet over the safe area; the streak day is right near midnight (Bucharest); after signing out no reminder arrives; TalkBack on the switch and the week dots.

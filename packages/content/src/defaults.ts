@@ -1,10 +1,8 @@
+import { TEXTS } from '@prepio/shared';
 import type { AiDefaults } from './types';
 
-export const welcomeMessage =
-  'Bine ai venit în Prepio! Aici te pregătești pentru proba de istorie de la Bacalaureat. ' +
-  'Alege o lecție din programă, citește cardurile cu ce trebuie să știi și răspunde la câteva întrebări. ' +
-  'Apoi exersează cu exerciții ca la BAC. Când scrii un răspuns, profesorul digital îți spune pe loc ce poți ' +
-  'îmbunătăți. Spor la învățat!';
+/** Legacy `settings.welcome_message` (the shipped APK still reads it); the live text is the `home.hero.welcome` catalog entry. */
+export const welcomeMessage: string = TEXTS['home.hero.welcome'].default;
 
 // Type-independent rules only: what each kind of exercise asks for lives in the AI templates (`aiTemplates.ts`).
 const rules = `Ești profesor de istorie și verifici răspunsurile elevilor de clasa a XII-a care se pregătesc pentru examenul de Bacalaureat din România (proba E.c). Primești enunțul, contextul profesorului și răspunsul scris de elev.

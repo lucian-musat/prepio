@@ -27,27 +27,26 @@ describe.skipIf(!url || !anon)('settings data functions (local Supabase)', () =>
     if (original) await saveSettings(db, original);
   });
 
-  const valid: SettingsInput = { welcomeMessage: '[test] Bun venit', rules: '[test] reguli', model: 'test-model', bacRules: '[test] reguli BAC' };
+  const valid: SettingsInput = { rules: '[test] reguli', model: 'test-model', bacRules: '[test] reguli BAC' };
 
-  it('persists both rows', async () => {
+  it('persists the AI settings', async () => {
     await saveSettings(db, valid);
     expect(await getSettings(db)).toEqual(valid);
   });
 
   it.each([
     ['empty model', { model: '  ' }],
-    ['empty welcome message', { welcomeMessage: ' ' }],
     ['empty rules', { rules: '' }],
   ])('rejects %s and saves nothing', async (_n, patch) => {
     await saveSettings(db, valid);
-    const bad = { ...valid, welcomeMessage: '[test] changed', ...patch };
+    const bad = { ...valid, rules: '[test] changed', ...patch };
     await expect(saveSettings(db, bad)).rejects.toBeInstanceOf(UserError);
     expect(await getSettings(db)).toEqual(valid);
   });
 
   it('fails for an unauthenticated client', async () => {
     const anonDb = createClient(url!, anon!, { auth: { persistSession: false } });
-    await expect(saveSettings(anonDb, { ...valid, welcomeMessage: '[test] anon' })).rejects.toBeInstanceOf(UserError);
-    expect((await getSettings(db)).welcomeMessage).not.toBe('[test] anon');
+    await expect(saveSettings(anonDb, { ...valid, rules: '[test] anon' })).rejects.toBeInstanceOf(UserError);
+    expect((await getSettings(db)).rules).not.toBe('[test] anon');
   });
 });

@@ -4,7 +4,7 @@
 # exercises to the seed lessons that have none yet (src/addConsolidation.ts), `sync-consolidation` replaces the
 # consolidation set (sources, exercises, their attempts and runs) of each seed lesson that differs from the seed
 # (src/syncConsolidation.ts), `remove-test-lessons` deletes the leftover „test” / „test 2” lessons,
-# `remove-test-cards` deletes the leftover „card test” card (src/removeTestCards.ts), `demo` creates or refreshes the demo lesson (src/demoLesson.ts; add --remove to delete it), `update-ai-settings` replaces the welcome message and the AI rules with the grade-free defaults
+# `remove-test-cards` deletes the leftover „card test” card (src/removeTestCards.ts), `demo` creates or refreshes the demo lesson (src/demoLesson.ts; add --remove to delete it), `update-ai-settings` replaces the AI rules with the grade-free defaults
 # (src/updateAiSettings.ts), `ai-templates` adds the seed AI templates, replaces the AI contexts of the seed exercises
 # with the fact-only seed ones and links every AI exercise without a template link to the seed template of its type
 # (src/syncAiTemplates.ts), `bac-subjects` adds the seed BAC subjects missing by title and fills an empty

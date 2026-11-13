@@ -82,7 +82,7 @@ const lesson = (over: Partial<Lesson> = {}): Lesson => ({
 });
 
 const summary = (id: string, title: string, position: number): LessonSummary => ({ id, nodeId: 'n', title, position });
-const homeOf = (...lessons: LessonSummary[]) => ({ welcomeMessage: '', sections: [{ path: ['A'], lessons }] });
+const homeOf = (...lessons: LessonSummary[]) => ({ sections: [{ path: ['A'], lessons }] });
 const twoLessons = homeOf(summary('l1', 'Lecția test', 1), summary('l2', 'Lecția doi', 2));
 const progressOf = (finished: string[] = [], positions: Record<string, LessonPosition> = {}) => ({
   finished: new Set(finished),

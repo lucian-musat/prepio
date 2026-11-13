@@ -6,6 +6,7 @@ import HomeScreen from './HomeScreen';
 import { fetchHome } from '../lib/content';
 import { fetchProgress } from '../lib/progress';
 import { fetchReferralSummary } from '../lib/referrals';
+import { applyOverrides, resetTexts } from '../texts/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let mockCanOpen = (_id: string) => true;
@@ -98,6 +99,8 @@ const summaryOf = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+afterEach(() => resetTexts());
+
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
@@ -113,7 +116,7 @@ beforeEach(async () => {
 });
 
 it('shows a profile button with the initial and opens the profile', async () => {
-  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
+  mockedFetch.mockResolvedValue({ sections: [] });
   await renderHome();
   expect(screen.getByText('A')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: 'Profil' }));
@@ -122,14 +125,13 @@ it('shows a profile button with the initial and opens the profile', async () => 
 
 it('falls back to a question mark when the student has no name', async () => {
   mockProfile = { id: 'u1', displayName: null, learningMode: null, creditBalance: 5 };
-  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
+  mockedFetch.mockResolvedValue({ sections: [] });
   await renderHome();
   expect(screen.getByText('?')).toBeTruthy();
 });
 
-it('renders the welcome message and lessons grouped under section headers', async () => {
+it('renders lessons grouped under section headers', async () => {
   mockedFetch.mockResolvedValue({
-    welcomeMessage: 'Bun venit la Prepio!',
     sections: [
       { path: ['A. Evul Mediu'], lessons: [{ id: 'l0', nodeId: 'a', title: 'Lecția zero', position: 1 }] },
       {
@@ -139,8 +141,7 @@ it('renders the welcome message and lessons grouped under section headers', asyn
     ],
   });
   await renderHome();
-  expect(await screen.findByText('Bun venit la Prepio!')).toBeTruthy();
-  expect(screen.getByText('A. Evul Mediu')).toBeTruthy();
+  expect(await screen.findByText('A. Evul Mediu')).toBeTruthy();
   // A two-level path: the parent as a small overline, the last level as the title.
   expect(screen.getByText('C. Statul')).toBeTruthy();
   expect(screen.getByText('Instituții')).toBeTruthy();
@@ -153,15 +154,14 @@ it('shows a Romanian error with a retry button when the fetch fails', async () =
   mockedFetch.mockRejectedValueOnce(new Error('network'));
   await renderHome();
   expect(await screen.findByText(/Nu am putut încărca lecțiile/)).toBeTruthy();
-  mockedFetch.mockResolvedValueOnce({ welcomeMessage: 'Salut', sections: [] });
+  mockedFetch.mockResolvedValueOnce({ sections: [] });
   await fireEvent.press(screen.getByText('Reîncearcă'));
-  expect(await screen.findByText('Salut')).toBeTruthy();
+  expect(await screen.findByText('Pregătește BAC-ul, pas cu pas.')).toBeTruthy();
   expect(mockedFetch).toHaveBeenCalledTimes(2);
 });
 
 it('navigates to the lesson when tapped', async () => {
   mockedFetch.mockResolvedValue({
-    welcomeMessage: 'x',
     sections: [{ path: ['A'], lessons: [{ id: 'abc', nodeId: 'a', title: 'Lecția', position: 1 }] }],
   });
   await renderHome();
@@ -175,8 +175,9 @@ it('shows a spinner while loading', async () => {
   expect(screen.getByLabelText('Se încarcă')).toBeTruthy();
 });
 
-it('shows the welcome message in the hero', async () => {
-  mockedFetch.mockResolvedValue({ welcomeMessage: 'Lecții scurte și exerciții.', sections: [] });
+it('shows the catalog welcome message in the hero', async () => {
+  applyOverrides({ 'home.hero.welcome': 'Lecții scurte și exerciții.' });
+  mockedFetch.mockResolvedValue({ sections: [] });
   await renderHome();
   const hero = await screen.findByTestId('hero');
   expect(screen.getByText('Bine ai venit!')).toBeTruthy();
@@ -186,7 +187,6 @@ it('shows the welcome message in the hero', async () => {
 
 it('shows the total lesson count chip', async () => {
   mockedFetch.mockResolvedValue({
-    welcomeMessage: 'x',
     sections: [
       { path: ['A'], lessons: [lesson('a1', 'Unu'), lesson('a2', 'Doi', 2)] },
       { path: ['B'], lessons: [lesson('b1', 'Trei')] },
@@ -202,7 +202,6 @@ it('shows the total lesson count chip', async () => {
 it('opens a lesson on press', async () => {
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'free', creditBalance: 5 };
   mockedFetch.mockResolvedValue({
-    welcomeMessage: 'x',
     sections: [{ path: ['A'], lessons: [lesson('first', 'Prima'), lesson('second', 'A doua', 2)] }],
   });
   await renderHome();
@@ -211,8 +210,9 @@ it('opens a lesson on press', async () => {
   expect(router.push).toHaveBeenCalledTimes(1);
 });
 
-it('hides the welcome text when empty but keeps the title', async () => {
-  mockedFetch.mockResolvedValue({ welcomeMessage: '', sections: [{ path: ['A'], lessons: [lesson('a1', 'Unu')] }] });
+it('hides the welcome text when emptied in the admin but keeps the title', async () => {
+  applyOverrides({ 'home.hero.welcome': '' });
+  mockedFetch.mockResolvedValue({ sections: [{ path: ['A'], lessons: [lesson('a1', 'Unu')] }] });
   await renderHome();
   expect(await screen.findByText('Pregătește BAC-ul, pas cu pas.')).toBeTruthy();
   expect(screen.getByText('📚 1 lecție')).toBeTruthy();
@@ -225,7 +225,6 @@ describe('entrance', () => {
 
   it('staggers hero, section header and lessons (40 + i × 50 ms, 420 ms each)', async () => {
     mockedFetch.mockResolvedValue({
-      welcomeMessage: 'x',
       sections: [{ path: ['A'], lessons: [lesson('a1', 'Unu'), lesson('a2', 'Doi', 2)] }],
     });
     await renderHome();
@@ -244,7 +243,6 @@ describe('entrance', () => {
 describe('lesson states', () => {
   const threeLessons = () =>
     mockedFetch.mockResolvedValue({
-      welcomeMessage: 'x',
       sections: [{ path: ['A'], lessons: [lesson('l1', 'Unu'), lesson('l2', 'Doi', 2), lesson('l3', 'Trei', 3)] }],
     });
 
@@ -337,7 +335,6 @@ describe('plan paywall', () => {
     mockCanOpen = (id) => id === 'a';
     mockedProgress.mockResolvedValue(progressOf('b'));
     mockedFetch.mockResolvedValue({
-      welcomeMessage: 'x',
       sections: [{ path: ['Istorie'], lessons: [lesson('a', 'Prima'), lesson('b', 'A doua'), lesson('c', 'A treia')] }],
     });
     await renderHome();
@@ -357,7 +354,6 @@ describe('plan paywall', () => {
     mockCanOpen = (id) => id === 'a';
     mockResetAccess();
     mockedFetch.mockResolvedValue({
-      welcomeMessage: 'x',
       sections: [{ path: ['Istorie'], lessons: [lesson('a', 'Prima'), lesson('b', 'A doua'), lesson('c', 'A treia')] }],
     });
     await renderHome();
@@ -452,7 +448,7 @@ describe('plan paywall', () => {
 
 it('keeps the spinner until the access read has settled', async () => {
   mockAccessReady = false;
-  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [{ path: ['I'], lessons: [lesson('a', 'Prima')] }] });
+  mockedFetch.mockResolvedValue({ sections: [{ path: ['I'], lessons: [lesson('a', 'Prima')] }] });
   const r = await renderHome();
   await act(async () => {});
   expect(screen.queryByText('Prima')).toBeNull();
@@ -466,7 +462,7 @@ it('keeps the spinner until the access read has settled', async () => {
 });
 
 it('has a Subiecte BAC card above the lessons that opens the BAC list', async () => {
-  mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [] });
+  mockedFetch.mockResolvedValue({ sections: [] });
   await renderHome();
   expect(await screen.findByText('Exersează lucrarea completă')).toBeTruthy();
   expect(screen.getByTestId('bac-card-chevron')).toBeTruthy();
@@ -477,7 +473,7 @@ it('has a Subiecte BAC card above the lessons that opens the BAC list', async ()
 const NOTE = 'Ai terminat prima lecție! Invită un coleg și primești credite.';
 
 describe('invite entry points', () => {
-  const home = () => mockedFetch.mockResolvedValue({ welcomeMessage: 'x', sections: [{ path: ['A'], lessons: [lesson('a1', 'Prima')] }] });
+  const home = () => mockedFetch.mockResolvedValue({ sections: [{ path: ['A'], lessons: [lesson('a1', 'Prima')] }] });
 
   it('shows one quiet line with the progress for a student without access', async () => {
     home();
@@ -558,7 +554,6 @@ describe('invite entry points', () => {
 describe('continue card and hero', () => {
   const threeLessons = () =>
     mockedFetch.mockResolvedValue({
-      welcomeMessage: 'Bun venit la Prepio!',
       sections: [
         { path: ['A'], lessons: [lesson('l1', 'Unu')] },
         { path: ['B'], lessons: [lesson('l2', 'Doi'), lesson('l3', 'Trei', 2)] },
@@ -591,6 +586,14 @@ describe('continue card and hero', () => {
     expect(card).toContainElement(screen.getByText('Ai rămas la cardul 4'));
     await fireEvent.press(screen.getByRole('button', { name: 'Continuă lecția' }));
     expect(router.push).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('the returning greeting comes from the catalog and follows admin overrides', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    applyOverrides({ 'home.hero.welcomeBack': 'Salut din nou, {nume}!' });
+    await renderHome();
+    expect(await screen.findByText('Salut din nou, ana!')).toBeTruthy();
   });
 
   it('after a finished lesson the card offers the next one', async () => {
@@ -633,6 +636,15 @@ describe('continue card and hero', () => {
     await renderHome();
     expect(await screen.findByText('Bine ai revenit!')).toBeTruthy();
     expect(screen.queryByTestId('continue-card')).toBeNull();
+  });
+
+  it('the nameless greeting follows its own override', async () => {
+    mockProfile = { id: 'u1', displayName: null, learningMode: 'guided', creditBalance: 5 };
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1', 'l2', 'l3'));
+    applyOverrides({ 'home.hero.welcomeBackNoName': 'Salut!' });
+    await renderHome();
+    expect(await screen.findByText('Salut!')).toBeTruthy();
   });
 
   it('numbers lessons in the Home order across sections', async () => {

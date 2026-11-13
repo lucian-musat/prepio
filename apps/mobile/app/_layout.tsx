@@ -12,6 +12,8 @@ import { fontFiles } from '../src/theme/fonts';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import ErrorScreen from '../src/screens/ErrorScreen';
 import { initSentry } from '../src/lib/sentry';
+import { useTextsBoot } from '../src/texts/useTextsBoot';
+import { hideBootLoader } from '../src/texts/bootLoader';
 
 // Before anything renders, so start-up errors are reported too. Off (returns false) without a DSN.
 const sentryEnabled = initSentry();
@@ -20,11 +22,18 @@ SplashScreen.preventAutoHideAsync();
 
 /** Root error boundary: renders above the providers, so ErrorScreen uses no auth. */
 export function ErrorBoundary(props: ErrorBoundaryProps) {
+  // A start-up error must not stay hidden behind the splash / web boot loader.
+  useEffect(() => {
+    SplashScreen.hideAsync();
+    hideBootLoader();
+  }, []);
   return <ErrorScreen {...props} />;
 }
 
 /**
- * Keeps the splash up until the fonts and the stored session are resolved, then shows exactly one route group:
+ * Keeps the splash (web: the boot loader of public/index.html) up until the fonts, the stored session and the UI
+ * texts (device cache, else the network for at most 1.5 s, else the defaults) are resolved, then shows exactly one
+ * route group:
  * signed out → (auth), suspended → (suspended), signed in without the current terms, a name or a mode → (onboarding),
  * otherwise → (app). A guarded route that becomes
  * unavailable redirects to the first available one, so nothing in (app) is reachable without a session.
@@ -32,10 +41,13 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
 function RootNavigator() {
   const [fontsLoaded, fontError] = useFonts(fontFiles);
   const { status } = useAuth();
-  const ready = (fontsLoaded || !!fontError) && status !== 'loading';
+  const textsReady = useTextsBoot();
+  const ready = (fontsLoaded || !!fontError) && status !== 'loading' && textsReady;
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync();
+    if (!ready) return;
+    SplashScreen.hideAsync();
+    hideBootLoader();
   }, [ready]);
 
   if (!ready) return null;

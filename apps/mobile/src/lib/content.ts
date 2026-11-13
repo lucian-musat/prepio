@@ -3,7 +3,6 @@ import { cardFromRow, type Card, type Lesson, LessonSummary, Question, TreeNode 
 import { getSupabase } from './supabase';
 
 export type HomeData = {
-  welcomeMessage: string;
   sections: Array<{ path: string[]; lessons: LessonSummary[] }>;
 };
 
@@ -50,16 +49,15 @@ export function imageUrl(path: string): string {
 }
 
 export async function fetchHome(client: SupabaseClient = getSupabase()): Promise<HomeData> {
-  const [nodesRes, lessonsRes, settingsRes] = await Promise.all([
+  const [nodesRes, lessonsRes] = await Promise.all([
     client.from('nodes').select('id,parent_id,title,position').order('position'),
     client
       .from('lessons')
       .select('id,node_id,title,position')
       .eq('status', 'published')
       .order('position'),
-    client.from('settings').select('welcome_message').eq('id', 1).maybeSingle(),
   ]);
-  for (const res of [nodesRes, lessonsRes, settingsRes]) if (res.error) throw res.error;
+  for (const res of [nodesRes, lessonsRes]) if (res.error) throw res.error;
 
   const nodes: TreeNode[] = (nodesRes.data ?? []).map((r) => ({
     id: r.id,
@@ -74,7 +72,6 @@ export async function fetchHome(client: SupabaseClient = getSupabase()): Promise
     position: r.position,
   }));
   return {
-    welcomeMessage: settingsRes.data?.welcome_message ?? '',
     sections: groupLessonsByTree(nodes, lessons),
   };
 }

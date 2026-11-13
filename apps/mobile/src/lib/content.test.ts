@@ -121,14 +121,14 @@ describe('fetchLesson', () => {
 });
 
 describe('fetchHome', () => {
-  it('combines welcome message and grouped lessons', async () => {
-    const { client } = mockClient({
+  it('returns the lessons grouped by section and does not query settings', async () => {
+    const { client, calls } = mockClient({
       nodes: { error: null, data: [{ id: 'a', parent_id: null, title: 'A', position: 1 }] },
       lessons: { error: null, data: [{ id: 'l', node_id: 'a', title: 'L', position: 1 }] },
-      settings: { error: null, data: { welcome_message: 'Bun venit!' } },
     });
     const home = await fetchHome(client);
-    expect(home.welcomeMessage).toBe('Bun venit!');
+    expect(home).not.toHaveProperty('welcomeMessage');
+    expect(calls).not.toContain('settings');
     expect(home.sections).toEqual([
       { path: ['A'], lessons: [{ id: 'l', nodeId: 'a', title: 'L', position: 1 }] },
     ]);

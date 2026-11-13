@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button, Card, Form } from 'react-bootstrap';
 import { useRunner } from '@/components/editor/common';
@@ -7,7 +8,6 @@ import type { SettingsInput } from '@/lib/data/settings';
 import { saveSettings } from './actions';
 
 export default function SettingsForm({ initial }: { initial: SettingsInput }) {
-  const [welcomeMessage, setWelcomeMessage] = useState(initial.welcomeMessage);
   const [rules, setRules] = useState(initial.rules);
   const [model, setModel] = useState(initial.model);
   const [bacRules, setBacRules] = useState(initial.bacRules);
@@ -21,22 +21,13 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
         e.preventDefault();
         setSaved(false);
         run(
-          () => saveSettings({ welcomeMessage, rules, model, bacRules }),
+          () => saveSettings({ rules, model, bacRules }),
           () => setSaved(true),
         );
       }}
     >
       {alert}
-      <Card className="mb-4">
-        <Card.Body>
-          <Form.Group controlId="welcome-message">
-            <Form.Label>Mesaj de bun venit</Form.Label>
-            <Form.Control as="textarea" rows={3} value={welcomeMessage} onChange={(e) => touch(setWelcomeMessage)(e.target.value)} />
-            <Form.Text muted>Afișat elevilor pe ecranul de start al aplicației.</Form.Text>
-          </Form.Group>
-        </Card.Body>
-      </Card>
-
+      <p className="text-muted small">Textele aplicației se editează în <Link href="/texts">Texte</Link>.</p>
       <Card className="mb-4">
         <Card.Body>
           <Card.Title as="h2" className="h5 mb-3">Evaluare AI</Card.Title>

@@ -6,6 +6,7 @@ import {
   CARD_TYPES,
   cardImagePaths,
   parseRichText,
+  TEXTS,
   validateCard,
   validateLesson,
   type Card,
@@ -203,6 +204,10 @@ describe('defaults', () => {
     expect(aiDefaults).toEqual({ rules: aiDefaults.rules, model: 'gpt-5-mini' });
     // Consolidation feedback has no grades (spec): the default rules must not ask for one.
     expect(aiDefaults.rules).not.toMatch(/\bnot[ăa]|\bscala\b/i);
+  });
+
+  it('keeps the legacy settings.welcome_message default equal to the catalog text', () => {
+    expect(welcomeMessage).toBe(TEXTS['home.hero.welcome'].default);
   });
 
   it('calls the lesson cards „carduri”, not „cartonașe”', () => {
