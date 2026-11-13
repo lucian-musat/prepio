@@ -20,3 +20,4 @@ export * from './bac/bac';
 export * from './sentryScrub';
 export * from './diacritics';
 export * from './streak';
+export * from './texts';
