@@ -24,7 +24,10 @@ export function resetTexts(): void {
 
 /** The text for `key` (the override, else the default) with its `{name}` variables filled in. */
 export function t(key: TextKey, vars?: Record<string, string | number>): string {
-  return formatText(overrides[key] ?? TEXTS[key].default, vars);
+  const override = overrides[key];
+  // A blank override of an optional key hides the text (never an invisible paragraph).
+  if (override !== undefined && (TEXTS[key] as TextEntry).optional && override.trim() === '') return '';
+  return formatText(override ?? TEXTS[key].default, vars);
 }
 
 /** A Romanian count with the singular / plural nouns taken from the texts. */

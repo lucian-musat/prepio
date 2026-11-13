@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function TextsPage() {
   const db = await createServerClient();
-  const rows = await listUiTexts(db, createAdminClient());
+  // The service client (editor email lookup) is only handed out after the session proves the viewer is an admin.
+  const { data: isAdmin } = await db.rpc('is_admin');
+  const rows = await listUiTexts(db, isAdmin === true ? createAdminClient() : undefined);
   return (
     <>
       <h1 className="h3 mb-2">Texte</h1>

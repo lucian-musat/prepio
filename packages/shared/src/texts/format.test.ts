@@ -24,6 +24,7 @@ describe('validateTextValue', () => {
   it('accepts a valid value', () => {
     expect(validateTextValue(g, 'Hei, {nume}')).toBeNull();
     expect(validateTextValue(o, '')).toBeNull();
+    expect(validateTextValue(o, '   ')).toBeNull();
   });
   it('reports missing variables', () => {
     expect(validateTextValue(g, 'Hei')).toContain('{nume}');

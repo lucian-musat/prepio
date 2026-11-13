@@ -20,7 +20,7 @@ export type UiTextRow = {
 
 type DbRow = { key: string; value: string; updated_at: string; updated_by: string | null };
 
-/** Editor emails; `serviceDb` (service role) is only used for the lookup and may be omitted. */
+/** Editor emails; `serviceDb` (service role, bypasses RLS) is only used for the lookup, may be omitted, and must only be passed for a caller already proven to be an admin. */
 async function editorLabels(serviceDb: SupabaseClient | undefined, ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   await Promise.all(
@@ -79,6 +79,8 @@ export async function saveUiText(db: SupabaseClient, key: string, value: string)
   const entry = (TEXTS as Record<string, TextEntry>)[key]!;
   const problem = validateTextValue(entry, value);
   if (problem) throw new UserError(problem);
+  // A whitespace-only value on an optional key means "hide the text": store it as ''.
+  if (entry.optional && value.trim() === '') value = '';
   if (value === entry.default) {
     check(await db.from('ui_texts').delete().eq('key', key));
     return;

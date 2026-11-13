@@ -1,5 +1,7 @@
-/** Matches the `#boot-loader` opacity transition in public/index.html, plus a margin. */
+/** Matches the `#boot-loader` opacity transition in public/index.html. */
 const FADE_MS = 200;
+/** Fallback removal delay: the fade plus a margin. */
+const REMOVE_AFTER_MS = FADE_MS + 100;
 
 /**
  * Fades out the `#boot-loader` overlay of public/index.html (a sibling of #root) and removes it. The removal also
@@ -12,5 +14,5 @@ export function hideBootLoader(): void {
   el.classList.add('boot-loader--done');
   const remove = () => el.remove();
   el.addEventListener('transitionend', remove, { once: true });
-  setTimeout(remove, FADE_MS + 100);
+  setTimeout(remove, REMOVE_AFTER_MS);
 }

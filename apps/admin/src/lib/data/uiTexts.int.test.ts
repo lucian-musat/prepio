@@ -91,6 +91,8 @@ describe.skipIf(!url || !anon || !serviceKey)('ui texts data functions (local Su
   it('saves an empty value for an optional key', async () => {
     await saveUiText(db, WELCOME, '');
     expect((await row(WELCOME)).value).toBe('');
+    await saveUiText(db, WELCOME, '   ');
+    expect((await row(WELCOME)).value).toBe('');
   });
 
   it('lists an orphan override and reset deletes it', async () => {

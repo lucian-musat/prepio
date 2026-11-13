@@ -161,7 +161,7 @@ export default function TextsTable({ initial }: { initial: UiTextRow[] }) {
           row={editing}
           pending={pending}
           error={error}
-          onClose={() => setEditing(null)}
+          onClose={() => { setEditing(null); setError(null); }}
           onSave={(value) => run(() => saveUiTextAction(editing.key, value), () => setEditing(null))}
         />
       )}

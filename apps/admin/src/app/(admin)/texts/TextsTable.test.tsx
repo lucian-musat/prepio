@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { UiTextRow } from '@/lib/data/uiTexts';
 
 vi.mock('./actions', () => ({ saveUiTextAction: vi.fn(), resetUiTextAction: vi.fn() }));
 
+import { saveUiTextAction } from './actions';
 import TextsTable from './TextsTable';
 
 afterEach(cleanup);
@@ -48,5 +49,17 @@ describe('TextsTable', () => {
     render(<TextsTable initial={rows} />);
     expect(screen.getByText('Texte care nu mai există în aplicație')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Șterge' })).toBeTruthy();
+  });
+
+  it('clears a save error when the edit modal is closed', async () => {
+    vi.mocked(saveUiTextAction).mockResolvedValue({ ok: false, error: 'Nu s-a putut salva.' });
+    render(<TextsTable initial={rows} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Editează' })[0]!);
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'Altceva' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+    await waitFor(() => expect(screen.getByText('Nu s-a putut salva.')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Anulează' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText('Nu s-a putut salva.')).toBeNull();
   });
 });

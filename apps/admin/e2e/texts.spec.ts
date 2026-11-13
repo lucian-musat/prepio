@@ -12,9 +12,16 @@ const PASSWORD = process.env.ADMIN_PASSWORD ?? 'prepio-local-admin';
 
 const KEY = 'home.hero.welcome';
 
+const service = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
+let saved: Record<string, unknown>[] = [];
+
+test.beforeAll(async () => {
+  saved = (await service.from('ui_texts').select('*').eq('key', KEY)).data ?? [];
+});
+
 test.afterAll(async () => {
-  const service = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
   await service.from('ui_texts').delete().eq('key', KEY);
+  if (saved.length) await service.from('ui_texts').upsert(saved);
 });
 
 test('edit a text, see it marked modified, reset it', async ({ page }) => {

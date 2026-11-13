@@ -11,8 +11,11 @@ import { captureError } from '@/lib/sentry';
 async function run(label: string, fn: (db: Awaited<ReturnType<typeof createServerClient>>) => Promise<void>): Promise<ActionResult<UiTextRow[]>> {
   try {
     const db = await createServerClient();
+    // Explicit admin proof: a non-admin write matches 0 rows silently under RLS, and the service client below
+    // bypasses RLS (it only resolves editor emails).
+    const { data: isAdmin, error } = await db.rpc('is_admin');
+    if (error || isAdmin !== true) throw new UserError('Nu ai drepturi de administrator.');
     await fn(db);
-    // The session client proved the caller is an admin (writes passed RLS); the service client only resolves emails.
     const data = await listUiTexts(db, createAdminClient());
     revalidatePath('/texts');
     return { ok: true, data };

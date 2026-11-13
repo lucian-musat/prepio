@@ -35,6 +35,10 @@ it('returns an empty string for an optional key overridden with ""', () => {
   expect(t('home.hero.welcome')).toBe('');
 });
 
+it('returns an empty string for an optional key overridden with whitespace only', () => {
+  applyOverrides({ 'home.hero.welcome': '   ' });
+});
+
 it('falls back to the default for a non-optional key overridden with ""', () => {
   applyOverrides({ 'home.hero.welcomeBack': '' });
   expect(t('home.hero.welcomeBack', { nume: 'Ana' })).toBe('Bine ai revenit, Ana!');
