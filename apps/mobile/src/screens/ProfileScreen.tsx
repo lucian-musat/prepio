@@ -47,6 +47,7 @@ export default function ProfileScreen() {
   const [timeOpen, setTimeOpen] = useState(false);
   const showReminders = Platform.OS !== 'web' && reminders.status !== 'unsupported';
   const reminderDenied = reminders.status === 'denied';
+  const reminderBlocked = reminderDenied && !reminders.canAskAgain;
   const switchOn = reminders.settings.enabled && !reminderDenied;
   const busy = saving || deleting;
   const unchanged = name.trim() === (profile?.displayName ?? '').trim();
@@ -195,7 +196,7 @@ export default function ProfileScreen() {
               </View>
               <SettingsRow label="Ora" value={formatTime(reminders.settings.time)} onPress={() => setTimeOpen(true)} disabled={busy} divider />
             </Surface>
-            {reminderDenied ? (
+            {reminderBlocked ? (
               <>
                 <AppText role="small" color="textMuted">
                   Notificările sunt oprite din setările telefonului.

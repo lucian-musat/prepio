@@ -1,7 +1,7 @@
 import * as N from 'expo-notifications';
 import { planReminders, type StreakSummary } from '@prepio/shared';
 // Jest runs with the native platform, so './reminders' resolves to reminders.native.ts.
-import { onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { canAskAgain, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
 
 const mock = N as unknown as Record<string, jest.Mock>;
 const sum = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: false, week: [], ...over });
@@ -128,5 +128,16 @@ describe('permission errors', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     mock.getPermissionsAsync.mockRejectedValueOnce(new Error('boom'));
     expect(await permission()).toBe('undetermined');
+  });
+});
+
+describe('canAskAgain', () => {
+  it('mirrors the system flag, true when unknown', async () => {
+    mock.getPermissionsAsync.mockResolvedValue({ status: 'denied', canAskAgain: false });
+    expect(await canAskAgain()).toBe(false);
+    mock.getPermissionsAsync.mockResolvedValue({ status: 'denied', canAskAgain: true });
+    expect(await canAskAgain()).toBe(true);
+    mock.getPermissionsAsync.mockResolvedValue({ status: 'denied' });
+    expect(await canAskAgain()).toBe(true);
   });
 });

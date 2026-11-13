@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bucharestDay, color, plural, radius, space, weekDays } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
 import { AppText, Button, TextButton } from '../ui';
-import { useStreak } from './StreakProvider';
+import { useReminders, useStreak } from './StreakProvider';
 
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as BuyCreditsSheet
@@ -28,6 +28,7 @@ type Props = {
  */
 export default function StreakSheet({ visible, onClose, onSolve }: Props) {
   const { summary } = useStreak();
+  const reminders = useReminders();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const dialog = width >= SPLIT_MIN_WIDTH;
@@ -99,7 +100,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
                   }}
                 />
               ) : null}
-              {Platform.OS !== 'web' ? (
+              {Platform.OS !== 'web' && reminders.status !== 'unsupported' ? (
                 <TextButton
                   label="Setări memento"
                   onPress={() => {

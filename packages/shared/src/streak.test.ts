@@ -3,6 +3,7 @@ import {
   DEFAULT_REMINDER,
   bucharestDay,
   parseStreak,
+  normalizeStreak,
   planReminders,
   streakToast,
   weekDays,
@@ -145,5 +146,36 @@ describe('planReminders', () => {
     const first = r[0]!;
     const alive = bucharestDay(first.at) === '2026-11-14';
     expect(first.title).toBe(alive ? '🔥 Seria ta de 5 zile te așteaptă' : NEW_SERIES);
+  });
+});
+
+describe('normalizeStreak', () => {
+  const s = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: true, week: ['2026-11-10', '2026-11-11'], ...over });
+
+  it('leaves a summary from today unchanged', () => {
+    const x = s();
+    expect(normalizeStreak(x, '2026-11-11', '2026-11-11')).toBe(x);
+  });
+
+  it('keeps the streak but clears todayDone when it was done yesterday', () => {
+    expect(normalizeStreak(s(), '2026-11-11', '2026-11-12')).toEqual(s({ todayDone: false }));
+  });
+
+  it('empties the week when today starts a new week (Monday)', () => {
+    // 2026-11-15 is a Sunday, 2026-11-16 a Monday
+    expect(normalizeStreak(s({ week: ['2026-11-15'] }), '2026-11-15', '2026-11-16')).toEqual(s({ todayDone: false, week: [] }));
+  });
+
+  it('drops the streak when yesterday was not worked', () => {
+    expect(normalizeStreak(s({ todayDone: false }), '2026-11-11', '2026-11-12')).toEqual(s({ current: 0, todayDone: false }));
+  });
+
+  it('drops the streak when the summary is older than yesterday, keeping the record', () => {
+    expect(normalizeStreak(s(), '2026-11-09', '2026-11-12')).toEqual(s({ current: 0, todayDone: false }));
+    expect(normalizeStreak(s(), '2026-11-09', '2026-11-12').record).toBe(9);
+  });
+
+  it('empties the week of an old summary from a previous week', () => {
+    expect(normalizeStreak(s(), '2026-11-09', '2026-11-17').week).toEqual([]);
   });
 });

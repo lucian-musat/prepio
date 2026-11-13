@@ -35,6 +35,17 @@ export async function permission(): Promise<PermissionStatus> {
   }
 }
 
+/** False once Android no longer shows the system prompt (the student must use the phone settings). */
+export async function canAskAgain(): Promise<boolean> {
+  if (!N) return false;
+  try {
+    const { canAskAgain: can } = await N.getPermissionsAsync();
+    return can !== false;
+  } catch {
+    return true;
+  }
+}
+
 /** Shows the system prompt (Android 13+; older versions grant at install). Resolves whether notifications are allowed. */
 export async function requestPermission(): Promise<boolean> {
   if (!N) return false;

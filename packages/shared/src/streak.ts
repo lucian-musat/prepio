@@ -50,6 +50,18 @@ export function weekDays(today: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 }
 
+/**
+ * Brings a summary confirmed on the Bucharest day `asOf` up to `today` (both YYYY-MM-DD) without a server call:
+ * a day that has passed is no longer done, and a streak not worked on the day before `today` is gone. The record
+ * is unchanged, and the week is emptied when it is no longer the same Monday-Sunday week.
+ */
+export function normalizeStreak(s: StreakSummary, asOf: string, today: string): StreakSummary {
+  if (asOf >= today) return s;
+  const week = weekDays(asOf)[0] === weekDays(today)[0] ? s.week : [];
+  if (asOf === addDays(today, -1) && s.todayDone) return { ...s, todayDone: false, week };
+  return { ...s, current: 0, todayDone: false, week };
+}
+
 export function streakToast(current: number): string {
   if (current <= 1) return '🔥 Ai început o serie nouă! Ne vedem mâine.';
   return `🔥 Seria continuă: ${plural(current, 'zi', 'zile')}! Ne vedem mâine.`;

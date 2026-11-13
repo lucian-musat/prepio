@@ -1,13 +1,13 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, radius, space } from '@prepio/shared';
+import { color, radius, space, type ReminderTime } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
 import { AppText } from '../ui';
 
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as BuyCreditsSheet
 
-export type ReminderTime = { hour: number; minute: number };
+
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const formatTime = (t: ReminderTime) => `${pad(t.hour)}:${pad(t.minute)}`;

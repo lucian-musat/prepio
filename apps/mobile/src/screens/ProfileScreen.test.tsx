@@ -290,6 +290,7 @@ describe('daily reminder settings', () => {
     (RN.Platform as { OS: string }).OS = 'android';
     reminderState.settings = { enabled: true, time: { hour: 19, minute: 0 }, asked: false };
     reminderState.status = 'granted';
+    reminderState.canAskAgain = true;
   });
   afterEach(() => {
     (RN.Platform as { OS: string }).OS = platform;
@@ -321,8 +322,9 @@ describe('daily reminder settings', () => {
     expect(setEnabled).toHaveBeenCalledWith(false);
   });
 
-  it('when denied the switch is off, a hint and a settings link show, and toggling on still saves the wish', async () => {
+  it('when denied for good the switch is off, a hint and a settings link show, and toggling on still saves the wish', async () => {
     reminderState.status = 'denied';
+    reminderState.canAskAgain = false;
     const open = jest.spyOn(RN.Linking, 'openSettings').mockResolvedValue(undefined);
     await renderScreen();
     expect(screen.getByRole('switch')).not.toBeChecked();
@@ -335,6 +337,7 @@ describe('daily reminder settings', () => {
     open.mockRestore();
   });
 
+it('when denied but Android can still ask, no phone-settings hint shows and toggling on asks', async () => {    reminderState.status = 'denied';    reminderState.canAskAgain = true;    await renderScreen();    expect(screen.queryByText('Notificările sunt oprite din setările telefonului.')).toBeNull();    expect(screen.queryByText('Deschide setările')).toBeNull();    await fireEvent(screen.getByRole('switch'), 'valueChange', true);    expect(setEnabled).toHaveBeenCalledWith(true);  });
   it('the Ora row opens the time sheet; choosing 20:30 saves it and closes', async () => {
     await renderScreen();
     await fireEvent.press(screen.getByLabelText('Ora · 19:00'));

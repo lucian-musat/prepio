@@ -12,7 +12,11 @@ const render = (ui: ReactElement) => rtlRender(<SafeAreaProvider initialMetrics=
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 let mockSummary: StreakSummary | null = null;
-jest.mock('./StreakProvider', () => ({ useStreak: () => ({ summary: mockSummary }) }));
+let mockReminderStatus = 'granted';
+jest.mock('./StreakProvider', () => ({
+  useStreak: () => ({ summary: mockSummary }),
+  useReminders: () => ({ status: mockReminderStatus }),
+}));
 
 const NOW = new Date('2026-11-11T10:00:00Z'); // a Wednesday
 const today = bucharestDay(NOW);
@@ -31,6 +35,7 @@ beforeEach(() => {
   (router.push as jest.Mock).mockReset();
   (RN.Platform as { OS: string }).OS = 'android';
   mockSummary = summary();
+  mockReminderStatus = 'granted';
 });
 
 const dot = (d: string) => StyleSheet.flatten(screen.getByTestId(`streak-day-${d}`).props.style);
@@ -118,4 +123,10 @@ it('names today as worked', async () => {
   mockSummary = summary({ todayDone: true, week: [today] });
   await render(<StreakSheet visible onClose={() => {}} />);
   expect(screen.getByLabelText('Miercuri, azi, ai lucrat')).toBeTruthy();
+});
+
+it('„Setări memento” is hidden when reminders are unsupported (build without the native module)', async () => {
+  mockReminderStatus = 'unsupported';
+  await render(<StreakSheet visible onClose={() => {}} />);
+  expect(screen.queryByText('Setări memento')).toBeNull();
 });

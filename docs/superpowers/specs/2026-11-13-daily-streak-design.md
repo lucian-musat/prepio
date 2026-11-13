@@ -1,6 +1,6 @@
 # Daily streak and evening reminder — design
 
-Date: 2026-11-13. Status: draft, awaiting owner approval.
+Date: 2026-11-13. Status: approved by the owner on 2026-11-13.
 Mockups (brainstorm, not committed): the Home placement options (owner chose **A**) and the details screen shown in the browser companion; the agreed screens are described below.
 
 ## Intent

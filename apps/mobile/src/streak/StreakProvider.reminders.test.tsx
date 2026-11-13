@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import type { StreakSummary } from '@prepio/shared';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import { loadReminderSettings, saveReminderSettings } from './reminderSettings';
-import { cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { canAskAgain, cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
 import { StreakProvider, useMarkActive, useReminders } from './StreakProvider';
 
 let mockUser: string | null = 'u1';
@@ -15,6 +15,7 @@ jest.mock('../lib/streak', () => ({ fetchStreak: jest.fn(), markActiveToday: jes
 jest.mock('./reminders', () => ({
   remindersSupported: jest.fn(),
   permission: jest.fn(),
+  canAskAgain: jest.fn(),
   requestPermission: jest.fn(),
   syncReminders: jest.fn(),
   onReminderTap: jest.fn(),
@@ -61,6 +62,7 @@ beforeEach(async () => {
   m(remindersSupported).mockReturnValue(true);
   m(permission).mockResolvedValue('granted');
   m(requestPermission).mockResolvedValue(true);
+  m(canAskAgain).mockResolvedValue(true);
   m(syncReminders).mockResolvedValue(undefined);
   m(cancelReminders).mockResolvedValue(undefined);
   mockUser = 'u1';
@@ -146,7 +148,8 @@ it('setEnabled(true) while undetermined asks for permission', async () => {
   expect(lastSync()[1]).toMatchObject({ enabled: true, asked: true });
 });
 
-it('setEnabled(true) while denied does not ask; setEnabled(false) turns off and syncs', async () => {
+it('setEnabled(true) while denied for good does not ask; setEnabled(false) turns off and syncs', async () => {
+  m(canAskAgain).mockResolvedValue(false);
   m(permission).mockResolvedValue('denied');
   await renderProvider();
   await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('denied'));
@@ -238,4 +241,44 @@ it('a permission() error (reported as undetermined) does not trigger a second au
   await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('undetermined'));
   await tapMark();
   expect(requestPermission).not.toHaveBeenCalled();
+});
+
+it('setEnabled(true) while denied but Android can still ask, asks again', async () => {
+  await saveReminderSettings({ enabled: false, time: { hour: 19, minute: 0 }, asked: true });
+  m(permission).mockResolvedValue('denied');
+  m(canAskAgain).mockResolvedValue(true);
+  await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('denied'));
+  expect(api.canAskAgain).toBe(true);
+  m(permission).mockResolvedValue('granted');
+  await act(async () => api.setEnabled(true));
+  expect(requestPermission).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('status')).toHaveTextContent('granted');
+});
+
+it('schedules nothing after the provider unmounted', async () => {
+  const view = await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('granted'));
+  await act(async () => view.unmount());
+  m(syncReminders).mockClear();
+  await act(async () => onChange('active'));
+  expect(syncReminders).not.toHaveBeenCalled();
+});
+
+describe('the day rolls over while the app is open', () => {
+  const REAL = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance', 'hrtime'] as const;
+  afterEach(() => jest.useRealTimers());
+
+  it('a summary confirmed yesterday is synced as not done today, even when the re-read never answers', async () => {
+    jest.useFakeTimers({ now: new Date('2026-11-11T10:00:00Z'), doNotFake: [...REAL] });
+    m(fetchStreak).mockResolvedValueOnce(sum({ todayDone: true, week: ['2026-11-11'] }));
+    await renderProvider();
+    await waitFor(() => expect(lastSync()[0]).toEqual(sum({ todayDone: true, week: ['2026-11-11'] })));
+    jest.setSystemTime(new Date('2026-11-12T10:00:00Z'));
+    m(fetchStreak).mockReturnValue(new Promise(() => {}));
+    m(syncReminders).mockClear();
+    await act(async () => onChange('active'));
+    await waitFor(() => expect(syncReminders).toHaveBeenCalled());
+    expect(lastSync()[0]).toEqual(sum({ todayDone: false, week: ['2026-11-11'] }));
+  });
 });

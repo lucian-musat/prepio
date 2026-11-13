@@ -1,5 +1,7 @@
 import { parseStreak, type StreakSummary } from '@prepio/shared';
-import { getSupabase } from './supabase';
+import { getSupabase, withTimeout } from './supabase';
+
+const RPC_TIMEOUT_MS = 10_000;
 
 /**
  * The daily streak. Best-effort like `activity.ts`: a failure is only logged and the call resolves `null`
@@ -7,7 +9,7 @@ import { getSupabase } from './supabase';
  */
 async function call(fn: 'my_streak' | 'mark_active_today'): Promise<StreakSummary | null> {
   try {
-    const { data, error } = await getSupabase().rpc(fn);
+    const { data, error } = await withTimeout(Promise.resolve(getSupabase().rpc(fn)), RPC_TIMEOUT_MS);
     if (error) throw error;
     return parseStreak(data);
   } catch (e) {

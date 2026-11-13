@@ -40,7 +40,7 @@
       ],
       "@react-native-google-signin/google-signin",
       "expo-web-browser",
-      "expo-notifications",
+      ["expo-notifications", { "icon": "./assets/images/android-icon-monochrome.png", "color": "#0F766E" }],
       [
         "@sentry/react-native/expo",
         {

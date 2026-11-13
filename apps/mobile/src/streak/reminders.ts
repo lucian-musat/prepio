@@ -3,8 +3,6 @@
 import type { StreakSummary } from '@prepio/shared';
 import type { PermissionStatus, ReminderSettings } from './reminderSettings';
 
-export const REMINDER_CHANNEL = 'daily-reminder';
-
 export function remindersSupported(): boolean {
   return false;
 }
@@ -25,3 +23,7 @@ export function onReminderTap(_cb: () => void): () => void {
 
 /** Cancels every scheduled reminder (sign-out, user switch). */
 export async function cancelReminders(): Promise<void> {}
+
+export async function canAskAgain(): Promise<boolean> {
+  return false;
+}

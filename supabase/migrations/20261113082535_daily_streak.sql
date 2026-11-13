@@ -1,5 +1,5 @@
 -- Daily streak: one row per student per Europe/Bucharest day on which they did something.
--- Written only by mark_active_today (and later by server-side triggers); clients can read their own rows.
+-- Written only by mark_active_today; clients can read their own rows.
 
 create table public.student_active_days (
   user_id uuid not null references auth.users (id) on delete cascade,

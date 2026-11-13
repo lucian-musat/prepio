@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
-import { bucharestDay, streakToast, type StreakSummary } from '@prepio/shared';
+import { bucharestDay, normalizeStreak, streakToast, type StreakSummary } from '@prepio/shared';
 import { useAuth } from '../auth/AuthProvider';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import StreakToast from './StreakToast';
@@ -12,8 +12,6 @@ const TOAST_MS = 3000;
 
 type StreakContextValue = {
   summary: StreakSummary | null;
-  /** Re-reads the streak; never throws. */
-  refresh(): Promise<void>;
   /** Calls `cb` when a mark turns today into an active day (the first exercise of the day); returns the unsubscribe. */
   onFirstOfDay(cb: () => void): () => void;
 };
@@ -28,7 +26,7 @@ type Confirmed = { summary: StreakSummary; day: string };
 export function StreakProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const userId = profile?.id ?? null;
-  const [summary, setSummary] = useState<StreakSummary | null>(null);
+  const [stored, setSummary] = useState<StreakSummary | null>(null);
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
   const confirmed = useRef<Confirmed | null>(null);
   const marking = useRef(false);
@@ -132,9 +130,16 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   const markRef = useRef(mark);
   markRef.current = mark;
   const markActive = useCallback(() => void markRef.current(), []);
-  const reminders = useReminderController(userId, summary, onFirstOfDay);
+  const getSummary = useCallback(() => {
+    const c = confirmed.current;
+    return c ? normalizeStreak(c.summary, c.day, bucharestDay(new Date())) : null;
+  }, []);
+  // The server-confirmed summary judged against today: after midnight yesterday's figures must not linger.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const summary = useMemo(getSummary, [stored, getSummary]);
+  const reminders = useReminderController(userId, summary, onFirstOfDay, getSummary);
 
-  const value = useMemo(() => ({ summary, refresh, onFirstOfDay }), [summary, refresh, onFirstOfDay]);
+  const value = useMemo(() => ({ summary, onFirstOfDay }), [summary, onFirstOfDay]);
   return (
     <StreakContext.Provider value={value}>
       <RemindersContext.Provider value={reminders}>

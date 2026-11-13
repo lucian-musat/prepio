@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { router } from 'expo-router';
 import { DEFAULT_REMINDER, type ReminderTime, type StreakSummary } from '@prepio/shared';
 import { loadReminderSettings, saveReminderSettings, type PermissionStatus, type ReminderSettings } from './reminderSettings';
-import { cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { canAskAgain, cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
 
 export type ReminderStatus = PermissionStatus | 'unsupported';
 
@@ -11,6 +11,8 @@ export type RemindersValue = {
   settings: ReminderSettings;
   /** The system permission; 'unsupported' on web or when this build has no notifications module. */
   status: ReminderStatus;
+  /** False once Android no longer shows the permission prompt; the student must use the phone settings. */
+  canAskAgain: boolean;
   /** Switches the reminders on or off; turning on asks for the permission when it was never decided. */
   setEnabled(on: boolean): Promise<void>;
   setTime(t: ReminderTime): Promise<void>;
@@ -27,33 +29,36 @@ export function useReminderController(
   userId: string | null,
   summary: StreakSummary | null,
   onFirstOfDay: (cb: () => void) => () => void,
+  /** The summary normalized to the Bucharest day it is read on (a foreground sync must not use a stale render's one). */
+  getSummary: () => StreakSummary | null,
 ): RemindersValue {
   const supported = remindersSupported();
   const [settings, setSettingsState] = useState<ReminderSettings>(INITIAL);
   const [status, setStatus] = useState<ReminderStatus>(supported ? 'undetermined' : 'unsupported');
+  const [askAgain, setAskAgain] = useState(true);
+  const askAgainRef = useRef(true);
   const [loaded, setLoaded] = useState(false);
   const settingsRef = useRef(settings);
   const statusRef = useRef(status);
-  const summaryRef = useRef(summary);
   const mounted = useRef(true);
   /** Syncs run one after another: a cancel-then-schedule pair must never interleave with another. */
   const chain = useRef<Promise<void>>(Promise.resolve());
   settingsRef.current = settings;
   statusRef.current = status;
-  summaryRef.current = summary;
-
   const enqueueSync = useCallback(() => {
-    if (!supported) return;
-    const s = summaryRef.current;
+    if (!supported || !mounted.current) return;
+    const s = getSummary();
     const st = settingsRef.current;
     chain.current = chain.current.then(() => syncReminders(s, st)).catch(() => {});
-  }, [supported]);
+  }, [supported, getSummary]);
 
   const refreshStatus = useCallback(async () => {
     if (!supported) return;
-    const next = await permission();
+    const [next, again] = await Promise.all([permission(), canAskAgain()]);
     if (mounted.current) {
       statusRef.current = next;
+      askAgainRef.current = again;
+      setAskAgain(again);
       setStatus(next);
     }
   }, [supported]);
@@ -144,17 +149,18 @@ export function useReminderController(
   const setEnabled = useCallback(
     async (on: boolean) => {
       await update({ enabled: on });
-      if (on && statusRef.current === 'undetermined') {
+      const st = statusRef.current;
+      if (on && (st === 'undetermined' || (st === 'denied' && askAgainRef.current))) {
         await requestPermission();
         await update({ asked: true });
         await refreshStatus();
       }
-      // A denied permission cannot be asked again from here: the UI explains the phone settings.
+      // Once Android no longer shows the prompt (canAskAgain false) the UI explains the phone settings.
     },
     [update, refreshStatus],
   );
 
   const setTime = useCallback((time: ReminderTime) => update({ time }), [update]);
 
-  return useMemo(() => ({ settings, status, setEnabled, setTime }), [settings, status, setEnabled, setTime]);
+  return useMemo(() => ({ settings, status, canAskAgain: askAgain, setEnabled, setTime }), [settings, status, askAgain, setEnabled, setTime]);
 }

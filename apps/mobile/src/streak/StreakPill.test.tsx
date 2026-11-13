@@ -12,7 +12,7 @@ const render = (ui: ReactElement) => rtlRender(<SafeAreaProvider initialMetrics=
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../credits/CreditChip', () => ({ __esModule: true, default: () => null }));
 let mockSummary: StreakSummary | null = null;
-jest.mock('./StreakProvider', () => ({ useStreak: () => ({ summary: mockSummary }) }));
+jest.mock('./StreakProvider', () => ({ useStreak: () => ({ summary: mockSummary }), useReminders: () => ({ status: 'granted' }) }));
 
 const summary = (current: number): StreakSummary => ({ current, record: 9, todayDone: false, week: [] });
 
