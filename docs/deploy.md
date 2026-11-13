@@ -210,6 +210,15 @@ Spec `docs/superpowers/specs/2026-11-13-daily-streak-design.md`.
 2. Merge the PR, which deploys admin and web through Vercel. Web shows the „🔥 n” pill right away; the old APK keeps working without it.
 3. Build and ship a new APK. It is mandatory for the reminders: `expo-notifications` is a new native module. A JS update on an old APK would hide the „Memento zilnic” settings (the module is missing), not crash.
 
+## Editable UI texts rollout
+
+Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, how-to `docs/ui-texts.md`.
+
+1. Foundation PR: push the `*_ui_texts` migration **before** merging: `pnpm db:cloud:push:dry` (must list only it) → `pnpm db:cloud:push`. The new web reads `ui_texts` at start-up, so the table must exist first. Safe before the code: it only adds a table and carries the old welcome message over.
+2. Merge the PR (Vercel deploys admin and web). A new APK is needed for the texts to apply on the phone; an old APK keeps its built-in texts.
+3. Later batch PRs (moving more screens into the catalog) need no migration: just merge.
+4. After the next APK is in use, drop `settings.welcome_message` (see the STATUS backlog).
+
 ## Local APK builds
 
 EAS cloud builds are limited on the Free plan (the Android quota ran out on 2026-11-10, resets on the 1st). `eas build --local` builds on this machine with no quota and the same signing keystore (downloaded from the EAS credentials; the CLI must be logged in as `lucian.m91`).

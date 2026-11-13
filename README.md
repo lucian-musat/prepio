@@ -48,6 +48,10 @@ Google sign-in needs an OAuth client (Google Cloud Console). Copy `supabase/.env
 
 Both must be non-empty for the stack to start; any placeholder works if you don't test Google locally (only Google sign-in then fails). Never commit real values. Full provider setup (Google Cloud, Supabase dashboard, env vars): [docs/auth-setup.md](docs/auth-setup.md).
 
+## Editable UI texts
+
+Student-facing copy comes from a catalog with admin overrides (admin → Texte): see [docs/ui-texts.md](docs/ui-texts.md).
+
 ## Deployment
 
 See [docs/deploy.md](docs/deploy.md). Database changes: [docs/database-migrations.md](docs/database-migrations.md).
