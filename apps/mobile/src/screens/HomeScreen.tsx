@@ -16,6 +16,7 @@ import PaywallSheet from '../access/PaywallSheet';
 import InviteNote from '../components/InviteNote';
 import ContinueCard from './home/ContinueCard';
 import { continueTarget, lockedReason } from '../lib/homeContinue';
+import { t } from '../texts/store';
 import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
 
 // The prototype staggers the first six children (40 … 290 ms); later ones start with the sixth.
@@ -220,7 +221,7 @@ export default function HomeScreen() {
   const target = continueTarget(order, access, progress);
   const returning = progress.finished.size > 0 || progress.positions.size > 0;
   const name = profile?.displayName?.trim();
-  const greeting = returning ? (name ? `Bine ai revenit, ${name}!` : 'Bine ai revenit!') : undefined;
+  const greeting = returning ? (name ? t('home.hero.welcomeBack', { nume: name }) : t('home.hero.welcomeBackNoName')) : undefined;
   // Lessons finished before the plan lost them still count as done.
   const done = orderedLessons(data.sections).filter((l) => progress.finished.has(l.id)).length;
   // Would the tapped lesson be playable with full access? (guided order may still lock it)
@@ -234,7 +235,7 @@ export default function HomeScreen() {
     <ScreenLayout logo trailing={<HomeTrailing onSolve={solve} />}>
       <AccessBanner onOffer={() => setSheet({ lessonId: null })} />
       <Enter testID="enter-hero" index={0}>
-        <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} greeting={greeting} />
+        <Hero lessonCount={total} greeting={greeting} />
       </Enter>
       <View style={styles.modeChip}>
         <Chip

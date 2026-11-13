@@ -1,4 +1,4 @@
-import { formatText, isTextKey, plural, TEXTS, validateTextValue, type TextKey } from '@prepio/shared';
+import { formatText, isTextKey, plural, TEXTS, validateTextValue, type TextEntry, type TextKey } from '@prepio/shared';
 
 /**
  * The admin overrides in force for this session. Filled once at start-up (useTextsBoot), before the first screen
@@ -11,7 +11,8 @@ export function applyOverrides(rows: Record<string, string>): void {
   const next: Partial<Record<TextKey, string>> = {};
   for (const [key, value] of Object.entries(rows)) {
     if (!isTextKey(key) || typeof value !== 'string') continue;
-    if (validateTextValue(TEXTS[key], value) === null) next[key] = value;
+    const entry: TextEntry = TEXTS[key]; // widened: an entry without `vars`/`optional` is not a weak-type match
+    if (validateTextValue(entry, value) === null) next[key] = value;
   }
   overrides = next;
 }

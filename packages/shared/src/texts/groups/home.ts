@@ -17,4 +17,9 @@ export const homeTexts = {
     vars: ['nume'],
     description: 'Salutul elevului care revine, afișat în titlul de pe Acasă',
   },
+  'home.hero.welcomeBackNoName': {
+    group: 'home',
+    default: 'Bine ai revenit!',
+    description: 'Salutul elevului care revine și nu și-a completat numele',
+  },
 } as const satisfies Record<string, TextEntry>;

@@ -105,7 +105,7 @@ beforeEach(() => {
   mocked.saveRun.mockResolvedValue(undefined);
   mocked.saveAttempt.mockResolvedValue(undefined);
   mocked.progress.mockResolvedValue({ finished: new Set(['l1']), positions: new Map() });
-  mocked.home.mockResolvedValue({ welcomeMessage: '', sections: [{ path: ['A'], lessons: [summary('l1', 1), summary('l2', 2)] }] });
+  mocked.home.mockResolvedValue({ sections: [{ path: ['A'], lessons: [summary('l1', 1), summary('l2', 2)] }] });
 });
 
 const open = async () => {
@@ -266,7 +266,7 @@ it.each(['free', 'guided'] as const)('trial (%s): no next-lesson button into a p
 });
 
 it('the last lesson offers „Înapoi acasă”', async () => {
-  mocked.home.mockResolvedValue({ welcomeMessage: '', sections: [{ path: ['A'], lessons: [summary('l1', 1)] }] });
+  mocked.home.mockResolvedValue({ sections: [{ path: ['A'], lessons: [summary('l1', 1)] }] });
   mocked.run.mockResolvedValue({ exerciseIds: ['e1'], index: 0, finished: true });
   await open();
   expect(await screen.findByText('Ai terminat consolidarea')).toBeTruthy();
