@@ -24,6 +24,7 @@
     "content:cloud:add-consolidation": "bash scripts/content-cloud.sh add-consolidation",
     "content:cloud:sync-consolidation": "bash scripts/content-cloud.sh sync-consolidation",
     "content:cloud:remove-test-lessons": "bash scripts/content-cloud.sh remove-test-lessons",
+    "content:cloud:remove-test-cards": "bash scripts/content-cloud.sh remove-test-cards",
     "content:demo": "pnpm --filter @prepio/content demo",
     "content:cloud:demo": "bash scripts/content-cloud.sh demo",
     "content:cloud:update-ai-settings": "bash scripts/content-cloud.sh update-ai-settings",

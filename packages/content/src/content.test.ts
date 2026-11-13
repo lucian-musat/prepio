@@ -205,6 +205,11 @@ describe('defaults', () => {
     expect(aiDefaults.rules).not.toMatch(/\bnot[ăa]|\bscala\b/i);
   });
 
+  it('calls the lesson cards „carduri”, not „cartonașe”', () => {
+    expect(welcomeMessage).not.toMatch(/cartona/i);
+    expect(welcomeMessage).toContain('cardurile');
+  });
+
   it('keeps only type-independent rules: the type instructions live in the AI templates', () => {
     expect(aiDefaults.rules).not.toMatch(/simplă menționare|punct de vedere este o apreciere|deoarece/);
     // The role, the language and the tone moved from the code into the rules.
