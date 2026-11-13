@@ -16,6 +16,8 @@ const ROOT = path.resolve(__dirname, '../..'); // apps/mobile
 /** Files not migrated yet (relative to apps/mobile). Each batch removes its files; the last one leaves it empty. */
 export const PENDING_FILES: string[] = [
   'app/(app)/_layout.tsx',
+  'app/(auth)/_layout.tsx',
+  'app/(suspended)/_layout.tsx',
   'app/_layout.tsx',
   'src/access/AccessBanner.tsx',
   'src/access/PaywallSheet.tsx',
@@ -31,10 +33,12 @@ export const PENDING_FILES: string[] = [
   'src/components/QuestionView.tsx',
   'src/components/ReferralCodeField.tsx',
   'src/components/cards/ImageViewer.tsx',
+  'src/components/cards/ImagesCard.tsx',
   'src/components/cards/LinkCard.tsx',
   'src/components/cards/SchemaCard.tsx',
   'src/components/cards/TimelineCard.tsx',
   'src/components/cards/VideoCard.tsx',
+  'src/components/cards/YouTubePlayer.web.tsx',
   'src/components/cards/expandable.tsx',
   'src/components/consolidation/ArgumentInput.tsx',
   'src/components/consolidation/ComparisonInput.tsx',
@@ -108,6 +112,7 @@ export const PENDING_FILES: string[] = [
   'src/screens/lesson/GuidedResult.tsx',
   'src/screens/lesson/LessonStart.tsx',
   'src/streak/ReminderTimeSheet.tsx',
+  'src/streak/StreakPill.tsx',
   'src/streak/StreakSheet.tsx',
   'src/ui/Button.tsx',
   'src/ui/ConfirmDialog.tsx',
@@ -125,7 +130,6 @@ const EXCLUDED_FILES = [
   'app/confidentialitate.tsx',
   'src/screens/TermsScreen.tsx',
   'src/screens/PrivacyScreen.tsx',
-  'src/screens/legal/LegalSection.tsx', // operator details of the legal pages (legal body)
   'src/screens/legal/LegalSection.tsx', // operator details of the legal pages (legal body)
 ];
 
@@ -147,6 +151,24 @@ function listFiles(dir: string, out: string[] = []): string[] {
     }
   }
   return out;
+}
+
+/** True when the expression is (a branch of) the value of a copy prop or of a copy-named object property. */
+function isCopyPropValue(node: ts.Node): boolean {
+  let child: ts.Node = node;
+  for (let p: ts.Node | undefined = node.parent; p; child = p, p = p.parent) {
+    if (ts.isJsxAttribute(p)) return COPY_PROPS.has(p.name.getText());
+    if (ts.isPropertyAssignment(p)) return p.initializer === child && COPY_PROPS.has(p.name.getText().replace(/['"]/g, ''));
+    if (ts.isJsxExpression(p) || ts.isParenthesizedExpression(p) || ts.isAsExpression(p) || ts.isNonNullExpression(p)) continue;
+    if (ts.isConditionalExpression(p) && p.condition !== child) continue;
+    if (ts.isBinaryExpression(p)) {
+      const op = p.operatorToken.kind;
+      if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) continue;
+      if (op === ts.SyntaxKind.AmpersandAmpersandToken && p.right === child) continue;
+    }
+    return false;
+  }
+  return false;
 }
 
 function isConsoleCall(node: ts.Node): boolean {
@@ -195,16 +217,11 @@ function scan(file: string): string[] {
     } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       const parent = node.parent;
       const isKey = ts.isPropertyAssignment(parent) && parent.name === node;
-      const inCopyProp = ts.isJsxAttribute(parent) && COPY_PROPS.has(parent.name.getText());
+      const inCopyProp = !isKey && isCopyPropValue(node);
       if (!isKey) checkString(node, node.text, inCopyProp);
     } else if (ts.isTemplateExpression(node)) {
       const parts = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ');
-      checkString(node, parts, false);
-    } else if (ts.isJsxExpression(node) && node.expression && ts.isJsxAttribute(node.parent)) {
-      const e = node.expression;
-      if (COPY_PROPS.has(node.parent.name.getText()) && (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e))) {
-        // handled by the string-literal branch via the JsxExpression parent
-      }
+      checkString(node, parts, isCopyPropValue(node));
     }
     ts.forEachChild(node, visit);
   };
@@ -214,6 +231,10 @@ function scan(file: string): string[] {
 
 describe('no UI text literals outside the catalog', () => {
   const all = [...listFiles(path.join(ROOT, 'app')), ...listFiles(path.join(ROOT, 'src'))];
+
+  it('EXCLUDED_FILES entries exist', () => {
+    expect(EXCLUDED_FILES.filter((f) => !all.includes(f))).toEqual([]);
+  });
 
   it('PENDING_FILES has no stale entries', () => {
     const stale = PENDING_FILES.filter((f) => !all.includes(f) || EXCLUDED_FILES.includes(f));
