@@ -21,16 +21,18 @@ import {
 } from '@prepio/shared';
 import {
   accountSuspended,
+  apiErrorText,
   bearerToken,
   EVALUATE_TIMEOUT_MS,
   missingApiUrl,
-  OFFLINE,
-  SESSION_EXPIRED,
+  offlineText,
+  sessionExpiredText,
   sessionExpired,
 } from './api';
 import { ownUserId } from './ownUser';
 import { refreshRegisteredAccess } from './profileRefresh';
 import { apiUrl, getSupabase } from './supabase';
+import { t } from '../texts/store';
 
 export type BacPosition = { section: BacSection; index: number };
 
@@ -206,7 +208,7 @@ export async function fetchLatestGraded(subjectId: string, client: SupabaseClien
 /** The draft cannot be saved: the paper is being graded. */
 export class BacDraftLocked extends Error {
   constructor() {
-    super('Subiectul este în curs de corectare.');
+    super(t('errors.bac.draftLocked'));
     this.name = 'BacDraftLocked';
   }
 }
@@ -243,18 +245,15 @@ export class BacApiError extends Error {
   }
 }
 
-const GRADING_FAILED = 'Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
-const TIMEOUT = 'Corectarea durează prea mult. Încearcă din nou.';
-const NOT_CONFIGURED = 'Corectarea nu e disponibilă acum. Încearcă mai târziu.';
 
 export async function submitBac(req: BacSubmitRequest): Promise<BacSubmitResponse> {
   const base = apiUrl();
   if (!base) {
     missingApiUrl('submitBac');
-    throw new BacApiError('grading_failed', NOT_CONFIGURED);
+    throw new BacApiError('grading_failed', t('errors.bac.notConfigured'));
   }
-  const token = await bearerToken(() => new BacApiError('grading_failed', OFFLINE));
-  if (!token) return sessionExpired(new BacApiError('unauthorized', SESSION_EXPIRED));
+  const token = await bearerToken(() => new BacApiError('grading_failed', offlineText()));
+  if (!token) return sessionExpired(new BacApiError('unauthorized', sessionExpiredText()));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), EVALUATE_TIMEOUT_MS);
@@ -268,18 +267,19 @@ export async function submitBac(req: BacSubmitRequest): Promise<BacSubmitRespons
         signal: controller.signal,
       });
     } catch {
-      throw new BacApiError('grading_failed', controller.signal.aborted ? TIMEOUT : OFFLINE);
+      throw new BacApiError('grading_failed', controller.signal.aborted ? t('errors.bac.timeout') : offlineText());
     }
-    if (res.status === 401) return sessionExpired(new BacApiError('unauthorized', SESSION_EXPIRED));
+    if (res.status === 401) return sessionExpired(new BacApiError('unauthorized', sessionExpiredText()));
     let body: unknown;
     try {
       body = await res.json();
     } catch {
-      throw new BacApiError('grading_failed', controller.signal.aborted ? TIMEOUT : GRADING_FAILED);
+      throw new BacApiError('grading_failed', controller.signal.aborted ? t('errors.bac.timeout') : t('errors.api.bac.gradingFailed'));
     }
     if (!res.ok) {
       const e = body as Partial<BacSubmitError> | null;
-      const error = new BacApiError(e?.error ?? 'grading_failed', e?.message || GRADING_FAILED, {
+      const code = e?.error ?? 'grading_failed';
+      const error = new BacApiError(code, apiErrorText('bac', code), {
         required: e?.required,
         balance: e?.balance ?? e?.credits?.balance,
         credits: e?.credits,

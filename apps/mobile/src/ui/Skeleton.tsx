@@ -16,6 +16,7 @@ import { border, color, motion, radius, space } from '@prepio/shared';
 import AppText from './AppText';
 import Enter from './Enter';
 import { easing } from './motion';
+import { t } from '../texts/store';
 
 // Prototype `.skel` / `.thinking` keyframes.
 const SHIMMER_MS = 1200; // `shimmer 1.2s linear infinite`: the 200 %-wide tile travels two tile widths
@@ -93,7 +94,7 @@ export default function Skeleton({ lines }: Props) {
           <Dot key={i} index={i} />
         ))}
         <AppText role="label" color="textMuted">
-          Se evaluează răspunsul…
+          {t('common.skeleton.evaluating')}
         </AppText>
       </View>
       {lines.map((width, i) => (

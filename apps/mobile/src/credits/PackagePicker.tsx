@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { color, creditsLabel, feedbackText, formatLei, palette, pricePerCredit, radius, space, type CreditPackage } from '@prepio/shared';
-import { CreditsApiError, fetchCreditPackages, PURCHASE_FAILED, purchaseCredits } from '../lib/credits';
+import { CreditsApiError, fetchCreditPackages, purchaseCredits } from '../lib/credits';
+import { t } from '../texts/store';
 import { AppText, Button, Spinner } from '../ui';
 import Coin from './Coin';
 import { useCredits } from './CreditsProvider';
@@ -73,7 +74,7 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
       setPhase('choose');
     } catch (e) {
       if (!mounted.current) return;
-      setError(e instanceof Error && e.message ? e.message : PURCHASE_FAILED);
+      setError(e instanceof Error && e.message ? e.message : t('errors.purchase.failed'));
       setPhase('choose');
       if (e instanceof CreditsApiError && e.code === 'package_unavailable') void load(false);
     } finally {

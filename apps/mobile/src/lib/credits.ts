@@ -9,7 +9,8 @@ import {
   type CreditsPurchaseResponse,
 } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
+import { accountSuspended, apiErrorText, bearerToken, missingApiUrl, offlineText, sessionExpired, sessionExpiredText } from './api';
+import { t } from '../texts/store';
 import { fetchMyReferrals } from './referrals';
 import { ownUserId } from './ownUser';
 import { apiUrl, getSupabase } from './supabase';
@@ -24,9 +25,6 @@ export class CreditsApiError extends Error {
 }
 
 export const PURCHASE_TIMEOUT_MS = 15_000;
-export const PURCHASE_FAILED = 'Cumpărarea nu a reușit. Încearcă din nou.';
-const PURCHASE_TIMEOUT = 'Cumpărarea durează prea mult. Încearcă din nou.';
-const PURCHASE_NOT_CONFIGURED = 'Cumpărarea nu e disponibilă acum. Încearcă mai târziu.';
 
 export type StudentLedgerEntry = {
   id: number;
@@ -179,10 +177,10 @@ export async function purchaseCredits(packageId: string): Promise<CreditsPurchas
   const base = apiUrl();
   if (!base) {
     missingApiUrl('purchaseCredits');
-    throw new CreditsApiError('server_error', PURCHASE_NOT_CONFIGURED);
+    throw new CreditsApiError('server_error', t('errors.purchase.notConfigured'));
   }
-  const token = await bearerToken(() => new CreditsApiError('server_error', OFFLINE));
-  if (!token) return sessionExpired(new CreditsApiError('unauthorized', SESSION_EXPIRED));
+  const token = await bearerToken(() => new CreditsApiError('server_error', offlineText()));
+  if (!token) return sessionExpired(new CreditsApiError('unauthorized', sessionExpiredText()));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PURCHASE_TIMEOUT_MS);
@@ -196,9 +194,9 @@ export async function purchaseCredits(packageId: string): Promise<CreditsPurchas
         signal: controller.signal,
       });
     } catch {
-      throw new CreditsApiError('server_error', controller.signal.aborted ? PURCHASE_TIMEOUT : OFFLINE);
+      throw new CreditsApiError('server_error', controller.signal.aborted ? t('errors.purchase.timeout') : offlineText());
     }
-    if (res.status === 401) return sessionExpired(new CreditsApiError('unauthorized', SESSION_EXPIRED));
+    if (res.status === 401) return sessionExpired(new CreditsApiError('unauthorized', sessionExpiredText()));
     let body: unknown = null;
     try {
       body = await res.json();
@@ -207,13 +205,15 @@ export async function purchaseCredits(packageId: string): Promise<CreditsPurchas
     }
     if (!res.ok) {
       const e = body as Partial<CreditsPurchaseError> | null;
-      const error = new CreditsApiError(e?.error ?? 'server_error', e?.message || PURCHASE_FAILED);
+      const error = e?.error
+        ? new CreditsApiError(e.error, apiErrorText('credits', e.error))
+        : new CreditsApiError('server_error', t('errors.purchase.failed'));
       if (res.status === 403 && error.code === 'suspended') return accountSuspended(error);
       throw error;
     }
     const ok = body as Partial<CreditsPurchaseResponse> | null;
     if (!ok || typeof ok.balance !== 'number') {
-      throw new CreditsApiError('server_error', controller.signal.aborted ? PURCHASE_TIMEOUT : PURCHASE_FAILED);
+      throw new CreditsApiError('server_error', controller.signal.aborted ? t('errors.purchase.timeout') : t('errors.purchase.failed'));
     }
     return ok as CreditsPurchaseResponse;
   } finally {

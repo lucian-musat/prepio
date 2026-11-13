@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { applyOverrides, resetTexts, t } from '../texts/store';
 import type { AccessOffer } from '@prepio/shared';
 import { AccessApiError, fetchAccessHistory, fetchAccessOffer, fetchAccessUntil, fetchFreeLessonId, fetchIsAdmin, purchaseAccess } from './access';
 import { getAccessToken, signOut } from './supabase';
@@ -152,7 +153,7 @@ describe('purchaseAccess', () => {
     expect(err).toBeInstanceOf(AccessApiError);
     expect(err.code).toBe('offer_changed');
     expect(err.offer).toEqual(fresh);
-    expect(err.message).toBe('Oferta s-a schimbat.');
+    expect(err.message).toBe(t('errors.api.access.offerChanged'));
   });
 
   it('401 signs out', async () => {
@@ -165,7 +166,7 @@ describe('purchaseAccess', () => {
     const refresh = jest.fn().mockResolvedValue(null);
     const unregister = registerProfileRefresh(refresh);
     fetchMock.mockResolvedValue(json(403, { error: 'suspended', message: 'Suspendat.' }));
-    await expect(purchaseAccess(offer)).rejects.toMatchObject({ code: 'suspended', message: 'Suspendat.' });
+    await expect(purchaseAccess(offer)).rejects.toMatchObject({ code: 'suspended', message: t('errors.api.suspended') });
     expect(refresh).toHaveBeenCalledTimes(1);
     unregister();
   });
@@ -178,5 +179,33 @@ describe('purchaseAccess', () => {
   it('a 200 without an accessUntil is a server_error', async () => {
     fetchMock.mockResolvedValue(json(200, {}));
     await expect(purchaseAccess(offer)).rejects.toMatchObject({ code: 'server_error' });
+  });
+});
+
+describe('purchaseAccess: server error codes become catalog texts', () => {
+  const offer: AccessOffer = { priceBani: 15000, bonusCredits: 100, durationMonths: 3 };
+  const SERVER = 'server text';
+  const json = (status: number, body: unknown) => ({ ok: status < 300, status, json: async () => body });
+  afterEach(() => resetTexts());
+
+  it.each([
+    ['bad_request', 'errors.api.badRequest'],
+    ['unauthorized', 'errors.api.unauthorized'],
+    ['suspended', 'errors.api.suspended'],
+    ['offer_changed', 'errors.api.access.offerChanged'],
+    ['server_error', 'errors.api.access.serverError'],
+    ['some_new_code', 'errors.api.generic'],
+  ] as const)('%s → %s', async (code, key) => {
+    fetchMock.mockResolvedValue(json(code === 'suspended' ? 403 : 400, { error: code, message: SERVER }));
+    const err = await purchaseAccess(offer).catch((e) => e);
+    expect(err).toBeInstanceOf(AccessApiError);
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(t(key));
+  });
+
+  it('an admin override replaces the text', async () => {
+    applyOverrides({ 'errors.api.access.offerChanged': '[override]' });
+    fetchMock.mockResolvedValue(json(409, { error: 'offer_changed', message: SERVER }));
+    await expect(purchaseAccess(offer)).rejects.toMatchObject({ message: '[override]' });
   });
 });

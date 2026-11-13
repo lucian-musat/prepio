@@ -1,4 +1,6 @@
 import { deleteAccount, evaluateConsolidation, AccountDeleteApiError, EvaluateApiError, EVALUATE_TIMEOUT_MS } from './api';
+import { MAX_ANSWER_CHARS } from '@prepio/shared';
+import { applyOverrides, resetTexts, t } from '../texts/store';
 import { registerAccessRefresh, registerProfileRefresh } from './profileRefresh';
 import { getAccessToken, signOut } from './supabase';
 
@@ -185,12 +187,12 @@ it('fails with a clear ai_failed error and never calls localhost when EXPO_PUBLI
   expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('EXPO_PUBLIC_API_URL'));
 });
 
-it('throws EvaluateApiError with the server code and message on 429', async () => {
+it('throws EvaluateApiError with the server code and the catalog text on 429', async () => {
   fetchMock.mockResolvedValue(json(429, { error: 'rate_limited', message: 'Prea multe cereri.' }));
   const err = await evaluateConsolidation(req).catch((e) => e);
   expect(err).toBeInstanceOf(EvaluateApiError);
   expect(err.code).toBe('rate_limited');
-  expect(err.message).toBe('Prea multe cereri.');
+  expect(err.message).toBe(t('errors.api.evaluate.rateLimited'));
 });
 
 it('maps a network failure to ai_failed with the connection message', async () => {
@@ -301,5 +303,81 @@ describe('access expired mid-session (403 access_required)', () => {
     expect(mockSignOut).not.toHaveBeenCalled();
     unregister();
     unregisterProfile();
+  });
+});
+
+describe('server error codes become catalog texts (the server message is not shown)', () => {
+  afterEach(() => resetTexts());
+  const SERVER = 'server text';
+
+  it.each([
+    ['empty', 'errors.api.evaluate.empty'],
+    ['too_long', 'errors.api.tooLong'],
+    ['not_found', 'errors.api.evaluate.notFound'],
+    ['rate_limited', 'errors.api.evaluate.rateLimited'],
+    ['insufficient_credits', 'errors.api.evaluate.insufficientCredits'],
+    ['ai_failed', 'errors.api.evaluate.aiFailed'],
+    ['bad_request', 'errors.api.badRequest'],
+    ['suspended', 'errors.api.suspended'],
+    ['access_required', 'errors.api.evaluate.accessRequired'],
+    ['some_new_code', 'errors.api.generic'],
+  ] as const)('evaluate %s → %s', async (code, key) => {
+    fetchMock.mockResolvedValue(json(code === 'suspended' ? 403 : 400, { error: code, message: SERVER }));
+    const err = await evaluateConsolidation(req).catch((e) => e);
+    expect(err).toBeInstanceOf(EvaluateApiError);
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(t(key, { max: MAX_ANSWER_CHARS }));
+    expect(err.message).not.toBe(SERVER);
+  });
+
+  it('a 403 unauthorized body (not a 401) uses the unauthorized text', async () => {
+    fetchMock.mockResolvedValue(json(403, { error: 'unauthorized', message: SERVER }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ message: 'Trebuie să fii autentificat.' });
+  });
+
+  it('too_long names the limit', async () => {
+    fetchMock.mockResolvedValue(json(400, { error: 'too_long', message: SERVER }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ message: 'Textul depășește 3000 de caractere.' });
+  });
+
+  it('ai_failed after a refund says no credit was taken', async () => {
+    fetchMock.mockResolvedValue(json(502, { error: 'ai_failed', message: SERVER, credits: { spent: 0, balance: 4 } }));
+    const err = await evaluateConsolidation(req).catch((e) => e);
+    expect(err.message).toBe('Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.');
+    expect(err.balance).toBe(4);
+  });
+
+  it('an admin override replaces the text', async () => {
+    applyOverrides({ 'errors.api.evaluate.rateLimited': '[override]' });
+    fetchMock.mockResolvedValue(json(429, { error: 'rate_limited', message: SERVER }));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ message: '[override]' });
+  });
+
+  it('the app-made messages come from the texts too', async () => {
+    applyOverrides({ 'errors.offline': '[offline]', 'errors.sessionExpired': '[expired]' });
+    fetchMock.mockRejectedValue(new TypeError('Network request failed'));
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ message: '[offline]' });
+    mockToken.mockResolvedValue(null);
+    await expect(evaluateConsolidation(req)).rejects.toMatchObject({ message: '[expired]' });
+  });
+
+  it.each([
+    ['forbidden', 'errors.api.accountDelete.forbidden'],
+    ['server_error', 'errors.api.accountDelete.serverError'],
+    ['bad_request', 'errors.api.badRequest'],
+    ['unauthorized', 'errors.api.unauthorized'],
+    ['some_new_code', 'errors.api.generic'],
+  ] as const)('account delete %s → %s', async (code, key) => {
+    fetchMock.mockResolvedValue(json(403, { error: code, message: SERVER }));
+    const err = await deleteAccount().catch((e) => e);
+    expect(err).toBeInstanceOf(AccountDeleteApiError);
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(t(key));
+  });
+
+  it('account delete: an admin override replaces the text', async () => {
+    applyOverrides({ 'errors.api.accountDelete.forbidden': '[override]' });
+    fetchMock.mockResolvedValue(json(403, { error: 'forbidden', message: SERVER }));
+    await expect(deleteAccount()).rejects.toMatchObject({ message: '[override]' });
   });
 });

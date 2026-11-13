@@ -1,13 +1,83 @@
-import type {
-  AccountDeleteError,
-  AccountDeleteErrorCode,
-  ConsolidationEvaluateError,
-  ConsolidationEvaluateErrorCode,
-  ConsolidationEvaluateRequest,
-  ConsolidationEvaluateResponse,
+import {
+  MAX_ANSWER_CHARS,
+  type AccessPurchaseErrorCode,
+  type AccountDeleteError,
+  type AccountDeleteErrorCode,
+  type BacSubmitErrorCode,
+  type ConsolidationEvaluateError,
+  type ConsolidationEvaluateErrorCode,
+  type ConsolidationEvaluateRequest,
+  type ConsolidationEvaluateResponse,
+  type CreditsPurchaseErrorCode,
+  type TextKey,
 } from '@prepio/shared';
 import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
 import { refreshRegisteredAccess, refreshRegisteredProfile } from './profileRefresh';
+import { t } from '../texts/store';
+
+/**
+ * The text shown for each error `code` of the admin API, per endpoint. The server's `message` is never shown: an
+ * admin can edit these texts (their defaults are the server's messages); an unknown code gets `errors.api.generic`.
+ */
+const API_ERROR_TEXTS = {
+  evaluate: {
+    empty: 'errors.api.evaluate.empty',
+    too_long: 'errors.api.tooLong',
+    not_found: 'errors.api.evaluate.notFound',
+    rate_limited: 'errors.api.evaluate.rateLimited',
+    insufficient_credits: 'errors.api.evaluate.insufficientCredits',
+    ai_failed: 'errors.api.evaluate.aiFailed',
+    bad_request: 'errors.api.badRequest',
+    unauthorized: 'errors.api.unauthorized',
+    suspended: 'errors.api.suspended',
+    access_required: 'errors.api.evaluate.accessRequired',
+  } satisfies Record<ConsolidationEvaluateErrorCode, TextKey>,
+  bac: {
+    bad_request: 'errors.api.badRequest',
+    unauthorized: 'errors.api.unauthorized',
+    suspended: 'errors.api.suspended',
+    access_required: 'errors.api.bac.accessRequired',
+    not_found: 'errors.api.bac.notFound',
+    rate_limited: 'errors.api.bac.rateLimited',
+    insufficient_credits: 'errors.api.bac.insufficientCredits',
+    already_grading: 'errors.api.bac.alreadyGrading',
+    grading_failed: 'errors.api.bac.gradingFailed',
+    too_long: 'errors.api.tooLong',
+  } satisfies Record<BacSubmitErrorCode, TextKey>,
+  credits: {
+    bad_request: 'errors.api.badRequest',
+    unauthorized: 'errors.api.unauthorized',
+    package_unavailable: 'errors.api.credits.packageUnavailable',
+    suspended: 'errors.api.suspended',
+    server_error: 'errors.api.credits.serverError',
+  } satisfies Record<CreditsPurchaseErrorCode, TextKey>,
+  access: {
+    bad_request: 'errors.api.badRequest',
+    unauthorized: 'errors.api.unauthorized',
+    suspended: 'errors.api.suspended',
+    offer_changed: 'errors.api.access.offerChanged',
+    server_error: 'errors.api.access.serverError',
+  } satisfies Record<AccessPurchaseErrorCode, TextKey>,
+  accountDelete: {
+    unauthorized: 'errors.api.unauthorized',
+    forbidden: 'errors.api.accountDelete.forbidden',
+    bad_request: 'errors.api.badRequest',
+    server_error: 'errors.api.accountDelete.serverError',
+  } satisfies Record<AccountDeleteErrorCode, TextKey>,
+};
+
+export type ApiEndpoint = keyof typeof API_ERROR_TEXTS;
+
+/**
+ * The student-facing text for an error `code` returned by `endpoint`. `refunded`: a consolidation `ai_failed` whose
+ * credits were given back (the reply carries `credits`).
+ */
+export function apiErrorText(endpoint: ApiEndpoint, code: string, opts: { refunded?: boolean } = {}): string {
+  if (endpoint === 'evaluate' && code === 'ai_failed' && opts.refunded) return t('errors.api.evaluate.aiFailedRefunded');
+  const texts: Record<string, TextKey> = API_ERROR_TEXTS[endpoint];
+  const key = Object.prototype.hasOwnProperty.call(texts, code) ? texts[code]! : 'errors.api.generic';
+  return t(key, { max: MAX_ANSWER_CHARS });
+}
 
 export class EvaluateApiError extends Error {
   code: ConsolidationEvaluateErrorCode;
@@ -35,13 +105,9 @@ export class AccountDeleteApiError extends Error {
 /** Slightly above the server's own limits (60 s function, 50 s OpenAI timeout). */
 export const EVALUATE_TIMEOUT_MS = 65_000;
 
-const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
-export const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
-const TIMEOUT = 'Evaluarea durează prea mult. Încearcă din nou.';
-const NOT_CONFIGURED = 'Evaluarea nu e disponibilă acum. Încearcă mai târziu.';
-export const SESSION_EXPIRED = 'Sesiunea a expirat. Intră din nou în cont.';
-const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
-const DELETE_NOT_CONFIGURED = 'Ștergerea contului nu e disponibilă acum. Încearcă mai târziu.';
+// The app's own messages, read at throw time (never at module load: the overrides arrive later).
+export const offlineText = () => t('errors.offline');
+export const sessionExpiredText = () => t('errors.sessionExpired');
 
 export function missingApiUrl(caller: string) {
   console.error(
@@ -61,7 +127,7 @@ export async function sessionExpired<E extends Error>(error: E): Promise<never> 
 
 /**
  * The server refused the call because an admin suspended the account (403 `suspended`): re-read the profile so
- * the root guard moves to the suspended screen, then throw the server's message.
+ * the root guard moves to the suspended screen, then throw the error (its text is `errors.api.suspended`).
  */
 export async function accountSuspended<E extends Error>(error: E): Promise<never> {
   await refreshRegisteredProfile();
@@ -85,10 +151,10 @@ export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): 
   const base = apiUrl();
   if (!base) {
     missingApiUrl('evaluateConsolidation');
-    throw new EvaluateApiError('ai_failed', NOT_CONFIGURED);
+    throw new EvaluateApiError('ai_failed', t('errors.evaluate.notConfigured'));
   }
-  const token = await bearerToken(() => new EvaluateApiError('ai_failed', OFFLINE));
-  if (!token) return sessionExpired(new EvaluateApiError('unauthorized', SESSION_EXPIRED));
+  const token = await bearerToken(() => new EvaluateApiError('ai_failed', offlineText()));
+  if (!token) return sessionExpired(new EvaluateApiError('unauthorized', sessionExpiredText()));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), EVALUATE_TIMEOUT_MS);
@@ -102,18 +168,19 @@ export async function evaluateConsolidation(req: ConsolidationEvaluateRequest): 
         signal: controller.signal,
       });
     } catch {
-      throw new EvaluateApiError('ai_failed', controller.signal.aborted ? TIMEOUT : OFFLINE);
+      throw new EvaluateApiError('ai_failed', controller.signal.aborted ? t('errors.evaluate.timeout') : offlineText());
     }
-    if (res.status === 401) return sessionExpired(new EvaluateApiError('unauthorized', SESSION_EXPIRED));
+    if (res.status === 401) return sessionExpired(new EvaluateApiError('unauthorized', sessionExpiredText()));
     let body: unknown;
     try {
       body = await res.json();
     } catch {
-      throw new EvaluateApiError('ai_failed', controller.signal.aborted ? TIMEOUT : AI_FAILED);
+      throw new EvaluateApiError('ai_failed', controller.signal.aborted ? t('errors.evaluate.timeout') : t('errors.api.evaluate.aiFailed'));
     }
     if (!res.ok) {
       const e = body as Partial<ConsolidationEvaluateError> | null;
-      const error = new EvaluateApiError(e?.error ?? 'ai_failed', e?.message || AI_FAILED, {
+      const code = e?.error ?? 'ai_failed';
+      const error = new EvaluateApiError(code, apiErrorText('evaluate', code, { refunded: !!e?.credits }), {
         required: e?.required,
         balance: e?.balance ?? e?.credits?.balance,
       });
@@ -136,24 +203,25 @@ export async function deleteAccount(): Promise<void> {
   const base = apiUrl();
   if (!base) {
     missingApiUrl('deleteAccount');
-    throw new AccountDeleteApiError('server_error', DELETE_NOT_CONFIGURED);
+    throw new AccountDeleteApiError('server_error', t('errors.accountDelete.notConfigured'));
   }
-  const token = await bearerToken(() => new AccountDeleteApiError('server_error', OFFLINE));
-  if (!token) return sessionExpired(new AccountDeleteApiError('unauthorized', SESSION_EXPIRED));
+  const token = await bearerToken(() => new AccountDeleteApiError('server_error', offlineText()));
+  if (!token) return sessionExpired(new AccountDeleteApiError('unauthorized', sessionExpiredText()));
 
   let res: Response;
   try {
     res = await fetch(`${base}/api/account/delete`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
   } catch {
-    throw new AccountDeleteApiError('server_error', OFFLINE);
+    throw new AccountDeleteApiError('server_error', offlineText());
   }
   if (res.status === 204) return;
-  if (res.status === 401) return sessionExpired(new AccountDeleteApiError('unauthorized', SESSION_EXPIRED));
+  if (res.status === 401) return sessionExpired(new AccountDeleteApiError('unauthorized', sessionExpiredText()));
   let body: Partial<AccountDeleteError> | null = null;
   try {
     body = (await res.json()) as Partial<AccountDeleteError> | null;
   } catch {
     // Non-JSON error page (proxy/gateway): fall through to the generic message.
   }
-  throw new AccountDeleteApiError(body?.error ?? 'server_error', body?.message || DELETE_FAILED);
+  const code = body?.error ?? 'server_error';
+  throw new AccountDeleteApiError(code, apiErrorText('accountDelete', code));
 }

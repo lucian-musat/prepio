@@ -8,6 +8,7 @@ import IconButton from './IconButton';
 import ProgressBar from './ProgressBar';
 import { raisedShadow } from './elevation';
 import { webTransition } from './motion';
+import { t } from '../texts/store';
 
 /** Back to the previous screen, or to Home when the screen was opened directly (deep link / reload). */
 export function goBackOrHome() {
@@ -46,9 +47,10 @@ function Logo() {
         importantForAccessibility="no-hide-descendants"
         aria-hidden
       >
+        {/* texts-ignore: the logo glyph, not copy */}
         <AppText role="logoMark" color="onPrimary">P</AppText>
       </LinearGradient>
-      <AppText role="logo">Prepio</AppText>
+      <AppText role="logo">{t('meta.appName')}</AppText>
     </View>
   );
 }
@@ -58,7 +60,7 @@ export default function TopBar({ title, logo = false, progress, progressLabel, o
   const wide = useWindowDimensions().width >= layout.wideBreakpoint;
   return (
     <View testID="top-bar" style={[styles.bar, wide && styles.wide, raised && styles.raised]}>
-      {onBack ? <IconButton icon="back" accessibilityLabel="Înapoi" onPress={onBack} /> : null}
+      {onBack ? <IconButton icon="back" accessibilityLabel={t('common.back')} onPress={onBack} /> : null}
       {logo ? <Logo /> : null}
       {title ? (
         <AppText role="bar" numberOfLines={1} accessibilityRole="header" style={styles.title}>

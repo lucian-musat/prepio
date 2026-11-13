@@ -1,4 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { color } from '@prepio/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Button from './Button';
@@ -93,4 +94,13 @@ it('hides the cost pill while loading', async () => {
 it('shows no pill without a cost', async () => {
   await render(<Button label="Verifică" onPress={jest.fn()} />);
   expect(screen.queryByTestId('button-cost')).toBeNull();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('reads the cost with the texts', async () => {
+    applyOverrides({ 'common.button.withCost': '{eticheta} [override] {credite}' });
+    await render(<Button label="Verifică" cost={2} onPress={jest.fn()} />);
+    expect(screen.getByRole('button', { name: 'Verifică [override] 2 credite' })).toBeTruthy();
+  });
 });

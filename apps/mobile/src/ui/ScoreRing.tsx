@@ -5,6 +5,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { color, stroke } from '@prepio/shared';
 import AppText from './AppText';
 import { easing, timing } from './motion';
+import { t } from '../texts/store';
 
 // Prototype `.ring`: 76 px, r 32, stroke 8, arc fills over 1.1 s.
 const DEFAULT_SIZE = 76;
@@ -65,7 +66,7 @@ export default function ScoreRing({ value, min, max, size = DEFAULT_SIZE, showMa
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={label ?? `Nota ${value} din ${max}`}
+      accessibilityLabel={label ?? t('common.scoreRing.label', { nota: value, max })}
       style={[styles.ring, { width: size, height: size }]}
     >
       <Svg width={size} height={size} style={styles.svg}>

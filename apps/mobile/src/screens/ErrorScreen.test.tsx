@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import ErrorScreen from './ErrorScreen';
@@ -44,4 +45,14 @@ it('reports the error once on mount', async () => {
   expect(captureError).toHaveBeenCalledWith(new Error('secret internal detail'), { handled: false });
   await fireEvent.press(screen.getByText('Mergi la început'));
   expect(captureError).toHaveBeenCalledTimes(1);
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the admin overrides', async () => {
+    applyOverrides({ 'errors.crash.title': '[override]', 'common.retry': '[retry]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[retry]' })).toBeTruthy();
+  });
 });

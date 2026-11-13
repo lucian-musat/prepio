@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout } from '../ui';
 import { captureError } from '../lib/sentry';
+import { t } from '../texts/store';
 
 /**
  * Root error boundary screen. It renders above AuthProvider, so it must not use auth hooks, and the error
@@ -19,13 +20,13 @@ export default function ErrorScreen({ error, retry }: { error: Error; retry: () 
     <ScreenLayout logo>
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header" style={styles.centre}>
-          Ceva n-a mers bine
+          {t('errors.crash.title')}
         </AppText>
         <AppText role="body" color="textMuted" style={styles.centre}>
-          Am primit eroarea și ne uităm la ea. Încearcă din nou peste puțin timp.
+          {t('errors.crash.body')}
         </AppText>
-        <Button label="Încearcă din nou" onPress={() => void retry()} />
-        <Button label="Mergi la început" variant="secondary" onPress={() => router.replace('/')} />
+        <Button label={t('common.retry')} onPress={() => void retry()} />
+        <Button label={t('common.goHome')} variant="secondary" onPress={() => router.replace('/')} />
       </View>
     </ScreenLayout>
   );

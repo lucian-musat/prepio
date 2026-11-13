@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { space } from '@prepio/shared';
 import { AppText, Button, Surface } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { deleteAccount, OFFLINE } from '../lib/api';
+import { deleteAccount, offlineText } from '../lib/api';
 
 const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
 
@@ -33,7 +33,7 @@ export function useAccountDeletion(): AccountDeletion {
   const confirm = async () => {
     if (deleting) return;
     if (!session) {
-      setError(OFFLINE);
+      setError(offlineText());
       return;
     }
     setError(null);

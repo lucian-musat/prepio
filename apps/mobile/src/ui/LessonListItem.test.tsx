@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import * as Reanimated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native';
 import { color, difficultyTone } from '@prepio/shared';
@@ -112,5 +113,16 @@ describe('paywall state', () => {
     await render(<LessonListItem index={1} title="Lecția" state="paywall" finished onPress={() => {}} />);
     expect(screen.getByTestId('lesson-check')).toBeTruthy();
     expect(screen.getByText('✓ 🔒')).toBeTruthy();
+  });
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the state caption and the locked name from the texts', async () => {
+    applyOverrides({ 'home.lessonItem.finished': '[override]', 'home.lessonItem.lockedLabel': '{titlu} [blocked]' });
+    await render(<LessonListItem index={0} title="Lecția" state="finished" onPress={() => {}} />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+    await screen.rerender(<LessonListItem index={0} title="Lecția" state="locked" onPress={() => {}} />);
+    expect(screen.getByLabelText('Lecția [blocked]')).toBeTruthy();
   });
 });

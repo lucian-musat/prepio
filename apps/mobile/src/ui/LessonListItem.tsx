@@ -8,6 +8,7 @@ import { mixColors, solidShadow } from './elevation';
 import { timing } from './motion';
 import { type } from './typography';
 import type { LessonState } from '../lib/lessonFlow';
+import { t } from '../texts/store';
 
 type Props = {
   index: number;
@@ -47,23 +48,27 @@ export default function LessonListItem({ index, title, state = 'open', finished 
   const tile = tiles[index % 2];
   const locked = state === 'locked';
   const paywall = state === 'paywall';
-  const caption = state === 'finished' ? 'Terminată' : state === 'current' ? 'Continuă' : (locked || paywall) && reason ? reason : null;
+  const caption =
+    state === 'finished' ? t('home.lessonItem.finished') : state === 'current' ? t('home.lessonItem.current') : (locked || paywall) && reason ? reason : null;
   // „Disponibilă cu acces complet” → „disponibilă cu acces complet”, after the title.
   const why = reason ? reason.charAt(0).toLowerCase() + reason.slice(1) : null;
-  const lockedLabel = paywall ? `${title}, blocată, ${why ?? 'face parte din accesul complet'}` : `${title}, blocată${why ? `, ${why}` : ''}`;
+  const lockedLabel =
+    paywall || why
+      ? t('home.lessonItem.lockedReasonLabel', { titlu: title, motiv: why ?? t('home.lessonItem.paywallReason') })
+      : t('home.lessonItem.lockedLabel', { titlu: title });
 
   // CSS: `:active` replaces the hover transform, so pressing drops the lift while it shrinks.
-  const t = () => timing(motion.duration.base);
+  const anim = () => timing(motion.duration.base);
   const onHover = (on: boolean) => () => {
     if (locked) return;
     setHovered(on);
-    lift.value = withTiming(on ? HOVER_LIFT : 0, t());
-    nudge.value = withTiming(on ? HOVER_NUDGE : 0, t());
+    lift.value = withTiming(on ? HOVER_LIFT : 0, anim());
+    nudge.value = withTiming(on ? HOVER_NUDGE : 0, anim());
   };
   const onPressState = (pressed: boolean) => () => {
     if (locked) return;
-    scale.value = withTiming(pressed ? pressScale.row : 1, t());
-    lift.value = withTiming(pressed || !hovered ? 0 : HOVER_LIFT, t());
+    scale.value = withTiming(pressed ? pressScale.row : 1, anim());
+    lift.value = withTiming(pressed || !hovered ? 0 : HOVER_LIFT, anim());
   };
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateY: lift.value }, { scale: scale.value }] }));

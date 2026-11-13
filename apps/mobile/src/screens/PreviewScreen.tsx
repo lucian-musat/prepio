@@ -3,15 +3,15 @@ import { Platform, StyleSheet } from 'react-native';
 import { PREVIEW_READY_MESSAGE, parsePreviewMessage, space, type Card } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Surface } from '../ui';
 import CardView from '../components/cards/CardView';
+import { t } from '../texts/store';
 
 type Shown = { card: Card; index: number; total: number };
 
-const TITLE = 'Previzualizare';
 const noop = () => {};
 
 function Message({ text }: { text: string }) {
   return (
-    <ScreenLayout title={TITLE} onBack={noop}>
+    <ScreenLayout title={t('common.preview.title')} onBack={noop}>
       <Surface>
         <AppText role="small" color="textMuted" style={styles.message}>
           {text}
@@ -43,23 +43,23 @@ export default function PreviewScreen() {
     return () => window.removeEventListener('message', onMessage);
   }, [web]);
 
-  if (!web) return <Message text="Previzualizarea este disponibilă doar pe web." />;
-  if (!shown) return <Message text="Se așteaptă cardul…" />;
+  if (!web) return <Message text={t('common.preview.webOnly')} />;
+  if (!shown) return <Message text={t('common.preview.waiting')} />;
 
   const { card, index, total } = shown;
   return (
     <ScreenLayout
-      title={TITLE}
+      title={t('common.preview.title')}
       progress={(index + 1) / total}
       onBack={noop}
       actions={
         <>
-          <Button flex variant="secondary" label="Înapoi" accessibilityLabel="Înapoi la cardul anterior" disabled onPress={noop} />
-          <Button flex label="Continuă" disabled onPress={noop} />
+          <Button flex variant="secondary" label={t('common.back')} accessibilityLabel={t('common.preview.backLabel')} disabled onPress={noop} />
+          <Button flex label={t('common.continue')} disabled onPress={noop} />
         </>
       }
     >
-      <CardView card={card} eyebrow={`Card ${index + 1} din ${total}`} showType />
+      <CardView card={card} eyebrow={t('common.preview.eyebrow', { n: index + 1, total })} showType />
     </ScreenLayout>
   );
 }

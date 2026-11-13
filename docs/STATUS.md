@@ -4,7 +4,12 @@ Last updated: 2026-11-13
 
 ## Where we are
 
-**Editable UI texts (2026-11-13, in progress, `feat/ui-texts-foundation`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+**Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- **Batch „shell” (`feat/ui-texts-shell`):**
+  - 98 keys: `common`, `errors`, `meta` (every route title and the „… · Prepio” tab title), `suspended`, the rest of the Home hero.
+  - Errors the server sends are mapped by code: one map per endpoint, which typecheck keeps complete. An unknown code shows `errors.api.generic`. The server's own message is no longer shown.
+  - Tests: mobile 1512, shared 512, admin 536.
+  - Browser walk (local, console clean): `/nu-exista` and `/termeni` titles and texts; overrides of `meta.pageTitle` and `common.goHome` show on the second opening; 360 px with no horizontal scroll; test rows removed.
 - Foundation done: a text catalog in `@prepio/shared` (`TEXTS`, `{vars}` formatting, validation), the `ui_texts` table (public read, admin write, RLS + pgTAP), the student text store (`t`, `tPlural`, cached start-up, web boot loader, the app waits for the texts) and admin → „Texte” (edit, reset, optional texts). The Home welcome paragraph moved from Setări to the catalog (`home.hero.welcome`, empty = hidden) and the returning-student greeting is editable.
 - Guard: `apps/mobile/src/texts/noLiterals.test.ts` fails on literal UI copy outside the catalog; `PENDING_FILES` lists the files not migrated yet (each batch PR removes its files). The Terms and Privacy pages are excluded for good.
 - An edit shows on the second opening (cache); a fresh install waits at most ~1.5 s, then uses the defaults.
