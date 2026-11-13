@@ -202,6 +202,14 @@ Keep it off until:
 
 The free access earned through referrals includes the access bonus credits (`access_settings.bonus_credits` at grant time, owner decision 2026-11-12). After switching the flag on, check once: an inviter who reaches the threshold gets the access and a „Credite incluse în accesul gratuit din recomandări” row of that size in the credit history. A referral-step error never rolls back a purchase; it shows as a `purchase_access: referral step skipped` warning in the database logs (STATUS backlog has what to do then).
 
+## Daily streak rollout
+
+Spec `docs/superpowers/specs/2026-11-13-daily-streak-design.md`.
+
+1. `pnpm db:cloud:push:dry` must list only the `*_daily_streak` migration, then `pnpm db:cloud:push`. Safe before the code: it only adds a table and two RPCs.
+2. Merge the PR, which deploys admin and web through Vercel. Web shows the „🔥 n” pill right away; the old APK keeps working without it.
+3. Build and ship a new APK. It is mandatory for the reminders: `expo-notifications` is a new native module. A JS update on an old APK would hide the „Memento zilnic” settings (the module is missing), not crash.
+
 ## Local APK builds
 
 EAS cloud builds are limited on the Free plan (the Android quota ran out on 2026-11-10, resets on the 1st). `eas build --local` builds on this machine with no quota and the same signing keystore (downloaded from the EAS credentials; the CLI must be logged in as `lucian.m91`).
