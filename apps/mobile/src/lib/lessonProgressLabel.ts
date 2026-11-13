@@ -1,6 +1,7 @@
 import type { ConsolidationSummary } from './consolidation';
 import type { LastTest } from './lastTest';
 import type { LessonPosition } from './progress';
+import { t } from '../texts/store';
 
 export type ZoneProgress = { learn?: string; check?: string; consolidate?: string };
 
@@ -16,9 +17,9 @@ export function describeProgress(
   consolidation: ConsolidationSummary | null = null,
 ): ZoneProgress {
   const out: ZoneProgress = {};
-  if (position?.phase === 'cards') out.learn = `Ai rămas la cardul ${position.index + 1} din ${counts.cards}`;
-  if (position?.phase === 'questions') out.check = `Ai rămas la întrebarea ${position.index + 1} din ${counts.questions}`;
-  else if (lastTest) out.check = `Ultima încercare: ${lastTest.correct} din ${lastTest.total} corecte`;
-  if (consolidation && consolidation.done > 0) out.consolidate = `${consolidation.correct} din ${consolidation.count} rezolvate corect`;
+  if (position?.phase === 'cards') out.learn = t('lesson.progress.card', { n: position.index + 1, total: counts.cards });
+  if (position?.phase === 'questions') out.check = t('lesson.progress.question', { n: position.index + 1, total: counts.questions });
+  else if (lastTest) out.check = t('lesson.progress.lastTest', { corecte: lastTest.correct, total: lastTest.total });
+  if (consolidation && consolidation.done > 0) out.consolidate = t('lesson.progress.consolidation', { corecte: consolidation.correct, total: consolidation.count });
   return out;
 }

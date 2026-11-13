@@ -9,6 +9,7 @@ import { cardKey, useWebKeys } from '../lib/keys';
 import CardView from './cards/CardView';
 import type { LessonFrame } from './QuestionView';
 import { swipeOffset, swipeTarget, swipeTilt } from './swipeMath';
+import { t } from '../texts/store';
 
 // Prototype `.dots i` / `.dots i.on`.
 const DOT = 7;
@@ -22,9 +23,9 @@ function Dot({ active }: { active: boolean }) {
   const width = useSharedValue(active ? DOT_ACTIVE : DOT);
   const bg = useSharedValue<string>(active ? color.primary : color.border);
   useEffect(() => {
-    const t = timing(motion.duration.base);
-    width.value = withTiming(active ? DOT_ACTIVE : DOT, t);
-    bg.value = withTiming(active ? color.primary : color.border, t);
+    const config = timing(motion.duration.base);
+    width.value = withTiming(active ? DOT_ACTIVE : DOT, config);
+    bg.value = withTiming(active ? color.primary : color.border, config);
   }, [active]);
   const style = useAnimatedStyle(() => ({ width: width.value, backgroundColor: bg.value }));
   return <Animated.View style={[styles.dot, style]} />;
@@ -60,11 +61,11 @@ export default function CardStepper({
   cards,
   onFinish,
   frame,
-  finishLabel = 'Continuă',
+  finishLabel,
   onIndexChange,
   initialIndex = 0,
   onSkip,
-  skipLabel = 'Sari la verificare',
+  skipLabel,
 }: Props) {
   const [index, setIndex] = useState(initialIndex);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
@@ -188,14 +189,14 @@ export default function CardStepper({
             <Button
               flex
               variant="secondary"
-              label="Înapoi"
-              accessibilityLabel="Înapoi la cardul anterior"
+              label={t('common.back')}
+              accessibilityLabel={t('lesson.cards.prevLabel')}
               disabled={index === 0}
               onPress={() => index > 0 && go(index - 1)}
             />
-            <Button flex label={last ? finishLabel : 'Continuă'} onPress={() => (last ? onFinish() : go(index + 1))} />
+            <Button flex label={last ? (finishLabel ?? t('common.continue')) : t('common.continue')} onPress={() => (last ? onFinish() : go(index + 1))} />
           </View>
-          {onSkip ? <TextButton label={skipLabel} onPress={onSkip} /> : null}
+          {onSkip ? <TextButton label={skipLabel ?? t('lesson.cards.skip')} onPress={onSkip} /> : null}
         </View>
       }
     >
@@ -203,7 +204,7 @@ export default function CardStepper({
       <GestureDetector gesture={pan} touchAction="pan-y" userSelect="auto">
         <Animated.View testID="card-swipe" style={drag} onLayout={(e) => (width.value = e.nativeEvent.layout.width)}>
           <CardTransition contentKey={card.id} direction={direction} exit={!swiped}>
-            <CardView card={card} eyebrow={`Card ${index + 1} din ${cards.length}`} />
+            <CardView card={card} eyebrow={t('lesson.cards.eyebrow', { n: index + 1, total: cards.length })} />
           </CardTransition>
         </Animated.View>
       </GestureDetector>

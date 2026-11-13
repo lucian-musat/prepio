@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { space, type Lesson, type LessonSummary } from '@prepio/shared';
+import { TEXTS, space, type Lesson, type LessonSummary } from '@prepio/shared';
 import CardStepper from '../components/CardStepper';
 import QuestionView, { type LessonFrame } from '../components/QuestionView';
 import { useAuth } from '../auth/AuthProvider';
@@ -17,6 +17,7 @@ import { useMarkActive } from '../streak/StreakProvider';
 import { clearLastTest, readLastTest, saveLastTest, type LastTest } from '../lib/lastTest';
 import { describeProgress } from '../lib/lessonProgressLabel';
 import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
+import { t } from '../texts/store';
 import LessonStart from './lesson/LessonStart';
 import { ConsolidationUnlocked, GuidedFailed, GuidedPassed, startConsolidation } from './lesson/GuidedResult';
 
@@ -55,7 +56,7 @@ export function lessonProgress(lesson: Lesson, phase: Phase, index: number): num
 
 function Message({ title, body, onRetry }: { title: string; body?: string; onRetry?: () => void }) {
   return (
-    <ScreenLayout title="Lecție" onBack={goBackOrHome}>
+    <ScreenLayout title={t('lesson.screenTitle')} onBack={goBackOrHome}>
       <Surface style={styles.message}>
         <AppText role="section">{title}</AppText>
         {body ? (
@@ -63,9 +64,9 @@ function Message({ title, body, onRetry }: { title: string; body?: string; onRet
             {body}
           </AppText>
         ) : null}
-        {onRetry ? <Button label="Reîncearcă" onPress={onRetry} /> : null}
+        {onRetry ? <Button label={t('common.retryButton')} onPress={onRetry} /> : null}
         <Button
-          label="Înapoi la lecții"
+          label={t('lesson.backToLessons')}
           variant={onRetry ? 'secondary' : 'primary'}
           onPress={() => router.replace('/')}
         />
@@ -76,7 +77,7 @@ function Message({ title, body, onRetry }: { title: string; body?: string; onRet
 
 function Loading() {
   return (
-    <ScreenLayout title="Lecție" onBack={goBackOrHome}>
+    <ScreenLayout title={t('lesson.screenTitle')} onBack={goBackOrHome}>
       <View style={styles.loader}>
         <Spinner />
       </View>
@@ -95,9 +96,6 @@ type Loaded = {
 /** The end of an attempt; `saving` / `error` while the finished mark is being written. */
 type End = { outcome: AttemptOutcome; status: 'saving' | 'saved' | 'error' };
 
-/** Shown for any failed finished mark: markFinished's own message, also used for a timeout. */
-const SAVE_FAILED = 'Progresul nu a putut fi salvat. Încearcă din nou.';
-
 /**
  * Runs progress writes one after another: they are upserts on the same row, so a late position save must
  * never land after the finished mark (or the cleared position) and bring a resume point back.
@@ -115,13 +113,16 @@ function useWriteQueue() {
 }
 
 /** What skipping the cards means, per mode: shown before the student goes straight to the test. */
-export const SKIP_MESSAGE = {
-  guided:
-    'Treci peste carduri și începi direct verificarea. Ca să treci la lecția următoare, trebuie să răspunzi corect la ' +
-    'toate întrebările. Dacă greșești, revezi cardurile și reiei verificarea.',
-  free: 'Treci peste carduri și începi direct verificarea. Lecția e terminată când ajungi la final. Poți reveni oricând la carduri.',
-} as const;
-export const SKIP_CONFIRM = 'Da, sari la verificare';
+export const SKIP_MESSAGE: Record<'guided' | 'free', string> = {
+  get guided() {
+    return t('lesson.skip.guided');
+  },
+  get free() {
+    return t('lesson.skip.free');
+  },
+};
+/** The skip dialog's confirm button (its default text; the dialog itself reads the override). */
+export const SKIP_CONFIRM = TEXTS['lesson.skip.confirm'].default;
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -181,18 +182,18 @@ export default function LessonScreen() {
   if (failed) {
     return (
       <Message
-        title="Nu am putut încărca lecția"
-        body="Verifică conexiunea la internet și încearcă din nou."
+        title={t('lesson.loadFailed')}
+        body={t('errors.checkConnection')}
         onRetry={() => setReload((n) => n + 1)}
       />
     );
   }
   if (data === undefined) return <Loading />;
-  if (data === null) return <Message title="Lecția nu a fost găsită" />;
+  if (data === null) return <Message title={t('lesson.notFound')} />;
 
   const { lesson, order, progress, consolidation } = data;
   if (mode === 'guided' && lessonAccess(order, progress.finished, mode, canOpen).get(lesson.id) === 'locked') {
-    return <Message title="Lecția este blocată" body="Termină mai întâi lecțiile de dinainte, în ordine." />;
+    return <Message title={t('lesson.locked.title')} body={t('lesson.locked.body')} />;
   }
 
   // Writes the finished mark; the result content waits for it, a failure offers a retry.
@@ -236,9 +237,9 @@ export default function LessonScreen() {
   const skipDialog = (
     <ConfirmDialog
       visible={confirmSkip}
-      title="Sari la verificare?"
+      title={t('lesson.skip.title')}
       message={SKIP_MESSAGE[mode]}
-      confirmLabel={SKIP_CONFIRM}
+      confirmLabel={t('lesson.skip.confirm')}
       onConfirm={() => {
         setConfirmSkip(false);
         startTest();
@@ -296,7 +297,7 @@ export default function LessonScreen() {
           initialIndex={index}
           onFinish={advance}
           frame={frame(lesson.title)}
-          finishLabel={somethingAfterCards ? 'La verificare' : 'Continuă'}
+          finishLabel={t(somethingAfterCards ? 'lesson.cards.toTest' : 'common.continue')}
           onIndexChange={(i) => goTo('cards', i, results)}
           onSkip={somethingAfterCards ? requestSkip : undefined}
         />
@@ -310,13 +311,13 @@ export default function LessonScreen() {
       <QuestionView
         key={question.id}
         question={question}
-        frame={frame(`Întrebarea ${index + 1} din ${lesson.questions.length}`)}
+        frame={frame(t('lesson.test.title', { n: index + 1, total: lesson.questions.length }))}
         onAnswered={(ok) => {
           markActive();
           goTo('questions', index, { ...results, [question.id]: ok });
         }}
         onNext={nextIn(lesson.questions.length)}
-        nextLabel={index + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
+        nextLabel={t(index + 1 < lesson.questions.length ? 'lesson.test.next' : 'common.continue')}
       />
     );
   }
@@ -339,10 +340,10 @@ function LessonEnd({ lesson, order, progress, consolidation, mode, end, onRetryS
   const { outcome } = end;
   if (end.status === 'error') {
     return (
-      <ScreenLayout title="Lecție" onBack={goBackOrHome} actions={<Button flex label="Reîncearcă" onPress={() => onRetrySave(outcome)} />}>
+      <ScreenLayout title={t('lesson.screenTitle')} onBack={goBackOrHome} actions={<Button flex label={t('common.retryButton')} onPress={() => onRetrySave(outcome)} />}>
         <Surface style={styles.message}>
           <AppText role="small" color="danger" accessibilityRole="alert">
-            {SAVE_FAILED}
+            {t('lesson.saveFailed')}
           </AppText>
         </Surface>
       </ScreenLayout>
@@ -410,28 +411,28 @@ function LessonDone({
 }) {
   const [burst, setBurst] = useState(0);
   useEffect(() => {
-    const t = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <View style={styles.fill}>
       <ScreenLayout
-        title="Lecție terminată"
+        title={t('lesson.result.finishedTitle')}
         progress={1}
         onBack={goBackOrHome}
         actions={
           consolidation > 0 ? (
             <View style={styles.stack}>
-              <Button label="Începe consolidarea" onPress={() => startConsolidation(lessonId)} />
+              <Button label={t('lesson.result.startConsolidation')} onPress={() => startConsolidation(lessonId)} />
               {/* Same secondary action as the guided pass: the next lesson, or home after the last one. */}
               {nextId ? (
-                <Button label="Mergi la lecția următoare" variant="secondary" onPress={() => router.replace(`/lesson/${nextId}`)} />
+                <Button label={t('lesson.result.nextLesson')} variant="secondary" onPress={() => router.replace(`/lesson/${nextId}`)} />
               ) : (
-                <Button label="Înapoi acasă" variant="secondary" onPress={() => router.replace('/')} />
+                <Button label={t('lesson.result.goHome')} variant="secondary" onPress={() => router.replace('/')} />
               )}
             </View>
           ) : (
-            <Button flex label="Înapoi la lecții" onPress={() => router.replace('/')} />
+            <Button flex label={t('lesson.backToLessons')} onPress={() => router.replace('/')} />
           )
         }
       >
@@ -440,7 +441,7 @@ function LessonDone({
           <Cap />
           <Enter index={1}>
             <AppText role="celebrate" accessibilityRole="header" style={styles.doneTitle}>
-              Ai terminat lecția!
+              {t('lesson.result.done')}
             </AppText>
           </Enter>
           <Enter index={2}>
@@ -451,7 +452,7 @@ function LessonDone({
           {total > 0 ? (
             <Enter index={3}>
               <AppText role="bodyStrong" style={[styles.centre, styles.score]}>
-                {correct} din {total} întrebări corecte
+                {t('lesson.result.score', { corecte: correct, total })}
               </AppText>
             </Enter>
           ) : null}

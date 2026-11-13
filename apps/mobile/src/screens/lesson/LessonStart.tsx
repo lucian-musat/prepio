@@ -2,7 +2,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { color, layout, space, type Lesson } from '@prepio/shared';
 import { AppText, Button, Enter, ScreenLayout, Surface, TextButton, goBackOrHome } from '../../ui';
-import { countLabel } from '../../lib/lessonCount';
+import { t, tPlural } from '../../texts/store';
 import type { ZoneProgress } from '../../lib/lessonProgressLabel';
 import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
 import HeaderPills from '../../streak/HeaderPills';
@@ -34,19 +34,19 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
   const lead = onResume ?? onRetake;
   const buttons = (
     <View style={styles.stack}>
-      {onResume ? <Button label="Continuă de unde ai rămas" onPress={onResume} /> : null}
-      {!onResume && onRetake ? <Button label="Reia testul" onPress={onRetake} /> : null}
-      {hasCards ? <Button label="Începe învățarea" variant={lead ? 'secondary' : 'primary'} onPress={onLearn} /> : null}
+      {onResume ? <Button label={t('lesson.start.resume')} onPress={onResume} /> : null}
+      {!onResume && onRetake ? <Button label={t('lesson.start.retake')} onPress={onRetake} /> : null}
+      {hasCards ? <Button label={t('lesson.start.learn')} variant={lead ? 'secondary' : 'primary'} onPress={onLearn} /> : null}
       {/* With nothing to learn first, going to the verification is the main action; otherwise a quiet link. */}
       {onRetake && !onResume ? null : lead || hasCards ? (
-        <TextButton label="Știu deja, sari la verificare" onPress={onSkip} />
+        <TextButton label={t('lesson.start.skip')} onPress={onSkip} />
       ) : (
-        <Button label="Știu deja, sari la verificare" onPress={onSkip} />
+        <Button label={t('lesson.start.skip')} onPress={onSkip} />
       )}
     </View>
   );
   return (
-    <ScreenLayout title="Lecție" pageTitle={lesson.title} onBack={goBackOrHome} trailing={<HeaderPills />} actions={wide ? undefined : buttons}>
+    <ScreenLayout title={t('lesson.screenTitle')} pageTitle={lesson.title} onBack={goBackOrHome} trailing={<HeaderPills />} actions={wide ? undefined : buttons}>
       <Surface style={styles.card}>
         <Enter index={0}>
           <AppText role="title" accessibilityRole="header">
@@ -57,15 +57,15 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
           <View style={styles.zones}>
             <ZoneRow
               icon="📖"
-              title="Învățare"
-              subtitle={countLabel(lesson.cards.length, 'card', 'carduri')}
+              title={t('lesson.start.learnZone')}
+              subtitle={tPlural(lesson.cards.length, 'lesson.cardCount.one', 'lesson.cardCount.many')}
               hint={progress.learn}
               marker={finished ? '✓' : undefined}
             />
             <ZoneRow
               icon="✅"
-              title="Verificare"
-              subtitle={countLabel(lesson.questions.length, 'întrebare', 'întrebări')}
+              title={t('lesson.start.checkZone')}
+              subtitle={tPlural(lesson.questions.length, 'lesson.questionCount.one', 'lesson.questionCount.many')}
               hint={progress.check}
               tint={color.accentSubtle}
               marker={finished ? '✓' : undefined}
@@ -73,11 +73,11 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
             {consolidation > 0 ? (
               <ZoneRow
                 icon="🎯"
-                title="Consolidare"
-                subtitle={`${countLabel(consolidation, 'exercițiu', 'exerciții')} tip BAC`}
-                hint={finished ? progress.consolidate : 'Se deschide după ce termini verificarea'}
+                title={t('lesson.start.consolidateZone')}
+                subtitle={t('lesson.start.consolidateSubtitle', { exercitii: tPlural(consolidation, 'lesson.exerciseCount.one', 'lesson.exerciseCount.many') })}
+                hint={finished ? progress.consolidate : t('lesson.start.consolidateLocked')}
                 tint={CONSOLIDATION_TINT}
-                marker={finished ? (progress.consolidate ? 'Continuă ›' : 'Începe ›') : undefined}
+                marker={finished ? t(progress.consolidate ? 'lesson.start.consolidateContinue' : 'lesson.start.consolidateStart') : undefined}
                 highlight={finished}
                 dimmed={!finished}
                 onPress={finished ? () => router.push(`/lesson/${lesson.id}/consolidare`) : undefined}
@@ -88,13 +88,13 @@ export default function LessonStart({ lesson, guided, finished, consolidation, p
         {finished ? (
           <Enter index={2}>
             <AppText role="label" color="primary">
-              ✓ Lecție terminată
+              {t('lesson.start.finished')}
             </AppText>
           </Enter>
         ) : guided ? (
           <Enter index={2}>
             <AppText role="small" color="textMuted">
-              Dacă răspunzi corect la toate, treci la lecția următoare.
+              {t('lesson.start.guidedHint')}
             </AppText>
           </Enter>
         ) : null}

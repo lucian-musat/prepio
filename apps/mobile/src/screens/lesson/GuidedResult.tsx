@@ -5,6 +5,7 @@ import { color, feedbackText, radius, space, type Question } from '@prepio/share
 import { AppText, Button, Confetti, Enter, Icon, ScoreRing, ScreenLayout, goBackOrHome } from '../../ui';
 import ZoneRow, { CONSOLIDATION_TINT } from './ZoneRow';
 import type { AttemptOutcome } from '../../lib/lessonFlow';
+import { t } from '../../texts/store';
 
 const CONFETTI_DELAY_MS = 200;
 const goHome = () => router.replace('/');
@@ -16,7 +17,7 @@ export const startConsolidation = (lessonId: string) => router.push(`/lesson/${l
 export function ConsolidationUnlocked() {
   return (
     <Enter index={4} style={styles.unlocked}>
-      <ZoneRow icon="🎯" title="Consolidare deblocată" subtitle="Exersează cerințele de BAC pe lecția asta" tint={CONSOLIDATION_TINT} />
+      <ZoneRow icon="🎯" title={t('lesson.result.consolidationUnlocked')} subtitle={t('lesson.result.consolidationUnlockedHint')} tint={CONSOLIDATION_TINT} />
     </Enter>
   );
 }
@@ -24,14 +25,15 @@ export function ConsolidationUnlocked() {
 /** Ring plus the same score line as the free-mode done screen; nothing for a lesson without questions. */
 function Score({ outcome }: { outcome: AttemptOutcome }) {
   if (outcome.total === 0) return null;
+  const score = t('lesson.result.score', { corecte: outcome.correct, total: outcome.total });
   return (
     <>
       <Enter index={0}>
-        <ScoreRing value={outcome.correct} min={0} max={outcome.total} showMax label={`${outcome.correct} din ${outcome.total} întrebări corecte`} />
+        <ScoreRing value={outcome.correct} min={0} max={outcome.total} showMax label={score} />
       </Enter>
       <Enter index={1}>
         <AppText role="bodyStrong" color="textMuted" style={styles.centre}>
-          {outcome.correct} din {outcome.total} întrebări corecte
+          {score}
         </AppText>
       </Enter>
     </>
@@ -53,28 +55,28 @@ export function GuidedPassed({ outcome, unlocked, nextId, consolidation }: Passe
   const hasConsolidation = !!consolidation && consolidation.count > 0;
   const [burst, setBurst] = useState(0);
   useEffect(() => {
-    const t = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setBurst(1), CONFETTI_DELAY_MS);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <View style={styles.fill}>
       <ScreenLayout
-        title="Lecție terminată"
+        title={t('lesson.result.finishedTitle')}
         progress={1}
         onBack={goBackOrHome}
         actions={
           <View style={styles.stack}>
-            {hasConsolidation ? <Button label="Începe consolidarea" onPress={() => startConsolidation(consolidation.lessonId)} /> : null}
+            {hasConsolidation ? <Button label={t('lesson.result.startConsolidation')} onPress={() => startConsolidation(consolidation.lessonId)} /> : null}
             {nextId ? (
               <Button
-                label="Mergi la lecția următoare"
+                label={t('lesson.result.nextLesson')}
                 variant={hasConsolidation ? 'secondary' : 'primary'}
                 onPress={() => router.replace(`/lesson/${nextId}`)}
               />
             ) : null}
             {/* The next lesson is the secondary action; with none (or without consolidation) home takes that place. */}
             {!nextId || !hasConsolidation ? (
-              <Button label="Înapoi acasă" variant={nextId || hasConsolidation ? 'secondary' : 'primary'} onPress={goHome} />
+              <Button label={t('lesson.result.goHome')} variant={nextId || hasConsolidation ? 'secondary' : 'primary'} onPress={goHome} />
             ) : null}
           </View>
         }
@@ -83,13 +85,13 @@ export function GuidedPassed({ outcome, unlocked, nextId, consolidation }: Passe
           <Score outcome={outcome} />
           <Enter index={2}>
             <AppText role="celebrate" accessibilityRole="header" style={styles.centre}>
-              Lecție terminată! 🎉
+              {t('lesson.result.passed')}
             </AppText>
           </Enter>
           {unlocked ? (
             <Enter index={3}>
               <AppText role="lead" color="textMuted" style={styles.centre}>
-                Ai deblocat: {unlocked}
+                {t('lesson.result.unlocked', { titlu: unlocked })}
               </AppText>
             </Enter>
           ) : null}
@@ -105,30 +107,33 @@ export function GuidedPassed({ outcome, unlocked, nextId, consolidation }: Passe
 export function correctAnswerText(q: Question): string {
   if (q.type === 'chronological_order') return q.options.map((o) => o.text).join(' → ');
   const right = q.options.filter((o) => o.correct).map((o) => o.text);
-  return `${right.length === 1 ? 'Răspuns corect' : 'Răspunsuri corecte'}: ${right.join('; ')}`;
+  return right.length === 1
+    ? t('lesson.test.correctAnswer', { raspuns: right[0]! })
+    : t('lesson.test.correctAnswers', { raspunsuri: right.join('; ') });
 }
 
 /** A missed question that opens in place: its prompt, then the right answer and the explanation. */
 function Mistake({ number, question }: { number: number; question: Question }) {
   const [open, setOpen] = useState(false);
+  const label = t('lesson.result.mistake', { n: number, intrebare: question.prompt });
   return (
     <View style={styles.mistake}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Întrebarea ${number} · ${question.prompt}`}
+        accessibilityLabel={label}
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((o) => !o)}
         style={styles.mistakeHead}
       >
         <AppText role="bodyStrong" style={styles.mistakeTitle}>
-          {`Întrebarea ${number} · ${question.prompt}`}
+          {label}
         </AppText>
         <Icon name={open ? 'up' : 'down'} tint={color.textMuted} />
       </Pressable>
       {open ? (
         <View style={styles.mistakeBody}>
           <AppText role="small" style={styles.right}>
-            {question.type === 'chronological_order' ? `Ordinea corectă: ${correctAnswerText(question)}` : correctAnswerText(question)}
+            {question.type === 'chronological_order' ? t('lesson.result.correctOrder', { ordine: correctAnswerText(question) }) : correctAnswerText(question)}
           </AppText>
           {question.explanation ? <AppText role="small">{question.explanation}</AppText> : null}
         </View>
@@ -150,13 +155,13 @@ type FailedProps = {
 export function GuidedFailed({ outcome, questions = [], onReviewCards, onRetake }: FailedProps) {
   return (
     <ScreenLayout
-      title="Rezultatul testului"
+      title={t('lesson.result.failedTitle')}
       progress={1}
       onBack={goBackOrHome}
       actions={
         <View style={styles.stack}>
-          {onReviewCards ? <Button label="Revezi cardurile" onPress={onReviewCards} /> : null}
-          <Button label="Reia testul acum" variant={onReviewCards ? 'secondary' : 'primary'} onPress={onRetake} />
+          {onReviewCards ? <Button label={t('lesson.result.reviewCards')} onPress={onReviewCards} /> : null}
+          <Button label={t('lesson.result.retakeNow')} variant={onReviewCards ? 'secondary' : 'primary'} onPress={onRetake} />
         </View>
       }
     >
@@ -164,23 +169,23 @@ export function GuidedFailed({ outcome, questions = [], onReviewCards, onRetake 
         <Score outcome={outcome} />
         <Enter index={2}>
           <AppText role="celebrate" accessibilityRole="header" style={styles.centre}>
-            Aproape!
+            {t('lesson.result.almost')}
           </AppText>
         </Enter>
         <Enter index={3}>
           <AppText role="small" color="textMuted" style={styles.centre}>
-            Ca să treci mai departe, ai nevoie de toate răspunsurile corecte. Revezi cardurile și încearcă din nou.
+            {t('lesson.result.failedBody')}
           </AppText>
         </Enter>
         <Enter index={4} style={styles.note}>
           <AppText role="label" style={styles.noteText}>
-            Ai greșit la:
+            {t('lesson.result.mistakes')}
           </AppText>
           {outcome.wrong.map((n) =>
             questions[n - 1] ? (
               <Mistake key={n} number={n} question={questions[n - 1]!} />
             ) : (
-              <AppText key={n} role="small" style={styles.noteText}>{`Întrebarea ${n}`}</AppText>
+              <AppText key={n} role="small" style={styles.noteText}>{t('lesson.result.mistakeNumber', { n })}</AppText>
             ),
           )}
         </Enter>

@@ -14,12 +14,14 @@ import {
   typeScale,
   type OrderItem,
   type Question,
+  type TextKey,
 } from '@prepio/shared';
 import { AppText, Button, Confetti, Enter, Icon, Pop, SCREEN_CONTENT_TOP, ScreenLayout, Surface, easing, feedbackConfig } from '../ui';
 import { choiceKey, useWebKeys } from '../lib/keys';
 import ChoiceQuestion from './ChoiceQuestion';
 import DifficultyBadge from './DifficultyBadge';
 import OrderQuestion, { CorrectOrder } from './OrderQuestion';
+import { t } from '../texts/store';
 
 export type LessonFrame = { title: string; progress: number; onBack: () => void };
 
@@ -33,24 +35,23 @@ type Props = {
   frame: LessonFrame;
 };
 
-const TYPE_LABELS: Record<Question['type'], string> = {
-  single_choice: 'Alegere unică',
-  multiple_choice: 'Alegere multiplă',
-  chronological_order: 'Ordine cronologică',
+const TYPE_LABELS: Record<Question['type'], TextKey> = {
+  single_choice: 'lesson.test.type.singleChoice',
+  multiple_choice: 'lesson.test.type.multipleChoice',
+  chronological_order: 'lesson.test.type.chronologicalOrder',
 };
 
 // The action bar repeats a single correct answer only when it fits on about one line.
 const SHORT_ANSWER_MAX = 60;
 // Prototype `reveal`: scroll so new content sits 12 px below the top bar.
 const REVEAL_GAP = space[3];
-const SEE_ABOVE = 'Vezi răspunsul corect mai sus.';
 
 // Badge: 15 px line + 2 × 2 px padding (Chip `badge`), against the 16 px eyebrow line.
 const BADGE_OVERHANG = (typeScale.badge.lineHeight + space[1] - typeScale.eyebrow.lineHeight) / 2;
 const ICON_SIZE = space[6] + space[1]; // 28 px circle (prototype `.feedback .ic`)
 const ICON_GLYPH = space[4];
 
-const verdictText = (good: boolean) => (good ? 'Corect, bravo!' : 'Nu chiar.');
+const verdictText = (good: boolean) => t(good ? 'lesson.test.right' : 'lesson.test.wrong');
 
 /** Verdict icon in a circle that pops in (prototype `.feedback .ic`). */
 function VerdictIcon({ good }: { good: boolean }) {
@@ -85,7 +86,7 @@ function Verdict({ good, line }: { good: boolean; line: string | null }) {
  * in the fixed action bar. Each thing is said once: the options mark the right answer, the bar names a short one
  * (or points up), the explanation sits under the options, and a wrong order shows the correct sequence there.
  */
-export default function QuestionView({ question, onAnswered, onNext, nextLabel = 'Următoarea întrebare', frame }: Props) {
+export default function QuestionView({ question, onAnswered, onNext, nextLabel, frame }: Props) {
   const isOrder = question.type === 'chronological_order';
   const [selected, setSelected] = useState<string[]>([]);
   const [order, setOrder] = useState<OrderItem[]>(() => (isOrder ? shuffleForDisplay(question.options) : []));
@@ -104,7 +105,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
     if (ok) return null;
     const only = correctTexts.length === 1 ? correctTexts[0]! : null;
     if (correctTexts.length === 0) return null; // nothing is revealed above, so there is nothing to point at
-    return only && only.length <= SHORT_ANSWER_MAX ? `Răspuns corect: ${only}` : SEE_ABOVE;
+    return only && only.length <= SHORT_ANSWER_MAX ? t('lesson.test.correctAnswer', { raspuns: only }) : t('lesson.test.seeAbove');
   };
 
   const toggle = (id: string) => {
@@ -182,9 +183,9 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
         feedback={answered ? <Verdict good={!!correct} line={line} /> : undefined}
         actions={
           answered ? (
-            <Button key="next" flex label={nextLabel} tone={correct ? 'success' : 'primary'} onPress={next} />
+            <Button key="next" flex label={nextLabel ?? t('lesson.test.next')} tone={correct ? 'success' : 'primary'} onPress={next} />
           ) : (
-            <Button key="check" flex label="Verifică" disabled={!canCheck} onPress={submit} />
+            <Button key="check" flex label={t('lesson.test.check')} disabled={!canCheck} onPress={submit} />
           )
         }
       >
@@ -193,7 +194,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
             {/* Prototype `.qcard.stagger`: eyebrow, prompt and options rise one after another. */}
             <Enter index={0} style={styles.header}>
               <AppText role="eyebrow" color="primary">
-                {TYPE_LABELS[question.type]}
+                {t(TYPE_LABELS[question.type])}
               </AppText>
               <View style={styles.badge}>
                 <DifficultyBadge difficulty={question.difficulty} />
@@ -205,7 +206,7 @@ export default function QuestionView({ question, onAnswered, onNext, nextLabel =
               </AppText>
               {question.type === 'multiple_choice' ? (
                 <AppText role="small" color="textMuted" style={styles.hint}>
-                  Alege toate variantele corecte.
+                  {t('lesson.test.multipleHint')}
                 </AppText>
               ) : null}
             </Enter>
