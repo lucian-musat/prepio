@@ -6,6 +6,7 @@ import type { Card, CardContent } from '@prepio/shared';
 import { CardTransition } from '../../ui';
 import CardStepper from '../CardStepper';
 import VideoCard from './VideoCard';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: () => false } }));
 
@@ -142,4 +143,19 @@ it('the sound pill sits under the video, off the player’s own title bar', asyn
   const frame = screen.getByTestId('video-frame');
   expect(within(frame).queryByLabelText('Pornește sunetul')).toBeNull();
   expect(screen.getByLabelText('Pornește sunetul')).toBeTruthy();
+});
+
+it('the sound pill and the fallback take their text from the catalog', async () => {
+  applyOverrides({ 'cards.video.unmute': '[pill]', 'cards.video.unmuteLabel': '[sound]', 'cards.video.openYoutube': '[youtube]' });
+  try {
+    await render(<VideoCard content={video()} />);
+    expect(screen.getByText('[pill]')).toBeTruthy();
+    expect(screen.getByLabelText('[sound]')).toBeTruthy();
+    await act(async () => {
+      player().props.onError();
+    });
+    expect(screen.getByRole('button', { name: '[youtube]' })).toBeTruthy();
+  } finally {
+    resetTexts();
+  }
 });

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { refreshIfDenied } from './profileRefresh';
 import { getSupabase } from './supabase';
+import { t } from '../texts/store';
 
 /** Where the student left a lesson; `results` maps question id → answered correctly in the current attempt. */
 export type LessonPosition = {
@@ -12,7 +13,6 @@ export type LessonPosition = {
 export type Progress = { finished: Set<string>; positions: Map<string, LessonPosition> };
 
 const PHASES: ReadonlyArray<LessonPosition['phase']> = ['cards', 'questions'];
-const SAVE_FAILED = 'Progresul nu a putut fi salvat. Încearcă din nou.';
 const ON_CONFLICT = 'user_id,lesson_id';
 
 /** Parses the stored `position` json; null when it is not a valid position. */
@@ -64,6 +64,6 @@ export async function markFinished(lessonId: string, client: SupabaseClient = ge
     .upsert({ lesson_id: lessonId, finished_at: new Date().toISOString(), position: null }, { onConflict: ON_CONFLICT });
   if (error) {
     await refreshIfDenied(error);
-    throw new Error(SAVE_FAILED);
+    throw new Error(t('lesson.saveFailed'));
   }
 }

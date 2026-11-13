@@ -7,7 +7,8 @@ import { AppText, Enter, Icon, Reveal } from '../../ui';
 import { mixColors } from '../../ui/elevation';
 import { fontFamily } from '../../theme/fonts';
 import { imageUrl } from '../../lib/content';
-import { EXPAND_HINT, ExpandHint, hoverTransition, pointer, useExpandFeedback } from './expandable';
+import { ExpandHint, hoverTransition, pointer, useExpandFeedback } from './expandable';
+import { t } from '../../texts/store';
 
 const LINE_LEFT = 7;
 const LINE_WIDTH = 3;
@@ -66,7 +67,7 @@ function ExpandablePoint({ point, label }: { point: TimelinePoint; label: string
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={expanded ? `${label}. ${point.details}` : label}
-      accessibilityHint={EXPAND_HINT}
+      accessibilityHint={t('cards.expand.hint')}
       aria-expanded={expanded}
       onPress={() => setExpanded((e) => !e)}
       {...handlers}
@@ -80,7 +81,7 @@ function ExpandablePoint({ point, label }: { point: TimelinePoint; label: string
 }
 
 function TimelineEvent({ point, index }: { point: TimelinePoint; index: number }) {
-  const label = `${point.date}, ${point.title}${point.key ? ', moment cheie' : ''}`;
+  const label = t(point.key ? 'cards.timeline.keyPoint' : 'cards.timeline.point', { data: point.date, titlu: point.title });
   return (
     <Enter index={index} style={styles.event}>
       <View style={[styles.dot, point.key && styles.dotKey]} />
@@ -98,7 +99,7 @@ function TimelineEvent({ point, index }: { point: TimelinePoint; index: number }
 export default function TimelineCard({ content }: { content: Extract<CardContent, { type: 'timeline' }> }) {
   return (
     <View>
-      {content.points.some((p) => p.details) ? <ExpandHint text="Atinge un punct pentru detalii" /> : null}
+      {content.points.some((p) => p.details) ? <ExpandHint text={t('cards.timeline.hint')} /> : null}
       <View style={styles.root}>
         <LinearGradient colors={[palette.teal[300], palette.teal[700]]} style={styles.line} />
         {content.points.map((p, i) => (

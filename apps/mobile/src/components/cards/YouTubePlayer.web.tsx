@@ -1,5 +1,6 @@
 import { createElement, useEffect, useMemo, useRef } from 'react';
 import type { YouTubePlayerProps } from './youtube';
+import { t } from '../../texts/store';
 
 const ORIGIN = 'https://www.youtube-nocookie.com';
 // Like the official IFrame API: repeat the `listening` handshake until the player answers.
@@ -93,7 +94,7 @@ export default function YouTubePlayer({ videoId, start, end, muted, onError }: Y
   return createElement('iframe', {
     ref,
     src,
-    title: 'Video YouTube',
+    title: t('cards.video.frameTitle'),
     allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
     onLoad,
     style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 },

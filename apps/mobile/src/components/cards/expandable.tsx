@@ -4,9 +4,6 @@ import { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from '
 import { color, motion, pressScale, space } from '@prepio/shared';
 import { AppText, Icon, easing, timing, webTransition } from '../../ui';
 
-/** Screen-reader hint on every expandable timeline point and schema box. */
-export const EXPAND_HINT = 'Atinge pentru detalii';
-
 const HINT_ICON = space[4]; // 16 px glyph
 
 /** One-line hint above a list whose items open for details (only rendered when some item can open). */

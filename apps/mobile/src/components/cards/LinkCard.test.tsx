@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import * as WebBrowser from 'expo-web-browser';
 import type { CardContent } from '@prepio/shared';
 import LinkCard from './LinkCard';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 type Link = Extract<CardContent, { type: 'link' }>;
 const link = (over: Partial<Link> = {}): Link => ({
@@ -84,4 +85,14 @@ it('an invalid url still renders the title, without a domain', async () => {
 it('renders the optional text', async () => {
   await render(<LinkCard content={link({ text: 'Citește aici' })} />);
   expect(screen.getByText('Citește aici')).toBeTruthy();
+});
+
+it('the open button takes its text from the catalog', async () => {
+  applyOverrides({ 'cards.link.open': '[override]' });
+  try {
+    await render(<LinkCard content={link()} />);
+    expect(screen.getByRole('button', { name: '[override]' })).toBeTruthy();
+  } finally {
+    resetTexts();
+  }
 });

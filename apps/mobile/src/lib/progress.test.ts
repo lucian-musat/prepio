@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { registerProfileRefresh } from './profileRefresh';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { fetchProgress, markFinished, positionFromJson, savePosition, type LessonPosition } from './progress';
 
 const L1 = '11111111-1111-4111-8111-111111111111';
@@ -130,4 +131,13 @@ describe('suspension (42501)', () => {
     await expect(savePosition(L1, POS, fakeClient({ data: null, error: { code: '08006' } }).client)).rejects.toBeDefined();
     expect(refresh).not.toHaveBeenCalled();
   });
+});
+
+it('markFinished takes its error message from the catalog', async () => {
+  applyOverrides({ 'lesson.saveFailed': '[override]' });
+  try {
+    await expect(markFinished(L1, fakeClient({ data: null, error: new Error('down') }).client)).rejects.toThrow('[override]');
+  } finally {
+    resetTexts();
+  }
 });

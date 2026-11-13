@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import type { Question } from '@prepio/shared';
 import QuestionView from './QuestionView';
+import { REVEAL_CORRECT_DELAY_MS } from './ChoiceQuestion';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), replace: jest.fn(), canGoBack: () => false } }));
 
@@ -380,5 +382,38 @@ describe('keyboard on the web', () => {
     const { onAnswered } = await renderQ(single);
     await key('Enter');
     expect(onAnswered).not.toHaveBeenCalled();
+  });
+});
+
+describe('texts from the catalog', () => {
+  afterEach(() => resetTexts());
+
+  it('the labels, the check button and the verdict use the overrides', async () => {
+    applyOverrides({
+      'lesson.test.type.singleChoice': '[type]',
+      'lesson.test.difficulty.medium': '[medium]',
+      'lesson.test.check': '[check]',
+      'lesson.test.wrong': '[wrong]',
+      'lesson.test.correctAnswer': '[right: {raspuns}]',
+      'lesson.test.option.wrongPicked': '[{varianta} picked wrong]',
+    });
+    await renderQ(single);
+    expect(screen.getByText('[type]')).toBeTruthy();
+    expect(screen.getByText('[medium]')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Varianta A'));
+    await fireEvent.press(bar().getByRole('button', { name: '[check]' }));
+    // Let the delayed reveal of the correct option happen inside act.
+    await act(() => new Promise((resolve) => setTimeout(resolve, REVEAL_CORRECT_DELAY_MS + 50)));
+    expect(screen.getByText('[wrong]')).toBeTruthy();
+    expect(screen.getByText('[right: Varianta B]')).toBeTruthy();
+    expect(screen.getByLabelText('[Varianta A picked wrong]')).toBeTruthy();
+  });
+
+  it('an order question uses the overrides', async () => {
+    applyOverrides({ 'lesson.test.order.moveDown': '[down {text}]', 'lesson.test.correctOrder': '[order]' });
+    await renderQ(order);
+    expect(screen.getAllByLabelText(/^\[down /)).toHaveLength(3); // the last one is disabled, still labelled
+    await fireEvent.press(verify());
+    expect(screen.getByText('[order]')).toBeTruthy(); // the shown order is never the correct one
   });
 });

@@ -5,6 +5,7 @@ import { AppText, Button } from '../../ui';
 import { imageUrl } from '../../lib/content';
 import RichText from './RichText';
 import { openExternal } from './openExternal';
+import { t } from '../../texts/store';
 
 type Link = Extract<CardContent, { type: 'link' }>;
 
@@ -50,7 +51,7 @@ export default function LinkCard({ content }: { content: Link }) {
               {description}
             </AppText>
           ) : null}
-          <Button variant="secondary" label="Deschide ↗" disabled={!parsed} onPress={() => parsed && openExternal(parsed.href)} />
+          <Button variant="secondary" label={t('cards.link.open')} disabled={!parsed} onPress={() => parsed && openExternal(parsed.href)} />
         </View>
       </View>
     </View>

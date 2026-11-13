@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import type { LessonSummary } from '@prepio/shared';
 import { continueTarget, lockedReason, resumeLabel } from './homeContinue';
 import type { LessonState } from './lessonFlow';
@@ -78,5 +79,15 @@ describe('lockedReason', () => {
     expect(lockedReason('open', 2)).toBeNull();
     expect(lockedReason('current', 1)).toBeNull();
     expect(lockedReason('finished', 1)).toBeNull();
+  });
+});
+
+describe('texts from the catalog', () => {
+  afterEach(() => resetTexts());
+
+  it('resumeLabel and lockedReason use the overrides', () => {
+    applyOverrides({ 'home.continue.whereQuestion': '[q {n}]', 'home.locked.paywall': '[paywall]' });
+    expect(resumeLabel(questions(2))).toBe('[q 3]');
+    expect(lockedReason('paywall', 2)).toBe('[paywall]');
   });
 });

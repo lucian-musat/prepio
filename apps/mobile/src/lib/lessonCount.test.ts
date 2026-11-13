@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import { countLabel, lessonCount } from './lessonCount';
 
 it.each([
@@ -22,4 +23,14 @@ it.each([
   [20, '20 de carduri'],
 ])('countLabel %i → %s', (n, label) => {
   expect(countLabel(n, 'card', 'carduri')).toBe(label);
+});
+
+it('lessonCount takes its nouns from the catalog, keeping the „de” rule', () => {
+  applyOverrides({ 'lesson.count.one': '[one]', 'lesson.count.many': '[many]' });
+  try {
+    expect(lessonCount(1)).toBe('1 [one]');
+    expect(lessonCount(20)).toBe('20 de [many]');
+  } finally {
+    resetTexts();
+  }
 });

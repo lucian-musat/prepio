@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react-native';
 import YouTubePlayer from './YouTubePlayer.web';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 const ORIGIN = 'https://www.youtube-nocookie.com';
 const UNMUTE = '{"event":"command","func":"unMute","args":[]}';
@@ -125,4 +126,14 @@ it('removes its message listener and stops the handshake on unmount', async () =
   const sent = contentWindow.postMessage.mock.calls.length;
   await act(async () => jest.advanceTimersByTime(1000));
   expect(contentWindow.postMessage.mock.calls.length).toBe(sent);
+});
+
+it('the frame title takes its text from the catalog', async () => {
+  applyOverrides({ 'cards.video.frameTitle': '[override]' });
+  try {
+    await render(<YouTubePlayer {...props} />);
+    expect(frame().props.title).toBe('[override]');
+  } finally {
+    resetTexts();
+  }
 });

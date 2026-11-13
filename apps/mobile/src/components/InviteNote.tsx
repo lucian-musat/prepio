@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { color, radius, space } from '@prepio/shared';
 import { AppText, Button, IconButton } from '../ui';
+import { t } from '../texts/store';
 
 export const INVITE_NOTE_KEY = 'prepio.inviteNoteSeen';
 
@@ -45,10 +46,10 @@ export default function InviteNote({ finishedCount, enabled }: Props) {
         🎁
       </AppText>
       <AppText role="small" color="primaryStrong" style={styles.text}>
-        Ai terminat prima lecție! Invită un coleg și primești credite.
+        {t('home.inviteNote.text')}
       </AppText>
-      <Button label="Invită" variant="secondary" compact onPress={open} />
-      <IconButton icon="close" accessibilityLabel="Închide" onPress={markSeen} />
+      <Button label={t('home.inviteNote.button')} variant="secondary" compact onPress={open} />
+      <IconButton icon="close" accessibilityLabel={t('common.close')} onPress={markSeen} />
     </View>
   );
 }

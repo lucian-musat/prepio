@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { CALLOUT_LABELS, color, parseRichText, radius, space, type CalloutVariant, type RichBlock, type RichSpan } from '@prepio/shared';
+import { color, parseRichText, radius, space, type CalloutVariant, type RichBlock, type RichSpan, type TextKey } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
 import { AppText } from '../../ui';
+import { t } from '../../texts/store';
 
-const CALLOUT: Record<CalloutVariant, { bg: string; edge: string }> = {
-  retine: { bg: color.accentSubtle, edge: color.accent },
-  atentie: { bg: color.dangerSubtle, edge: color.danger },
-  exemplu: { bg: color.primarySubtle, edge: color.primary },
+const CALLOUT: Record<CalloutVariant, { bg: string; edge: string; labelKey: TextKey }> = {
+  retine: { bg: color.accentSubtle, edge: color.accent, labelKey: 'cards.callout.retine' },
+  atentie: { bg: color.dangerSubtle, edge: color.danger, labelKey: 'cards.callout.atentie' },
+  exemplu: { bg: color.primarySubtle, edge: color.primary, labelKey: 'cards.callout.exemplu' },
 };
 
 // Nested plain Text inherits the parent's role typography and colour; only bold/italic are added.
@@ -56,7 +57,7 @@ function Block({ block }: { block: RichBlock }) {
       const c = CALLOUT[block.variant];
       return (
         <View style={[styles.callout, { backgroundColor: c.bg, borderLeftColor: c.edge }]}>
-          <AppText role="bodyStrong">{CALLOUT_LABELS[block.variant]}</AppText>
+          <AppText role="bodyStrong">{t(c.labelKey)}</AppText>
           {block.blocks.map((b, i) => (
             <Block key={i} block={b} />
           ))}

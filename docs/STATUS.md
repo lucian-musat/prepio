@@ -5,6 +5,22 @@ Last updated: 2026-11-13
 ## Where we are
 
 **Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- **Batch „home and lesson” (`feat/ui-texts-home`):**
+  - 127 keys in `home`, `lesson` and `cards`:
+    - Home: continue card, sections, locked reasons, invite note
+    - lesson: start screen, skip dialog, test feedback, result
+    - all card types
+    - accessibility labels
+  - Plurals go through `tPlural` and keep the „de” rule.
+  - Tests: mobile 1544, shared 699, admin 536.
+  - Browser walk (local, `[test]` trial student, console clean):
+    - overrides on Home („Începe de aici”, „Subiecte BAC”) and on the lesson start show
+    - „3 lecții” / „1 lecție” are unchanged
+    - the skip dialog
+    - a wrong answer shows „Nu chiar.” and the right answer
+    - 360 px with no horizontal scroll
+    - test rows and the student removed
+  - Not walked: the learning cards themselves (images, video, schema, timeline); they are covered by component tests.
 - **Batch „shell” (`feat/ui-texts-shell`):**
   - 98 keys: `common`, `errors`, `meta` (every route title and the „… · Prepio” tab title), `suspended`, the rest of the Home hero.
   - Errors the server sends are mapped by code: one map per endpoint, which typecheck keeps complete. An unknown code shows `errors.api.generic`. The server's own message is no longer shown.

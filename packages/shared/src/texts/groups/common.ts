@@ -9,12 +9,17 @@ export const commonTexts = {
   'common.continue': {
     group: 'common',
     default: 'Continuă',
-    description: 'Butonul de mers mai departe (previzualizarea cardului din admin)',
+    description: 'Butonul de mers mai departe (carduri, ultima întrebare, previzualizarea cardului din admin)',
   },
   'common.retry': {
     group: 'common',
     default: 'Încearcă din nou',
     description: 'Butonul de reîncercare de pe ecranul de eroare',
+  },
+  'common.retryButton': {
+    group: 'common',
+    default: 'Reîncearcă',
+    description: 'Butonul de reîncercare după o încărcare sau o salvare eșuată (Acasă, lecție)',
   },
   'common.goHome': {
     group: 'common',
@@ -29,7 +34,7 @@ export const commonTexts = {
   'common.close': {
     group: 'common',
     default: 'Închide',
-    description: 'Numele citit de cititorul de ecran pentru fundalul unui dialog (atingerea lui îl închide)',
+    description: 'Numele citit de cititorul de ecran pentru butoanele ×, pentru imaginea mărită și pentru fundalul unui dialog (atingerea lui îl închide)',
   },
   'common.loading': {
     group: 'common',

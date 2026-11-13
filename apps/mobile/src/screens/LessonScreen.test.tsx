@@ -8,6 +8,7 @@ import { consolidationSummary } from '../lib/consolidation';
 import { AUTH_TIMEOUT_MS } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../lib/content', () => ({
   fetchLesson: jest.fn(),
@@ -902,5 +903,41 @@ describe('start screen progress', () => {
     await renderLesson(lesson());
     expect(await screen.findByText('✓ Lecție terminată')).toBeTruthy();
     expect(screen.queryByText('Dacă răspunzi corect la toate, treci la lecția următoare.')).toBeNull();
+  });
+});
+
+describe('texts from the catalog', () => {
+  afterEach(() => resetTexts());
+
+  it('the start screen and its counts use the overrides', async () => {
+    applyOverrides({ 'lesson.start.learn': '[learn]', 'lesson.cardCount.one': '[card]', 'lesson.start.checkZone': '[check]' });
+    await renderLesson(lesson());
+    expect(await screen.findByText('[check]')).toBeTruthy();
+    expect(screen.getByText('1 [card]')).toBeTruthy();
+    expect(actionBar().getByRole('button', { name: '[learn]' })).toBeTruthy();
+  });
+
+  it('the question frame and the free result use the overrides', async () => {
+    applyOverrides({ 'lesson.test.title': '[q {n}/{total}]', 'lesson.result.done': '[done]', 'lesson.result.score': '[{corecte} of {total}]' });
+    await openLesson(lesson({ cards: [] }), SKIP);
+    expect(await screen.findByText('[q 1/1]')).toBeTruthy();
+    await answer('Da', 'Continuă');
+    expect(await screen.findByText('[done]')).toBeTruthy();
+    expect(screen.getByText('[1 of 1]')).toBeTruthy();
+  });
+
+  it('the guided failed result uses the overrides', async () => {
+    mockMode = 'guided';
+    applyOverrides({ 'lesson.result.almost': '[almost]', 'lesson.result.mistake': '[#{n} {intrebare}]' });
+    await openLesson(lesson({ cards: [] }), SKIP);
+    await answer('Nu', 'Continuă');
+    expect(await screen.findByText('[almost]')).toBeTruthy();
+    expect(screen.getByText('[#1 Prima întrebare?]')).toBeTruthy();
+  });
+
+  it('a lesson that is not found uses the override', async () => {
+    applyOverrides({ 'lesson.notFound': '[override]' });
+    await renderLesson(null);
+    expect(await screen.findByText('[override]')).toBeTruthy();
   });
 });

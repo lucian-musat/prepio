@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { describeProgress } from './lessonProgressLabel';
 import { clearLastTest, readLastTest, saveLastTest } from './lastTest';
@@ -57,4 +58,13 @@ describe('last test (this device)', () => {
     jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('blocked'));
     expect(await readLastTest('l1')).toBeNull();
   });
+});
+
+it('describeProgress takes its lines from the catalog', () => {
+  applyOverrides({ 'lesson.progress.card': '[card {n}/{total}]' });
+  try {
+    expect(describeProgress({ phase: 'cards', index: 1, results: {} }, null, { cards: 5, questions: 3 }).learn).toBe('[card 2/5]');
+  } finally {
+    resetTexts();
+  }
 });

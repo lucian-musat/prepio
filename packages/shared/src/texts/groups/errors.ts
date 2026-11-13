@@ -33,6 +33,11 @@ export const errorsTexts = {
     default: 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.',
     description: 'Fără internet sau serverul nu răspunde',
   },
+  'errors.checkConnection': {
+    group: 'errors',
+    default: 'Verifică conexiunea la internet și încearcă din nou.',
+    description: 'Sub titlul unei erori de încărcare (lecțiile de pe Acasă, o lecție)',
+  },
   'errors.sessionExpired': {
     group: 'errors',
     default: 'Sesiunea a expirat. Intră din nou în cont.',

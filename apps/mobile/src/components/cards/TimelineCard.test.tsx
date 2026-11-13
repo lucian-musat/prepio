@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as Reanimated from 'react-native-reanimated';
 import type { CardContent } from '@prepio/shared';
 import TimelineCard from './TimelineCard';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 // Reanimated's jest helper; the public typings only describe the no-op production stub.
 const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { transform: { rotate: string }[] } };
@@ -95,4 +96,16 @@ describe('tap affordance', () => {
       jest.useRealTimers();
     }
   });
+});
+
+it('the hints and labels take their text from the catalog', async () => {
+  applyOverrides({ 'cards.timeline.hint': '[hint]', 'cards.expand.hint': '[tap]', 'cards.timeline.keyPoint': '[key {data} {titlu}]' });
+  try {
+    await render(<TimelineCard content={timeline([point(1, { key: true }), point(2, { details: 'Mai mult' })])} />);
+    expect(screen.getByText('[hint]')).toBeTruthy();
+    expect(screen.getByLabelText('[key Data 1 Titlu 1]')).toBeTruthy();
+    expect(screen.getByRole('button').props.accessibilityHint).toBe('[tap]');
+  } finally {
+    resetTexts();
+  }
 });

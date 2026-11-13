@@ -2,6 +2,7 @@ import { Image, Platform, StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { CardContent } from '@prepio/shared';
 import ImagesCard from './ImagesCard';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 jest.mock('../../lib/content', () => ({ imageUrl: (p: string) => `http://x/${p}` }));
 
@@ -172,4 +173,23 @@ it('caps an image at 45 % of the screen height, so a portrait photo leaves room 
   await render(<ImagesCard content={make('single')} />);
   const style = StyleSheet.flatten(screen.getByTestId('card-image-0').props.style);
   expect(style.maxHeight).toBe(Math.round(Dimensions.get('window').height * 0.45));
+});
+
+describe('texts from the catalog', () => {
+  afterEach(() => resetTexts());
+
+  it('the thumbnails and the viewer use the overrides', async () => {
+    applyOverrides({
+      'cards.images.thumb': '[thumb {n} {descriere}]',
+      'cards.images.next': '[next]',
+      'cards.images.zoomed': '[big {descriere}]',
+      'common.close': '[close]',
+    });
+    await render(<ImagesCard content={make('gallery')} />);
+    expect(screen.getByLabelText('[thumb 2 A doua]')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Prima'));
+    expect(screen.getByLabelText('[close]')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('[next]'));
+    expect(screen.getByLabelText('[big A doua]')).toBeTruthy();
+  });
 });

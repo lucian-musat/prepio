@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import RichText from './RichText';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 it('renders bold and italic spans', async () => {
   await render(<RichText source="Un **gros** și *oblic* text" />);
@@ -35,4 +36,14 @@ it('headings keep the section typography and spans inherit the parent colour', a
   const span = StyleSheet.flatten(screen.getByText('gros').props.style);
   expect(span.color).toBeUndefined();
   expect(span.fontSize).toBeUndefined();
+});
+
+it('the callout label takes its text from the catalog', async () => {
+  applyOverrides({ 'cards.callout.retine': '[override]' });
+  try {
+    await render(<RichText source={':::retine\nConținut important\n:::'} />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+  } finally {
+    resetTexts();
+  }
 });

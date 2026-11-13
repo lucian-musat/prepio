@@ -1,12 +1,13 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { border, color, layout, radius, space } from '@prepio/shared';
+import { border, color, layout, radius, space, type TextKey } from '@prepio/shared';
 import { AppText, Button, Surface } from '../../ui';
 import type { ContinueTarget } from '../../lib/homeContinue';
+import { t } from '../../texts/store';
 
-const EYEBROW: Record<ContinueTarget['kind'], string> = {
-  first: 'Începe de aici',
-  resume: 'Continuă de unde ai rămas',
-  next: 'Următoarea lecție',
+const EYEBROW: Record<ContinueTarget['kind'], TextKey> = {
+  first: 'home.continue.first',
+  resume: 'home.continue.resume',
+  next: 'home.continue.next',
 };
 
 type Props = { target: ContinueTarget; number: number; onPress: () => void };
@@ -21,16 +22,16 @@ export default function ContinueCard({ target, number, onPress }: Props) {
     <Surface testID="continue-card" style={[styles.card, wide && styles.cardWide]}>
       <View style={[styles.text, wide && styles.textWide]}>
         <AppText role="eyebrow" color="primary">
-          {EYEBROW[target.kind]}
+          {t(EYEBROW[target.kind])}
         </AppText>
-        <AppText role="section">{`Lecția ${number} · ${target.lesson.title}`}</AppText>
+        <AppText role="section">{t('home.continue.title', { n: number, titlu: target.lesson.title })}</AppText>
         {target.where ? (
           <AppText role="small" color="textMuted">
             {target.where}
           </AppText>
         ) : null}
       </View>
-      <Button label={target.kind === 'resume' ? 'Continuă lecția' : 'Începe lecția'} onPress={onPress} />
+      <Button label={t(target.kind === 'resume' ? 'home.continue.resumeButton' : 'home.continue.startButton')} onPress={onPress} />
     </Surface>
   );
 }

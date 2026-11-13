@@ -4,6 +4,7 @@ import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { Card } from '@prepio/shared';
 import CardStepper from './CardStepper';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 // Reanimated's jest helper; the public typings only describe the no-op production stub.
 const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { transform: Record<string, number | string>[] } };
@@ -273,5 +274,17 @@ describe('keyboard on the web', () => {
     await key('ArrowRight');
     await key('ArrowRight');
     expect(onFinish).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('texts from the catalog', () => {
+  afterEach(() => resetTexts());
+
+  it('the eyebrow and the buttons use the overrides', async () => {
+    applyOverrides({ 'lesson.cards.eyebrow': '[{n} of {total}]', 'common.continue': '[next]', 'lesson.cards.prevLabel': '[prev]' });
+    await renderStepper([card(1), card(2)]);
+    expect(screen.getByText('[1 of 2]')).toBeTruthy();
+    expect(bar().getByRole('button', { name: '[next]' })).toBeTruthy();
+    expect(bar().getByRole('button', { name: '[prev]' })).toBeTruthy();
   });
 });

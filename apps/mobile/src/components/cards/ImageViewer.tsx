@@ -6,6 +6,7 @@ import { color, motion, space, type CardImage } from '@prepio/shared';
 import { AppText, IconButton, timing } from '../../ui';
 import { imageUrl } from '../../lib/content';
 import { clampTranslation } from './zoomMath';
+import { t } from '../../texts/store';
 
 const MAX_SCALE = 4;
 const TAP_SCALE = 2;
@@ -108,13 +109,13 @@ export default function ImageViewer({ images, index, onClose }: { images: CardIm
   const image = images[current];
   if (!image) return null;
   const uri = imageUrl(image.path);
-  const alt = `${image.alt} (mărită)`;
+  const alt = t('cards.images.zoomed', { descriere: image.alt });
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <GestureHandlerRootView style={styles.backdrop}>
         <View style={styles.top}>
-          <IconButton icon="close" accessibilityLabel="Închide" onPress={onClose} />
+          <IconButton icon="close" accessibilityLabel={t('common.close')} onPress={onClose} />
         </View>
         <View style={styles.stage}>
           <ZoomableImage key={current} uri={uri} alt={alt} />
@@ -122,11 +123,11 @@ export default function ImageViewer({ images, index, onClose }: { images: CardIm
         <View style={styles.bottom}>
           {images.length > 1 ? (
             <View style={styles.nav}>
-              <IconButton icon="back" accessibilityLabel="Imaginea anterioară" disabled={current === 0} onPress={() => setCurrent(current - 1)} />
+              <IconButton icon="back" accessibilityLabel={t('cards.images.prev')} disabled={current === 0} onPress={() => setCurrent(current - 1)} />
               <AppText role="caption" style={styles.light}>
                 {current + 1} / {images.length}
               </AppText>
-              <IconButton icon="chevron-right" accessibilityLabel="Imaginea următoare" disabled={current === images.length - 1} onPress={() => setCurrent(current + 1)} />
+              <IconButton icon="chevron-right" accessibilityLabel={t('cards.images.next')} disabled={current === images.length - 1} onPress={() => setCurrent(current + 1)} />
             </View>
           ) : null}
           {image.credit ? (

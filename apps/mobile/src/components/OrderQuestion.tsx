@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { color, elevation, feedbackText, radius, space, type OrderItem } from '@prepio/shared';
 import { AppText, Chip, Enter, IconButton } from '../ui';
 import { solidShadow } from '../ui/elevation';
+import { t } from '../texts/store';
 
 type Props = {
   /** Items in the learner's current order (owned by QuestionView). */
@@ -25,7 +26,7 @@ export default function OrderQuestion({ order, items, answered, onMove }: Props)
             <View
               style={[styles.row, answered && (inPlace ? styles.rowOk : styles.rowBad)]}
               accessible={answered}
-              accessibilityLabel={answered ? `${i + 1}. ${item.text}, ${inPlace ? 'poziție corectă' : 'poziție greșită'}` : undefined}
+              accessibilityLabel={answered ? t(inPlace ? 'lesson.test.order.inPlace' : 'lesson.test.order.misplaced', { n: i + 1, text: item.text }) : undefined}
             >
               <AppText role="bodyStrong" color="textMuted" style={styles.index}>
                 {i + 1}.
@@ -35,11 +36,11 @@ export default function OrderQuestion({ order, items, answered, onMove }: Props)
               </AppText>
               {!answered ? (
                 <View style={styles.buttons}>
-                  <IconButton icon="up" disabled={i === 0} accessibilityLabel={`Mută în sus: ${item.text}`} onPress={() => onMove(i, -1)} />
+                  <IconButton icon="up" disabled={i === 0} accessibilityLabel={t('lesson.test.order.moveUp', { text: item.text })} onPress={() => onMove(i, -1)} />
                   <IconButton
                     icon="down"
                     disabled={i === order.length - 1}
-                    accessibilityLabel={`Mută în jos: ${item.text}`}
+                    accessibilityLabel={t('lesson.test.order.moveDown', { text: item.text })}
                     onPress={() => onMove(i, 1)}
                   />
                 </View>
@@ -57,7 +58,7 @@ export function CorrectOrder({ items }: { items: OrderItem[] }) {
   return (
     <View style={styles.correctBox}>
       <AppText role="bodyStrong" style={styles.correctTitle}>
-        Ordinea corectă:
+        {t('lesson.test.correctOrder')}
       </AppText>
       {items.map((item) => (
         <View key={item.id} style={styles.correctRow}>

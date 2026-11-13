@@ -655,3 +655,28 @@ describe('continue card and hero', () => {
     for (const n of ['1', '2', '3']) expect(screen.getByText(n)).toBeTruthy();
   });
 });
+
+describe('texts from the catalog', () => {
+  it('Home, its continue card and lesson counts use the overrides', async () => {
+    applyOverrides({
+      'home.bac.subtitle': '[override]',
+      'home.continue.first': '[eyebrow]',
+      'home.locked.afterLesson': '[locked {n}]',
+      'lesson.count.many': '[lectii]',
+    });
+    mockedFetch.mockResolvedValue({ sections: [{ path: ['A'], lessons: [lesson('l1', 'Unu'), lesson('l2', 'Doi', 2)] }] });
+    await renderHome();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[eyebrow]')).toBeTruthy();
+    expect(screen.getByText('[locked 1]')).toBeTruthy();
+    expect(screen.getByText('2 [lectii]')).toBeTruthy();
+  });
+
+  it('the load error uses the overrides', async () => {
+    applyOverrides({ 'home.loadFailed': '[override]', 'common.retryButton': '[retry]' });
+    mockedFetch.mockRejectedValue(new Error('x'));
+    await renderHome();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[retry]' })).toBeTruthy();
+  });
+});
