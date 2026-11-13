@@ -6,6 +6,7 @@ import { AppText } from '../../ui';
 import { imageUrl } from '../../lib/content';
 import RichText from './RichText';
 import ImageViewer from './ImageViewer';
+import { t } from '../../texts/store';
 
 const FALLBACK_RATIO = 16 / 9;
 const THUMB = 64;
@@ -81,7 +82,7 @@ export default function ImagesCard({ content }: { content: Extract<CardContent, 
             <Pressable
               key={`${image.path}-${i}`}
               accessibilityRole="button"
-              accessibilityLabel={`Miniatura ${i + 1}: ${image.alt}`}
+              accessibilityLabel={t('cards.images.thumb', { n: i + 1, descriere: image.alt })}
               // aria-selected, not accessibilityState: react-native-web 0.21 drops the latter; native maps both.
               aria-selected={i === main}
               onPress={() => setSelected(i)}

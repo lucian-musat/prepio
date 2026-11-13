@@ -6,6 +6,7 @@ import RichText from './RichText';
 import { openExternal } from './openExternal';
 import YouTubePlayer from './YouTubePlayer';
 import { thumbnailUrl, watchUrl } from './youtube';
+import { t } from '../../texts/store';
 
 /**
  * A YouTube video in a 16:9 box (width-driven). The card is active while it is mounted outside the
@@ -31,13 +32,13 @@ export default function VideoCard({ content }: { content: Extract<CardContent, {
       </View>
       {/* Under the player, not over it: on top it covered YouTube's own title bar. */}
       {live && muted ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Pornește sunetul" hitSlop={PILL_SLOP} onPress={() => setMuted(false)} style={styles.pill}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cards.video.unmuteLabel')} hitSlop={PILL_SLOP} onPress={() => setMuted(false)} style={styles.pill}>
           <AppText role="caption" color="surface">
-            🔇 Atinge pentru sunet
+            {t('cards.video.unmute')}
           </AppText>
         </Pressable>
       ) : null}
-      {failed && youtubeId ? <Button variant="secondary" label="Deschide pe YouTube" onPress={() => openExternal(watchUrl(youtubeId))} /> : null}
+      {failed && youtubeId ? <Button variant="secondary" label={t('cards.video.openYoutube')} onPress={() => openExternal(watchUrl(youtubeId))} /> : null}
       {text ? <RichText source={text} /> : null}
     </View>
   );

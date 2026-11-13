@@ -4,7 +4,8 @@ import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reani
 import { border, color, palette, radius, space, stroke, type CardContent, type SchemaBox } from '@prepio/shared';
 import { AppText, Enter, Icon, Reveal } from '../../ui';
 import { mixColors, withAlpha } from '../../ui/elevation';
-import { EXPAND_HINT, ExpandHint, hoverTransition, pointer, useExpandFeedback } from './expandable';
+import { ExpandHint, hoverTransition, pointer, useExpandFeedback } from './expandable';
+import { t } from '../../texts/store';
 
 type Tone = 'cause' | 'central' | 'consequence';
 const TEXT_COLOR = { cause: 'text', central: 'onPrimary', consequence: 'onAccent' } as const;
@@ -60,7 +61,7 @@ function ExpandableBox({ box, tone, detail }: { box: SchemaBox; tone: Tone; deta
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={expanded ? `${box.text}. ${detail}` : box.text}
-      accessibilityHint={EXPAND_HINT}
+      accessibilityHint={t('cards.expand.hint')}
       aria-expanded={expanded}
       onPress={() => setExpanded((e) => !e)}
       {...handlers}
@@ -116,7 +117,7 @@ export default function SchemaCard({ content }: { content: Extract<CardContent, 
   const expandable = [...content.causes, content.central, ...content.consequences].some((b) => b.detail);
   return (
     <Enter index={0} style={styles.root}>
-      {expandable ? <ExpandHint text="Atinge căsuțele cu + pentru detalii" /> : null}
+      {expandable ? <ExpandHint text={t('cards.schema.hint')} /> : null}
       <Zone label={content.causesLabel} boxes={content.causes} tone="cause" />
       <Arrow />
       <View style={styles.zone}>

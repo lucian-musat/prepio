@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import type { CardContent } from '@prepio/shared';
 import SchemaCard from './SchemaCard';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 // Reanimated's jest helper; the public typings only describe the no-op production stub.
 const { getAnimatedStyle } = Reanimated as unknown as { getAnimatedStyle: (node: unknown) => { transform: { rotate: string }[] } };
@@ -100,4 +101,15 @@ it('the central box keeps its „+” badge inside its edges (it spans the full 
   const badges = screen.getAllByTestId('schema-badge', { includeHiddenElements: true });
   const right = StyleSheet.flatten(badges[badges.length - 1].props.style).right;
   expect(right).toBeGreaterThanOrEqual(0);
+});
+
+it('the hints take their text from the catalog', async () => {
+  applyOverrides({ 'cards.schema.hint': '[hint]', 'cards.expand.hint': '[tap]' });
+  try {
+    await render(<SchemaCard content={schema()} />);
+    expect(screen.getByText('[hint]')).toBeTruthy();
+    expect(screen.getByRole('button').props.accessibilityHint).toBe('[tap]');
+  } finally {
+    resetTexts();
+  }
 });

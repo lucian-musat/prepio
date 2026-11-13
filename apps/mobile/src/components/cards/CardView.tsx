@@ -1,7 +1,18 @@
 import { StyleSheet, View } from 'react-native';
-import { CARD_TYPE_LABELS, color, radius, space, type Card } from '@prepio/shared';
+import { color, radius, space, type Card, type CardType, type TextKey } from '@prepio/shared';
 import { AppText, Icon, Surface } from '../../ui';
 import CardContentView from './CardContentView';
+import { t } from '../../texts/store';
+
+/** The type chip of the admin preview. */
+const TYPE_LABELS: Record<CardType, TextKey> = {
+  text: 'cards.type.text',
+  images: 'cards.type.images',
+  video: 'cards.type.video',
+  timeline: 'cards.type.timeline',
+  schema: 'cards.type.schema',
+  link: 'cards.type.link',
+};
 
 /**
  * One learning card: eyebrow row (position; the type chip only in the admin preview, `showType`), optional title,
@@ -15,7 +26,7 @@ export default function CardView({ card, eyebrow, showType = false }: { card: Ca
           <View style={styles.chip}>
             <Icon name={card.type} size={14} tint={color.primary} />
             <AppText role="chip" color="primary">
-              {CARD_TYPE_LABELS[card.type]}
+              {t(TYPE_LABELS[card.type])}
             </AppText>
           </View>
         ) : null}
