@@ -26,6 +26,8 @@ jest.mock('../../lib/bac', () => ({
 }));
 jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../streak/StreakProvider');
+const { markActive } = jest.requireMock<typeof import('../../streak/__mocks__/StreakProvider')>('../../streak/StreakProvider');
 jest.mock('../../access/AccessProvider');
 jest.mock('../../lib/access', () => ({ ...jest.requireActual('../../lib/access'), purchaseAccess: jest.fn() }));
 jest.mock('expo-router', () => ({
@@ -240,6 +242,7 @@ it('a successful submit renders the result with „8,40” and the grade note', 
   expect(screen.getByText('I.5: Ai inversat cauza cu efectul.')).toBeTruthy();
   expect(mockedSubmit).toHaveBeenCalledWith({ subjectId: 's1', answers: MOST });
   expect(setBalance).toHaveBeenCalledWith(35);
+  expect(markActive).toHaveBeenCalledTimes(1);
 });
 
 it('a 402 opens the credits sheet, keeping the answers', async () => {
@@ -262,6 +265,7 @@ it('too few credits on the client: the sheet opens and nothing is sent', async (
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByTestId('buy-credits-sheet')).toBeTruthy();
   expect(mockedSubmit).not.toHaveBeenCalled();
+  expect(markActive).not.toHaveBeenCalled();
 });
 
 it('rate_limited shows the message on the submit view', async () => {
@@ -272,6 +276,7 @@ it('rate_limited shows the message on the submit view', async () => {
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText('Corectarea nu este disponibilă acum. Încearcă din nou mai târziu.')).toBeTruthy();
   expect(send()).toBeTruthy();
+  expect(markActive).not.toHaveBeenCalled();
 });
 
 it('an edit made just before a failed submit is still saved', async () => {
@@ -292,6 +297,7 @@ it('a lost connection on submit while the server is already grading shows the gr
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText('Corectăm lucrarea…')).toBeTruthy();
   expect(screen.queryByText(OFFLINE)).toBeNull();
+  expect(markActive).toHaveBeenCalled();
 });
 
 it('a lost connection on submit with nothing being graded shows the error inline', async () => {
@@ -302,6 +308,7 @@ it('a lost connection on submit with nothing being graded shows the error inline
   await act(async () => void fireEvent.press(send()));
   expect(await screen.findByText(OFFLINE)).toBeTruthy();
   expect(send()).toBeTruthy();
+  expect(markActive).toHaveBeenCalled(); // grading_failed still counts at submit
 });
 
 it('a refunded grading failure keeps the refund message on the paper after „Mai lucrez”', async () => {

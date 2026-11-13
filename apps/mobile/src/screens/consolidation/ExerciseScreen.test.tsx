@@ -9,6 +9,8 @@ jest.mock('../../lib/api', () => ({ ...jest.requireActual('../../lib/api'), eval
 jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../streak/StreakProvider');
+const { markActive } = jest.requireMock<typeof import('../../streak/__mocks__/StreakProvider')>('../../streak/StreakProvider');
 jest.mock('../../access/AccessProvider');
 jest.mock('../../lib/access', () => ({ ...jest.requireActual('../../lib/access'), purchaseAccess: jest.fn() }));
 const { mockResetCredits } = jest.requireMock<typeof import('../../credits/__mocks__/CreditsProvider')>('../../credits/CreditsProvider');
@@ -170,6 +172,7 @@ it('a refunded failure shows the server message and leaves the balance as it was
   expect(screen.getByText('Evaluarea nu a reușit. Creditele au fost returnate.')).toBeTruthy();
   expect(chip(7)).toBeTruthy();
   expect(screen.queryByText(/Îți mai trebuie/)).toBeNull();
+  expect(markActive).not.toHaveBeenCalled();
 });
 
 it('a cause-effect exercise shows the step banner with the signal words (consolidation only)', async () => {
@@ -191,6 +194,11 @@ describe('after a check', () => {
   it('„Încearcă din nou” on an AI exercise shows that it costs again', async () => {
     await checked('almost');
     expect(screen.getByRole('button', { name: 'Încearcă din nou, costă 2 credite' })).toBeTruthy();
+  });
+
+  it('a finished check counts as an active day', async () => {
+    await checked('almost');
+    expect(markActive).toHaveBeenCalledTimes(1);
   });
 
   it('after „Corect” the retry is a quiet link, not a full button', async () => {

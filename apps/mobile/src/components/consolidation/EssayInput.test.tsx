@@ -9,6 +9,8 @@ import { useCreditGate } from '../../credits/useCreditGate';
 import EssayInput from './EssayInput';
 
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../streak/StreakProvider');
+const { markActive } = jest.requireMock<typeof import('../../streak/__mocks__/StreakProvider')>('../../streak/StreakProvider');
 jest.mock('../../access/AccessProvider');
 const { mockResetCredits } = jest.requireMock<typeof import('../../credits/__mocks__/CreditsProvider')>('../../credits/CreditsProvider');
 jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
@@ -87,6 +89,7 @@ it('checks one requirement with its id and updates its state chip', async () => 
   expect(await card.findByText('Aproape')).toBeTruthy();
   expect(card.getByText('Aproape: o singură prevedere')).toBeTruthy();
   expect(onFeedback).toHaveBeenCalledWith(expect.objectContaining({ verdict: null, items: [expect.objectContaining({ key: 'r1', verdict: 'almost' })] }));
+  expect(markActive).toHaveBeenCalledTimes(1);
 });
 
 it('a failed requirement check shows the API message with „Reîncearcă”', async () => {
@@ -98,6 +101,7 @@ it('a failed requirement check shows the API message with „Reîncearcă”', a
   await act(async () => void fireEvent.press(card.getByRole('button', { name: 'Verifică cerința 1, costă 2 credite' })));
   expect(await card.findByText('Ai atins limita de evaluări.')).toBeTruthy();
   expect(card.getByRole('button', { name: 'Reîncearcă' })).toBeTruthy();
+  expect(markActive).not.toHaveBeenCalled();
   expect(onFeedback).not.toHaveBeenCalled();
 });
 

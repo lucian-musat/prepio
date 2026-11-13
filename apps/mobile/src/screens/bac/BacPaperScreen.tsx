@@ -15,9 +15,10 @@ import {
 } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePanel';
 import type { PanelSource } from '../../components/marker/SourceReader';
-import CreditChip from '../../credits/CreditChip';
+import HeaderPills from '../../streak/HeaderPills';
 import { useCredits } from '../../credits/CreditsProvider';
 import { useCreditGate } from '../../credits/useCreditGate';
+import { useMarkActive } from '../../streak/StreakProvider';
 import { OFFLINE } from '../../lib/api';
 import {
   answeredCount,
@@ -55,6 +56,7 @@ export default function BacPaperScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { width } = useWindowDimensions();
   const credits = useCredits();
+  const markActive = useMarkActive();
   const draft = useBacDraft(id);
   const gate = useCreditGate({ variant: 'bac' });
 
@@ -192,18 +194,22 @@ export default function BacPaperScreen() {
       // submission that fails without storing the answers loses nothing.
       await draft.flush();
       const res = await submitBac({ subjectId: id, answers: draft.answers });
+      markActive();
       gate.settle(res.credits.balance);
       setFailed(false);
       setResult({ grade: res.grade, results: res.results });
       setMode('result');
     } catch (e) {
       if (e instanceof BacApiError && e.code === 'already_grading') {
+        markActive();
         setMode('grading');
         return;
       }
       // A lost connection or a timeout (mapped to grading_failed) may leave the server grading: follow it if so.
       if (!(e instanceof BacApiError) || e.code === 'grading_failed') {
+        if (e instanceof BacApiError) markActive();
         const open = await fetchOpenAttempt(id).catch(() => null);
+        if (!(e instanceof BacApiError) && (open?.status === 'grading' || open?.status === 'failed')) markActive();
         if (open?.status === 'grading') {
           setMode('grading');
           return;
@@ -280,7 +286,7 @@ export default function BacPaperScreen() {
   if (mode === 'submit') {
     return (
       <View style={styles.fill}>
-        <ScreenLayout title={title} onBack={() => setMode('paper')} trailing={<CreditChip need={paper.subject.creditCost} />}>
+        <ScreenLayout title={title} onBack={() => setMode('paper')} trailing={<HeaderPills need={paper.subject.creditCost} />}>
           <BacSubmitView
             items={items}
             answers={draft.answers}

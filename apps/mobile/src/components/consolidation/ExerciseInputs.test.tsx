@@ -17,6 +17,7 @@ import ViewpointInput from './ViewpointInput';
 import ExerciseScreen from '../../screens/consolidation/ExerciseScreen';
 
 jest.mock('../../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
+jest.mock('../../streak/StreakProvider');
 jest.mock('../../access/AccessProvider');
 jest.mock('../../lib/api', () => ({ evaluateConsolidation: jest.fn() }));
 

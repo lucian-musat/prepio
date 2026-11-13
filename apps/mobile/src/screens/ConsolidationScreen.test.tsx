@@ -8,6 +8,7 @@ import { fetchProgress } from '../lib/progress';
 import { fetchHome } from '../lib/content';
 
 jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
+jest.mock('../streak/StreakProvider');
 jest.mock('../lib/consolidation', () => {
   const actual = jest.requireActual('../lib/consolidation');
   return {

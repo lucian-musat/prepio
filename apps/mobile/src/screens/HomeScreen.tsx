@@ -9,7 +9,7 @@ import { lessonAccess, orderedLessons, type LessonState } from '../lib/lessonFlo
 import { MODE_INFO, modeOf } from '../lib/learningMode';
 import { fetchProgress, type Progress } from '../lib/progress';
 import { useAuth } from '../auth/AuthProvider';
-import CreditChip from '../credits/CreditChip';
+import HeaderPills from '../streak/HeaderPills';
 import { useAccess } from '../access/AccessProvider';
 import AccessBanner from '../access/AccessBanner';
 import PaywallSheet from '../access/PaywallSheet';
@@ -97,11 +97,11 @@ function ProfileButton() {
   );
 }
 
-/** Top-bar trailing slot: the credit balance chip, then the profile avatar. */
-function HomeTrailing() {
+/** Top-bar trailing slot: the streak and credit pills, then the profile avatar. */
+function HomeTrailing({ onSolve }: { onSolve?: () => void }) {
   return (
     <View style={styles.trailing}>
-      <CreditChip />
+      <HeaderPills onSolve={onSolve} />
       <ProfileButton />
     </View>
   );
@@ -226,9 +226,12 @@ export default function HomeScreen() {
   // Would the tapped lesson be playable with full access? (guided order may still lock it)
   const afterPurchase = sheet?.lessonId ? lessonAccess(orderedLessons(data.sections), progress.finished, mode, () => true).get(sheet.lessonId) : undefined;
   const sheetTitle = sheet?.lessonId ? orderedLessons(data.sections).find((l) => l.id === sheet.lessonId)?.title : undefined;
+  const openLesson = (id: string) => router.push(`/lesson/${id}`);
+  // The streak sheet's „Rezolvă un exercițiu” does what the continue card does.
+  const solve = target ? () => openLesson(target.lesson.id) : undefined;
 
   return (
-    <ScreenLayout logo trailing={<HomeTrailing />}>
+    <ScreenLayout logo trailing={<HomeTrailing onSolve={solve} />}>
       <AccessBanner onOffer={() => setSheet({ lessonId: null })} />
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} greeting={greeting} />
@@ -241,7 +244,7 @@ export default function HomeScreen() {
         />
       </View>
       {target ? (
-        <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={() => router.push(`/lesson/${target.lesson.id}`)} />
+        <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={() => openLesson(target.lesson.id)} />
       ) : null}
       <InviteNote enabled={referral !== null} finishedCount={done} />
       <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>

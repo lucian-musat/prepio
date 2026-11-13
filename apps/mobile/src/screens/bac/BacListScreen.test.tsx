@@ -6,6 +6,7 @@ import { fetchBacList, type BacListRow } from '../../lib/bac';
 
 jest.mock('../../access/AccessProvider');
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../streak/StreakProvider');
 jest.mock('../../lib/access', () => ({ ...jest.requireActual('../../lib/access'), purchaseAccess: jest.fn() }));
 jest.mock('../../lib/bac', () => ({ fetchBacList: jest.fn() }));
 jest.mock('expo-router', () => {

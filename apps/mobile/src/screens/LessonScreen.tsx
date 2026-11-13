@@ -13,6 +13,7 @@ import { attemptOutcome, lessonAccess, orderedLessons, resumePoint, type Attempt
 import { fetchProgress, markFinished, savePosition, type LessonPosition, type Progress } from '../lib/progress';
 import { withTimeout } from '../lib/supabase';
 import { logTestFailed } from '../lib/activity';
+import { useMarkActive } from '../streak/StreakProvider';
 import { clearLastTest, readLastTest, saveLastTest, type LastTest } from '../lib/lastTest';
 import { describeProgress } from '../lib/lessonProgressLabel';
 import { AppText, Button, ConfirmDialog, Confetti, Enter, Pop, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
@@ -126,6 +127,7 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const mode = modeOf(useAuth().profile);
   const { canOpen } = useAccess();
+  const markActive = useMarkActive();
   const [data, setData] = useState<Loaded | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
@@ -309,7 +311,10 @@ export default function LessonScreen() {
         key={question.id}
         question={question}
         frame={frame(`Întrebarea ${index + 1} din ${lesson.questions.length}`)}
-        onAnswered={(ok) => goTo('questions', index, { ...results, [question.id]: ok })}
+        onAnswered={(ok) => {
+          markActive();
+          goTo('questions', index, { ...results, [question.id]: ok });
+        }}
         onNext={nextIn(lesson.questions.length)}
         nextLabel={index + 1 < lesson.questions.length ? 'Următoarea întrebare' : 'Continuă'}
       />

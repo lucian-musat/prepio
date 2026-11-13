@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { color, formatAccessDate, space } from '@prepio/shared';
 import { AppText, Button, Chip, ScreenLayout, SettingsRow, Surface, TextField, goBackOrHome } from '../ui';
@@ -12,6 +12,8 @@ import LearningModePicker from '../components/LearningModePicker';
 import { ownMessage } from '../lib/errorMessage';
 import { useCredits } from '../credits/CreditsProvider';
 import { useAccess } from '../access/AccessProvider';
+import { useReminders } from '../streak/StreakProvider';
+import ReminderTimeSheet, { formatTime } from '../streak/ReminderTimeSheet';
 import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
 
 const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
@@ -41,6 +43,12 @@ export default function ProfileScreen() {
   const [modeSaving, setModeSaving] = useState(false);
   const [modeError, setModeError] = useState<string | null>(null);
   const [modeSaved, setModeSaved] = useState<string | null>(null);
+  const reminders = useReminders();
+  const [timeOpen, setTimeOpen] = useState(false);
+  const showReminders = Platform.OS !== 'web' && reminders.status !== 'unsupported';
+  const reminderDenied = reminders.status === 'denied';
+  const reminderBlocked = reminderDenied && !reminders.canAskAgain;
+  const switchOn = reminders.settings.enabled && !reminderDenied;
   const busy = saving || deleting;
   const unchanged = name.trim() === (profile?.displayName ?? '').trim();
   const email = session?.user.email;
@@ -165,6 +173,51 @@ export default function ProfileScreen() {
           ) : null}
         </Surface>
 
+        {showReminders ? (
+          <View style={styles.field}>
+            <AppText role="caption" color="textMuted" style={styles.eyebrow}>
+              Memento zilnic
+            </AppText>
+            <Surface radius="lg" style={styles.group}>
+              <View style={styles.switchRow}>
+                <AppText role="bodyStrong" style={styles.switchLabel}>
+                  Notificare seara
+                </AppText>
+                <Switch
+                  accessible
+                  accessibilityRole="switch"
+                  accessibilityLabel="Notificare seara"
+                  value={switchOn}
+                  accessibilityState={{ checked: switchOn, disabled: busy }}
+                  onValueChange={(on) => void reminders.setEnabled(on)}
+                  trackColor={{ true: color.primary }}
+                  disabled={busy}
+                />
+              </View>
+              <SettingsRow label="Ora" value={formatTime(reminders.settings.time)} onPress={() => setTimeOpen(true)} disabled={busy} divider />
+            </Surface>
+            {reminderBlocked ? (
+              <>
+                <AppText role="small" color="textMuted">
+                  Notificările sunt oprite din setările telefonului.
+                </AppText>
+                <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => void Linking.openSettings()} style={styles.link}>
+                  Deschide setările
+                </AppText>
+              </>
+            ) : null}
+            <AppText role="caption" color="textMuted">
+              Primești notificarea doar în zilele în care n-ai rezolvat încă niciun exercițiu.
+            </AppText>
+            <ReminderTimeSheet
+              visible={timeOpen}
+              current={reminders.settings.time}
+              onSelect={(t) => void reminders.setTime(t)}
+              onClose={() => setTimeOpen(false)}
+            />
+          </View>
+        ) : null}
+
         <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
 
         {deletion.confirming ? (
@@ -201,5 +254,8 @@ const styles = StyleSheet.create({
   stack: { gap: space[4] },
   field: { gap: space[2] },
   group: { padding: 0, overflow: 'hidden' },
+  eyebrow: { textTransform: 'uppercase', letterSpacing: 0.8 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 56, paddingVertical: space[2.5], paddingHorizontal: space[4] },
+  switchLabel: { flex: 1 },
   link: { textDecorationLine: 'underline', alignSelf: 'flex-start' },
 });
