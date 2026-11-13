@@ -337,7 +337,16 @@ describe('daily reminder settings', () => {
     open.mockRestore();
   });
 
-it('when denied but Android can still ask, no phone-settings hint shows and toggling on asks', async () => {    reminderState.status = 'denied';    reminderState.canAskAgain = true;    await renderScreen();    expect(screen.queryByText('Notificările sunt oprite din setările telefonului.')).toBeNull();    expect(screen.queryByText('Deschide setările')).toBeNull();    await fireEvent(screen.getByRole('switch'), 'valueChange', true);    expect(setEnabled).toHaveBeenCalledWith(true);  });
+  it('when denied but Android can still ask, no phone-settings hint shows and toggling on asks', async () => {
+    reminderState.status = 'denied';
+    reminderState.canAskAgain = true;
+    await renderScreen();
+    expect(screen.queryByText('Notificările sunt oprite din setările telefonului.')).toBeNull();
+    expect(screen.queryByText('Deschide setările')).toBeNull();
+    await fireEvent(screen.getByRole('switch'), 'valueChange', true);
+    expect(setEnabled).toHaveBeenCalledWith(true);
+  });
+
   it('the Ora row opens the time sheet; choosing 20:30 saves it and closes', async () => {
     await renderScreen();
     await fireEvent.press(screen.getByLabelText('Ora · 19:00'));

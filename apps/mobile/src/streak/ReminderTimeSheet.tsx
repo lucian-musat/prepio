@@ -7,8 +7,6 @@ import { AppText } from '../ui';
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as BuyCreditsSheet
 
-
-
 const pad = (n: number) => String(n).padStart(2, '0');
 export const formatTime = (t: ReminderTime) => `${pad(t.hour)}:${pad(t.minute)}`;
 

@@ -30,6 +30,8 @@ type Props = {
 };
 
 const LOGO_MARK = space[6] + space[1]; // 28 px
+/** Height of the phone top bar without a progress row: padding 16 + 40 px icon button + padding 12. */
+export const TOP_BAR_HEIGHT = space[4] + space[10] + space[3];
 const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg
 
 function Logo() {
