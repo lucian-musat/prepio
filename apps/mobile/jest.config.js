@@ -8,5 +8,7 @@ module.exports = {
     '^@react-native-async-storage/async-storage$': '@react-native-async-storage/async-storage/jest/async-storage-mock',
     // Google Sign-In is a native TurboModule: a manual mock stands in for it.
     '^@react-native-google-signin/google-signin$': '<rootDir>/__mocks__/@react-native-google-signin/google-signin.ts',
+    // expo-notifications is a native module: a manual mock stands in for it.
+    '^expo-notifications$': '<rootDir>/__mocks__/expo-notifications.ts',
   },
 };

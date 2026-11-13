@@ -8,13 +8,23 @@ import { StreakProvider, useMarkActive, useStreak } from './StreakProvider';
 let mockUser = 'u1';
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: mockUser } }) }));
 jest.mock('../lib/streak', () => ({ fetchStreak: jest.fn(), markActiveToday: jest.fn() }));
+// Reminders are covered in StreakProvider.reminders.test.tsx.
+jest.mock('./reminders', () => ({
+  remindersSupported: () => false,
+  permission: async () => 'undetermined',
+  requestPermission: async () => false,
+  syncReminders: async () => {},
+  onReminderTap: () => () => {},
+}));
+jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }));
 
 const sum = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: false, week: [], ...over });
 const TOAST = '🔥 Seria continuă: 6 zile! Ne vedem mâine.';
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 640 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 
 let onFirst: jest.Mock;
-let onChange: (s: string) => void = () => {};
+let listeners: ((s: string) => void)[] = [];
+const onChange = (s: string) => listeners.forEach((l) => l(s));
 function Probe() {
   const { summary, onFirstOfDay } = useStreak();
   const mark = useMarkActive();
@@ -46,9 +56,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   onFirst = jest.fn();
   mockUser = 'u1';
+  listeners = [];
   (fetchStreak as jest.Mock).mockResolvedValue(sum());
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_t, cb) => {
-    onChange = cb as (s: string) => void;
+    listeners.push(cb as (s: string) => void);
     return { remove: jest.fn() } as never;
   });
 });

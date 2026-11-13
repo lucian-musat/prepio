@@ -4,6 +4,9 @@ import { bucharestDay, streakToast, type StreakSummary } from '@prepio/shared';
 import { useAuth } from '../auth/AuthProvider';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import StreakToast from './StreakToast';
+import { useReminderController, type RemindersValue } from './useReminderController';
+
+export type { RemindersValue } from './useReminderController';
 
 const TOAST_MS = 3000;
 
@@ -17,6 +20,7 @@ type StreakContextValue = {
 
 const StreakContext = createContext<StreakContextValue | null>(null);
 const MarkContext = createContext<() => void>(() => {});
+const RemindersContext = createContext<RemindersValue | null>(null);
 
 /** The last server-confirmed summary and the Bucharest day it was obtained on. */
 type Confirmed = { summary: StreakSummary; day: string };
@@ -128,14 +132,17 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   const markRef = useRef(mark);
   markRef.current = mark;
   const markActive = useCallback(() => void markRef.current(), []);
+  const reminders = useReminderController(summary, onFirstOfDay);
 
   const value = useMemo(() => ({ summary, refresh, onFirstOfDay }), [summary, refresh, onFirstOfDay]);
   return (
     <StreakContext.Provider value={value}>
-      <MarkContext.Provider value={markActive}>
-        {children}
-        {toast ? <StreakToast key={toast.id} text={toast.text} /> : null}
-      </MarkContext.Provider>
+      <RemindersContext.Provider value={reminders}>
+        <MarkContext.Provider value={markActive}>
+          {children}
+          {toast ? <StreakToast key={toast.id} text={toast.text} /> : null}
+        </MarkContext.Provider>
+      </RemindersContext.Provider>
     </StreakContext.Provider>
   );
 }
@@ -149,4 +156,11 @@ export function useStreak(): StreakContextValue {
 /** Fire-and-forget: records today as an active day. A no-op outside the provider (the admin lesson preview). */
 export function useMarkActive(): () => void {
   return useContext(MarkContext);
+}
+
+/** The evening-reminder settings and permission status (the Profil switch). */
+export function useReminders(): RemindersValue {
+  const v = useContext(RemindersContext);
+  if (!v) throw new Error('useReminders must be used inside StreakProvider');
+  return v;
 }
