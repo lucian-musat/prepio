@@ -37,10 +37,56 @@
         flex: 1;
       }
     </style>
+    <!-- Start-up overlay (fonts, session, UI texts); app/_layout.tsx hides it via src/texts/bootLoader.web.ts. -->
+    <style id="boot-loader-style">
+      #boot-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f3faf7; /* color.bg */
+        opacity: 1;
+        transition: opacity 200ms ease-out;
+      }
+      #boot-loader.boot-loader--done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot-loader img {
+        width: 88px;
+        height: 88px;
+        border-radius: 24px;
+        box-shadow: 0 8px 24px rgba(15, 118, 110, 0.18);
+        animation: boot-loader-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes boot-loader-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(0.92);
+          opacity: 0.8;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-loader {
+          transition: none;
+        }
+        #boot-loader img {
+          animation: none;
+        }
+      }
+    </style>
   </head>
 
   <body>
     <noscript>Prepio are nevoie de JavaScript ca să funcționeze.</noscript>
     <div id="root"></div>
+    <!-- A sibling of #root, not a child: React clears #root on its first commit. -->
+    <div id="boot-loader" aria-hidden="true"><img src="/icon-192.png" alt="" width="88" height="88" /></div>
   </body>
 </html>
