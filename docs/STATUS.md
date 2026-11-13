@@ -10,6 +10,16 @@ Last updated: 2026-11-13
   - Errors the server sends are mapped by code: one map per endpoint, which typecheck keeps complete. An unknown code shows `errors.api.generic`. The server's own message is no longer shown.
   - Tests: mobile 1512, shared 512, admin 536.
   - Browser walk (local, console clean): `/nu-exista` and `/termeni` titles and texts; overrides of `meta.pageTitle` and `common.goHome` show on the second opening; 360 px with no horizontal scroll; test rows removed.
+- **Batch „auth” (`feat/ui-texts-auth`):**
+  - 61 keys: `auth` (welcome, consent, email, code, invite code), `onboarding` (terms gate, name, mode), `errors.auth.*`.
+  - Supabase sign-in errors map to the app's existing categories: invalid email, wrong or expired code, rate limit, Google failure.
+  - Tests: mobile 1522, shared 573.
+  - Browser walk (local, console clean):
+    - welcome screen with two overrides (title and the Terms link), shown on the second opening
+    - email → code: the address and the countdown are filled in; a wrong code shows „Codul nu este corect sau a expirat.”
+    - name („Cel mult 60 de caractere.”) → mode screen, both unchanged
+    - 360 px with no horizontal scroll
+    - test rows and the `[test]` student removed
 - Foundation done: a text catalog in `@prepio/shared` (`TEXTS`, `{vars}` formatting, validation), the `ui_texts` table (public read, admin write, RLS + pgTAP), the student text store (`t`, `tPlural`, cached start-up, web boot loader, the app waits for the texts) and admin → „Texte” (edit, reset, optional texts). The Home welcome paragraph moved from Setări to the catalog (`home.hero.welcome`, empty = hidden) and the returning-student greeting is editable.
 - Guard: `apps/mobile/src/texts/noLiterals.test.ts` fails on literal UI copy outside the catalog; `PENDING_FILES` lists the files not migrated yet (each batch PR removes its files). The Terms and Privacy pages are excluded for good.
 - An edit shows on the second opening (cache); a fresh install waits at most ~1.5 s, then uses the defaults.
