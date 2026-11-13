@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCredits } from '../credits/CreditsProvider';
-import { ACCESS_PURCHASE_FAILED, AccessApiError, purchaseAccess } from '../lib/access';
+import { AccessApiError, purchaseAccess } from '../lib/access';
+import { t } from '../texts/store';
 import { useAccess } from './AccessProvider';
 
 export const OFFER_CHANGED = 'Oferta s-a schimbat. Verifică noul preț.';
@@ -56,7 +57,7 @@ export function useAccessPurchase(): AccessPurchase {
         setOfferChanged(true);
         setError(OFFER_CHANGED);
       } else {
-        setError(e instanceof Error && e.message ? e.message : ACCESS_PURCHASE_FAILED);
+        setError(e instanceof Error && e.message ? e.message : t('errors.purchase.failed'));
       }
       return false;
     } finally {

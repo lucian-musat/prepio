@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SuspendedScreen from './SuspendedScreen';
 import { deleteAccount } from '../lib/api';
@@ -77,4 +78,15 @@ it('shows the deletion error and stays signed in', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Da, șterge contul' }));
   expect(await screen.findByText('Contul nu a putut fi șters.')).toBeTruthy();
   expect(mockSignOut).not.toHaveBeenCalled();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the admin overrides', async () => {
+    applyOverrides({ 'suspended.title': '[override]', 'suspended.contactPrefix': '[write]', 'suspended.signOut': '[out]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText(`[write] ${CONTACT_EMAIL}.`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[out]' })).toBeTruthy();
+  });
 });

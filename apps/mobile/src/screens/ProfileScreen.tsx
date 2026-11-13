@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { color, formatAccessDate, space } from '@prepio/shared';
 import { AppText, Button, Chip, ScreenLayout, SettingsRow, Surface, TextField, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import { OFFLINE } from '../lib/api';
+import { offlineText } from '../lib/api';
 import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, updateLearningMode, validateDisplayName } from '../lib/profile';
 import { modeOf, type LearningMode } from '../lib/learningMode';
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
     setModeSaved(null);
     const userId = session?.user.id;
     if (!userId) {
-      setModeError(OFFLINE);
+      setModeError(offlineText());
       return;
     }
     setModeError(null);
@@ -91,7 +91,7 @@ export default function ProfileScreen() {
     }
     const userId = session?.user.id;
     if (!userId) {
-      setNameError(OFFLINE);
+      setNameError(offlineText());
       return;
     }
     setNameError(null);

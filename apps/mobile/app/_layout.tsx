@@ -14,6 +14,7 @@ import ErrorScreen from '../src/screens/ErrorScreen';
 import { initSentry } from '../src/lib/sentry';
 import { useTextsBoot } from '../src/texts/useTextsBoot';
 import { hideBootLoader } from '../src/texts/bootLoader';
+import { t } from '../src/texts/store';
 
 // Before anything renders, so start-up errors are reported too. Off (returns false) without a DSN.
 const sentryEnabled = initSentry();
@@ -71,27 +72,27 @@ function RootNavigator() {
         </Stack.Protected>
         {/* Terms gate (14+ and parental consent, the current terms), before the name and mode. */}
         <Stack.Protected guard={status === 'needsTerms'}>
-          <Stack.Screen name="(onboarding)/terms" options={{ title: 'Înainte să continui' }} />
+          <Stack.Screen name="(onboarding)/terms" options={{ title: t('meta.route.terms') }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'needsName'}>
-          <Stack.Screen name="(onboarding)/name" options={{ title: 'Cum te numești?' }} />
+          <Stack.Screen name="(onboarding)/name" options={{ title: t('meta.route.name') }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'needsMode'}>
-          <Stack.Screen name="(onboarding)/mode" options={{ title: 'Cum vrei să înveți?' }} />
+          <Stack.Screen name="(onboarding)/mode" options={{ title: t('meta.route.mode') }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'ready'}>
           <Stack.Screen name="(app)" />
         </Stack.Protected>
         {/* Public pages (Google Play needs them reachable signed out): outside every guard. */}
-        <Stack.Screen name="confidentialitate" options={{ title: 'Politica de confidențialitate' }} />
-        <Stack.Screen name="termeni" options={{ title: 'Termeni de utilizare' }} />
-        <Stack.Screen name="sterge-cont" options={{ title: 'Ștergerea contului' }} />
+        <Stack.Screen name="confidentialitate" options={{ title: t('meta.route.privacyPage') }} />
+        <Stack.Screen name="termeni" options={{ title: t('meta.route.termsPage') }} />
+        <Stack.Screen name="sterge-cont" options={{ title: t('meta.route.deleteAccount') }} />
         {/* Invite link: stores the code, then replaces to "/" (the guard picks the screen); a signed-out visitor must reach it. */}
-        <Stack.Screen name="invita/[code]" options={{ title: 'Invitație' }} />
+        <Stack.Screen name="invita/[code]" options={{ title: t('meta.route.invite') }} />
         {/* Referral rules page (linked from the invite screen and the Welcome code field): public like the legal pages. */}
-        <Stack.Screen name="recomandari" options={{ title: 'Cum funcționează recomandările' }} />
+        <Stack.Screen name="recomandari" options={{ title: t('meta.route.referrals') }} />
         {/* Admin card preview (iframe): needs no session and reads no data, the card arrives by postMessage. */}
-        <Stack.Screen name="preview" options={{ title: 'Previzualizare' }} />
+        <Stack.Screen name="preview" options={{ title: t('meta.route.preview') }} />
       </Stack>
     </>
   );

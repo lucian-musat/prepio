@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { fontFamily } from '../theme/fonts';
 import { DeleteAccountConfirm, useAccountDeletion } from '../components/AccountDeletion';
 import EmailLink from '../components/EmailLink';
+import { t } from '../texts/store';
 
 const LOCK_TILE = space[8] * 2; // 64 px
 const LOCK_GLYPH = space[8];
@@ -24,23 +25,24 @@ export default function SuspendedScreen() {
           <Icon name="lock" size={LOCK_GLYPH} tint={color.danger} />
         </View>
         <AppText role="title" accessibilityRole="header" style={styles.centre}>
-          Contul tău a fost suspendat
+          {t('suspended.title')}
         </AppText>
         <Surface style={styles.reason}>
           <AppText role="body">
             <AppText role="body" style={styles.strong}>
-              Motiv:
+              {t('suspended.reasonLabel')}
             </AppText> {profile?.suspendedReason ?? ''}
           </AppText>
         </Surface>
         <AppText role="small" color="textMuted" style={styles.centre}>
-          {`Dacă crezi că e o greșeală, scrie-ne la `}<EmailLink />{`.`}
+          {t('suspended.contactPrefix')} <EmailLink />
+          {t('suspended.contactSuffix')}
         </AppText>
-        <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={deletion.deleting} />
+        <Button label={t('suspended.signOut')} variant="secondary" onPress={signOut} disabled={deletion.deleting} />
         {deletion.confirming ? (
           <DeleteAccountConfirm deletion={deletion} />
         ) : (
-          <TextButton label="Șterge contul" tone="danger" onPress={deletion.ask} />
+          <TextButton label={t('suspended.deleteAccount')} tone="danger" onPress={deletion.ask} />
         )}
       </View>
     </ScreenLayout>

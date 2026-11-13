@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import ProgressBar from './ProgressBar';
 
 const value = () => screen.getByRole('progressbar').props.accessibilityValue;
@@ -18,4 +19,13 @@ it('clamps values outside 0..1', async () => {
 it('is labelled "Progres" by default', async () => {
   await render(<ProgressBar value={0.5} />);
   expect(screen.getByRole('progressbar', { name: 'Progres' })).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('takes its default name from the texts', async () => {
+    applyOverrides({ 'common.progress': '[override]' });
+    await render(<ProgressBar value={0.5} />);
+    expect(screen.getByLabelText('[override]')).toBeTruthy();
+  });
 });

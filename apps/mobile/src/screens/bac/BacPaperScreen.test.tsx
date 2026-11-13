@@ -12,7 +12,7 @@ import {
   type BacAttemptView,
   type BacPaper,
 } from '../../lib/bac';
-import { OFFLINE } from '../../lib/api';
+const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 import { fetchCreditPackages } from '../../lib/credits';
 import BacPaperScreen from './BacPaperScreen';
 

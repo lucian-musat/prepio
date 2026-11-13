@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { applyOverrides, resetTexts, t } from '../texts/store';
 import {
   CreditsApiError,
   fetchCreditBalance,
@@ -117,12 +118,12 @@ describe('purchaseCredits', () => {
     expect(init.headers.Authorization).toBe('Bearer token-1');
   });
 
-  it('maps 409 to package_unavailable with the server message', async () => {
+  it('maps 409 to package_unavailable with the catalog text', async () => {
     fetchMock.mockResolvedValue(json(409, { error: 'package_unavailable', message: 'Pachetul nu mai e disponibil.' }));
     const err = await purchaseCredits('p1').catch((e) => e);
     expect(err).toBeInstanceOf(CreditsApiError);
     expect(err.code).toBe('package_unavailable');
-    expect(err.message).toBe('Pachetul nu mai e disponibil.');
+    expect(err.message).toBe(t('errors.api.credits.packageUnavailable'));
   });
 
   it('signs out on 401', async () => {
@@ -344,5 +345,34 @@ describe('fetchLedger names the BAC subject of a grading row', () => {
     const [row] = await fetchLedger({}, { from, auth } as unknown as SupabaseClient);
     expect(from).toHaveBeenCalledWith('bac_subjects');
     expect(row).toMatchObject({ bacTitle: 'Istorie 2026 · Varianta 3' });
+  });
+});
+
+describe('purchaseCredits: server error codes become catalog texts', () => {
+  const SERVER = 'server text';
+  const json = (status: number, body: unknown) => ({ ok: status < 300, status, json: async () => body });
+  afterEach(() => resetTexts());
+
+  it.each([
+    ['bad_request', 'errors.api.badRequest'],
+    ['unauthorized', 'errors.api.unauthorized'],
+    ['package_unavailable', 'errors.api.credits.packageUnavailable'],
+    ['suspended', 'errors.api.suspended'],
+    ['server_error', 'errors.api.credits.serverError'],
+    ['some_new_code', 'errors.api.generic'],
+  ] as const)('%s → %s', async (code, key) => {
+    fetchMock.mockResolvedValue(json(code === 'suspended' ? 403 : 400, { error: code, message: SERVER }));
+    const err = await purchaseCredits('p1').catch((e) => e);
+    expect(err).toBeInstanceOf(CreditsApiError);
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(t(key));
+  });
+
+  it('an admin override replaces the text', async () => {
+    applyOverrides({ 'errors.api.credits.packageUnavailable': '[override]', 'errors.purchase.failed': '[failed]' });
+    fetchMock.mockResolvedValue(json(409, { error: 'package_unavailable', message: SERVER }));
+    await expect(purchaseCredits('p1')).rejects.toMatchObject({ message: '[override]' });
+    fetchMock.mockResolvedValue({ ok: false, status: 502, json: async () => Promise.reject(new Error('html')) });
+    await expect(purchaseCredits('p1')).rejects.toMatchObject({ message: '[failed]' });
   });
 });

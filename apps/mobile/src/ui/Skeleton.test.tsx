@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import * as Reanimated from 'react-native-reanimated';
 import Skeleton from './Skeleton';
 
@@ -43,4 +44,13 @@ it('is static with reduce motion (dots full, highlight held mid-bar)', async () 
   expect(after).toBe(before);
   expect(getAnimatedStyle(screen.getByTestId('skeleton-dot-0')).opacity).toBe(1);
   expect(getAnimatedStyle(screen.getByTestId('skeleton-sweep-0')).transform).toEqual([{ translateX: -100 }]);
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the evaluating line from the texts', async () => {
+    applyOverrides({ 'common.skeleton.evaluating': '[override]' });
+    await render(<Skeleton lines={[90]} />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

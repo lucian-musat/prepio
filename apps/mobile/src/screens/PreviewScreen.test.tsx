@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import PreviewScreen from './PreviewScreen';
@@ -128,4 +129,14 @@ it('on native, explains the preview is web-only and does not listen', async () =
   expect(screen.getByText('Previzualizarea este disponibilă doar pe web.')).toBeTruthy();
   expect(win.addEventListener).not.toHaveBeenCalled();
   expect(parent.postMessage).not.toHaveBeenCalled();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the admin overrides', async () => {
+    applyOverrides({ 'common.preview.waiting': '[override]', 'common.preview.title': '[title]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[title]')).toBeTruthy();
+  });
 });

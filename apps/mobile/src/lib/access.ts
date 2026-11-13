@@ -1,6 +1,7 @@
 import type { AccessOffer, AccessPurchaseError, AccessPurchaseErrorCode, AccessPurchaseResponse } from '@prepio/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { accountSuspended, bearerToken, missingApiUrl, OFFLINE, SESSION_EXPIRED, sessionExpired } from './api';
+import { accountSuspended, apiErrorText, bearerToken, missingApiUrl, offlineText, sessionExpired, sessionExpiredText } from './api';
+import { t } from '../texts/store';
 import { apiUrl, getSupabase } from './supabase';
 
 export class AccessApiError extends Error {
@@ -16,9 +17,6 @@ export class AccessApiError extends Error {
 }
 
 export const ACCESS_PURCHASE_TIMEOUT_MS = 15_000;
-export const ACCESS_PURCHASE_FAILED = 'Cumpărarea nu a reușit. Încearcă din nou.';
-const PURCHASE_TIMEOUT = 'Cumpărarea durează prea mult. Încearcă din nou.';
-const PURCHASE_NOT_CONFIGURED = 'Cumpărarea nu e disponibilă acum. Încearcă mai târziu.';
 
 export type AccessHistoryEntry = {
   kind: 'purchase' | 'admin_grant' | 'admin_revoke' | 'referral_reward';
@@ -93,10 +91,10 @@ export async function purchaseAccess(offer: AccessOffer): Promise<AccessPurchase
   const base = apiUrl();
   if (!base) {
     missingApiUrl('purchaseAccess');
-    throw new AccessApiError('server_error', PURCHASE_NOT_CONFIGURED);
+    throw new AccessApiError('server_error', t('errors.purchase.notConfigured'));
   }
-  const token = await bearerToken(() => new AccessApiError('server_error', OFFLINE));
-  if (!token) return sessionExpired(new AccessApiError('unauthorized', SESSION_EXPIRED));
+  const token = await bearerToken(() => new AccessApiError('server_error', offlineText()));
+  if (!token) return sessionExpired(new AccessApiError('unauthorized', sessionExpiredText()));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ACCESS_PURCHASE_TIMEOUT_MS);
@@ -114,9 +112,9 @@ export async function purchaseAccess(offer: AccessOffer): Promise<AccessPurchase
         signal: controller.signal,
       });
     } catch {
-      throw new AccessApiError('server_error', controller.signal.aborted ? PURCHASE_TIMEOUT : OFFLINE);
+      throw new AccessApiError('server_error', controller.signal.aborted ? t('errors.purchase.timeout') : offlineText());
     }
-    if (res.status === 401) return sessionExpired(new AccessApiError('unauthorized', SESSION_EXPIRED));
+    if (res.status === 401) return sessionExpired(new AccessApiError('unauthorized', sessionExpiredText()));
     let body: unknown = null;
     try {
       body = await res.json();
@@ -125,13 +123,15 @@ export async function purchaseAccess(offer: AccessOffer): Promise<AccessPurchase
     }
     if (!res.ok) {
       const e = body as Partial<AccessPurchaseError> | null;
-      const error = new AccessApiError(e?.error ?? 'server_error', e?.message || ACCESS_PURCHASE_FAILED, e?.offer);
+      const error = e?.error
+        ? new AccessApiError(e.error, apiErrorText('access', e.error), e.offer)
+        : new AccessApiError('server_error', t('errors.purchase.failed'), e?.offer);
       if (res.status === 403 && error.code === 'suspended') return accountSuspended(error);
       throw error;
     }
     const ok = body as Partial<AccessPurchaseResponse> | null;
     if (!ok || typeof ok.accessUntil !== 'string') {
-      throw new AccessApiError('server_error', controller.signal.aborted ? PURCHASE_TIMEOUT : ACCESS_PURCHASE_FAILED);
+      throw new AccessApiError('server_error', controller.signal.aborted ? t('errors.purchase.timeout') : t('errors.purchase.failed'));
     }
     return ok as AccessPurchaseResponse;
   } finally {

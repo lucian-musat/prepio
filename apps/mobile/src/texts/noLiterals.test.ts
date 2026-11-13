@@ -15,10 +15,6 @@ const ROOT = path.resolve(__dirname, '../..'); // apps/mobile
 
 /** Files not migrated yet (relative to apps/mobile). Each batch removes its files; the last one leaves it empty. */
 export const PENDING_FILES: string[] = [
-  'app/(app)/_layout.tsx',
-  'app/(auth)/_layout.tsx',
-  'app/(suspended)/_layout.tsx',
-  'app/_layout.tsx',
   'src/access/AccessBanner.tsx',
   'src/access/PaywallSheet.tsx',
   'src/access/useAccessPurchase.ts',
@@ -66,9 +62,6 @@ export const PENDING_FILES: string[] = [
   'src/credits/CreditChip.tsx',
   'src/credits/PackagePicker.tsx',
   'src/credits/useCreditGate.ts',
-  'src/lib/access.ts',
-  'src/lib/api.ts',
-  'src/lib/bac.ts',
   'src/lib/credits.ts',
   'src/lib/emailAuth.ts',
   'src/lib/homeContinue.ts',
@@ -82,15 +75,11 @@ export const PENDING_FILES: string[] = [
   'src/screens/ConsolidationScreen.tsx',
   'src/screens/CreditsScreen.tsx',
   'src/screens/DeleteAccountInfoScreen.tsx',
-  'src/screens/ErrorScreen.tsx',
   'src/screens/HomeScreen.tsx',
   'src/screens/InviteScreen.tsx',
   'src/screens/LessonScreen.tsx',
-  'src/screens/NotFoundScreen.tsx',
-  'src/screens/PreviewScreen.tsx',
   'src/screens/ProfileScreen.tsx',
   'src/screens/ReferralsInfoScreen.tsx',
-  'src/screens/SuspendedScreen.tsx',
   'src/screens/TermsGateScreen.tsx',
   'src/screens/auth/CodeScreen.tsx',
   'src/screens/auth/EmailScreen.tsx',
@@ -114,14 +103,6 @@ export const PENDING_FILES: string[] = [
   'src/streak/ReminderTimeSheet.tsx',
   'src/streak/StreakPill.tsx',
   'src/streak/StreakSheet.tsx',
-  'src/ui/Button.tsx',
-  'src/ui/ConfirmDialog.tsx',
-  'src/ui/Hero.tsx',
-  'src/ui/LessonListItem.tsx',
-  'src/ui/ScoreRing.tsx',
-  'src/ui/Skeleton.tsx',
-  'src/ui/Spinner.tsx',
-  'src/ui/TopBar.tsx',
 ];
 
 /** Legal pages: the Terms/Privacy body text stays out of the editable catalog. */

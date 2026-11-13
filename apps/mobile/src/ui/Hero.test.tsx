@@ -53,3 +53,10 @@ it('hides the welcome paragraph when the text is emptied', async () => {
   await render(<Hero lessonCount={3} />);
   expect(screen.queryByTestId('hero-welcome')).toBeNull();
 });
+
+it('shows admin overrides of the label and the title', async () => {
+  applyOverrides({ 'home.hero.label': '[label]', 'home.hero.title': '[title]' });
+  await render(<Hero lessonCount={3} />);
+  expect(screen.getByText('[label]')).toBeTruthy();
+  expect(screen.getByText('[title]')).toBeTruthy();
+});

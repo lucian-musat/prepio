@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { router } from 'expo-router';
 import TopBar, { goBackOrHome } from './TopBar';
 
@@ -37,4 +38,14 @@ it('labels the progress bar with progressLabel (default "Progres")', async () =>
   expect(screen.getByRole('progressbar', { name: 'Progres' })).toBeTruthy();
   await screen.rerender(<TopBar title="Lecția" progress={0.5} progressLabel="Progres lecție" raised={false} />);
   expect(screen.getByRole('progressbar', { name: 'Progres lecție' })).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('names the back button and the logo from the texts', async () => {
+    applyOverrides({ 'common.back': '[override]', 'meta.appName': '[app]' });
+    await render(<TopBar logo onBack={() => {}} raised={false} />);
+    expect(screen.getByRole('button', { name: '[override]' })).toBeTruthy();
+    expect(screen.getByText('[app]')).toBeTruthy();
+  });
 });

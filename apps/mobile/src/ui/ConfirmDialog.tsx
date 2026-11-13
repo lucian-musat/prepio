@@ -3,6 +3,7 @@ import { color, layout, space } from '@prepio/shared';
 import AppText from './AppText';
 import Button from './Button';
 import Surface from './Surface';
+import { t } from '../texts/store';
 
 type Props = {
   visible: boolean;
@@ -21,11 +22,11 @@ const SCRIM = `${color.text}80`;
  * Centred in-app confirmation (works the same on web and native, unlike Alert). Tapping outside the card or
  * the Android back button cancels.
  */
-export default function ConfirmDialog({ visible, title, message, confirmLabel, cancelLabel = 'Anulează', onConfirm, onCancel }: Props) {
+export default function ConfirmDialog({ visible, title, message, confirmLabel, cancelLabel, onConfirm, onCancel }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Pressable accessibilityLabel="Închide" style={StyleSheet.absoluteFill} onPress={onCancel} />
+        <Pressable accessibilityLabel={t('common.close')} style={StyleSheet.absoluteFill} onPress={onCancel} />
         <Surface style={styles.card}>
           <AppText role="section" accessibilityRole="header">
             {title}
@@ -35,7 +36,7 @@ export default function ConfirmDialog({ visible, title, message, confirmLabel, c
           </AppText>
           <View style={styles.buttons}>
             <Button label={confirmLabel} onPress={onConfirm} />
-            <Button label={cancelLabel} variant="secondary" onPress={onCancel} />
+            <Button label={cancelLabel ?? t('common.cancel')} variant="secondary" onPress={onCancel} />
           </View>
         </Surface>
       </View>

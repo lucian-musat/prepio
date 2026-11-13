@@ -19,7 +19,7 @@ import HeaderPills from '../../streak/HeaderPills';
 import { useCredits } from '../../credits/CreditsProvider';
 import { useCreditGate } from '../../credits/useCreditGate';
 import { useMarkActive } from '../../streak/StreakProvider';
-import { OFFLINE } from '../../lib/api';
+import { offlineText } from '../../lib/api';
 import {
   answeredCount,
   BacApiError,
@@ -219,7 +219,7 @@ export default function BacPaperScreen() {
       }
       setMode('submit');
       if (gate.onError(e, () => void send())) return;
-      setSubmitError(e instanceof BacApiError ? e.message || GRADING_FAILED : e instanceof Error && e.message ? e.message : OFFLINE);
+      setSubmitError(e instanceof BacApiError ? e.message || GRADING_FAILED : e instanceof Error && e.message ? e.message : offlineText());
     } finally {
       busy.current = false;
       setSubmitting(false);

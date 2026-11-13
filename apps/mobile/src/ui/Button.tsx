@@ -8,6 +8,7 @@ import Spinner from './Spinner';
 import { type } from './typography';
 import { easing, timing, webTransition } from './motion';
 import Coin from '../credits/Coin';
+import { t } from '../texts/store';
 
 type Props = {
   /** The visible text; an icon-only button leaves it out and needs an accessibilityLabel. */
@@ -82,7 +83,7 @@ export default function Button({
   );
 
   const base = accessibilityLabel ?? label;
-  const name = cost !== undefined && base ? `${base}, costă ${creditsLabel(cost)}` : base;
+  const name = cost !== undefined && base ? t('common.button.withCost', { eticheta: base, credite: creditsLabel(cost) }) : base;
 
   const y = useSharedValue(0);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));

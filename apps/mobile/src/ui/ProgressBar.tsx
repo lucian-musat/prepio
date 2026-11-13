@@ -5,10 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { color, elevation, gradient, motion, radius, shadowColor, space } from '@prepio/shared';
 import { withAlpha } from './elevation';
 import { easing, timing } from './motion';
+import { t } from '../texts/store';
 
 type Props = { value: number; accessibilityLabel?: string };
-
-export const DEFAULT_PROGRESS_LABEL = 'Progres';
 
 const clamp = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0));
 
@@ -25,7 +24,7 @@ const { progressInset } = elevation;
 const INNER_SHADOW = `inset 0px ${progressInset.offsetY}px 0px ${withAlpha(shadowColor, progressInset.opacity)}`;
 
 /** Lesson progress: pill track with a gradient fill whose width eases to the new value. */
-export default function ProgressBar({ value, accessibilityLabel = DEFAULT_PROGRESS_LABEL }: Props) {
+export default function ProgressBar({ value, accessibilityLabel }: Props) {
   const v = clamp(value);
   const now = Math.round(v * 100);
   const width = useSharedValue(v);
@@ -41,7 +40,7 @@ export default function ProgressBar({ value, accessibilityLabel = DEFAULT_PROGRE
       style={styles.track}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? t('common.progress')}
       accessibilityValue={{ min: 0, max: 100, now }}
       // react-native-web 0.21 ignores accessibilityValue; the aria props reach the DOM.
       aria-valuemin={0}

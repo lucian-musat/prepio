@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MAX_ANSWER_CHARS } from '@prepio/shared';
+import { applyOverrides, resetTexts, t } from '../texts/store';
 import type { BacItem } from '@prepio/shared';
 import { answeredCount, BacApiError, BacDraftLocked, fetchBacList, fetchLatestGraded, fetchOpenAttempt, saveBacDraft, submitBac } from './bac';
 import { getAccessToken, signOut } from './supabase';
@@ -224,5 +226,37 @@ describe('answeredCount', () => {
     const r = answeredCount([short, letter, info], answers);
     expect(r.answered).toBe(2);
     expect(r.empty).toEqual([short]);
+  });
+});
+
+describe('submitBac: server error codes become catalog texts', () => {
+  const req = { subjectId: 's1', answers: {} };
+  const SERVER = 'server text';
+  afterEach(() => resetTexts());
+
+  it.each([
+    ['bad_request', 'errors.api.badRequest'],
+    ['suspended', 'errors.api.suspended'],
+    ['access_required', 'errors.api.bac.accessRequired'],
+    ['not_found', 'errors.api.bac.notFound'],
+    ['rate_limited', 'errors.api.bac.rateLimited'],
+    ['insufficient_credits', 'errors.api.bac.insufficientCredits'],
+    ['already_grading', 'errors.api.bac.alreadyGrading'],
+    ['grading_failed', 'errors.api.bac.gradingFailed'],
+    ['too_long', 'errors.api.tooLong'],
+    ['unauthorized', 'errors.api.unauthorized'],
+    ['some_new_code', 'errors.api.generic'],
+  ] as const)('%s → %s', async (code, key) => {
+    fetchMock.mockResolvedValue(respond(code === 'suspended' ? 403 : 400, { error: code, message: SERVER }));
+    const err = await submitBac(req).catch((e) => e);
+    expect(err).toBeInstanceOf(BacApiError);
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(t(key, { max: MAX_ANSWER_CHARS }));
+  });
+
+  it('an admin override replaces the text', async () => {
+    applyOverrides({ 'errors.api.bac.alreadyGrading': '[override]' });
+    fetchMock.mockResolvedValue(respond(409, { error: 'already_grading', message: SERVER }));
+    await expect(submitBac(req)).rejects.toMatchObject({ message: '[override]' });
   });
 });

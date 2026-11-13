@@ -24,6 +24,10 @@ A deliberate literal (a developer error message, a technical value) is allowed w
 - Plurals use two keys: `tPlural(n, 'streak.day.one', 'streak.day.many')` (`1 zi` / `n zile`).
 - Text with a bold part or a link inside a sentence is split into keys around the formatted part (`…prefix`, `…bold`, `…suffix`).
 
+## Server error messages
+
+The admin API routes (`/api/consolidation/evaluate`, `/api/bac/submit`, `/api/credits/purchase`, `/api/access/purchase`, `/api/account/delete`) still send a Romanian `message`, but the app never shows it: `apiErrorText(endpoint, code)` in `apps/mobile/src/lib/api.ts` maps the response's `code` to an `errors.api.*` text (defaults = the server's messages), and an unknown code shows `errors.api.generic`. A new error code on the server needs its `errors.api.*` entry and a line in that map (the map is typed against the shared error-code types, so a missing one fails the typecheck).
+
 ## Optional texts
 
 `optional: true` lets an admin save an empty override, which hides the text (the welcome paragraph on Home). The component must render nothing for an empty string.

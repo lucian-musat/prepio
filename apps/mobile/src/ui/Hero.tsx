@@ -110,9 +110,9 @@ export default function Hero({ lessonCount: count, greeting }: Props) {
         </AppText>
       ) : (
         <>
-          <AppText style={styles.label}>Bine ai venit!</AppText>
+          <AppText style={styles.label}>{t('home.hero.label')}</AppText>
           <AppText role="display" accessibilityRole="header" style={styles.title}>
-            Pregătește BAC-ul, pas cu pas.
+            {t('home.hero.title')}
           </AppText>
           {welcome ? (
             <AppText testID="hero-welcome" role="small" style={styles.body}>

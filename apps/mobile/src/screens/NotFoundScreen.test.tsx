@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import NotFoundScreen from './NotFoundScreen';
@@ -25,4 +26,14 @@ it('goes to the start', async () => {
   await renderScreen();
   await fireEvent.press(screen.getByText('Mergi la început'));
   expect(router.replace).toHaveBeenCalledWith('/');
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('shows the admin overrides', async () => {
+    applyOverrides({ 'errors.notFound.body': '[override]', 'common.goHome': '[home]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[home]' })).toBeTruthy();
+  });
 });

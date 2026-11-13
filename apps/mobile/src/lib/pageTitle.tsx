@@ -1,13 +1,12 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ExpoRouter from 'expo-router';
-
-const APP = 'Prepio';
+import { t } from '../texts/store';
 
 /** The browser tab title: „<page> · Prepio”, or „Prepio” alone. */
 export function pageTitle(name?: string): string {
   const n = name?.trim();
-  return n ? `${n} · ${APP}` : APP;
+  return n ? t('meta.pageTitle', { pagina: n }) : t('meta.appName');
 }
 
 /**

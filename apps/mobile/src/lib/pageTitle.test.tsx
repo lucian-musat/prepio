@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { applyOverrides, resetTexts } from '../texts/store';
 import { render } from '@testing-library/react-native';
 import { pageTitle, PageTitle } from './pageTitle';
 
@@ -41,5 +42,14 @@ describe('<PageTitle>', () => {
   it('renders nothing', async () => {
     const { toJSON } = await render(<PageTitle name="Profilul tău" />);
     expect(toJSON()).toBeNull();
+  });
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+  it('builds the title from the texts', () => {
+    applyOverrides({ 'meta.pageTitle': '{pagina} [override]', 'meta.appName': '[app]' });
+    expect(pageTitle('Profil')).toBe('Profil [override]');
+    expect(pageTitle()).toBe('[app]');
   });
 });
