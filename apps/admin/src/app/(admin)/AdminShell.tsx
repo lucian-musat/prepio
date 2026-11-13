@@ -14,6 +14,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     { href: '/ai-templates', label: 'Șabloane AI' },
     { href: '/students', label: 'Elevi' },
     { href: '/settings', label: 'Setări' },
+    { href: '/texts', label: 'Texte' },
   ];
   return (
     <div className="min-vh-100 d-flex flex-column">

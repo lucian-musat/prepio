@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button, Card, Form } from 'react-bootstrap';
 import { useRunner } from '@/components/editor/common';
@@ -26,6 +27,7 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
       }}
     >
       {alert}
+      <p className="text-muted small">Textele aplicației se editează în <Link href="/texts">Texte</Link>.</p>
       <Card className="mb-4">
         <Card.Body>
           <Card.Title as="h2" className="h5 mb-3">Evaluare AI</Card.Title>
