@@ -1,13 +1,14 @@
 import type { LessonSummary } from '@prepio/shared';
 import type { LessonState } from './lessonFlow';
 import type { LessonPosition, Progress } from './progress';
+import { t } from '../texts/store';
 
 /** Where the student left a lesson, for the Home continue card; null without a saved position. */
 export function resumeLabel(position: LessonPosition | null): string | null {
   if (!position) return null;
   return position.phase === 'cards'
-    ? `Ai rămas la cardul ${position.index + 1}`
-    : `Ai rămas la întrebarea ${position.index + 1} din verificare`;
+    ? t('home.continue.whereCard', { n: position.index + 1 })
+    : t('home.continue.whereQuestion', { n: position.index + 1 });
 }
 
 export type ContinueTarget = { lesson: LessonSummary; kind: 'first' | 'resume' | 'next'; where: string | null };
@@ -31,7 +32,7 @@ export function continueTarget(order: LessonSummary[], access: Map<string, Lesso
 
 /** Why a lesson on Home can't be opened (`number` is its 1-based place in the Home order); null when it can. */
 export function lockedReason(state: LessonState | undefined, number: number): string | null {
-  if (state === 'locked') return `Se deschide după lecția ${number - 1}`;
-  if (state === 'paywall') return 'Disponibilă cu acces complet';
+  if (state === 'locked') return t('home.locked.afterLesson', { n: number - 1 });
+  if (state === 'paywall') return t('home.locked.paywall');
   return null;
 }

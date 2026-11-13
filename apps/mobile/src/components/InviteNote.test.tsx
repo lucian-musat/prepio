@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import InviteNote, { INVITE_NOTE_KEY } from './InviteNote';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
@@ -57,6 +58,17 @@ it('a failed write still hides the note for this visit', async () => {
   { const el = await screen.findByRole('button', { name: 'Închide' }); await fireEvent.press(el); }
   await act(async () => {});
   expect(screen.queryByText(TEXT)).toBeNull();
+});
+
+it('takes its texts from the catalog', async () => {
+  applyOverrides({ 'home.inviteNote.text': '[override]', 'home.inviteNote.button': '[invite]' });
+  try {
+    await mount();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[invite]' })).toBeTruthy();
+  } finally {
+    resetTexts();
+  }
 });
 
 it('unreadable storage neither crashes nor shows the note', async () => {

@@ -87,7 +87,7 @@ function ProfileButton() {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Profil"
+      accessibilityLabel={t('home.profileLabel')}
       onPress={() => router.push('/profile')}
       style={styles.avatar}
     >
@@ -193,11 +193,11 @@ export default function HomeScreen() {
     return (
       <ScreenLayout logo trailing={<HomeTrailing />}>
         <Surface style={styles.error}>
-          <AppText role="section">Nu am putut încărca lecțiile</AppText>
+          <AppText role="section">{t('home.loadFailed')}</AppText>
           <AppText role="small" color="textMuted">
-            Verifică conexiunea la internet și încearcă din nou.
+            {t('errors.checkConnection')}
           </AppText>
-          <Button label="Reîncearcă" onPress={retry} />
+          <Button label={t('common.retryButton')} onPress={retry} />
         </Surface>
       </ScreenLayout>
     );
@@ -239,7 +239,7 @@ export default function HomeScreen() {
       </Enter>
       <View style={styles.modeChip}>
         <Chip
-          label={`${MODE_INFO[mode].icon} ${MODE_INFO[mode].name} · ${done} din ${total} terminate`}
+          label={t('home.modeChip', { icon: MODE_INFO[mode].icon, mod: MODE_INFO[mode].name, terminate: done, total })}
           fg={color.primaryStrong}
           bg={color.primarySubtle}
         />
@@ -248,13 +248,13 @@ export default function HomeScreen() {
         <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={() => openLesson(target.lesson.id)} />
       ) : null}
       <InviteNote enabled={referral !== null} finishedCount={done} />
-      <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('home.bac.title')} onPress={() => router.push('/bac')} style={styles.bacCard}>
         <Surface style={styles.bacRow}>
           <AppText role="section">📝</AppText>
           <View style={styles.bacText}>
-            <AppText role="bodyStrong">Subiecte BAC</AppText>
+            <AppText role="bodyStrong">{t('home.bac.title')}</AppText>
             <AppText role="small" color="textMuted">
-              Exersează lucrarea completă
+              {t('home.bac.subtitle')}
             </AppText>
           </View>
           <View testID="bac-card-chevron" accessible={false}>
@@ -290,7 +290,7 @@ export default function HomeScreen() {
       {referral ? (
         <Pressable accessibilityRole="link" onPress={() => router.push('/invita')} style={styles.invite} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}>
           <AppText role="small" color="textMuted">
-            {`🎁 Invită colegi${referralBadge ? `, ${referralBadge}` : ''} ›`}
+            {referralBadge ? t('home.invite.linkWithProgress', { progres: referralBadge }) : t('home.invite.link')}
           </AppText>
         </Pressable>
       ) : null}
