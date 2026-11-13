@@ -7,7 +7,7 @@ import { AppText, Enter, feedbackConfig } from '../ui';
 export default function StreakToast({ text }: { text: string }) {
   const insets = useSafeAreaInsets();
   return (
-    <View pointerEvents="none" style={[styles.wrap, { bottom: insets.bottom + space[4] }]}>
+    <View style={[styles.wrap, { bottom: insets.bottom + space[4] }]}>
       <Enter config={feedbackConfig} style={styles.toast}>
         <View accessibilityLiveRegion="polite" accessibilityRole="alert" testID="streak-toast">
           <AppText role="bodyStrong" style={styles.text}>{text}</AppText>
@@ -18,7 +18,8 @@ export default function StreakToast({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', paddingHorizontal: space[4] },
+  // pointerEvents lives in style: the prop form is deprecated on react-native-web.
+  wrap: { pointerEvents: 'none', position: 'absolute', left: 0, right: 0, alignItems: 'center', paddingHorizontal: space[4] },
   toast: { backgroundColor: color.text, borderRadius: radius.lg, paddingVertical: space[3], paddingHorizontal: space[4], maxWidth: 480 },
   text: { color: color.bg, textAlign: 'center' },
 });

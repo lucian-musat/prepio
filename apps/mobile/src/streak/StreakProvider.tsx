@@ -45,6 +45,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   // Another student (or sign-out) starts clean.
   useEffect(() => {
     confirmed.current = null;
+    marking.current = false;
     version.current++;
     setSummary(null);
     setToast(null);
@@ -77,16 +78,31 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     // One mark per Bucharest day: skip only a done summary obtained today.
     if (before && before.day === bucharestDay(new Date()) && before.summary.todayDone) return;
     marking.current = true;
+    const stale = () => !mounted.current || userIdRef.current !== userId;
     try {
-      const fresh = await markActiveToday();
-      if (!mounted.current || userIdRef.current !== userId || !fresh) return;
-      apply(fresh);
-      if (fresh.todayDone) {
-        setToast({ text: streakToast(fresh.current), id: ++toastId.current });
-        listeners.current.forEach((cb) => cb());
+      // Read first: another device may already have recorded today, and then this is not the first of the day.
+      const fresh = await fetchStreak();
+      if (stale()) return;
+      if (fresh) {
+        apply(fresh);
+        if (fresh.todayDone) return;
+      }
+      const marked = await markActiveToday();
+      if (stale() || !marked) return;
+      apply(marked);
+      // Without a successful read we cannot know it was the first exercise of the day: no toast.
+      if (fresh && marked.todayDone) {
+        setToast({ text: streakToast(marked.current), id: ++toastId.current });
+        listeners.current.forEach((cb) => {
+          try {
+            cb();
+          } catch (e) {
+            console.warn('[streak] onFirstOfDay listener failed:', e);
+          }
+        });
       }
     } finally {
-      marking.current = false;
+      if (!stale()) marking.current = false;
     }
   }, [userId, apply]);
 

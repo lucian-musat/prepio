@@ -5,7 +5,8 @@ import type { StreakSummary } from '@prepio/shared';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import { StreakProvider, useMarkActive, useStreak } from './StreakProvider';
 
-jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: 'u1' } }) }));
+let mockUser = 'u1';
+jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: mockUser } }) }));
 jest.mock('../lib/streak', () => ({ fetchStreak: jest.fn(), markActiveToday: jest.fn() }));
 
 const sum = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: false, week: [], ...over });
@@ -44,6 +45,7 @@ const tapMark = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   onFirst = jest.fn();
+  mockUser = 'u1';
   (fetchStreak as jest.Mock).mockResolvedValue(sum());
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_t, cb) => {
     onChange = cb as (s: string) => void;
@@ -118,27 +120,80 @@ it('keeps a failed mark retryable: no toast, summary unchanged', async () => {
 });
 
 it('marks again on a new Bucharest day even if the stored summary was done', async () => {
-  const now = jest.spyOn(Date, 'now');
-  const RealDate = Date;
-  let clock = new RealDate('2026-11-12T10:00:00Z');
-  // bucharestDay(new Date()) reads the system time: pin `new Date()` to a controllable clock.
-  const spy = jest.spyOn(global, 'Date').mockImplementation(((...a: unknown[]) => (a.length ? new RealDate(...(a as [string])) : new RealDate(clock))) as never);
-  Object.assign(global.Date, { now: () => clock.getTime() });
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
   try {
-    (fetchStreak as jest.Mock).mockResolvedValue(sum({ todayDone: true }));
+    jest.setSystemTime(new Date('2026-11-12T10:00:00Z'));
     (markActiveToday as jest.Mock).mockResolvedValue(sum({ current: 6, todayDone: true }));
+    (fetchStreak as jest.Mock).mockResolvedValue(sum({ todayDone: true }));
     await renderProvider();
-    await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('5'));
+    await act(async () => {});
     await tapMark();
     expect(markActiveToday).not.toHaveBeenCalled();
-    clock = new RealDate('2026-11-13T10:00:00Z');
+    jest.setSystemTime(new Date('2026-11-13T10:00:00Z'));
+    (fetchStreak as jest.Mock).mockResolvedValue(sum({ todayDone: false }));
     await tapMark();
     expect(markActiveToday).toHaveBeenCalledTimes(1);
     expect(screen.getByText(TOAST)).toBeTruthy();
   } finally {
-    spy.mockRestore();
-    now.mockRestore();
+    jest.useRealTimers();
   }
+});
+
+it('another device already recorded today: no mark call, no toast, no listener', async () => {
+  (fetchStreak as jest.Mock).mockResolvedValue(sum({ todayDone: true }));
+  await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('5'));
+  (fetchStreak as jest.Mock).mockClear();
+  // The confirmed summary is already done today, so no read and no mark is needed at all.
+  await tapMark();
+  expect(markActiveToday).not.toHaveBeenCalled();
+  expect(screen.queryByText(TOAST)).toBeNull();
+  expect(onFirst).not.toHaveBeenCalled();
+});
+
+it('a stale not-done summary but the fresh read says done: no mark call, no toast', async () => {
+  (fetchStreak as jest.Mock).mockResolvedValueOnce(sum()).mockResolvedValue(sum({ current: 6, todayDone: true }));
+  await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('5'));
+  await tapMark();
+  expect(markActiveToday).not.toHaveBeenCalled();
+  expect(screen.queryByText(TOAST)).toBeNull();
+  expect(onFirst).not.toHaveBeenCalled();
+  expect(screen.getByTestId('current')).toHaveTextContent('6');
+});
+
+it('a failed read still marks, but shows no toast', async () => {
+  (fetchStreak as jest.Mock).mockResolvedValue(null);
+  (markActiveToday as jest.Mock).mockResolvedValue(sum({ current: 6, todayDone: true }));
+  await renderProvider();
+  await tapMark();
+  expect(markActiveToday).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText(TOAST)).toBeNull();
+  expect(onFirst).not.toHaveBeenCalled();
+  expect(screen.getByTestId('current')).toHaveTextContent('6');
+});
+
+it('a user switch clears the summary and the toast and drops a stale result', async () => {
+  let resolve: (s: StreakSummary) => void = () => {};
+  (markActiveToday as jest.Mock).mockReturnValue(new Promise((r) => (resolve = r)));
+  const ui = () => (
+    <SafeAreaProvider initialMetrics={metrics}>
+      <StreakProvider>
+        <Probe />
+      </StreakProvider>
+    </SafeAreaProvider>
+  );
+  const view = await render(ui());
+  await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('5'));
+  await tapMark();
+  mockUser = 'u2';
+  (fetchStreak as jest.Mock).mockResolvedValue(sum({ current: 2 }));
+  await act(async () => view.rerender(ui()));
+  await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('2'));
+  await act(async () => resolve(sum({ current: 6, todayDone: true })));
+  expect(screen.getByTestId('current')).toHaveTextContent('2');
+  expect(screen.queryByText(TOAST)).toBeNull();
+  expect(onFirst).not.toHaveBeenCalled();
 });
 
 it('useMarkActive is a no-op outside the provider', async () => {

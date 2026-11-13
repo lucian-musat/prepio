@@ -172,6 +172,7 @@ it('a refunded failure shows the server message and leaves the balance as it was
   expect(screen.getByText('Evaluarea nu a reușit. Creditele au fost returnate.')).toBeTruthy();
   expect(chip(7)).toBeTruthy();
   expect(screen.queryByText(/Îți mai trebuie/)).toBeNull();
+  expect(markActive).not.toHaveBeenCalled();
 });
 
 it('a cause-effect exercise shows the step banner with the signal words (consolidation only)', async () => {
@@ -193,6 +194,10 @@ describe('after a check', () => {
   it('„Încearcă din nou” on an AI exercise shows that it costs again', async () => {
     await checked('almost');
     expect(screen.getByRole('button', { name: 'Încearcă din nou, costă 2 credite' })).toBeTruthy();
+  });
+
+  it('a finished check counts as an active day', async () => {
+    await checked('almost');
     expect(markActive).toHaveBeenCalledTimes(1);
   });
 
