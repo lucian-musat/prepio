@@ -2,12 +2,14 @@ import { Stack } from 'expo-router';
 import { color } from '@prepio/shared';
 import { AccessProvider } from '../../src/access/AccessProvider';
 import { CreditsProvider } from '../../src/credits/CreditsProvider';
+import { StreakProvider } from '../../src/streak/StreakProvider';
 
 /** The signed-in student's screens (only mounted when the root guard says `ready`). */
 export default function AppLayout() {
   return (
     <CreditsProvider>
       <AccessProvider>
+        <StreakProvider>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -25,6 +27,7 @@ export default function AppLayout() {
           <Stack.Screen name="credits" options={{ title: 'Creditele mele' }} />
           <Stack.Screen name="invita" options={{ title: 'Invită colegi' }} />
         </Stack>
+        </StreakProvider>
       </AccessProvider>
     </CreditsProvider>
   );

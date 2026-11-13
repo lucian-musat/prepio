@@ -22,6 +22,8 @@ jest.mock('../access/AccessProvider', () => ({
   useAccess: () => ({ canOpen: (id: string) => mockCanOpen(id), status: { plan: 'trial' }, isAdmin: false }),
 }));
 jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 7, change: null }) }));
+jest.mock('../streak/StreakProvider');
+const { markActive } = jest.requireMock<typeof import('../streak/__mocks__/StreakProvider')>('../streak/StreakProvider');
 let mockMode: 'guided' | 'free' = 'free';
 jest.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({ profile: { id: 'u1', displayName: 'ana', learningMode: mockMode } }),
@@ -287,6 +289,7 @@ describe('free mode', () => {
     await answer('Da', 'Continuă');
     expect(await screen.findByText('1 din 1 întrebări corecte')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
     await press('Înapoi la lecții');
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
@@ -304,6 +307,7 @@ describe('free mode', () => {
     expect(await screen.findByText('Ai terminat lecția!')).toBeTruthy();
     expect(screen.getByText('0 din 1 întrebări corecte')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
   });
 
   it('progress bar is visible on every phase', async () => {
@@ -386,6 +390,7 @@ describe('stalled progress writes', () => {
     });
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith('Could not save the lesson position', expect.anything());
     warn.mockRestore();
   });
@@ -448,6 +453,7 @@ describe('guided mode', () => {
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Ai deblocat: Lecția doi')).toBeTruthy();
     await press('Mergi la lecția următoare');
     expect(mockReplace).toHaveBeenCalledWith('/lesson/l2');
@@ -544,6 +550,7 @@ describe('guided mode', () => {
     await answer('Da', 'Continuă');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
   });
 
   it('resumes on the saved card', async () => {
@@ -592,6 +599,7 @@ describe('guided mode', () => {
     expect(mockedFinish).not.toHaveBeenCalled();
     await act(async () => settle());
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
   });
 
@@ -718,6 +726,7 @@ describe('guided mode', () => {
     await openLesson(lesson({ questions: [] }), 'Știu deja, sari la verificare');
     expect(await screen.findByText('Lecție terminată! 🎉')).toBeTruthy();
     expect(mockedFinish).toHaveBeenCalledWith('l1');
+    expect(markActive).not.toHaveBeenCalled();
   });
 });
 

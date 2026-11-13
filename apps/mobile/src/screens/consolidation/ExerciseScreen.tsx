@@ -23,6 +23,7 @@ import {
 import CostTag from '../../credits/CostTag';
 import CreditChip from '../../credits/CreditChip';
 import { useCreditGate } from '../../credits/useCreditGate';
+import { useMarkActive } from '../../streak/StreakProvider';
 import ExerciseInput from '../../components/consolidation/ExerciseInput';
 import { initialMarker, markerReducer, type MarkerConfig } from '../../components/marker/markerReducer';
 import SourcePanel, { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePanel';
@@ -101,6 +102,7 @@ export default function ExerciseScreen({
   map,
 }: Props) {
   const { width } = useWindowDimensions();
+  const markActive = useMarkActive();
   const sourceList = useMemo(() => [...sources.values()], [sources]);
   const panelSources: PanelSource[] = useMemo(
     () => exercise.sources.flatMap((r) => (sources.has(r.sourceId) ? [{ source: sources.get(r.sourceId)!, label: r.label }] : [])),
@@ -155,6 +157,7 @@ export default function ExerciseScreen({
   const finish = (fb: ExerciseFeedback, a: ExerciseAnswer) => {
     setFeedback(fb);
     setStatus('idle');
+    markActive();
     onChecked({ exerciseId: exercise.id, answer: a, verdict: fb.verdict, feedback: fb });
   };
 

@@ -9,6 +9,8 @@ jest.mock('../../lib/api', () => ({ ...jest.requireActual('../../lib/api'), eval
 jest.mock('../../lib/credits', () => ({ ...jest.requireActual('../../lib/credits'), fetchCreditPackages: jest.fn(), purchaseCredits: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../credits/CreditsProvider');
+jest.mock('../../streak/StreakProvider');
+const { markActive } = jest.requireMock<typeof import('../../streak/__mocks__/StreakProvider')>('../../streak/StreakProvider');
 jest.mock('../../access/AccessProvider');
 jest.mock('../../lib/access', () => ({ ...jest.requireActual('../../lib/access'), purchaseAccess: jest.fn() }));
 const { mockResetCredits } = jest.requireMock<typeof import('../../credits/__mocks__/CreditsProvider')>('../../credits/CreditsProvider');
@@ -191,6 +193,7 @@ describe('after a check', () => {
   it('„Încearcă din nou” on an AI exercise shows that it costs again', async () => {
     await checked('almost');
     expect(screen.getByRole('button', { name: 'Încearcă din nou, costă 2 credite' })).toBeTruthy();
+    expect(markActive).toHaveBeenCalledTimes(1);
   });
 
   it('after „Corect” the retry is a quiet link, not a full button', async () => {

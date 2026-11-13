@@ -6,6 +6,7 @@ import { mergeItems, essayProgress } from '../../screens/consolidation/checking'
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
 import { AppText, TextArea } from '../../ui';
 import Coin from '../../credits/Coin';
+import { useMarkActive } from '../../streak/StreakProvider';
 import type { CreditGate } from '../../credits/useCreditGate';
 import ConnectorChips from './ConnectorChips';
 import { MAX_CHARS, type InputProps } from './inputKit';
@@ -35,6 +36,7 @@ type Props = InputProps<'essay'> & {
  * requirement alone. Below, how many requirements are right; there is no whole-essay check.
  */
 export default function EssayInput({ exercise, value, onChange, feedback, disabled, onFeedback, templateIds, onOpenTemplate, onBusyChange, gate }: Props) {
+  const markActive = useMarkActive();
   const reqs = exercise.requirements;
   const [open, setOpen] = useState<Set<string>>(() => new Set(reqs[0] ? [reqs[0].id] : []));
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -79,6 +81,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
     try {
       const res = await evaluateConsolidation({ exerciseId: exercise.id, target: { requirementId: r.id }, answer: value });
       if (res.credits) gate.settle(res.credits.balance);
+      markActive();
       const merged = mergeItems(latest.current, res.items.filter((i) => i.key === r.id));
       latest.current = merged;
       setCheckedText((c) => ({ ...c, [r.id]: sent }));
