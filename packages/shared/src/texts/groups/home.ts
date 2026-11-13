@@ -59,4 +59,105 @@ export const homeTexts = {
     default: 'face parte din accesul complet',
     description: 'Motivul citit de cititorul de ecran pentru o lecție din accesul complet, când nu e afișat altul',
   },
+  'home.profileLabel': {
+    group: 'home',
+    default: 'Profil',
+    description: 'Numele citit de cititorul de ecran pentru inițiala din colțul de sus (deschide profilul)',
+  },
+  'home.loadFailed': {
+    group: 'home',
+    default: 'Nu am putut încărca lecțiile',
+    description: 'Titlul erorii când lista de lecții nu se încarcă',
+  },
+  'home.modeChip': {
+    group: 'home',
+    default: '{icon} {mod} · {terminate} din {total} terminate',
+    vars: ['icon', 'mod', 'terminate', 'total'],
+    description: 'Eticheta de sub titlu: modul de învățare și câte lecții sunt terminate',
+  },
+  'home.bac.title': {
+    group: 'home',
+    default: 'Subiecte BAC',
+    description: 'Titlul cardului spre subiectele de BAC (și numele lui pentru cititorul de ecran)',
+  },
+  'home.bac.subtitle': {
+    group: 'home',
+    default: 'Exersează lucrarea completă',
+    description: 'Sub „Subiecte BAC”',
+  },
+  'home.invite.link': {
+    group: 'home',
+    default: '🎁 Invită colegi ›',
+    description: 'Linkul spre invitații de la finalul listei de lecții',
+  },
+  'home.invite.linkWithProgress': {
+    group: 'home',
+    default: '🎁 Invită colegi, {progres} ›',
+    vars: ['progres'],
+    description: 'Linkul spre invitații, cu progresul spre recompensă (de exemplu „2/5”)',
+  },
+  'home.inviteNote.text': {
+    group: 'home',
+    default: 'Ai terminat prima lecție! Invită un coleg și primești credite.',
+    description: 'Nota afișată o singură dată pe Acasă, după prima lecție terminată',
+  },
+  'home.inviteNote.button': {
+    group: 'home',
+    default: 'Invită',
+    description: 'Butonul notei de după prima lecție terminată',
+  },
+  'home.continue.first': {
+    group: 'home',
+    default: 'Începe de aici',
+    description: 'Rândul de sus al cardului principal, pentru un elev fără progres',
+  },
+  'home.continue.resume': {
+    group: 'home',
+    default: 'Continuă de unde ai rămas',
+    description: 'Rândul de sus al cardului principal, când elevul a rămas în mijlocul unei lecții',
+  },
+  'home.continue.next': {
+    group: 'home',
+    default: 'Următoarea lecție',
+    description: 'Rândul de sus al cardului principal, după o lecție terminată',
+  },
+  'home.continue.title': {
+    group: 'home',
+    default: 'Lecția {n} · {titlu}',
+    vars: ['n', 'titlu'],
+    description: 'Titlul cardului principal: numărul și titlul lecției',
+  },
+  'home.continue.whereCard': {
+    group: 'home',
+    default: 'Ai rămas la cardul {n}',
+    vars: ['n'],
+    description: 'Pe cardul principal: unde a rămas elevul în carduri',
+  },
+  'home.continue.whereQuestion': {
+    group: 'home',
+    default: 'Ai rămas la întrebarea {n} din verificare',
+    vars: ['n'],
+    description: 'Pe cardul principal: unde a rămas elevul în test',
+  },
+  'home.continue.resumeButton': {
+    group: 'home',
+    default: 'Continuă lecția',
+    description: 'Butonul cardului principal, când elevul a rămas în mijlocul lecției',
+  },
+  'home.continue.startButton': {
+    group: 'home',
+    default: 'Începe lecția',
+    description: 'Butonul cardului principal, pentru o lecție neîncepută',
+  },
+  'home.locked.afterLesson': {
+    group: 'home',
+    default: 'Se deschide după lecția {n}',
+    vars: ['n'],
+    description: 'Traseu ghidat: sub o lecție blocată; {n} este lecția de dinaintea ei',
+  },
+  'home.locked.paywall': {
+    group: 'home',
+    default: 'Disponibilă cu acces complet',
+    description: 'Sub o lecție care nu face parte din planul elevului',
+  },
 } as const satisfies Record<string, TextEntry>;
