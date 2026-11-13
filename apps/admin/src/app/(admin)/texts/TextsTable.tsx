@@ -17,7 +17,7 @@ export function normalize(s: string): string {
     .replace(/[șş]/g, 's')
     .replace(/[țţ]/g, 't')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+    .replace(/[̀-ͯ]/g, '')
 }
 
 function Current({ row }: { row: UiTextRow }) {

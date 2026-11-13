@@ -37,6 +37,7 @@ it('returns an empty string for an optional key overridden with ""', () => {
 
 it('returns an empty string for an optional key overridden with whitespace only', () => {
   applyOverrides({ 'home.hero.welcome': '   ' });
+  expect(t('home.hero.welcome')).toBe('');
 });
 
 it('falls back to the default for a non-optional key overridden with ""', () => {
