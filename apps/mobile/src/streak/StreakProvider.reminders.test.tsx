@@ -6,10 +6,11 @@ import { router } from 'expo-router';
 import type { StreakSummary } from '@prepio/shared';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import { loadReminderSettings, saveReminderSettings } from './reminderSettings';
-import { onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
 import { StreakProvider, useMarkActive, useReminders } from './StreakProvider';
 
-jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: 'u1' } }) }));
+let mockUser: string | null = 'u1';
+jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: mockUser ? { id: mockUser } : null }) }));
 jest.mock('../lib/streak', () => ({ fetchStreak: jest.fn(), markActiveToday: jest.fn() }));
 jest.mock('./reminders', () => ({
   remindersSupported: jest.fn(),
@@ -17,6 +18,7 @@ jest.mock('./reminders', () => ({
   requestPermission: jest.fn(),
   syncReminders: jest.fn(),
   onReminderTap: jest.fn(),
+  cancelReminders: jest.fn(),
 }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }));
 
@@ -60,6 +62,8 @@ beforeEach(async () => {
   m(permission).mockResolvedValue('granted');
   m(requestPermission).mockResolvedValue(true);
   m(syncReminders).mockResolvedValue(undefined);
+  m(cancelReminders).mockResolvedValue(undefined);
+  mockUser = 'u1';
   m(onReminderTap).mockImplementation((cb: () => void) => {
     tap = cb;
     return () => {};
@@ -173,4 +177,65 @@ it('opens Home when a reminder is tapped', async () => {
   await renderProvider();
   await act(async () => tap());
   expect(router.replace).toHaveBeenCalledWith('/');
+});
+
+it('a failing router.replace on a tap does not throw', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  m(router.replace).mockImplementationOnce(() => {
+    throw new Error('not ready');
+  });
+  await renderProvider();
+  expect(() => tap()).not.toThrow();
+});
+
+it('cancels all reminders when the provider unmounts', async () => {
+  const view = await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('granted'));
+  m(cancelReminders).mockClear();
+  await act(async () => view.unmount());
+  await waitFor(() => expect(cancelReminders).toHaveBeenCalledTimes(1));
+});
+
+it('cancels all reminders when the user signs out', async () => {
+  const ui = () => (
+    <SafeAreaProvider initialMetrics={metrics}>
+      <StreakProvider>
+        <Probe />
+      </StreakProvider>
+    </SafeAreaProvider>
+  );
+  const view = await render(ui());
+  await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('granted'));
+  expect(cancelReminders).not.toHaveBeenCalled();
+  mockUser = null;
+  await act(async () => view.rerender(ui()));
+  await waitFor(() => expect(cancelReminders).toHaveBeenCalledTimes(1));
+});
+
+it('a user switch cancels before the new user schedules', async () => {
+  const ui = () => (
+    <SafeAreaProvider initialMetrics={metrics}>
+      <StreakProvider>
+        <Probe />
+      </StreakProvider>
+    </SafeAreaProvider>
+  );
+  const view = await render(ui());
+  await waitFor(() => expect(lastSync()[0]).toEqual(sum()));
+  m(syncReminders).mockClear();
+  mockUser = 'u2';
+  m(fetchStreak).mockResolvedValue(sum({ current: 2 }));
+  await act(async () => view.rerender(ui()));
+  await waitFor(() => expect(cancelReminders).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(lastSync()[0]).toEqual(sum({ current: 2 })));
+  expect(m(cancelReminders).mock.invocationCallOrder[0]).toBeLessThan(m(syncReminders).mock.invocationCallOrder.at(-1)!);
+});
+
+it('a permission() error (reported as undetermined) does not trigger a second automatic prompt', async () => {
+  await saveReminderSettings({ enabled: true, time: { hour: 19, minute: 0 }, asked: true });
+  m(permission).mockResolvedValue('undetermined');
+  await renderProvider();
+  await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('undetermined'));
+  await tapMark();
+  expect(requestPermission).not.toHaveBeenCalled();
 });

@@ -132,7 +132,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   const markRef = useRef(mark);
   markRef.current = mark;
   const markActive = useCallback(() => void markRef.current(), []);
-  const reminders = useReminderController(summary, onFirstOfDay);
+  const reminders = useReminderController(userId, summary, onFirstOfDay);
 
   const value = useMemo(() => ({ summary, refresh, onFirstOfDay }), [summary, refresh, onFirstOfDay]);
   return (

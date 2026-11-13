@@ -122,3 +122,11 @@ describe('web no-op', () => {
     await r.syncReminders(sum(), on, now);
   });
 });
+
+describe('permission errors', () => {
+  it('reports undetermined when the native check throws', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mock.getPermissionsAsync.mockRejectedValueOnce(new Error('boom'));
+    expect(await permission()).toBe('undetermined');
+  });
+});

@@ -15,6 +15,7 @@ jest.mock('./reminders', () => ({
   requestPermission: async () => false,
   syncReminders: async () => {},
   onReminderTap: () => () => {},
+  cancelReminders: async () => {},
 }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }));
 

@@ -22,3 +22,6 @@ export async function syncReminders(_s: StreakSummary | null, _settings: Reminde
 export function onReminderTap(_cb: () => void): () => void {
   return () => {};
 }
+
+/** Cancels every scheduled reminder (sign-out, user switch). */
+export async function cancelReminders(): Promise<void> {}

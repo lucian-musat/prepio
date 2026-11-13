@@ -98,3 +98,13 @@ export function onReminderTap(cb: () => void): () => void {
   }
   return () => sub?.remove();
 }
+
+/** Cancels every scheduled reminder (sign-out, user switch). Never throws. */
+export async function cancelReminders(): Promise<void> {
+  if (!N) return;
+  try {
+    await N.cancelAllScheduledNotificationsAsync();
+  } catch (e) {
+    console.warn('[reminders] could not cancel:', e);
+  }
+}

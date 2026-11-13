@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { router } from 'expo-router';
 import { DEFAULT_REMINDER, type ReminderTime, type StreakSummary } from '@prepio/shared';
 import { loadReminderSettings, saveReminderSettings, type PermissionStatus, type ReminderSettings } from './reminderSettings';
-import { onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { cancelReminders, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
 
 export type ReminderStatus = PermissionStatus | 'unsupported';
 
@@ -24,6 +24,7 @@ const INITIAL: ReminderSettings = { enabled: true, time: { ...DEFAULT_REMINDER }
  * `onFirstOfDay` registers a listener fired when the first exercise of the day is recorded.
  */
 export function useReminderController(
+  userId: string | null,
   summary: StreakSummary | null,
   onFirstOfDay: (cb: () => void) => () => void,
 ): RemindersValue {
@@ -110,7 +111,35 @@ export function useReminderController(
     });
   }, [supported, onFirstOfDay, update, refreshStatus]);
 
-  useEffect(() => onReminderTap(() => router.replace('/')), []);
+  // Scheduled reminders belong to the signed-in student's streak: cancel them on sign-out, on a user switch and when
+  // the provider unmounts (sign-out, suspension, terms gate; the next mount reschedules). The settings themselves
+  // stay device-wide: one student per phone.
+  const prevUser = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevUser.current;
+    prevUser.current = userId;
+    if (!supported) return;
+    if (!userId || (prev && prev !== userId)) chain.current = chain.current.then(cancelReminders).catch(() => {});
+  }, [supported, userId]);
+  useEffect(
+    () => () => {
+      if (supported) chain.current = chain.current.then(cancelReminders).catch(() => {});
+    },
+    [supported],
+  );
+
+  useEffect(
+    () =>
+      onReminderTap(() => {
+        // The provider sits in app/(app)/_layout.tsx inside the root Stack, so the navigator is mounted by now.
+        try {
+          router.replace('/');
+        } catch (e) {
+          console.warn('[reminders] could not open Home from a notification:', e);
+        }
+      }),
+    [],
+  );
 
   const setEnabled = useCallback(
     async (on: boolean) => {
