@@ -84,6 +84,33 @@ export const errorsTexts = {
     description: 'Ștergerea contului nu e configurată în această versiune a aplicației',
   },
 
+  // Sign-in (Supabase auth), by what went wrong; a network failure uses errors.offline
+  'errors.auth.invalidEmail': {
+    group: 'errors',
+    default: 'Adresa de email nu pare corectă.',
+    description: 'Intrare cu email: adresa e respinsă (coduri email_address_invalid, validation_failed) sau nu arată a email',
+  },
+  'errors.auth.wrongCode': {
+    group: 'errors',
+    default: 'Codul nu este corect sau a expirat.',
+    description: 'Intrare cu email: codul din email e greșit sau expirat (cod otp_expired și orice altă respingere a codului)',
+  },
+  'errors.auth.rateLimit': {
+    group: 'errors',
+    default: 'Prea multe încercări. Așteaptă puțin și încearcă din nou.',
+    description: 'Intrare cu email: prea multe încercări (status 429, coduri over_email_send_rate_limit, over_request_rate_limit)',
+  },
+  'errors.auth.googleFailed': {
+    group: 'errors',
+    default: 'Intrarea cu Google nu a reușit. Încearcă din nou.',
+    description: 'Intrare cu Google: a eșuat din orice motiv în afară de renunțarea elevului',
+  },
+  'errors.auth.signInFailed': {
+    group: 'errors',
+    default: 'Nu ai putut intra în cont. Încearcă din nou.',
+    description: 'Intrare în cont: eroare neprevăzută pe ecranul Bun venit',
+  },
+
   // Server replies, by error code (every endpoint)
   'errors.api.generic': {
     group: 'errors',

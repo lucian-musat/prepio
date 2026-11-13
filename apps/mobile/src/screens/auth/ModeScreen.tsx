@@ -7,10 +7,8 @@ import LearningModePicker from '../../components/LearningModePicker';
 import { DEFAULT_MODE, type LearningMode } from '../../lib/learningMode';
 import { updateLearningMode } from '../../lib/profile';
 import { ownMessage } from '../../lib/errorMessage';
+import { t } from '../../texts/store';
 
-const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
-const SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
-const NOT_CONFIRMED = 'Nu am putut confirma alegerea. Încearcă din nou.';
 
 /** "Cum vrei să înveți?" shown once, after the name. Saving flips the status to ready (AuthProvider). */
 export default function ModeScreen() {
@@ -23,7 +21,7 @@ export default function ModeScreen() {
     if (saving) return;
     const userId = session?.user.id;
     if (!userId) {
-      setError(OFFLINE);
+      setError(t('errors.offline'));
       return;
     }
     setError(null);
@@ -32,21 +30,21 @@ export default function ModeScreen() {
       await updateLearningMode(userId, mode);
       // The refresh never throws; a profile without the saved mode means the status did not move on.
       const fresh = await refreshProfile();
-      if (fresh?.learningMode !== mode) setError(NOT_CONFIRMED);
+      if (fresh?.learningMode !== mode) setError(t('onboarding.mode.notConfirmed'));
     } catch (e) {
-      setError(ownMessage(e, SAVE_FAILED));
+      setError(ownMessage(e, t('onboarding.mode.saveFailed')));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ScreenLayout logo actions={<Button flex label="Continuă" onPress={submit} loading={saving} />}>
+    <ScreenLayout logo actions={<Button flex label={t('common.continue')} onPress={submit} loading={saving} />}>
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header">
-          Cum vrei să înveți?
+          {t('onboarding.mode.title')}
         </AppText>
-        <AppText color="textMuted">Poți schimba oricând din Profil.</AppText>
+        <AppText color="textMuted">{t('onboarding.mode.body')}</AppText>
         <LearningModePicker
           value={mode}
           onChange={(m) => {
@@ -61,7 +59,7 @@ export default function ModeScreen() {
           </AppText>
         ) : null}
         <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={signOut} style={styles.signOut}>
-          Ieși din cont
+          {t('auth.signOut')}
         </AppText>
       </View>
     </ScreenLayout>

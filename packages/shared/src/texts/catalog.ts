@@ -1,15 +1,19 @@
 import type { TextEntry } from './types';
+import { authTexts } from './groups/auth';
 import { commonTexts } from './groups/common';
 import { errorsTexts } from './groups/errors';
 import { homeTexts } from './groups/home';
 import { metaTexts } from './groups/meta';
+import { onboardingTexts } from './groups/onboarding';
 import { suspendedTexts } from './groups/suspended';
 
 export const TEXTS = {
+  ...authTexts,
   ...commonTexts,
   ...errorsTexts,
   ...homeTexts,
   ...metaTexts,
+  ...onboardingTexts,
   ...suspendedTexts,
 }as const satisfies Record<string, TextEntry>;
 

@@ -3,13 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextButton } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
-import AgeTermsCheckbox, { CONSENT_HINT } from '../components/AgeTermsCheckbox';
+import AgeTermsCheckbox, { consentHint } from '../components/AgeTermsCheckbox';
 import { CONTACT_EMAIL, TERMS_VERSION } from '../lib/legal';
 import { acceptTerms, clearConsent, isTermsVersionMismatch } from '../lib/termsConsent';
+import { t } from '../texts/store';
 
-const SAVE_FAILED = 'Nu am putut salva. Încearcă din nou.';
-/** The server's terms are newer (or older) than this build's: retrying can't help, updating can. */
-const OUTDATED = `Actualizează aplicația (sau reîncarcă pagina) ca să continui. Dacă problema rămâne, scrie-ne la ${CONTACT_EMAIL}.`;
 
 /**
  * Terms gate (root guard `needsTerms`), before the name and mode: a signed-in student who never accepted the
@@ -32,10 +30,10 @@ export default function TermsGateScreen() {
       await clearConsent();
       // The refresh never throws; a profile still without the current terms means the status did not move on.
       const fresh = await refreshProfile();
-      if (fresh?.termsVersion !== TERMS_VERSION) setError(SAVE_FAILED);
+      if (fresh?.termsVersion !== TERMS_VERSION) setError(t('onboarding.terms.saveFailed'));
     } catch (e) {
       console.warn('[terms] accept failed:', e);
-      setError(isTermsVersionMismatch(e) ? OUTDATED : SAVE_FAILED);
+      setError(isTermsVersionMismatch(e) ? t('onboarding.terms.outdated', { email: CONTACT_EMAIL }) : t('onboarding.terms.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -47,21 +45,20 @@ export default function TermsGateScreen() {
       actions={
         <Button
           flex
-          label="Continuă"
+          label={t('common.continue')}
           onPress={submit}
           disabled={!checked || saving}
           loading={saving}
-          accessibilityHint={checked ? undefined : CONSENT_HINT}
+          accessibilityHint={checked ? undefined : consentHint()}
         />
       }
     >
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header">
-          Înainte să continui
+          {t('onboarding.terms.title')}
         </AppText>
         <AppText color="textMuted">
-          Prepio este pentru elevii de liceu care au cel puțin 14 ani. Ca să folosești aplicația, confirmă
-          vârsta (și, dacă ai sub 18 ani, acordul părintelui) și acceptă termenii.
+          {t('onboarding.terms.body')}
         </AppText>
         <AgeTermsCheckbox
           checked={checked}
@@ -76,7 +73,7 @@ export default function TermsGateScreen() {
             {error}
           </AppText>
         ) : null}
-        <TextButton label="Ieși din cont" onPress={signOut} disabled={saving} />
+        <TextButton label={t('auth.signOut')} onPress={signOut} disabled={saving} />
       </View>
     </ScreenLayout>
   );

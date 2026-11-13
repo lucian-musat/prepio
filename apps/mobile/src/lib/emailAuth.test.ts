@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../texts/store';
 import { getSupabase } from './supabase';
 import { sendEmailCode, verifyEmailCode, EMAIL_AUTH_ERROR } from './emailAuth';
 
@@ -49,4 +50,13 @@ it.each([
 it('maps a thrown fetch failure to the network message', async () => {
   auth.signInWithOtp.mockRejectedValue(new TypeError('Failed to fetch'));
   await expect(sendEmailCode('ana@example.com')).rejects.toThrow(EMAIL_AUTH_ERROR.network);
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('uses an admin override of the wrong-code message', async () => {
+    applyOverrides({ 'errors.auth.wrongCode': '[override]' });
+    auth.verifyOtp.mockResolvedValue({ data: {}, error: authError({ code: 'otp_expired', status: 403 }) });
+    await expect(verifyEmailCode('ana@example.com', '000000')).rejects.toThrow('[override]');
+  });
 });

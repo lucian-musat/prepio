@@ -1,6 +1,6 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { getSupabase } from '../lib/supabase';
-import { GOOGLE_SIGN_IN_ERROR } from './googleCommon';
+import { googleSignInError } from './googleCommon';
 // Jest runs with the native platform, so './google' resolves to google.native.ts.
 import { signInWithGoogle, signOutGoogle } from './google';
 import * as web from './google.web';
@@ -67,22 +67,22 @@ describe('signInWithGoogle (native)', () => {
 
   it('throws the Romanian error when Google returns no id token', async () => {
     mockGoogle.signIn.mockResolvedValue({ type: 'success', data: { idToken: null, user: {} } });
-    await expect(signInWithGoogle()).rejects.toThrow(GOOGLE_SIGN_IN_ERROR);
+    await expect(signInWithGoogle()).rejects.toThrow(googleSignInError());
     expect(auth.signInWithIdToken).not.toHaveBeenCalled();
   });
 
   it('throws the Romanian error when Supabase rejects the token', async () => {
     auth.signInWithIdToken.mockResolvedValue({ data: { session: null }, error: new Error('invalid token') });
-    await expect(signInWithGoogle()).rejects.toThrow(GOOGLE_SIGN_IN_ERROR);
+    await expect(signInWithGoogle()).rejects.toThrow(googleSignInError());
   });
 
   it('throws the Romanian error on other native failures', async () => {
     mockGoogle.signIn.mockRejectedValue(nativeError(statusCodes.PLAY_SERVICES_NOT_AVAILABLE));
-    await expect(signInWithGoogle()).rejects.toThrow(GOOGLE_SIGN_IN_ERROR);
+    await expect(signInWithGoogle()).rejects.toThrow(googleSignInError());
   });
 
   it('uses the exact Romanian message', () => {
-    expect(GOOGLE_SIGN_IN_ERROR).toBe('Intrarea cu Google nu a reușit. Încearcă din nou.');
+    expect(googleSignInError()).toBe('Intrarea cu Google nu a reușit. Încearcă din nou.');
   });
 });
 
@@ -122,7 +122,7 @@ describe('signInWithGoogle (web)', () => {
 
   it('throws the Romanian error when Supabase cannot start the redirect', async () => {
     auth.signInWithOAuth.mockResolvedValue({ data: { url: null }, error: new Error('provider disabled') });
-    await expect(web.signInWithGoogle()).rejects.toThrow(GOOGLE_SIGN_IN_ERROR);
+    await expect(web.signInWithGoogle()).rejects.toThrow(googleSignInError());
   });
 
   it('signOutGoogle is a no-op on web', async () => {

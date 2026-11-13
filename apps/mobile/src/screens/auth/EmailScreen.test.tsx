@@ -1,3 +1,4 @@
+import { applyOverrides, resetTexts } from '../../texts/store';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -45,4 +46,13 @@ it('shows the mapped error when sending fails', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Trimite codul' }));
   expect(await screen.findByText('Prea multe încercări. Așteaptă puțin și încearcă din nou.')).toBeTruthy();
   expect(router.push).not.toHaveBeenCalled();
+});
+
+describe('texts wiring', () => {
+  afterEach(resetTexts);
+  it('shows an admin override of the title', async () => {
+    applyOverrides({ 'auth.email.title': '[override]' });
+    await renderScreen();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

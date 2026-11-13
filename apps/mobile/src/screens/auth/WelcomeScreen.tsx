@@ -9,11 +9,10 @@ import { TERMS_VERSION } from '../../lib/legal';
 import { clearConsent, getStoredConsent, storeConsent } from '../../lib/termsConsent';
 import { clearPendingCode, storePendingCode } from '../../lib/referrals';
 import ReferralCodeField from '../../components/ReferralCodeField';
-import AgeTermsCheckbox, { CONSENT_HINT } from '../../components/AgeTermsCheckbox';
+import AgeTermsCheckbox, { consentHint } from '../../components/AgeTermsCheckbox';
 import AuthHero from './AuthHero';
+import { t } from '../../texts/store';
 
-const TITLE = 'Bun venit la Prepio';
-const SUBTITLE = 'Pregătește-te pentru BAC cu lecții scurte și exerciții. Intră sau creează-ți cont ca să începi.';
 
 /**
  * First screen for a signed-out student: the required 14+/parental consent/terms checkbox, then Google, and email code when the
@@ -59,7 +58,7 @@ export default function WelcomeScreen() {
       if ((await signInWithGoogle()) === 'cancelled') await Promise.all([clearConsent(), clearPendingCode()]);
     } catch (e) {
       await Promise.all([clearConsent(), clearPendingCode()]);
-      setError(e instanceof Error ? e.message : 'Nu ai putut intra în cont. Încearcă din nou.');
+      setError(e instanceof Error ? e.message : t('errors.auth.signInFailed'));
     } finally {
       setPending(false);
     }
@@ -73,10 +72,10 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ScreenLayout logo pageTitle="Intră în cont">
+    <ScreenLayout logo pageTitle={t('auth.welcome.pageTitle')}>
       <View style={styles.stack}>
         <Enter index={0}>
-          <AuthHero title={TITLE} body={SUBTITLE} />
+          <AuthHero title={t('auth.welcome.title')} body={t('auth.welcome.subtitle')} />
         </Enter>
         <Enter index={1}>
           <AgeTermsCheckbox checked={consented} onChange={toggle} disabled={pending} />
@@ -86,19 +85,19 @@ export default function WelcomeScreen() {
         </Enter>
         <Enter index={3} style={styles.buttons}>
           <Button
-            label="Continuă cu Google"
+            label={t('auth.welcome.google')}
             onPress={google}
             disabled={pending || !consented}
             loading={pending}
-            accessibilityHint={consented ? undefined : CONSENT_HINT}
+            accessibilityHint={consented ? undefined : consentHint()}
           />
           {emailAuthEnabled() ? (
             <Button
-              label="Continuă cu email"
+              label={t('auth.welcome.email')}
               variant="secondary"
               onPress={email}
               disabled={pending || !consented}
-              accessibilityHint={consented ? undefined : CONSENT_HINT}
+              accessibilityHint={consented ? undefined : consentHint()}
             />
           ) : null}
           {error ? (

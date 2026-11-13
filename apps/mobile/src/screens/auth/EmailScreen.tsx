@@ -5,6 +5,7 @@ import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../../ui';
 import { EMAIL_AUTH_ERROR, sendEmailCode } from '../../lib/emailAuth';
 import { setPendingEmail } from '../../lib/pendingEmail';
+import { t } from '../../texts/store';
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -35,20 +36,20 @@ export default function EmailScreen() {
   };
 
   return (
-    <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label="Trimite codul" onPress={submit} loading={sending} />}>
+    <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label={t('auth.email.submit')} onPress={submit} loading={sending} />}>
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header">
-          Care e adresa ta de email?
+          {t('auth.email.title')}
         </AppText>
-        <AppText color="textMuted">Îți trimitem un cod de 6 cifre cu care intri în cont. Nu ai nevoie de parolă.</AppText>
+        <AppText color="textMuted">{t('auth.email.body')}</AppText>
         <TextField
           value={email}
-          onChangeText={(t) => {
-            setEmail(t);
+          onChangeText={(text) => {
+            setEmail(text);
             setError(null);
           }}
-          accessibilityLabel="Adresa de email"
-          placeholder="nume@exemplu.ro"
+          accessibilityLabel={t('auth.email.fieldLabel')}
+          placeholder={t('auth.email.placeholder')}
           inputMode="email"
           autoComplete="email"
           autoCapitalize="none"

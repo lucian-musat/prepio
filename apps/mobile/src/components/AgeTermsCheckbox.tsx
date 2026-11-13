@@ -1,22 +1,21 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { border, color, layout, radius, space, stroke } from '@prepio/shared';
+import { border, color, layout, radius, space, stroke, type TextKey } from '@prepio/shared';
 import { AppText, Icon } from '../ui';
+import { t } from '../texts/store';
 
 /** The consent sentence: the checkbox's visible text and accessible name. */
-export const AGE_TERMS_LABEL =
-  'Am cel puțin 14 ani și accept Termenii de utilizare și Politica de confidențialitate. ' +
-  'Dacă am sub 18 ani, am acordul părintelui sau al tutorelui pentru a folosi Prepio și pentru plăți.';
+export const ageTermsLabel = (): string => t('auth.consent.label');
 
 /** Screen-reader hint on a button disabled until the consent is checked. */
-export const CONSENT_HINT = 'Bifează confirmarea de mai sus.';
+export const consentHint = (): string => t('auth.consent.hint');
 
 const BOX = space[6]; // 24 px
 const GLYPH = space[4]; // 16 px
 
-const LINKS: Array<{ label: string; href: Href }> = [
-  { label: 'Termenii de utilizare', href: '/termeni' },
-  { label: 'Politica de confidențialitate', href: '/confidentialitate' },
+const LINKS: Array<{ key: TextKey; href: Href }> = [
+  { key: 'auth.consent.termsLink', href: '/termeni' },
+  { key: 'auth.consent.privacyLink', href: '/confidentialitate' },
 ];
 
 type Props = { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean };
@@ -31,7 +30,7 @@ export default function AgeTermsCheckbox({ checked, onChange, disabled = false }
     <View style={styles.stack}>
       <Pressable
         accessibilityRole="checkbox"
-        accessibilityLabel={AGE_TERMS_LABEL}
+        accessibilityLabel={ageTermsLabel()}
         accessibilityState={{ checked, disabled }}
         // react-native-web 0.21 ignores accessibilityState; the aria props reach the DOM.
         aria-checked={checked}
@@ -44,20 +43,20 @@ export default function AgeTermsCheckbox({ checked, onChange, disabled = false }
           {checked ? <Icon name="check" size={GLYPH} stroke={stroke.iconBold} tint={color.onPrimary} /> : null}
         </View>
         <AppText role="small" style={styles.label}>
-          {AGE_TERMS_LABEL}
+          {ageTermsLabel()}
         </AppText>
       </Pressable>
       <View style={styles.links}>
-        {LINKS.map(({ label, href }) => (
+        {LINKS.map(({ key, href }) => (
           <Pressable
-            key={label}
+            key={key}
             accessibilityRole="link"
-            accessibilityLabel={label}
+            accessibilityLabel={t(key)}
             onPress={() => router.push(href)}
             style={styles.linkHit}
           >
             <AppText role="small" color="primaryStrong" style={styles.link}>
-              {label}
+              {t(key)}
             </AppText>
           </Pressable>
         ))}

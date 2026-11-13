@@ -2,13 +2,13 @@
 import type { GoogleSignInResult } from './googleCommon';
 
 export type { GoogleSignInResult } from './googleCommon';
-export { GOOGLE_SIGN_IN_ERROR } from './googleCommon';
+export { googleSignInError } from './googleCommon';
 
 /**
  * Signs the student in with Google. Web: redirects to Google through Supabase OAuth (the page navigates away and
  * Supabase picks the session up from the URL on return). Android: native account picker, then the id token is
  * exchanged with Supabase. Resolves `cancelled` when the student closes the picker; throws an Error with
- * GOOGLE_SIGN_IN_ERROR on any other failure.
+ * googleSignInError on any other failure.
  */
 export declare function signInWithGoogle(): Promise<GoogleSignInResult>;
 

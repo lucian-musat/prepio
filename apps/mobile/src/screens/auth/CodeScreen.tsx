@@ -5,6 +5,7 @@ import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, TextField, goBackOrHome } from '../../ui';
 import { EMAIL_AUTH_ERROR, RESEND_COOLDOWN_SECONDS, sendEmailCode, verifyEmailCode } from '../../lib/emailAuth';
 import { getPendingEmail, setPendingEmail } from '../../lib/pendingEmail';
+import { t } from '../../texts/store';
 
 const CODE_LENGTH = 6;
 
@@ -29,7 +30,7 @@ export default function CodeScreen() {
   const verify = async (value: string) => {
     if (verifying) return;
     if (value.length !== CODE_LENGTH) {
-      setError(`Scrie codul de ${CODE_LENGTH} cifre.`);
+      setError(t('auth.code.tooShort', { n: CODE_LENGTH }));
       return;
     }
     setError(null);
@@ -68,29 +69,29 @@ export default function CodeScreen() {
   if (!email) {
     // Opened directly or in another tab: we don't know where the code went.
     return (
-      <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label="Scrie adresa de email" onPress={() => router.replace('/email')} />}>
+      <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label={t('auth.code.missingAction')} onPress={() => router.replace('/email')} />}>
         <View style={styles.stack}>
           <AppText role="title" accessibilityRole="header">
-            Verifică-ți emailul
+            {t('auth.code.title')}
           </AppText>
-          <AppText color="textMuted">Nu mai știm la ce adresă ți-am trimis codul. Scrie-o din nou și îți trimitem altul.</AppText>
+          <AppText color="textMuted">{t('auth.code.missingBody')}</AppText>
         </View>
       </ScreenLayout>
     );
   }
 
   return (
-    <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label="Continuă" onPress={() => verify(code)} loading={verifying} />}>
+    <ScreenLayout logo onBack={goBackOrHome} actions={<Button flex label={t('common.continue')} onPress={() => verify(code)} loading={verifying} />}>
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header">
-          Verifică-ți emailul
+          {t('auth.code.title')}
         </AppText>
-        <AppText color="textMuted">{`Ți-am trimis un cod de 6 cifre la ${email}.`}</AppText>
+        <AppText color="textMuted">{t('auth.code.body', { email })}</AppText>
         <TextField
           code
           value={code}
           onChangeText={onChange}
-          accessibilityLabel="Codul din email"
+          accessibilityLabel={t('auth.code.fieldLabel')}
           placeholder="000000"
           inputMode="numeric"
           autoComplete="one-time-code"
@@ -108,12 +109,12 @@ export default function CodeScreen() {
         <View style={styles.links}>
           <Button
             variant="secondary"
-            label={cooldown > 0 ? `Retrimite în ${cooldown} s` : 'Retrimite codul'}
+            label={cooldown > 0 ? t('auth.code.resendIn', { n: cooldown }) : t('auth.code.resend')}
             onPress={resend}
             disabled={cooldown > 0}
             loading={resending}
           />
-          <Button variant="secondary" label="Schimbă adresa" onPress={() => (router.canGoBack() ? router.back() : goBackOrHome())} />
+          <Button variant="secondary" label={t('auth.code.changeEmail')} onPress={() => (router.canGoBack() ? router.back() : goBackOrHome())} />
         </View>
       </View>
     </ScreenLayout>

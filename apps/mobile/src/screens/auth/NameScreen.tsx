@@ -5,9 +5,8 @@ import { AppText, Button, ScreenLayout, TextField } from '../../ui';
 import { useAuth } from '../../auth/AuthProvider';
 import { MAX_DISPLAY_NAME_CHARS, updateDisplayName, validateDisplayName } from '../../lib/profile';
 import { ownMessage } from '../../lib/errorMessage';
+import { t } from '../../texts/store';
 
-const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
-const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
 
 /** "Cum te numești?" shown once, right after the first sign-in. Saving flips the status to ready (AuthProvider). */
 export default function NameScreen() {
@@ -25,7 +24,7 @@ export default function NameScreen() {
     }
     const userId = session?.user.id;
     if (!userId) {
-      setError(OFFLINE);
+      setError(t('errors.offline'));
       return;
     }
     setError(null);
@@ -34,27 +33,27 @@ export default function NameScreen() {
       await updateDisplayName(userId, name);
       await refreshProfile();
     } catch (e) {
-      setError(ownMessage(e, SAVE_FAILED));
+      setError(ownMessage(e, t('onboarding.name.saveFailed')));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ScreenLayout logo actions={<Button flex label="Continuă" onPress={submit} loading={saving} />}>
+    <ScreenLayout logo actions={<Button flex label={t('common.continue')} onPress={submit} loading={saving} />}>
       <View style={styles.stack}>
         <AppText role="title" accessibilityRole="header">
-          Cum te numești?
+          {t('onboarding.name.title')}
         </AppText>
-        <AppText color="textMuted">Îți spunem pe nume în aplicație. Îl poți schimba mai târziu.</AppText>
+        <AppText color="textMuted">{t('onboarding.name.body')}</AppText>
         <TextField
           value={name}
-          onChangeText={(t) => {
-            setName(t);
+          onChangeText={(text) => {
+            setName(text);
             setError(null);
           }}
-          accessibilityLabel="Numele tău"
-          placeholder="Prenumele tău"
+          accessibilityLabel={t('onboarding.name.fieldLabel')}
+          placeholder={t('onboarding.name.placeholder')}
           autoComplete="given-name"
           textContentType="givenName"
           autoCapitalize="words"
@@ -68,9 +67,9 @@ export default function NameScreen() {
             {error}
           </AppText>
         ) : null}
-        <AppText role="caption" color="textMuted">{`Cel mult ${MAX_DISPLAY_NAME_CHARS} de caractere.`}</AppText>
+        <AppText role="caption" color="textMuted">{t('onboarding.name.limit', { max: MAX_DISPLAY_NAME_CHARS })}</AppText>
         <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={signOut} style={styles.signOut}>
-          Ieși din cont
+          {t('auth.signOut')}
         </AppText>
       </View>
     </ScreenLayout>

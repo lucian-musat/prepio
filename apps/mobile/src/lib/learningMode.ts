@@ -1,24 +1,34 @@
 import type { Profile } from './profile';
+import { t } from '../texts/store';
 
 export type LearningMode = 'guided' | 'free';
 
 export const DEFAULT_MODE: LearningMode = 'guided';
 
+/** Name and points are getters: the texts are read at use time (admin overrides), never at module load. */
 export const MODE_INFO: Record<LearningMode, { name: string; icon: string; points: string[] }> = {
   guided: {
-    name: 'Traseu ghidat',
+    get name() {
+      return t('onboarding.mode.guided.name');
+    },
     icon: '🧭',
-    points: [
-      'Parcurgi lecțiile în ordine, una după alta.',
-      'Lecția următoare se deschide după ce răspunzi corect la toate întrebările.',
-      'Dacă greșești, revezi cardurile și reiei testul.',
-      'Știi deja materia? Sari direct la verificare.',
-    ],
+    get points() {
+      return [
+        t('onboarding.mode.guided.point1'),
+        t('onboarding.mode.guided.point2'),
+        t('onboarding.mode.guided.point3'),
+        t('onboarding.mode.guided.point4'),
+      ];
+    },
   },
   free: {
-    name: 'Explorare liberă',
+    get name() {
+      return t('onboarding.mode.free.name');
+    },
     icon: '🗺️',
-    points: ['Începi orice lecție, în ce ordine vrei.', 'O lecție e terminată când ajungi la final.'],
+    get points() {
+      return [t('onboarding.mode.free.point1'), t('onboarding.mode.free.point2')];
+    },
   },
 };
 
