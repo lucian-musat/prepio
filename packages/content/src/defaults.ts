@@ -2,9 +2,9 @@ import type { AiDefaults } from './types';
 
 export const welcomeMessage =
   'Bine ai venit în Prepio! Aici te pregătești pentru proba de istorie de la Bacalaureat. ' +
-  'Alege o lecție din programă: citește cartonașele cu informațiile esențiale, verifică-ți ' +
-  'cunoștințele prin întrebări, apoi consolidează-le cu exerciții după modelul subiectelor de BAC. ' +
-  'La exercițiile de redactare primești pe loc sugestii concrete de la profesorul digital. Spor la învățat!';
+  'Alege o lecție din programă, citește cardurile cu ce trebuie să știi și răspunde la câteva întrebări. ' +
+  'Apoi exersează cu exerciții ca la BAC. Când scrii un răspuns, profesorul digital îți spune pe loc ce poți ' +
+  'îmbunătăți. Spor la învățat!';
 
 // Type-independent rules only: what each kind of exercise asks for lives in the AI templates (`aiTemplates.ts`).
 const rules = `Ești profesor de istorie și verifici răspunsurile elevilor de clasa a XII-a care se pregătesc pentru examenul de Bacalaureat din România (proba E.c). Primești enunțul, contextul profesorului și răspunsul scris de elev.
