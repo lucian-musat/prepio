@@ -9,7 +9,11 @@ import { useStreak } from './StreakProvider';
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as BuyCreditsSheet
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const DAY_NAMES = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 const DOT = 36;
+
+/** „Vineri, azi”, „Vineri, azi, ai lucrat”, „Luni, ai lucrat”, or just the name. */
+const dayLabel = (name: string, isToday: boolean, worked: boolean) => [name, isToday ? 'azi' : null, worked ? 'ai lucrat' : null].filter(Boolean).join(', ');
 
 type Props = {
   visible: boolean;
@@ -60,7 +64,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
                   const isWorked = worked.has(d);
                   const isToday = d === today;
                   return (
-                    <View key={d} style={styles.dayCol}>
+                    <View key={d} accessible accessibilityLabel={dayLabel(DAY_NAMES[i], isToday, isWorked)} style={styles.dayCol}>
                       <View
                         testID={`streak-day-${d}`}
                         style={[

@@ -44,3 +44,12 @@ it('tapping the pill opens the details sheet', async () => {
   await fireEvent.press(screen.getByTestId('streak-pill'));
   expect(screen.getByText('🔥 5 zile la rând')).toBeTruthy();
 });
+
+it('HeaderPills lays the pills out in a row', async () => {
+  mockSummary = summary(5);
+  await render(<HeaderPills />);
+  const style = StyleSheet.flatten(screen.getByTestId('header-pills').props.style);
+  expect(style.flexDirection).toBe('row');
+  expect(style.alignItems).toBe('center');
+  expect(screen.getByTestId('streak-pill')).toBeTruthy();
+});

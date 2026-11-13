@@ -14,11 +14,20 @@ jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 let mockSummary: StreakSummary | null = null;
 jest.mock('./StreakProvider', () => ({ useStreak: () => ({ summary: mockSummary }) }));
 
-const today = bucharestDay(new Date());
+const NOW = new Date('2026-11-11T10:00:00Z'); // a Wednesday
+const today = bucharestDay(NOW);
 const days = weekDays(today);
 const summary = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: false, week: [], ...over });
 
+const REAL = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance', 'hrtime'] as const;
+const platform = RN.Platform.OS;
+afterEach(() => {
+  (RN.Platform as { OS: string }).OS = platform;
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
+  jest.useFakeTimers({ now: NOW, doNotFake: [...REAL] });
   (router.push as jest.Mock).mockReset();
   (RN.Platform as { OS: string }).OS = 'android';
   mockSummary = summary();
@@ -44,13 +53,10 @@ it('uses the singular for one day', async () => {
 it('marks worked days, dashes today until worked, leaves the rest empty', async () => {
   mockSummary = summary({ week: [days[0]] });
   await render(<StreakSheet visible onClose={() => {}} />);
-  const todayIdx = days.indexOf(today);
   expect(dot(days[0]).backgroundColor).toBe(color.accent);
   expect(screen.getAllByText('✓')).toHaveLength(1);
-  if (todayIdx !== 0) {
-    expect(dot(today).borderStyle).toBe('dashed');
-    expect(dot(today).borderColor).toBe(color.primary);
-  }
+  expect(dot(today).borderStyle).toBe('dashed');
+  expect(dot(today).borderColor).toBe(color.primary);
   const other = days.find((d) => d !== today && d !== days[0])!;
   expect(dot(other).backgroundColor).toBe(color.surfaceMuted);
   expect(dot(other).borderStyle).toBeUndefined();
@@ -97,4 +103,19 @@ it('„Setări memento” is hidden on web', async () => {
   (RN.Platform as { OS: string }).OS = 'web';
   await render(<StreakSheet visible onClose={() => {}} />);
   expect(screen.queryByText('Setări memento')).toBeNull();
+});
+
+it('gives every day an accessible name with its state', async () => {
+  mockSummary = summary({ week: [days[0]] }); // Monday worked, today (Wednesday) not yet
+  await render(<StreakSheet visible onClose={() => {}} />);
+  expect(screen.getByLabelText('Luni, ai lucrat')).toBeTruthy();
+  expect(screen.getByLabelText('Miercuri, azi')).toBeTruthy();
+  expect(screen.getByLabelText('Marți')).toBeTruthy();
+  expect(screen.getByLabelText('Duminică')).toBeTruthy();
+});
+
+it('names today as worked', async () => {
+  mockSummary = summary({ todayDone: true, week: [today] });
+  await render(<StreakSheet visible onClose={() => {}} />);
+  expect(screen.getByLabelText('Miercuri, azi, ai lucrat')).toBeTruthy();
 });

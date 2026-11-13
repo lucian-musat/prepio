@@ -226,10 +226,12 @@ export default function HomeScreen() {
   // Would the tapped lesson be playable with full access? (guided order may still lock it)
   const afterPurchase = sheet?.lessonId ? lessonAccess(orderedLessons(data.sections), progress.finished, mode, () => true).get(sheet.lessonId) : undefined;
   const sheetTitle = sheet?.lessonId ? orderedLessons(data.sections).find((l) => l.id === sheet.lessonId)?.title : undefined;
-  const openTarget = target ? () => router.push(`/lesson/${target.lesson.id}`) : undefined;
+  const openLesson = (id: string) => router.push(`/lesson/${id}`);
+  // The streak sheet's „Rezolvă un exercițiu” does what the continue card does.
+  const solve = target ? () => openLesson(target.lesson.id) : undefined;
 
   return (
-    <ScreenLayout logo trailing={<HomeTrailing onSolve={openTarget} />}>
+    <ScreenLayout logo trailing={<HomeTrailing onSolve={solve} />}>
       <AccessBanner onOffer={() => setSheet({ lessonId: null })} />
       <Enter testID="enter-hero" index={0}>
         <Hero welcomeMessage={data.welcomeMessage} lessonCount={total} greeting={greeting} />
@@ -242,7 +244,7 @@ export default function HomeScreen() {
         />
       </View>
       {target ? (
-        <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={openTarget!} />
+        <ContinueCard target={target} number={numbers.get(target.lesson.id) ?? 1} onPress={() => openLesson(target.lesson.id)} />
       ) : null}
       <InviteNote enabled={referral !== null} finishedCount={done} />
       <Pressable accessibilityRole="button" accessibilityLabel="Subiecte BAC" onPress={() => router.push('/bac')} style={styles.bacCard}>

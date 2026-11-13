@@ -23,6 +23,7 @@ jest.mock('../credits/CreditsProvider');
 jest.mock('../streak/StreakProvider');
 jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn() }));
 const { mockResetAccess } = jest.requireMock<typeof import('../access/__mocks__/AccessProvider')>('../access/AccessProvider');
+const { streakState } = jest.requireMock<typeof import('../streak/__mocks__/StreakProvider')>('../streak/StreakProvider');
 const { mockResetCredits } = jest.requireMock<typeof import('../credits/__mocks__/CreditsProvider')>('../credits/CreditsProvider');
 let mockParams: { paywall?: string } = {};
 jest.mock('../lib/content', () => ({ fetchHome: jest.fn() }));
@@ -106,6 +107,7 @@ beforeEach(async () => {
   mockParams = {};
   mockResetAccess({ accessUntil: new Date(Date.now() + 40 * 86400000).toISOString() });
   mockResetCredits(5);
+  streakState.summary = null;
   mockProfile = { id: 'u1', displayName: 'ana', learningMode: 'guided', creditBalance: 5 };
   mockedProgress.mockResolvedValue(progressOf());
 });
@@ -598,6 +600,30 @@ describe('continue card and hero', () => {
     expect(await screen.findByText('Următoarea lecție')).toBeTruthy();
     expect(screen.getByText('Lecția 2 · Doi')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Începe lecția' })).toBeTruthy();
+  });
+
+  const aStreak = { current: 3, record: 5, todayDone: false, week: [] };
+
+  it('the streak sheet button „Rezolvă un exercițiu” opens the continue target, like the card', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1'));
+    streakState.summary = aStreak;
+    await renderHome();
+    await screen.findByTestId('continue-card');
+    await fireEvent.press(screen.getByTestId('streak-pill'));
+    await fireEvent.press(screen.getByText('Rezolvă un exercițiu'));
+    expect(router.push).toHaveBeenCalledWith('/lesson/l2');
+  });
+
+  it('without a continue target the streak sheet has no „Rezolvă un exercițiu”', async () => {
+    threeLessons();
+    mockedProgress.mockResolvedValue(progressOf('l1', 'l2', 'l3'));
+    streakState.summary = aStreak;
+    await renderHome();
+    await screen.findByText('Bine ai revenit, ana!');
+    await fireEvent.press(screen.getByTestId('streak-pill'));
+    expect(screen.getByTestId('streak-sheet')).toBeTruthy();
+    expect(screen.queryByText('Rezolvă un exercițiu')).toBeNull();
   });
 
   it('no card when every lesson is finished; the greeting has no name without one', async () => {
