@@ -15,7 +15,7 @@ import {
 } from '@prepio/shared';
 import { DEMO_CONSOLIDATION } from './demoLesson';
 import { EXTRA_CARDS } from './extraCards';
-import { AI_TEMPLATES, aiDefaults, lessons, tree, welcomeMessage, type SeedLesson, type SeedNode } from './index';
+import { AI_TEMPLATES, aiDefaults, lessons, tree, type SeedLesson, type SeedNode } from './index';
 
 const imagesDir = fileURLToPath(new URL('../images/', import.meta.url));
 const credits = readFileSync(imagesDir + 'CREDITS.md', 'utf8');
@@ -198,21 +198,11 @@ describe('lessons', () => {
 });
 
 describe('defaults', () => {
-  it('has a welcome message and AI defaults', () => {
-    expect(welcomeMessage.trim().length).toBeGreaterThan(0);
+  it('has AI defaults', () => {
     expect(aiDefaults.rules.trim().length).toBeGreaterThan(0);
     expect(aiDefaults).toEqual({ rules: aiDefaults.rules, model: 'gpt-5-mini' });
     // Consolidation feedback has no grades (spec): the default rules must not ask for one.
     expect(aiDefaults.rules).not.toMatch(/\bnot[ăa]|\bscala\b/i);
-  });
-
-  it('keeps the legacy settings.welcome_message default equal to the catalog text', () => {
-    expect(welcomeMessage).toBe(TEXTS['home.hero.welcome'].default);
-  });
-
-  it('calls the lesson cards „carduri”, not „cartonașe”', () => {
-    expect(welcomeMessage).not.toMatch(/cartona/i);
-    expect(welcomeMessage).toContain('cardurile');
   });
 
   it('keeps only type-independent rules: the type instructions live in the AI templates', () => {
@@ -254,7 +244,7 @@ describe('seed AI contexts', () => {
 
 describe('diacritics', () => {
   it('uses comma-below ș/ț, never cedilla ş/ţ', () => {
-    const all = JSON.stringify({ tree, lessons, welcomeMessage, aiDefaults, AI_TEMPLATES });
+    const all = JSON.stringify({ tree, lessons, aiDefaults, AI_TEMPLATES });
     expect(all).not.toMatch(/[şţŞŢ]/);
   });
 });

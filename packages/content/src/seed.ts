@@ -8,7 +8,7 @@ import { cardImagePaths, cardToRow } from '@prepio/shared';
 import { writeBacSubjects } from './bacSubjects';
 import { check, ensureAiTemplates, ensureTemplates, writeConsolidation } from './consolidation';
 import { DEFAULT_BAC_RULES } from './defaults';
-import { aiDefaults, lessons, tree, welcomeMessage } from './index';
+import { aiDefaults, lessons, tree } from './index';
 import type { SeedCard, SeedNode } from './types';
 
 export { check };
@@ -98,10 +98,6 @@ export async function seed(client: SupabaseClient, opts: SeedOptions = {}): Prom
   await writeBacSubjects(client, async () => (await ensureTemplates(client, true)).ids, randomUUID);
 
   // Only create when missing: never overwrite the owner's edits.
-  check(
-    await client.from('settings').upsert({ id: 1, welcome_message: welcomeMessage }, { onConflict: 'id', ignoreDuplicates: true }),
-    'settings',
-  );
   check(
     await client.from('ai_settings').upsert(
       { id: 1, rules: aiDefaults.rules, model: aiDefaults.model },

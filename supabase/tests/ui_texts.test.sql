@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(15);
 
 insert into auth.users (id, email, aud, role, raw_user_meta_data)
 select ('00000000-0000-0000-0000-0000000000' || x)::uuid, 'ut-' || x || '@test.local', 'authenticated', 'authenticated', '{}'
@@ -38,6 +38,8 @@ select is((select count(*)::int from public.ui_texts), 1, 'other row remains');
 
 reset role;
 select is((select count(*)::int from public.ui_texts where key = 'home.hero.welcome'), 0, 'welcome override removed');
+
+select hasnt_table('public', 'settings', 'the legacy settings table is dropped (welcome text lives in ui_texts)');
 
 select * from finish();
 rollback;
