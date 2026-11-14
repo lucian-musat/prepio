@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { border, color, consolidationColor, elevation, radius, readingMinutes, space, tokenizeSource, type Source, type SourceLabel } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
+import { t, tPlural } from '../../texts/store';
 import { AppText } from '../../ui';
 import { solidShadow } from '../../ui/elevation';
 
@@ -10,14 +11,11 @@ const PREVIEW = { size: 15, lineHeight: 25.5 }; // mockup .preview: Literata 15 
 const FADE = 60;
 
 /** „3 paragrafe”, „1 paragraf”, „21 de paragrafe” (Romanian: „de” from 20 on). */
-function paragraphs(n: number): string {
-  if (n === 1) return '1 paragraf';
-  return n % 100 >= 20 || n % 100 === 0 ? `${n} de paragrafe` : `${n} paragrafe`;
-}
+const paragraphs = (n: number) => tPlural(n, 'consolidation.source.paragraph.one', 'consolidation.source.paragraph.many');
 
 export function sourceMeta(source: Source): string {
   const n = tokenizeSource(source.body).paragraphCount;
-  return [source.author, paragraphs(n), `~${readingMinutes(source.body)} min`].filter(Boolean).join(' · ');
+  return [source.author, paragraphs(n), t('consolidation.source.readingTime', { n: readingMinutes(source.body) })].filter(Boolean).join(' · ');
 }
 
 type Props = { source: Source; label: SourceLabel; marking: boolean; onPress: () => void };
@@ -28,13 +26,17 @@ type Props = { source: Source; label: SourceLabel; marking: boolean; onPress: ()
  * The whole card opens the reader.
  */
 export default function SourceCard({ source, label, marking, onPress }: Props) {
-  const action = marking ? '📖 Citește și marchează' : '📖 Citește sursa';
+  const action = t(marking ? 'consolidation.source.readAndMark' : 'consolidation.source.read');
   const preview = source.body.split(/\r?\n[^\S\r\n]*\r?\n/)[0]?.replace(/\s+/g, ' ').trim() ?? '';
   return (
     <Pressable
       testID={`source-card-${label}`}
       accessibilityRole="button"
-      accessibilityLabel={`Sursa ${label}, ${sourceMeta(source)}. ${marking ? 'Citește și marchează' : 'Citește sursa'}`}
+      accessibilityLabel={t('consolidation.source.cardLabel', {
+        litera: label,
+        detalii: sourceMeta(source),
+        actiune: t(marking ? 'consolidation.source.readAndMarkLabel' : 'consolidation.source.readLabel'),
+      })}
       onPress={onPress}
       style={styles.card}
     >
@@ -45,7 +47,7 @@ export default function SourceCard({ source, label, marking, onPress }: Props) {
           </AppText>
         </View>
         <View style={styles.fill}>
-          <AppText role="bodyStrong">Sursa {label}</AppText>
+          <AppText role="bodyStrong">{t('consolidation.source.title', { litera: label })}</AppText>
           <AppText role="caption" color="textMuted">
             {sourceMeta(source)}
           </AppText>

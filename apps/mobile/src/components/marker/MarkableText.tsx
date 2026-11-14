@@ -12,6 +12,7 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { color, markerInk, tokenizeSource, typeScale, type ExerciseFeedback, type Source, type Verdict } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { fontFamily } from '../../theme/fonts';
 import { ROLE, type Role } from './causeEffect';
 import type { MarkerAction, MarkerState, Pen } from './markerReducer';
@@ -30,9 +31,8 @@ const BLINK_MS = 1000;
 // (reader ~1.8 x 17 px as in the mockup, body ~1.6 x 17 px like `typeScale.body`).
 const READING_TEXT = { size: 17, lineHeight: 24, lineGap: 3.5 };
 const BODY_TEXT = { size: typeScale.body.size, lineHeight: 23, lineGap: 2 };
-const HINT = 'Atinge primul și ultimul cuvânt al informației ca s-o marchezi.';
-
-export const PEN_LABEL: Record<Pen, string> = { info: 'Informație', cause: 'Cauză', effect: 'Efect', support: 'Informație-suport' };
+/** The marker's name („Informație”, „Cauză”, …). */
+export const penLabel = (pen: Pen) => t(`consolidation.marker.pen.${pen}`);
 const isRole = (pen: Pen | null): pen is Role => pen === 'cause' || pen === 'effect';
 const VERDICT_COLOR: Record<Verdict, string> = { ok: color.success, almost: color.accent, no: color.danger };
 
@@ -342,7 +342,7 @@ export default function MarkableText({
     return {
       pen,
       bg: pen ? markBg({ pen, slot }) : null,
-      markName: pen ? (slot !== undefined ? slotName(pen, slot) : PEN_LABEL[pen]) : null,
+      markName: pen ? (slot !== undefined ? slotName(pen, slot) : penLabel(pen)) : null,
       label: pill?.label ?? null,
       labelInk: pill?.ink ?? null,
       first: i === from,
@@ -433,8 +433,8 @@ const Word = memo(function Word(p: WordProps) {
       style={[styles.word, { marginVertical: p.lineGap }]}
       onLayout={(e) => p.onLayout(p.i, e)}
       accessible={native}
-      accessibilityLabel={p.markName ? `${p.text}, marcat ${p.markName}` : p.text}
-      accessibilityHint={p.interactive ? HINT : undefined}
+      accessibilityLabel={p.markName ? t('consolidation.marker.wordMarked', { cuvant: p.text, marcaj: p.markName }) : p.text}
+      accessibilityHint={p.interactive ? t('consolidation.marker.wordHint') : undefined}
       accessibilityActions={p.interactive ? [{ name: 'activate' }] : undefined}
       onAccessibilityAction={p.interactive ? (e) => e.nativeEvent.actionName === 'activate' && p.onA11yTap(p.i) : undefined}
     >

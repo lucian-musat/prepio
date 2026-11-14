@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { border, color, feedbackText, markerInk, markerTint, radius, space, type Source } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { AppText } from '../../ui';
 import { useMarkText } from '../consolidation/inputKit';
-import { DONE, ROLE, type Role } from './causeEffect';
+import { done, ROLE, type Role } from './causeEffect';
 import type { MarkerAction, MarkerState } from './markerReducer';
 
 const ROLES: Role[] = ['cause', 'effect'];
@@ -40,7 +41,7 @@ export default function CauseEffectBanner({ state, clues }: { state: MarkerState
         </>
       ) : (
         <AppText role="eyebrow" style={styles.doneText} accessibilityLiveRegion="polite">
-          {DONE}
+          {done()}
         </AppText>
       )}
       <View style={styles.progress}>
@@ -49,7 +50,7 @@ export default function CauseEffectBanner({ state, clues }: { state: MarkerState
             key={r}
             testID={`ce-progress-${r}`}
             accessibilityLabel={ROLE[r].name}
-            accessibilityValue={{ text: marked(state, r) ? 'marcat' : 'nemarcat' }}
+            accessibilityValue={{ text: t(marked(state, r) ? 'consolidation.marker.marked' : 'consolidation.marker.unmarked') }}
             style={[styles.segment, marked(state, r) && { backgroundColor: markerInk[r] }]}
           />
         ))}
@@ -80,9 +81,9 @@ export function CauseEffectTrayStep({ state, sources, dispatch }: TrayProps) {
         ) : (
           <>
             <AppText role="eyebrow" style={styles.doneText} accessibilityLiveRegion="polite">
-              {DONE}
+              {done()}
             </AppText>
-            <AppText role="bodyStrong">Apasă „Gata” și citește relația.</AppText>
+            <AppText role="bodyStrong">{t('consolidation.causeEffect.trayDone')}</AppText>
           </>
         )}
       </View>
@@ -101,7 +102,7 @@ export function CauseEffectTrayStep({ state, sources, dispatch }: TrayProps) {
                 testID={`ce-mini-${r}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityHint={`Marchează ${ROLE[r].name.toLowerCase()}`}
+                accessibilityHint={t('consolidation.causeEffect.miniHint', { rol: ROLE[r].name.toLowerCase() })}
                 onPress={() => dispatch({ type: 'setPen', pen: r })}
                 style={[
                   styles.mini,
@@ -114,7 +115,7 @@ export function CauseEffectTrayStep({ state, sources, dispatch }: TrayProps) {
                   {ROLE[r].name.toUpperCase()}
                 </AppText>
                 <AppText testID={`ce-mini-${r}-text`} role="caption" color={mark ? 'text' : 'textMuted'} numberOfLines={1}>
-                  {mark ? `„${textOf(mark)}”` : 'nemarcat'}
+                  {mark ? `„${textOf(mark)}”` : t('consolidation.marker.unmarked')}
                 </AppText>
               </Pressable>
             </View>

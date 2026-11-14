@@ -22,6 +22,7 @@ import { fetchHome } from '../lib/content';
 import { modeOf, type LearningMode } from '../lib/learningMode';
 import { lessonAccess, orderedLessons } from '../lib/lessonFlow';
 import { fetchProgress } from '../lib/progress';
+import { t } from '../texts/store';
 import { AppText, Button, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import ExerciseMap from '../components/consolidation/ExerciseMap';
 import { emptyAnswer } from './consolidation/checking';
@@ -38,7 +39,7 @@ type Loaded = {
 
 function Message({ title, body, action }: { title: string; body?: string; action: { label: string; onPress: () => void } }) {
   return (
-    <ScreenLayout title="Consolidare" onBack={goBackOrHome}>
+    <ScreenLayout title={t('consolidation.screenTitle')} onBack={goBackOrHome}>
       <Surface style={styles.message}>
         <AppText role="section">{title}</AppText>
         {body ? (
@@ -123,15 +124,15 @@ export default function ConsolidationScreen() {
   if (loaded === null) {
     return (
       <Message
-        title="Nu am putut încărca consolidarea"
-        body="Verifică conexiunea la internet și încearcă din nou."
-        action={{ label: 'Reîncearcă', onPress: () => setReload((n) => n + 1) }}
+        title={t('consolidation.loadFailed')}
+        body={t('errors.checkConnection')}
+        action={{ label: t('common.retryButton'), onPress: () => setReload((n) => n + 1) }}
       />
     );
   }
   if (loaded === undefined) {
     return (
-      <ScreenLayout title="Consolidare" onBack={goBackOrHome}>
+      <ScreenLayout title={t('consolidation.screenTitle')} onBack={goBackOrHome}>
         <View style={styles.loader}>
           <Spinner />
         </View>
@@ -140,12 +141,12 @@ export default function ConsolidationScreen() {
   }
 
   const { data, finished, order, attempts } = loaded;
-  const backToLesson = { label: 'Înapoi la lecție', onPress: () => router.replace(`/lesson/${lessonId}`) };
+  const backToLesson = { label: t('consolidation.backToLesson'), onPress: () => router.replace(`/lesson/${lessonId}`) };
   if (!finished.has(lessonId)) {
-    return <Message title="Consolidarea e blocată" body="Consolidarea se deschide după ce termini lecția." action={backToLesson} />;
+    return <Message title={t('consolidation.locked.title')} body={t('consolidation.locked.body')} action={backToLesson} />;
   }
   if (data.exercises.length === 0) {
-    return <Message title="Lecția nu are exerciții de consolidare" action={backToLesson} />;
+    return <Message title={t('consolidation.empty')} action={backToLesson} />;
   }
 
   const ids = data.exercises.map((e) => e.id);
@@ -182,8 +183,8 @@ export default function ConsolidationScreen() {
         }}
         next={
           next
-            ? { label: 'Mergi la lecția următoare', onPress: () => router.replace(`/lesson/${next.id}`) }
-            : { label: 'Înapoi acasă', onPress: () => router.replace('/') }
+            ? { label: t('consolidation.end.nextLesson'), onPress: () => router.replace(`/lesson/${next.id}`) }
+            : { label: t('consolidation.end.goHome'), onPress: () => router.replace('/') }
         }
       />
     );

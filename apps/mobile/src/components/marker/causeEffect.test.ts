@@ -1,4 +1,4 @@
-import { DONE, ROLE, relationSentence } from './causeEffect';
+import { done, ROLE, relationSentence } from './causeEffect';
 
 describe('relationSentence', () => {
   it('joins the cause and the effect as written, dropping a trailing comma of the cause', () => {
@@ -20,6 +20,6 @@ describe('ROLE', () => {
     expect(ROLE.effect.label).toBe('EFECT');
     expect(ROLE.cause.question).toBe('De ce s-a întâmplat ceva?');
     expect(ROLE.effect.clues).toEqual(['ca urmare', 'astfel', 'ceea ce', 'de aceea']);
-    expect(DONE).toBe('✓ Gata, ambele roluri marcate');
+    expect(done()).toBe('✓ Gata, ambele roluri marcate');
   });
 });

@@ -17,12 +17,13 @@ import {
   type SourceLabel,
 } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
+import { t } from '../../texts/store';
 import { AppText, Button, IconButton } from '../../ui';
 import { raisedShadow } from '../../ui/elevation';
 import { CauseEffectTrayStep } from './CauseEffectBanner';
 import { markBg } from './numbered';
 import { NumberedTrayStep } from './NumberedBanner';
-import MarkableText, { PEN_LABEL, type DragGesture } from './MarkableText';
+import MarkableText, { penLabel, type DragGesture } from './MarkableText';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
 
 export type PanelSource = { source: Source; label: SourceLabel };
@@ -41,18 +42,12 @@ export const canMark = (m?: PanelMarker): m is PanelMarker => !!m && !m.readOnly
 /** A cause-effect marker: the step banner replaces the pen buttons. */
 export const isCauseEffect = (cfg: MarkerConfig) => cfg.pens.includes('cause') && cfg.pens.includes('effect');
 
-export const HINT = {
-  start: 'Trage peste text (ține apăsat, apoi trage) sau atinge primul și ultimul cuvânt.',
-  anchored: 'Atinge ultimul cuvânt al informației.',
-  pickGap: 'Atinge golul pe care vrei să-l schimbi.',
-  pickSlot: 'Atinge informația pe care vrei s-o schimbi.',
-} as const;
 
 /** The one-line gesture hint under the pens (long-sources mockup `#msg`); the role / slot itself is in the banner. */
 export function hintFor(cfg: MarkerConfig, s: MarkerState): string {
-  if (s.anchor) return HINT.anchored;
-  if (s.pen === null) return cfg.numbered ? HINT.pickSlot : HINT.pickGap;
-  return HINT.start;
+  if (s.anchor) return t('consolidation.marker.hint.anchored');
+  if (s.pen === null) return t(cfg.numbered ? 'consolidation.marker.hint.pickSlot' : 'consolidation.marker.hint.pickGap');
+  return t('consolidation.marker.hint.start');
 }
 
 export const citation = (s: Source) => [s.author, s.work].filter(Boolean).join(', ');
@@ -74,14 +69,14 @@ export function PenBar({ marker }: { marker: PanelMarker }) {
             key={pen}
             testID={`pen-${pen}`}
             accessibilityRole="button"
-            accessibilityLabel={`Marker ${PEN_LABEL[pen]}${used ? ', folosit' : ''}`}
+            accessibilityLabel={t(used ? 'consolidation.marker.penLabelUsed' : 'consolidation.marker.penLabel', { pen: penLabel(pen) })}
             accessibilityState={{ selected: on }}
             onPress={() => dispatch({ type: 'setPen', pen })}
             style={[styles.pen, on && styles.penOn]}
           >
             <View style={[styles.swatch, { backgroundColor: markerPen[pen] }]} />
             <AppText role="label" numberOfLines={1} style={styles.penLabel}>
-              {PEN_LABEL[pen]}
+              {penLabel(pen)}
             </AppText>
             <AppText role="caption" style={styles.check}>
               {used ? '✓' : ''}
@@ -110,7 +105,7 @@ export function SourceTabs({ sources, label, onLabel, testPrefix }: { sources: P
             style={[styles.tab, on && styles.tabOn]}
           >
             <AppText role="label" color={on ? 'primary' : 'text'}>
-              Sursa {s.label}
+              {t('consolidation.source.title', { litera: s.label })}
             </AppText>
           </Pressable>
         );
@@ -229,10 +224,10 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
       <GestureHandlerRootView style={styles.fill}>
         <View testID="source-reader" style={[styles.reader, { paddingTop: insets.top }]}>
           <View style={styles.top}>
-            <IconButton icon="close" accessibilityLabel="Închide sursa" onPress={onClose} />
+            <IconButton icon="close" accessibilityLabel={t('consolidation.source.close')} onPress={onClose} />
             <View style={styles.fill}>
               <AppText role="bar" accessibilityRole="header">
-                Sursa {current.label}
+                {t('consolidation.source.title', { litera: current.label })}
               </AppText>
               <AppText role="caption" color="textMuted" numberOfLines={1}>
                 {citation(current.source)}
@@ -243,13 +238,13 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
             testID="reader-task"
             accessibilityRole="button"
             accessibilityState={{ expanded }}
-            accessibilityHint={expanded ? 'Restrânge cerința' : 'Arată toată cerința'}
+            accessibilityHint={t(expanded ? 'consolidation.source.taskCollapse' : 'consolidation.source.taskExpand')}
             onPress={() => setExpanded((x) => !x)}
             style={styles.task}
           >
             <AppText testID="reader-task-text" role="note" numberOfLines={expanded ? undefined : 1} style={styles.fill}>
               <AppText role="note" style={styles.bold}>
-                Cerința:
+                {t('consolidation.source.taskLabel')}
               </AppText>{' '}
               {prompt}
             </AppText>
@@ -315,7 +310,7 @@ export default function SourceReader({ visible, sources, label, onLabel, prompt,
                 </AppText>
               </>
             ) : null}
-            <Button label="Gata" onPress={onClose} />
+            <Button label={t('consolidation.source.done')} onPress={onClose} />
           </View>
         </View>
       </GestureHandlerRootView>

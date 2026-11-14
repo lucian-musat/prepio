@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react-native';
 import type { ConsolidationExercise, ExerciseFeedback } from '@prepio/shared';
-import FeedbackView, { AI_NOTE, Analyzing, CheckError } from './FeedbackView';
+import FeedbackView, { aiNote, Analyzing, CheckError } from './FeedbackView';
 
 const TYPES = ['short_answer', 'multi_answer', 'source_info', 'source_letter', 'cause_effect', 'facts', 'comparison', 'viewpoint', 'argument'] as const;
 
@@ -18,7 +18,7 @@ it.each(TYPES)('%s: the AI note never says "AI"', async (type) => {
 });
 
 it('uses the agreed wording', async () => {
-  expect(AI_NOTE).toBe('Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.');
+  expect(aiNote()).toBe('Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.');
   await render(<FeedbackView exercise={exercise('viewpoint')} feedback={feedback('viewpoint')} />);
   expect(screen.getByText('Punctul de vedere îl evaluează profesorul digital, care poate greși. Informațiile din sursă le verificăm exact.')).toBeTruthy();
 });

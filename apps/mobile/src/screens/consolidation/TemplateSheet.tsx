@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, feedbackText, radius, space, type SolutionTemplate } from '@prepio/shared';
 import RichText from '../../components/cards/RichText';
 import { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePanel';
+import { t } from '../../texts/store';
 import { AppText, Button } from '../../ui';
 
 const DIALOG_MAX = 560;
@@ -27,7 +28,7 @@ export default function TemplateSheet({ template, typeLabel, onClose }: Props) {
   return (
     <Modal visible={!!template} transparent animationType={dialog ? 'fade' : 'slide'} onRequestClose={onClose} statusBarTranslucent>
       <View style={[styles.root, dialog && styles.rootDialog]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Închide șablonul" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('consolidation.template.closeLabel')} onPress={onClose} style={StyleSheet.absoluteFill} />
         {template ? (
           <View
             testID="template-sheet"
@@ -37,7 +38,7 @@ export default function TemplateSheet({ template, typeLabel, onClose }: Props) {
             {dialog ? null : <View style={styles.grab} />}
             <ScrollView contentContainerStyle={styles.body}>
               <AppText role="eyebrow" style={styles.kind}>
-                Șablon · {typeLabel}
+                {t('consolidation.template.kind', { tip: typeLabel })}
               </AppText>
               <AppText role="question" accessibilityRole="header">
                 {template.title}
@@ -45,12 +46,12 @@ export default function TemplateSheet({ template, typeLabel, onClose }: Props) {
               {template.points ? (
                 <View style={styles.points}>
                   <AppText role="label" style={styles.pointsText}>
-                    La BAC: {template.points}
+                    {t('consolidation.template.points', { puncte: template.points })}
                   </AppText>
                 </View>
               ) : null}
               <RichText source={template.body} />
-              <Button label="Am înțeles" onPress={onClose} />
+              <Button label={t('consolidation.template.gotIt')} onPress={onClose} />
             </ScrollView>
           </View>
         ) : null}

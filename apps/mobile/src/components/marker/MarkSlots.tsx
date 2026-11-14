@@ -1,9 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { border, color, layout, radius, space, VERDICT_LABELS, type Verdict } from '@prepio/shared';
+import { border, color, layout, radius, space, type TextKey, type Verdict } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
+import { verdictLabel } from '../../screens/consolidation/status';
+import { t } from '../../texts/store';
 import { AppText, Icon } from '../../ui';
 import { VERDICT_TONE } from '../consolidation/verdictTone';
-import { PEN_LABEL } from './MarkableText';
+import { penLabel } from './MarkableText';
 import type { MarkerMark, MarkerState, Pen } from './markerReducer';
 import { markBg, slotName, slotPill, slotTone } from './numbered';
 import { useSourcePanel } from './SourcePanel';
@@ -26,7 +28,12 @@ type Props = {
 };
 
 // Slot titles and the ✕ labels, per pen; numbered when the exercise asks for several.
-const TITLE: Record<Pen, string> = { info: 'Informația', support: 'Informația-suport', cause: 'Cauza', effect: 'Efectul' };
+const TITLE: Record<Pen, TextKey> = {
+  info: 'consolidation.marker.slot.info',
+  support: 'consolidation.marker.slot.support',
+  cause: 'consolidation.marker.slot.cause',
+  effect: 'consolidation.marker.slot.effect',
+};
 const REMOVE = 28;
 // The ✕ is drawn at the mockup's 28 px; its touch area reaches the 48 px minimum.
 const REMOVE_SLOP = (layout.minTouch - REMOVE) / 2;
@@ -46,7 +53,7 @@ export default function MarkSlots({ kind, count, numbered = false, state, textOf
   const slot = (pen: Pen, k: number) => {
     const mine = indexed.filter((x) => x.m.pen === pen);
     const own = numbered ? mine.find((x) => x.m.slot === k) : mine[k];
-    const title = numbered ? slotName(pen, k) : count > 1 ? `${TITLE[pen]} ${k + 1}` : TITLE[pen];
+    const title = numbered ? slotName(pen, k) : count > 1 ? `${t(TITLE[pen])} ${k + 1}` : t(TITLE[pen]);
     const common = {
       testID: `slot-${k}`,
       pen,
@@ -99,7 +106,7 @@ function Slot({ testID, pen, slot, title, current, text, verdict = null, onPress
     <View testID={testID} style={[styles.slot, !filled && styles.empty, current && slot !== undefined && [styles.current, { borderColor: slotTone(slot).ink }]]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityHint={filled ? 'Deschide sursa la acest marcaj' : 'Deschide sursa ca să marchezi'}
+        accessibilityHint={t(filled ? 'consolidation.marker.slot.openMarked' : 'consolidation.marker.slot.openEmpty')}
         onPress={onPress}
         style={styles.open}
       >
@@ -118,7 +125,7 @@ function Slot({ testID, pen, slot, title, current, text, verdict = null, onPress
           <View style={[styles.body, styles.titleRow]}>
             {pillView}
             <AppText role="note" color="textMuted" style={styles.body}>
-              {slot === undefined ? PEN_LABEL[pen] : title}: marchează în text
+              {t('consolidation.marker.slot.emptyPrompt', { nume: slot === undefined ? penLabel(pen) : title })}
             </AppText>
           </View>
         )}
@@ -129,16 +136,16 @@ function Slot({ testID, pen, slot, title, current, text, verdict = null, onPress
         )}
       </Pressable>
       {verdict ? (
-        <View accessibilityLabel={`Verdict: ${VERDICT_LABELS[verdict]}`} style={[styles.verdict, { backgroundColor: VERDICT_TONE[verdict].bg }]}>
+        <View accessibilityLabel={t('consolidation.marker.verdictLabel', { verdict: verdictLabel(verdict) })} style={[styles.verdict, { backgroundColor: VERDICT_TONE[verdict].bg }]}>
           <AppText role="badge" style={{ color: VERDICT_TONE[verdict].fg }}>
-            {VERDICT_LABELS[verdict]}
+            {verdictLabel(verdict)}
           </AppText>
         </View>
       ) : null}
       {filled && onRemove ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Șterge ${title.toLowerCase()}`}
+          accessibilityLabel={t('consolidation.marker.removeLabel', { nume: title.toLowerCase() })}
           onPress={onRemove}
           hitSlop={{ top: REMOVE_SLOP, bottom: REMOVE_SLOP, left: REMOVE_SLOP, right: REMOVE_SLOP }}
           style={styles.remove}

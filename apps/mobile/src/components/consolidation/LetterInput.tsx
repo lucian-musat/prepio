@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { space, type SourceLabel } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { OptionRow, type OptionState } from '../../ui';
 import type { InputProps } from './inputKit';
 
@@ -18,7 +19,8 @@ export default function LetterInput({ exercise, value, onChange, feedback, disab
   };
   const labelOf = (l: SourceLabel) => {
     const s = stateOf(l);
-    return s === 'correct' ? `Sursa ${l}, răspunsul corect` : s === 'wrong' ? `Sursa ${l}, alegerea ta, greșită` : `Sursa ${l}`;
+    if (s === 'correct') return t('consolidation.input.letter.correctLabel', { litera: l });
+    return s === 'wrong' ? t('consolidation.input.letter.wrongLabel', { litera: l }) : t('consolidation.source.title', { litera: l });
   };
   return (
     <View style={styles.list} accessibilityRole="radiogroup">
@@ -26,7 +28,7 @@ export default function LetterInput({ exercise, value, onChange, feedback, disab
         <OptionRow
           key={l}
           marker={l}
-          label={`Sursa ${l}`}
+          label={t('consolidation.source.title', { litera: l })}
           state={stateOf(l)}
           checked={l === value.letter}
           accessibilityLabel={labelOf(l)}

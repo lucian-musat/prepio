@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type Animated from 'react-native-reanimated';
 import {
   AI_TYPES,
-  CONSOLIDATION_TYPE_LABELS,
   checkCost,
   checkExercise,
   color,
@@ -30,9 +29,11 @@ import SourcePanel, { SPLIT_MIN_WIDTH } from '../../components/marker/SourcePane
 import { NO_MARKS, noop, type PanelMarker, type PanelSource } from '../../components/marker/SourceReader';
 import { evaluateConsolidation } from '../../lib/api';
 import type { Attempt } from '../../lib/consolidation';
+import { t } from '../../texts/store';
 import { AppText, Button, ScreenLayout, TextButton } from '../../ui';
 import { aiBlocked, combineVerdict, emptyAnswer, isComplete, markerConfig, markerMarks, mergeAiFeedback, restorable } from './checking';
 import FeedbackView, { Analyzing, CheckError } from './FeedbackView';
+import { requirementCount, typeLabel } from './status';
 import TemplateSheet from './TemplateSheet';
 
 type Props = {
@@ -63,13 +64,12 @@ type Props = {
 export type Draft = { answer: ExerciseAnswer; feedback: ExerciseFeedback | null };
 
 const NO_PENS: MarkerConfig = { pens: [], limits: {} };
-const AI_FAILED = 'Evaluarea nu a reușit. Încearcă din nou.';
 
 /** The chip's name for the exercise (comparison: its variant; essay: the requirement count). */
 function chipLabel(ex: ConsolidationExercise): string {
-  if (ex.type === 'comparison') return ex.variant === 'difference' ? 'Deosebire' : 'Asemănare';
-  if (ex.type === 'essay') return `Eseu · ${ex.requirements.length} ${ex.requirements.length === 1 ? 'cerință' : 'cerințe'}`;
-  return CONSOLIDATION_TYPE_LABELS[ex.type];
+  if (ex.type === 'comparison') return t(ex.variant === 'difference' ? 'consolidation.exercise.difference' : 'consolidation.exercise.similarity');
+  if (ex.type === 'essay') return t('consolidation.exercise.essayChip', { cerinte: requirementCount(ex.requirements.length) });
+  return typeLabel(ex.type);
 }
 
 /** After checking a letter exercise, its evidence is underlined green in the source. */
@@ -165,7 +165,7 @@ export default function ExerciseScreen({
     // The essay is checked per requirement, inside EssayInput.
     if (essay || busy.current || !isComplete(exercise, answer)) return;
     const a = answer;
-    const det = checkExercise(exercise, sourceList, a);
+    const det = checkExercise(exercise, sourceList, a, t);
     if (!AI_TYPES.has(exercise.type)) return finish(det, a);
     if (aiBlocked(exercise, det, a)) return finish({ ...det, verdict: det.verdict ?? combineVerdict(det.items) }, a);
     if (!gate.allow(checkCost(exercise, 'exercise'), check)) return;
@@ -183,7 +183,7 @@ export default function ExerciseScreen({
         return;
       }
       setStatus('error');
-      setError(e instanceof Error && e.message ? e.message : AI_FAILED);
+      setError(e instanceof Error && e.message ? e.message : t('errors.api.evaluate.aiFailed'));
     } finally {
       busy.current = false;
     }
@@ -213,9 +213,9 @@ export default function ExerciseScreen({
         </AppText>
       </View>
       {template ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="💡 Cum rezolv" onPress={() => setSheet(template.id)} style={styles.hint}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('consolidation.exercise.howTo')} onPress={() => setSheet(template.id)} style={styles.hint}>
           <AppText role="label" style={styles.hintText}>
-            💡 Cum rezolv
+            {t('consolidation.exercise.howTo')}
           </AppText>
         </Pressable>
       ) : null}
@@ -253,20 +253,20 @@ export default function ExerciseScreen({
   // Nothing is left while a check runs: its result belongs to this exercise.
   const moving = loading || partBusy;
   const prev = (
-    <Button icon="back" accessibilityLabel="Exercițiul anterior" variant="secondary" disabled={!onPrev || moving} onPress={() => onPrev?.()} />
+    <Button icon="back" accessibilityLabel={t('consolidation.exercise.prevLabel')} variant="secondary" disabled={!onPrev || moving} onPress={() => onPrev?.()} />
   );
   const skip = (flex: boolean) => (
-    <Button flex={flex} compact={!flex} label="Sari peste" accessibilityLabel="Sari peste, exercițiul următor" variant="secondary" disabled={moving} onPress={onSkip} />
+    <Button flex={flex} compact={!flex} label={t('consolidation.exercise.skip')} accessibilityLabel={t('consolidation.exercise.skipLabel')} variant="secondary" disabled={moving} onPress={onSkip} />
   );
   // A retry pays again on an AI exercise; after „Corect” it is only a quiet link.
   const retry =
     feedback?.verdict === 'ok' ? (
       <View testID="retry-link" style={styles.retryLink}>
-        <TextButton label={ai && exerciseCost ? `Încearcă din nou · 🪙 ${exerciseCost}` : 'Încearcă din nou'} onPress={onRetry} />
+        <TextButton label={ai && exerciseCost ? t('consolidation.exercise.retryWithCost', { credite: exerciseCost }) : t('common.retry')} onPress={onRetry} />
       </View>
     ) : (
       <View testID="retry-button">
-        <Button label="Încearcă din nou" variant="secondary" cost={ai && exerciseCost ? exerciseCost : undefined} onPress={onRetry} />
+        <Button label={t('common.retry')} variant="secondary" cost={ai && exerciseCost ? exerciseCost : undefined} onPress={onRetry} />
       </View>
     );
   const actions = checked ? (
@@ -274,7 +274,7 @@ export default function ExerciseScreen({
       {feedback?.verdict === 'ok' ? null : retry}
       <View style={styles.row}>
         {prev}
-        <Button flex label="Continuă" onPress={onContinue} />
+        <Button flex label={t('common.continue')} onPress={onContinue} />
       </View>
       {feedback?.verdict === 'ok' ? retry : null}
     </View>
@@ -283,7 +283,7 @@ export default function ExerciseScreen({
       <View style={styles.row}>
         {prev}
         {reqItems.length ? (
-          <Button flex label="Continuă" variant={allVerdicts ? 'primary' : 'secondary'} disabled={moving} onPress={onContinue} />
+          <Button flex label={t('common.continue')} variant={allVerdicts ? 'primary' : 'secondary'} disabled={moving} onPress={onContinue} />
         ) : (
           skip(true)
         )}
@@ -292,7 +292,7 @@ export default function ExerciseScreen({
   ) : (
     <View style={[styles.row, styles.fill]}>
       {prev}
-      <Button flex label="Verifică" cost={exerciseCost || undefined} disabled={!complete} loading={loading} onPress={check} />
+      <Button flex label={t('consolidation.exercise.check')} cost={exerciseCost || undefined} disabled={!complete} loading={loading} onPress={check} />
       {skip(false)}
     </View>
   );
@@ -302,7 +302,7 @@ export default function ExerciseScreen({
   return (
     <View style={styles.fill}>
       <ScreenLayout
-        title="Consolidare"
+        title={t('consolidation.screenTitle')}
         trailing={<HeaderPills need={ai ? exercise.creditCost : undefined} />}
         subheader={map?.(moving)}
         onBack={onBack}
@@ -321,7 +321,7 @@ export default function ExerciseScreen({
       </ScreenLayout>
       <TemplateSheet
         template={sheetTemplate}
-        typeLabel={CONSOLIDATION_TYPE_LABELS[sheetTemplate?.exerciseType ?? exercise.type]}
+        typeLabel={typeLabel(sheetTemplate?.exerciseType ?? exercise.type)}
         onClose={() => setSheet(null)}
       />
       {gate.sheet}

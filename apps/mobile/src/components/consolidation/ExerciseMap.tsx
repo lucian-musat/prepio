@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { color, layout, radius, space } from '@prepio/shared';
+import { color, layout, radius, space, type TextKey } from '@prepio/shared';
 import { MUTED, type StatusTone } from '../../screens/consolidation/status';
+import { t } from '../../texts/store';
 import { AppText } from '../../ui';
 import { VERDICT_TONE } from './verdictTone';
 
-const LEGEND: Array<[string, StatusTone]> = [
-  ['corect', VERDICT_TONE.ok],
-  ['aproape', VERDICT_TONE.almost],
-  ['mai lucrează', VERDICT_TONE.no],
-  ['nerezolvat', MUTED],
+const LEGEND: Array<[TextKey, StatusTone]> = [
+  ['consolidation.map.legend.ok', VERDICT_TONE.ok],
+  ['consolidation.map.legend.almost', VERDICT_TONE.almost],
+  ['consolidation.map.legend.no', VERDICT_TONE.no],
+  ['consolidation.map.legend.unsolved', MUTED],
 ];
 
 export type MapItem = { id: string; chip: string; tone: StatusTone };
@@ -52,7 +53,7 @@ export default function ExerciseMap({ items, current, onJump, disabled = false }
               key={it.id}
               testID={`map-${it.id}`}
               accessibilityRole="button"
-              accessibilityLabel={`Exercițiul ${i + 1}, ${it.chip}`}
+              accessibilityLabel={t('consolidation.map.itemLabel', { n: i + 1, stare: it.chip })}
               accessibilityState={{ selected: here, disabled }}
               aria-selected={here}
               disabled={disabled}
@@ -75,7 +76,7 @@ export default function ExerciseMap({ items, current, onJump, disabled = false }
           <View key={label} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: tone.bg, borderColor: tone.edge }]} />
             <AppText role="caption" color="textMuted">
-              {label}
+              {t(label)}
             </AppText>
           </View>
         ))}

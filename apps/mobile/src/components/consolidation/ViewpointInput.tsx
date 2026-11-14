@@ -1,11 +1,17 @@
 import { StyleSheet, View } from 'react-native';
-import { space, type ExerciseAnswer } from '@prepio/shared';
+import { space, type ExerciseAnswer, type TextKey } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { TextArea } from '../../ui';
 import MarkSlots from '../marker/MarkSlots';
 import { Field, MAX_CHARS, slotVerdict, useMarkText, useMarksAnswer, verdictOf, type MarkerInputProps } from './inputKit';
 
 const VIEWPOINT_HEIGHT = 80; // mockup: a sentence or two
-const COUNT_WORDS = ['', 'o informație care îl susține', 'două informații care îl susțin', 'trei informații care îl susțin'];
+const COUNT_KEYS: Array<TextKey | null> = [
+  null,
+  'consolidation.input.viewpoint.support.one',
+  'consolidation.input.viewpoint.support.two',
+  'consolidation.input.viewpoint.support.three',
+];
 
 /** Punct de vedere: 1 · the point of view, 2 · the support marked in the source. */
 export default function ViewpointInput({ exercise, sources, value, onChange, feedback, disabled, marker }: MarkerInputProps<'viewpoint'>) {
@@ -18,22 +24,23 @@ export default function ViewpointInput({ exercise, sources, value, onChange, fee
     value,
     onChange,
   );
-  const support = COUNT_WORDS[exercise.count] ?? `${exercise.count} informații care îl susțin`;
+  const countKey = COUNT_KEYS[exercise.count];
+  const support = countKey ? t(countKey) : t('consolidation.input.viewpoint.support.many', { n: exercise.count });
   return (
     <View style={styles.parts}>
-      <Field label="1 · Punctul tău de vedere">
+      <Field label={t('consolidation.input.viewpoint.label')}>
         <TextArea
           value={value.text}
           onChangeText={(text) => onChange({ ...value, text })}
-          accessibilityLabel="Punctul tău de vedere"
-          placeholder="Consider că…"
+          accessibilityLabel={t('consolidation.input.viewpoint.fieldLabel')}
+          placeholder={t('consolidation.input.viewpoint.placeholder')}
           minHeight={VIEWPOINT_HEIGHT}
           maxLength={MAX_CHARS}
           editable={!disabled}
           status={verdictOf(feedback, 'viewpoint')}
         />
       </Field>
-      <Field label={`2 · Marchează în sursă ${support}`}>
+      <Field label={t('consolidation.input.viewpoint.markLabel', { informatii: support })}>
         <MarkSlots
           kind="support"
           count={exercise.count}

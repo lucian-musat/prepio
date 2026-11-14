@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, motion, radius, space, stroke, type ConsolidationExercise, type ExerciseFeedback, type FeedbackItem } from '@prepio/shared';
+import { border, color, motion, radius, space, stroke, type ConsolidationExercise, type ExerciseFeedback, type FeedbackItem, type TextKey } from '@prepio/shared';
 import { VERDICT_TONE } from '../../components/consolidation/verdictTone';
+import { t } from '../../texts/store';
 import { AppText, Button, Enter, Icon, Pop, Spinner, easing, feedbackConfig } from '../../ui';
+import { verdictLabel } from './status';
 
 const ICON = 24;
 const ICON_GLYPH = 13;
 
-export const AI_NOTE = 'Feedback de la profesorul digital, după indicațiile scrise de un profesor. Poate greși.';
+/** The note under AI feedback. */
+export const aiNote = () => t('consolidation.feedback.aiNote');
 // Mixed types: say which part the AI judged (types mockup).
-const MIXED_NOTE: Partial<Record<ConsolidationExercise['type'], string>> = {
-  viewpoint: 'Punctul de vedere îl evaluează profesorul digital, care poate greși. Informațiile din sursă le verificăm exact.',
-  argument: 'Conectorii îi verificăm automat. Faptul istoric îl evaluează profesorul digital, care poate greși.',
+const MIXED_NOTE: Partial<Record<ConsolidationExercise['type'], TextKey>> = {
+  viewpoint: 'consolidation.feedback.viewpointNote',
+  argument: 'consolidation.feedback.argumentNote',
 };
-
-const VERDICT_WORD = { ok: 'Corect', almost: 'Aproape', no: 'Mai lucrează' } as const;
 
 /**
  * One verdict box (types mockup `.fb`): the icon, the title, then what was good and what to improve. An AI item's
@@ -28,7 +29,7 @@ export function FeedbackBox({ item, children, showVerdict = true }: { item: Feed
     <Enter config={feedbackConfig} curve={easing.standard} style={[styles.box, { backgroundColor: tone.bg }]}>
       {item.ai && showVerdict ? (
         <AppText role="eyebrow" style={ink}>
-          {VERDICT_WORD[item.verdict]}
+          {verdictLabel(item.verdict)}
         </AppText>
       ) : null}
       <View style={styles.head} accessibilityRole="header">
@@ -47,8 +48,8 @@ export function FeedbackBox({ item, children, showVerdict = true }: { item: Feed
       </View>
       {item.ai ? (
         <>
-          {item.good.length ? <Lines heading="Bine:" lines={item.good} ink={ink} body={body} /> : null}
-          {item.improve.length ? <Lines heading="Ce poți îmbunătăți" lines={item.improve} ink={ink} body={body} /> : null}
+          {item.good.length ? <Lines heading={t('consolidation.feedback.good')} lines={item.good} ink={ink} body={body} /> : null}
+          {item.improve.length ? <Lines heading={t('consolidation.feedback.improve')} lines={item.improve} ink={ink} body={body} /> : null}
         </>
       ) : (
         [...item.good, ...item.improve].map((line, i) => (
@@ -119,11 +120,15 @@ function revealOf(ex: ConsolidationExercise, fb: ExerciseFeedback): { label: str
   const note = ex.type === 'short_answer' || ex.type === 'source_letter' ? null : ex.explanation;
   if (fb.reveal?.length) {
     const label =
-      ex.type === 'source_info' ? 'Vezi toate informațiile corecte' : ex.type === 'cause_effect' ? 'Vezi relațiile posibile din sursă' : 'Vezi răspunsul';
+      ex.type === 'source_info'
+        ? t('consolidation.feedback.revealInfo')
+        : ex.type === 'cause_effect'
+          ? t('consolidation.feedback.revealRelations')
+          : t('consolidation.feedback.revealAnswer');
     return { label, lines: fb.reveal, note };
   }
-  if (ex.modelAnswer) return { label: 'Vezi un răspuns model', lines: [ex.modelAnswer], note };
-  return note ? { label: 'Vezi explicația', lines: [note], note: null } : null;
+  if (ex.modelAnswer) return { label: t('consolidation.feedback.modelAnswer'), lines: [ex.modelAnswer], note };
+  return note ? { label: t('consolidation.feedback.explanation'), lines: [note], note: null } : null;
 }
 
 /** Loading row while the AI judges the answer (types mockup `.loading`). */
@@ -132,7 +137,7 @@ export function Analyzing() {
     <View style={styles.loading} accessibilityLiveRegion="polite">
       <Spinner />
       <AppText role="note" color="textMuted">
-        Se analizează răspunsul…
+        {t('consolidation.feedback.analyzing')}
       </AppText>
     </View>
   );
@@ -145,7 +150,7 @@ export function CheckError({ message, onRetry }: { message: string; onRetry: () 
       <AppText role="note" style={{ color: VERDICT_TONE.no.fg }}>
         {message}
       </AppText>
-      <Button label="Reîncearcă" variant="secondary" onPress={onRetry} />
+      <Button label={t('common.retryButton')} variant="secondary" onPress={onRetry} />
     </View>
   );
 }
@@ -175,14 +180,14 @@ export default function FeedbackView({ exercise, feedback, onSwap }: Props) {
           <View key={item.key} style={styles.group}>
             {fact ? (
               <AppText role="eyebrow" color="textMuted">
-                {`Faptul ${Number(fact[1]) + 1}`.toUpperCase()}
+                {t('consolidation.feedback.factHeading', { n: Number(fact[1]) + 1 }).toUpperCase()}
               </AppText>
             ) : null}
             <FeedbackBox item={item}>
               {feedback.swapped && onSwap && item.key === 'relation' ? (
                 <Pressable accessibilityRole="button" onPress={onSwap} style={styles.swap}>
                   <AppText role="label" color="primary">
-                    ⇅ Inversează rolurile
+                    {t('consolidation.feedback.swapRoles')}
                   </AppText>
                 </Pressable>
               ) : null}
@@ -193,7 +198,7 @@ export default function FeedbackView({ exercise, feedback, onSwap }: Props) {
       {reveal ? <Disclosure {...reveal} /> : null}
       {ai ? (
         <AppText role="caption" color="textMuted">
-          {MIXED_NOTE[exercise.type] ?? AI_NOTE}
+          {t(MIXED_NOTE[exercise.type] ?? 'consolidation.feedback.aiNote')}
         </AppText>
       ) : null}
     </View>

@@ -1,4 +1,5 @@
-import { plural, type SourceLabel } from '@prepio/shared';
+import type { SourceLabel } from '@prepio/shared';
+import { tPlural } from '../texts/store';
 
 /**
  * The source letters a requirement names („…precizată în sursa B”, „din sursele A și B”), in order; none for
@@ -14,5 +15,5 @@ export function sourcesNamedIn(prompt: string): SourceLabel[] {
 
 /** A BAC item's „· 2 puncte”, with non-breaking spaces so the word never wraps alone onto a new line. */
 export function pointsTail(points: number): string {
-  return `· ${plural(points, 'punct', 'puncte')}`.replace(/ /g, ' ');
+  return `· ${tPlural(points, 'consolidation.points.one', 'consolidation.points.many')}`.replace(/ /g, ' ');
 }
