@@ -13,19 +13,14 @@ import ts from 'typescript';
 
 const ROOT = path.resolve(__dirname, '../..'); // apps/mobile
 
-/** Files not migrated yet (relative to apps/mobile). Each batch removes its files; the last one leaves it empty. */
-export const PENDING_FILES: string[] = [
-  'src/screens/DeleteAccountInfoScreen.tsx',
-  'src/screens/ReferralsInfoScreen.tsx',
-];
-
 /** Legal pages: the Terms/Privacy body text stays out of the editable catalog. */
 const EXCLUDED_FILES = [
   'app/termeni.tsx',
   'app/confidentialitate.tsx',
   'src/screens/TermsScreen.tsx',
   'src/screens/PrivacyScreen.tsx',
-  'src/screens/legal/LegalSection.tsx', // operator details of the legal pages (legal body)
+  // Section/Item hold no copy; OperatorDetails and LegalLink are used only by the Terms/Privacy bodies.
+  'src/screens/legal/LegalSection.tsx',
 ];
 
 const COPY_PROPS = new Set([
@@ -131,19 +126,9 @@ describe('no UI text literals outside the catalog', () => {
     expect(EXCLUDED_FILES.filter((f) => !all.includes(f))).toEqual([]);
   });
 
-  it('PENDING_FILES has no stale entries', () => {
-    const stale = PENDING_FILES.filter((f) => !all.includes(f) || EXCLUDED_FILES.includes(f));
-    expect(stale).toEqual([]);
-  });
-
-  it('migrated files contain no copy literals', () => {
-    const skip = new Set([...PENDING_FILES, ...EXCLUDED_FILES]);
+  it('files contain no copy literals', () => {
+    const skip = new Set(EXCLUDED_FILES);
     const hits = all.filter((f) => !skip.has(f)).flatMap(scan);
     expect(hits).toEqual([]);
-  });
-
-  it('pending files still have literals (remove migrated files from PENDING_FILES)', () => {
-    const clean = PENDING_FILES.filter((f) => scan(f).length === 0);
-    expect(clean).toEqual([]);
   });
 });

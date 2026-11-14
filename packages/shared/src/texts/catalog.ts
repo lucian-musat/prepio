@@ -14,6 +14,7 @@ import { lessonTexts } from './groups/lesson';
 import { metaTexts } from './groups/meta';
 import { notificationsTexts } from './groups/notifications';
 import { onboardingTexts } from './groups/onboarding';
+import { pagesTexts } from './groups/pages';
 import { profileTexts } from './groups/profile';
 import { streakTexts } from './groups/streak';
 import { suspendedTexts } from './groups/suspended';
@@ -33,10 +34,11 @@ export const TEXTS = {
   ...metaTexts,
   ...notificationsTexts,
   ...onboardingTexts,
+  ...pagesTexts,
   ...profileTexts,
   ...streakTexts,
   ...suspendedTexts,
-}as const satisfies Record<string, TextEntry>;
+} as const satisfies Record<string, TextEntry>;
 
 export type TextKey = keyof typeof TEXTS;
 
