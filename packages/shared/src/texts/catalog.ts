@@ -1,6 +1,7 @@
 import type { TextEntry } from './types';
 import { formatText } from './format';
 import { authTexts } from './groups/auth';
+import { bacTexts } from './groups/bac';
 import { cardsTexts } from './groups/cards';
 import { commonTexts } from './groups/common';
 import { consolidationTexts } from './groups/consolidation';
@@ -13,6 +14,7 @@ import { suspendedTexts } from './groups/suspended';
 
 export const TEXTS = {
   ...authTexts,
+  ...bacTexts,
   ...cardsTexts,
   ...commonTexts,
   ...consolidationTexts,

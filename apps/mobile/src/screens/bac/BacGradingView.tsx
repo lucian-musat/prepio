@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { space } from '@prepio/shared';
 import { AppText, Spinner } from '../../ui';
+import { t } from '../../texts/store';
 
 /** While the paper is being graded: a spinner and „Corectăm lucrarea…”. */
 export default function BacGradingView() {
@@ -8,7 +9,7 @@ export default function BacGradingView() {
     <View style={styles.root} accessibilityLiveRegion="polite">
       <Spinner />
       <AppText role="section" accessibilityRole="header">
-        Corectăm lucrarea…
+        {t('bac.grading.title')}
       </AppText>
     </View>
   );

@@ -5,6 +5,14 @@ Last updated: 2026-11-13
 ## Where we are
 
 **Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- **Batch „BAC” (`feat/ui-texts-bac`):**
+  - 56 keys in `bac`: list, paper, hints, hand-in summary, grading view and result.
+  - Reuses the existing consolidation type labels, requirement counts and BAC API errors.
+  - What still can't be edited, and why:
+    - „Necompletat.” and the per-requirement feedback are written by the server and stored with the attempt, so they stay as constants.
+    - The grade note is shared with the Terms page; a test keeps the two equal.
+  - Tests: mobile 1579, shared 985, admin 536.
+  - Browser walk (local, `[test]` student with access, console clean): list title and state overrides; the paper at desktop and 360 px with no horizontal scroll; the hand-in summary („Ai răspuns complet la 0 din 14 cerințe”, the missing chips). Test rows and the student were removed. Not walked: submitting and the grading/result screens, which need the AI grader; component tests cover them.
 - **Batch „consolidation” (`feat/ui-texts-consolidation`):**
   - 227 keys in `consolidation`: screen, exercise map and legend, end screen, feedback, „Cum rezolv”, every exercise input, the marker/source reader, and the instant-check messages.
   - The instant-check messages come from `packages/shared` and take a `text` function (default: catalog defaults; the app passes `t`). So an override changes the app's instant check, not BAC grading or feedback already saved.

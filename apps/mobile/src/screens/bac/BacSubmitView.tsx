@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { color, feedbackText, plural, radius, space, type BacAnswers, type BacItem } from '@prepio/shared';
+import { color, feedbackText, radius, space, type BacAnswers, type BacItem } from '@prepio/shared';
 import { answeredCount } from '../../lib/bac';
 import { AppText, Button, Surface } from '../../ui';
+import { t, tPlural } from '../../texts/store';
 
 export const ROMAN = ['', 'I', 'II', 'III'] as const;
 const filled = (s: string | undefined) => !!s && s.trim() !== '';
@@ -17,7 +18,8 @@ export function emptyLabels(empty: BacItem[], answers: BacAnswers): string[] {
     const parts = a?.type === 'essay' ? a.parts : {};
     const missing = item.requirements.flatMap((r, i) => (filled(parts?.[r.id]) ? [] : [i + 1]));
     if (missing.length === item.requirements.length) return ROMAN[item.section];
-    return `${ROMAN[item.section]} (${missing.length === 1 ? 'cerința' : 'cerințele'} ${missing.join(', ')})`;
+    const noun = t(missing.length === 1 ? 'bac.submit.essayMissing.one' : 'bac.submit.essayMissing.many');
+    return `${ROMAN[item.section]} (${noun} ${missing.join(', ')})`;
   });
 }
 
@@ -71,13 +73,16 @@ export default function BacSubmitView({ items, answers, cost, error, sending, on
     <View style={styles.root}>
       <Surface style={styles.card}>
         <AppText role="section" accessibilityRole="header">
-          {`Ai răspuns complet la ${answered} din ${plural(total, 'cerință', 'cerințe')}`}
+          {t('bac.submit.answered', {
+            n: answered,
+            cerinte: tPlural(total, 'consolidation.requirementCount.one', 'consolidation.requirementCount.many'),
+          })}
         </AppText>
-        <ItemList heading="Incomplete:" kind="Incomplet" items={partial} labels={emptyLabels(partial, answers)} onJump={onJump} />
-        <ItemList heading="Necompletate:" kind="Necompletat" items={empty} labels={emptyLabels(empty, answers)} onJump={onJump} />
+        <ItemList heading={t('bac.submit.partialHeading')} kind={t('bac.submit.partialKind')} items={partial} labels={emptyLabels(partial, answers)} onJump={onJump} />
+        <ItemList heading={t('bac.submit.emptyHeading')} kind={t('bac.submit.emptyKind')} items={empty} labels={emptyLabels(empty, answers)} onJump={onJump} />
       </Surface>
       <AppText role="note" color="textMuted">
-        După ce predai lucrarea, nu mai poți schimba răspunsurile.
+        {t('bac.submit.warning')}
       </AppText>
       {error ? (
         <View style={styles.error} accessibilityLiveRegion="polite">
@@ -87,8 +92,8 @@ export default function BacSubmitView({ items, answers, cost, error, sending, on
         </View>
       ) : null}
       <View style={styles.actions}>
-        <Button label="Trimite la corectat" cost={cost} loading={sending} disabled={sending} onPress={onSend} />
-        <Button label="Mai lucrez" variant="secondary" disabled={sending} onPress={onBack} />
+        <Button label={t('bac.submit.send')} cost={cost} loading={sending} disabled={sending} onPress={onSend} />
+        <Button label={t('bac.submit.keepWorking')} variant="secondary" disabled={sending} onPress={onBack} />
       </View>
     </View>
   );

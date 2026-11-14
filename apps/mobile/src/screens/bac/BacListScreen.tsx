@@ -8,6 +8,7 @@ import PaywallSheet from '../../access/PaywallSheet';
 import Coin from '../../credits/Coin';
 import HeaderPills from '../../streak/HeaderPills';
 import { fetchBacList, type BacListRow } from '../../lib/bac';
+import { t } from '../../texts/store';
 
 const ROMAN = ['', 'I', 'II', 'III'];
 
@@ -17,23 +18,23 @@ function stateChip(r: BacListRow): { label: string; fg: string; bg: string } {
     case 'draft':
       return {
         label: r.position
-          ? `În lucru · Subiectul ${ROMAN[r.position.section]}, cerința ${r.position.index + 1}`
-          : 'În lucru',
+          ? t('bac.list.state.draftAt', { subiect: ROMAN[r.position.section]!, n: r.position.index + 1 })
+          : t('bac.list.state.draft'),
         fg: feedbackText.almost,
         bg: color.accentSubtle,
       };
     case 'grading':
-      return { label: 'Se corectează…', fg: color.primaryStrong, bg: color.primarySubtle };
+      return { label: t('bac.list.state.grading'), fg: color.primaryStrong, bg: color.primarySubtle };
     case 'failed':
-      return { label: 'Corectarea nu a reușit', fg: feedbackText.wrong, bg: color.dangerSubtle };
+      return { label: t('bac.list.state.failed'), fg: feedbackText.wrong, bg: color.dangerSubtle };
     case 'completed':
       return {
-        label: r.lastGrade != null ? `✓ Completat · ${formatGrade(r.lastGrade)}` : '✓ Completat',
+        label: r.lastGrade != null ? t('bac.list.state.completedGrade', { nota: formatGrade(r.lastGrade) }) : t('bac.list.state.completed'),
         fg: feedbackText.good,
         bg: color.successSubtle,
       };
     default:
-      return { label: 'Neînceput', fg: color.textMuted, bg: color.surfaceMuted };
+      return { label: t('bac.list.state.new'), fg: color.textMuted, bg: color.surfaceMuted };
   }
 }
 
@@ -48,10 +49,10 @@ function SubjectRow({ row, locked, onPress, onResult }: { row: BacListRow; locke
         <View style={styles.rowText}>
           <AppText role="bodyStrong">{row.title}</AppText>
           <Chip label={chip.label} fg={chip.fg} bg={chip.bg} />
-          <View style={styles.cost} accessible accessibilityLabel={`Costă ${row.creditCost} credite la predare`}>
+          <View style={styles.cost} accessible accessibilityLabel={t('bac.list.costLabel', { n: row.creditCost })}>
             <Coin size={12} />
             <AppText role="caption" color="textMuted" accessible={false}>
-              {`${row.creditCost} credite la predare`}
+              {t('bac.list.cost', { n: row.creditCost })}
             </AppText>
           </View>
         </View>
@@ -66,12 +67,12 @@ function SubjectRow({ row, locked, onPress, onResult }: { row: BacListRow; locke
       {earlier ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Ultima notă: ${formatGrade(row.lastGrade!)}, vezi rezultatul`}
+          accessibilityLabel={t('bac.list.lastGradeLabel', { nota: formatGrade(row.lastGrade!) })}
           onPress={onResult}
           hitSlop={8}
           style={styles.earlier}
         >
-          <AppText role="small" color="primary">{`Ultima notă: ${formatGrade(row.lastGrade!)} ›`}</AppText>
+          <AppText role="small" color="primary">{`${t('bac.list.lastGrade', { nota: formatGrade(row.lastGrade!) })} ›`}</AppText>
         </Pressable>
       ) : null}
     </Surface>
@@ -131,11 +132,11 @@ export default function BacListScreen() {
     if (failed) {
       return (
         <Surface style={styles.error}>
-          <AppText role="section">Nu am putut încărca subiectele</AppText>
+          <AppText role="section">{t('bac.list.loadFailed')}</AppText>
           <AppText role="small" color="textMuted">
-            Verifică conexiunea la internet și încearcă din nou.
+            {t('errors.checkConnection')}
           </AppText>
-          <Button label="Reîncearcă" onPress={retry} />
+          <Button label={t('common.retryButton')} onPress={retry} />
         </Surface>
       );
     }
@@ -149,7 +150,7 @@ export default function BacListScreen() {
     if (rows.length === 0) {
       return (
         <AppText role="body" color="textMuted">
-          Nu există încă subiecte publicate.
+          {t('bac.list.empty')}
         </AppText>
       );
     }
@@ -157,15 +158,14 @@ export default function BacListScreen() {
     const intro = (
       <Surface key="intro" style={styles.intro}>
         <AppText role="small" color="textMuted">
-          Lucrări complete, ca la examen: Subiectul I, II și III. Lucrezi în ritmul tău și totul se salvează automat. La
-          final primești o notă orientativă și vezi ce mai ai de lucrat.
+          {t('bac.list.intro')}
         </AppText>
       </Surface>
     );
     return [intro, ...years.map((year) => (
       <View key={year} style={styles.group}>
         <AppText role="caption" color="textMuted" accessibilityRole="header">
-          {`Istorie · ${year}`}
+          {t('bac.list.yearHeading', { an: year })}
         </AppText>
         {rows
           .filter((r) => r.year === year)
@@ -186,12 +186,12 @@ export default function BacListScreen() {
   };
 
   return (
-    <ScreenLayout title="Subiecte BAC" onBack={goBackOrHome} trailing={<HeaderPills />}>
+    <ScreenLayout title={t('bac.list.title')} onBack={goBackOrHome} trailing={<HeaderPills />}>
       {body()}
       <PaywallSheet
         visible={paywall}
         canOpenAfterPurchase={false}
-        doneLabel="Înapoi la subiecte"
+        doneLabel={t('bac.backToSubjects')}
         onClose={() => setPaywall(false)}
         onUnlocked={() => setPaywall(false)}
       />

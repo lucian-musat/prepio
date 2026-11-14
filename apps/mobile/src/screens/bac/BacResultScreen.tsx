@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { BAC_GRADE_NOTE, color, formatAccessDate, formatGrade, radius, space, type BacItemResult } from '@prepio/shared';
+import { color, formatAccessDate, formatGrade, radius, space, type BacItemResult } from '@prepio/shared';
 import { fetchLatestGraded, fetchOpenAttempt, type BacAttemptView } from '../../lib/bac';
 import { AppText, Button, ScreenLayout, Spinner, Surface } from '../../ui';
+import { t } from '../../texts/store';
 import { ROMAN } from './BacSubmitView';
 
 /** Back to the subject list: the screen below when there is one (the list pushed the paper), otherwise the list. */
@@ -29,7 +30,7 @@ export function subtotals(results: BacItemResult[]): string[] {
     const rows = results.filter((r) => r.section === s);
     if (!rows.length) return [];
     const sum = (k: 'points' | 'max') => rows.reduce((t, r) => t + r[k], 0);
-    return [`Subiectul ${ROMAN[s]} · ${sum('points')} / ${sum('max')} p`];
+    return [t('bac.result.subtotal', { subiect: ROMAN[s], puncte: sum('points'), max: sum('max') })];
   });
 }
 
@@ -54,38 +55,38 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
   const work = toWorkOn(results);
   return (
     <ScreenLayout
-      title="Rezultat"
+      title={t('bac.result.title')}
       onBack={onDone}
       actions={
         <View style={styles.actions}>
           {onContinue ? (
-            <Button label="Continuă lucrarea începută" variant="secondary" onPress={onContinue} />
+            <Button label={t('bac.result.continue')} variant="secondary" onPress={onContinue} />
           ) : (
             <>
-              <Button label="Reia subiectul" variant="secondary" onPress={onRedo} />
+              <Button label={t('bac.result.redo')} variant="secondary" onPress={onRedo} />
               <AppText role="caption" color="textMuted" style={styles.center}>
-                Dacă reiei subiectul, corectarea costă din nou credite.
+                {t('bac.result.redoNote')}
               </AppText>
             </>
           )}
-          <Button label="Înapoi la subiecte" onPress={onDone} />
+          <Button label={t('bac.backToSubjects')} onPress={onDone} />
         </View>
       }
     >
       <View style={styles.gradeBox}>
         <AppText role="label" color="textMuted">
-          Nota ta
+          {t('bac.result.yourGrade')}
         </AppText>
         <AppText role="display" style={styles.grade} accessibilityRole="header">
           {formatGrade(grade)}
         </AppText>
         <AppText role="caption" color="textMuted" style={styles.center}>
-          {BAC_GRADE_NOTE}
+          {t('bac.result.gradeNote')}
         </AppText>
         <AppText role="caption" color="textMuted" style={styles.center}>
           {gradedAt
-            ? `Corectată pe ${formatAccessDate(new Date(gradedAt))} · include 10 puncte din oficiu`
-            : 'Include 10 puncte din oficiu'}
+            ? t('bac.result.gradedOn', { data: formatAccessDate(new Date(gradedAt)) })
+            : t('bac.result.exOfficio')}
         </AppText>
       </View>
       <View style={styles.subtotals}>
@@ -98,7 +99,7 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
       {work.length ? (
         <View style={styles.list}>
           <AppText role="eyebrow" color="textMuted" accessibilityRole="header">
-            De lucrat
+            {t('bac.result.workOn')}
           </AppText>
           {work.map((r) => {
             const label = itemLabel(r, results);
@@ -108,7 +109,7 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
                   {r.feedback ? `${label}: ${r.feedback}` : label}
                 </AppText>
                 <AppText role="label" color="textMuted">
-                  {`${r.points} / ${r.max} p`}
+                  {t('bac.result.points', { puncte: r.points, max: r.max })}
                 </AppText>
               </Surface>
             );
@@ -117,7 +118,7 @@ export function BacResultView({ grade, results, gradedAt, onRedo, onContinue, on
       ) : (
         <Surface style={styles.congrats}>
           <AppText role="bodyStrong" style={styles.center}>
-            Felicitări! Ai luat punctajul maxim la toate cerințele.
+            {t('bac.result.congrats')}
           </AppText>
         </Surface>
       )}
@@ -164,25 +165,25 @@ export default function BacResultScreen() {
     );
   }
   return (
-    <ScreenLayout title="Rezultat" onBack={backToSubjects}>
+    <ScreenLayout title={t('bac.result.title')} onBack={backToSubjects}>
       {state.status === 'loading' ? (
         <View style={styles.loader}>
           <Spinner />
         </View>
       ) : state.status === 'error' ? (
         <Surface style={styles.list}>
-          <AppText role="section">Nu am putut încărca rezultatul</AppText>
+          <AppText role="section">{t('bac.result.loadFailed')}</AppText>
           <AppText role="small" color="textMuted">
-            Verifică conexiunea la internet și încearcă din nou.
+            {t('errors.checkConnection')}
           </AppText>
-          <Button label="Reîncearcă" onPress={load} />
+          <Button label={t('common.retryButton')} onPress={load} />
         </Surface>
       ) : (
         <View style={styles.list}>
           <AppText role="body" color="textMuted">
-            Nu ai încă un rezultat la acest subiect.
+            {t('bac.result.none')}
           </AppText>
-          <Button label="Înapoi la subiecte" variant="secondary" onPress={backToSubjects} />
+          <Button label={t('bac.backToSubjects')} variant="secondary" onPress={backToSubjects} />
         </View>
       )}
     </ScreenLayout>

@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import BacListScreen from './BacListScreen';
 import { fetchBacList, type BacListRow } from '../../lib/bac';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 jest.mock('../../access/AccessProvider');
 jest.mock('../../credits/CreditsProvider');
@@ -143,4 +144,15 @@ it('the last-grade link is not nested inside the row button (invalid HTML on the
   let inside = false;
   for (let p = link.parent; p; p = p.parent) if (p === rowButton) inside = true;
   expect(inside).toBe(false);
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('shows the overridden state chip and year heading', async () => {
+    applyOverrides({ 'bac.list.state.new': '[override]', 'bac.list.yearHeading': '[an {an}]' });
+    await renderList();
+    expect(await screen.findByText('[an 2026]')).toBeTruthy();
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });
