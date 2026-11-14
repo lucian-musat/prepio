@@ -15,27 +15,8 @@ const ROOT = path.resolve(__dirname, '../..'); // apps/mobile
 
 /** Files not migrated yet (relative to apps/mobile). Each batch removes its files; the last one leaves it empty. */
 export const PENDING_FILES: string[] = [
-  'src/access/AccessBanner.tsx',
-  'src/access/PaywallSheet.tsx',
-  'src/access/useAccessPurchase.ts',
-  'src/components/AccountDeletion.tsx',
-  'src/credits/BuyCreditsSheet.tsx',
-  'src/credits/CostTag.tsx',
-  'src/credits/CreditChip.tsx',
-  'src/credits/PackagePicker.tsx',
-  'src/credits/useCreditGate.ts',
-  'src/lib/credits.ts',
-  'src/lib/profile.ts',
-  'src/lib/referrals.ts',
-  'src/screens/AccessScreen.tsx',
-  'src/screens/CreditsScreen.tsx',
   'src/screens/DeleteAccountInfoScreen.tsx',
-  'src/screens/InviteScreen.tsx',
-  'src/screens/ProfileScreen.tsx',
   'src/screens/ReferralsInfoScreen.tsx',
-  'src/streak/ReminderTimeSheet.tsx',
-  'src/streak/StreakPill.tsx',
-  'src/streak/StreakSheet.tsx',
 ];
 
 /** Legal pages: the Terms/Privacy body text stays out of the editable catalog. */

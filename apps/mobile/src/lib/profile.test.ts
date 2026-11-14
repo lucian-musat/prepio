@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchProfile, updateDisplayName, updateLearningMode, validateDisplayName } from './profile';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 
@@ -121,5 +122,15 @@ describe('updateLearningMode', () => {
     await expect(updateLearningMode(USER, 'guided', fakeClient({ data: [], error: null }).client)).rejects.toThrow(
       'Modul nu a putut fi salvat. Încearcă din nou.',
     );
+  });
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('validateDisplayName reads its messages from the texts (overrides apply)', () => {
+    applyOverrides({ 'profile.name.empty': '[empty]', 'profile.name.tooLong': '[{max}]' });
+    expect(validateDisplayName('')).toEqual({ ok: false, message: '[empty]' });
+    expect(validateDisplayName('a'.repeat(61))).toEqual({ ok: false, message: '[60]' });
   });
 });

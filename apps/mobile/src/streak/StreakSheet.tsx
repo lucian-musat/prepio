@@ -1,19 +1,41 @@
 import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bucharestDay, color, plural, radius, space, weekDays } from '@prepio/shared';
+import { bucharestDay, color, radius, space, weekDays, type TextKey } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
+import { dayCount } from '../lib/counts';
+import { t } from '../texts/store';
 import { AppText, Button, TextButton } from '../ui';
 import { useReminders, useStreak } from './StreakProvider';
 
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as BuyCreditsSheet
-const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-const DAY_NAMES = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+/** Monday to Sunday: the initial under each dot and the name the screen reader says. */
+const DAY_LETTERS: TextKey[] = [
+  'streak.weekdayLetter.mon',
+  'streak.weekdayLetter.tue',
+  'streak.weekdayLetter.wed',
+  'streak.weekdayLetter.thu',
+  'streak.weekdayLetter.fri',
+  'streak.weekdayLetter.sat',
+  'streak.weekdayLetter.sun',
+];
+const DAY_NAMES: TextKey[] = [
+  'streak.weekday.mon',
+  'streak.weekday.tue',
+  'streak.weekday.wed',
+  'streak.weekday.thu',
+  'streak.weekday.fri',
+  'streak.weekday.sat',
+  'streak.weekday.sun',
+];
+const dayLetter = (i: number) => t(DAY_LETTERS[i]!);
+const dayName = (i: number) => t(DAY_NAMES[i]!);
 const DOT = 36;
 
 /** „Vineri, azi”, „Vineri, azi, ai lucrat”, „Luni, ai lucrat”, or just the name. */
-const dayLabel = (name: string, isToday: boolean, worked: boolean) => [name, isToday ? 'azi' : null, worked ? 'ai lucrat' : null].filter(Boolean).join(', ');
+const dayLabel = (name: string, isToday: boolean, worked: boolean) =>
+  [name, isToday ? t('streak.sheet.today') : null, worked ? t('streak.sheet.worked') : null].filter(Boolean).join(', ');
 
 type Props = {
   visible: boolean;
@@ -43,7 +65,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
   return (
     <Modal visible={visible} transparent animationType={dialog ? 'fade' : 'slide'} onRequestClose={onClose} statusBarTranslucent>
       <View style={[styles.root, dialog && styles.rootDialog]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Închide fereastra" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.closeWindow')} onPress={onClose} style={StyleSheet.absoluteFill} />
         {visible ? (
           <View
             testID="streak-sheet"
@@ -54,10 +76,10 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
             <View style={styles.body}>
               <View style={styles.head}>
                 <AppText role="question" accessibilityRole="header">
-                  {`🔥 ${plural(summary.current, 'zi', 'zile')} la rând`}
+                  {t('streak.sheet.title', { zile: dayCount(summary.current) })}
                 </AppText>
                 <AppText role="body" color="textMuted">
-                  {`Recordul tău: ${plural(summary.record, 'zi', 'zile')}`}
+                  {t('streak.sheet.record', { zile: dayCount(summary.record) })}
                 </AppText>
               </View>
               <View style={styles.week}>
@@ -65,7 +87,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
                   const isWorked = worked.has(d);
                   const isToday = d === today;
                   return (
-                    <View key={d} accessible accessibilityLabel={dayLabel(DAY_NAMES[i], isToday, isWorked)} style={styles.dayCol}>
+                    <View key={d} accessible accessibilityLabel={dayLabel(dayName(i), isToday, isWorked)} style={styles.dayCol}>
                       <View
                         testID={`streak-day-${d}`}
                         style={[
@@ -80,7 +102,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
                         ) : null}
                       </View>
                       <AppText role="caption" color="textMuted">
-                        {DAY_LETTERS[i]}
+                        {dayLetter(i)}
                       </AppText>
                     </View>
                   );
@@ -88,12 +110,12 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
               </View>
               {doneToday ? null : (
                 <AppText role="body" color="textMuted" style={styles.hint}>
-                  Azi încă n-ai lucrat. Un singur exercițiu păstrează seria.
+                  {t('streak.sheet.hint')}
                 </AppText>
               )}
               {!doneToday && onSolve ? (
                 <Button
-                  label="Rezolvă un exercițiu"
+                  label={t('streak.sheet.solve')}
                   onPress={() => {
                     onClose();
                     onSolve();
@@ -102,7 +124,7 @@ export default function StreakSheet({ visible, onClose, onSolve }: Props) {
               ) : null}
               {Platform.OS !== 'web' && reminders.status !== 'unsupported' ? (
                 <TextButton
-                  label="Setări memento"
+                  label={t('streak.sheet.settings')}
                   onPress={() => {
                     onClose();
                     router.push('/profile');

@@ -1,6 +1,4 @@
 import {
-  CONSOLIDATION_TYPE_LABELS,
-  creditsLabel,
   type ConsolidationType,
   type CreditLedgerKind,
   type CreditPackage,
@@ -11,6 +9,8 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { accountSuspended, apiErrorText, bearerToken, missingApiUrl, offlineText, sessionExpired, sessionExpiredText } from './api';
 import { t } from '../texts/store';
+import { typeLabel } from '../screens/consolidation/status';
+import { creditCount } from './counts';
 import { fetchMyReferrals } from './referrals';
 import { ownUserId } from './ownUser';
 import { apiUrl, getSupabase } from './supabase';
@@ -136,7 +136,7 @@ export async function fetchCreditBalance(userId: string, client: SupabaseClient 
 export function ledgerLabel(e: StudentLedgerEntry): string {
   // BAC paper grading rows target `bac:<subject id>`, named after the subject when its title is known.
   if ((e.kind === 'check' || e.kind === 'refund') && e.target?.startsWith('bac:')) {
-    const label = e.kind === 'refund' ? 'Corectare nereușită · returnat' : 'Corectare subiect';
+    const label = e.kind === 'refund' ? t('credits.ledger.bacRefund') : t('credits.ledger.bacCheck');
     return e.bacTitle ? `${label} · ${e.bacTitle}` : label;
   }
   const lesson = (e.kind === 'check' || e.kind === 'refund') && e.exercise?.lesson ? ` · ${e.exercise.lesson}` : '';
@@ -146,26 +146,26 @@ export function ledgerLabel(e: StudentLedgerEntry): string {
 function base(e: StudentLedgerEntry): string {
   switch (e.kind) {
     case 'welcome':
-      return 'Credite de bun venit';
+      return t('credits.ledger.welcome');
     case 'purchase':
-      return `Pachet ${creditsLabel(e.delta)}`;
+      return t('credits.ledger.purchase', { credite: creditCount(e.delta) });
     case 'access_bonus':
-      return e.fromReferral ? 'Credite incluse în accesul gratuit din recomandări' : 'Credite incluse în acces';
+      return e.fromReferral ? t('credits.ledger.accessBonusReferral') : t('credits.ledger.accessBonus');
     case 'refund':
-      return 'Verificare nereușită · returnat';
+      return t('credits.ledger.refund');
     case 'referral':
-      return e.referralName ? `Recomandare: ${e.referralName}` : 'Recomandare';
+      return e.referralName ? t('credits.ledger.referralNamed', { nume: e.referralName }) : t('credits.ledger.referral');
     case 'admin':
-      return e.reason?.trim() ? `Ajustare · ${e.reason.trim()}` : 'Ajustare';
+      return e.reason?.trim() ? t('credits.ledger.adminReason', { motiv: e.reason.trim() }) : t('credits.ledger.admin');
     case 'check': {
-      if (!e.exercise) return 'Verificare cu profesorul digital';
-      const base = e.exercise.type === 'essay' ? 'Eseu' : CONSOLIDATION_TYPE_LABELS[e.exercise.type];
+      if (!e.exercise) return t('credits.ledger.check');
+      const base = e.exercise.type === 'essay' ? t('credits.ledger.essay') : typeLabel(e.exercise.type);
       if (e.exercise.type !== 'essay') return base;
       // Old ledger rows still carry the removed whole-essay target.
-      if (e.target === 'whole') return `${base} · eseul întreg`;
+      if (e.target === 'whole') return `${base} · ${t('credits.ledger.essayWhole')}`;
       if (e.target?.startsWith('req:')) {
         const n = (e.exercise.requirements ?? []).indexOf(e.target.slice(4)) + 1;
-        if (n > 0) return `${base} · cerința ${n}`;
+        if (n > 0) return `${base} · ${t('credits.ledger.essayRequirement', { n })}`;
       }
       return base;
     }

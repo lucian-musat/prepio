@@ -4,8 +4,6 @@ import { AccessApiError, purchaseAccess } from '../lib/access';
 import { t } from '../texts/store';
 import { useAccess } from './AccessProvider';
 
-export const OFFER_CHANGED = 'Oferta s-a schimbat. Verifică noul preț.';
-
 export type AccessPurchase = {
   /** Buys access at the offer on screen; true on success. A call while one is in flight resolves false at once. */
   purchase(): Promise<boolean>;
@@ -55,7 +53,8 @@ export function useAccessPurchase(): AccessPurchase {
         if (e.offer) applyOffer(e.offer);
         else void refresh();
         setOfferChanged(true);
-        setError(OFFER_CHANGED);
+        // The catalog text (an admin may have edited it), not the server's message.
+        setError(t('errors.api.access.offerChanged'));
       } else {
         setError(e instanceof Error && e.message ? e.message : t('errors.purchase.failed'));
       }

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, creditsLabel, feedbackText, formatAccessDate, gradient, radius, space } from '@prepio/shared';
+import { color, feedbackText, formatAccessDate, gradient, radius, space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Spinner, goBackOrHome } from '../ui';
 import Coin from '../credits/Coin';
 import { useCredits } from '../credits/CreditsProvider';
-import PackagePicker, { PAYMENT_FOOTNOTE } from '../credits/PackagePicker';
+import PackagePicker from '../credits/PackagePicker';
+import { creditCount } from '../lib/counts';
 import { fetchLedger, ledgerLabel, type StudentLedgerEntry } from '../lib/credits';
+import { t } from '../texts/store';
 
 const PAGE = 30; // fetchLedger's default page size: a full page means there may be more
 const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, as the top bar logo
-const LOAD_FAILED = 'Nu am putut încărca istoricul.';
 /** The day a row belongs to, as its group header: „3 noiembrie 2026” (Bucharest time). */
 const dayOf = (iso: string) => formatAccessDate(new Date(iso));
 
@@ -33,12 +34,12 @@ function HistoryRow({ entry }: { entry: StudentLedgerEntry }) {
       <View style={styles.rowText}>
         <AppText role="bodyStrong">{ledgerLabel(entry)}</AppText>
         <AppText role="caption" color="textMuted">
-          {`sold ${entry.balanceAfter}`}
+          {t('credits.screen.rowBalance', { n: entry.balanceAfter })}
         </AppText>
       </View>
       <AppText
         role="bodyStrong"
-        accessibilityLabel={`${gain ? 'plus' : 'minus'} ${creditsLabel(Math.abs(entry.delta))}`}
+        accessibilityLabel={t(gain ? 'credits.screen.gain' : 'credits.screen.spend', { credite: creditCount(Math.abs(entry.delta)) })}
         style={{ color: gain ? feedbackText.good : feedbackText.wrong }}
       >
         {entry.delta > 0 ? `+${entry.delta}` : entry.delta < 0 ? `−${-entry.delta}` : '0'}
@@ -88,7 +89,7 @@ export default function CreditsScreen() {
     } catch (e) {
       if (!mounted.current || id !== gen.current) return;
       console.warn('[credits] history could not be loaded:', e);
-      setError(LOAD_FAILED);
+      setError(t('credits.screen.loadFailed'));
     } finally {
       if (id === gen.current) {
         busy.current = false;
@@ -106,7 +107,7 @@ export default function CreditsScreen() {
   const last = entries[entries.length - 1];
 
   return (
-    <ScreenLayout title="Creditele mele" onBack={goBackOrHome}>
+    <ScreenLayout title={t('credits.screen.title')} onBack={goBackOrHome}>
       <View style={styles.stack}>
         <LinearGradient
           colors={[...gradient.hero.colors]}
@@ -115,7 +116,7 @@ export default function CreditsScreen() {
           style={styles.card}
         >
           <AppText role="eyebrow" color="onPrimary">
-            Sold
+            {t('credits.screen.balance')}
           </AppText>
           <View style={styles.balance}>
             <Coin size={28} />
@@ -125,24 +126,24 @@ export default function CreditsScreen() {
           </View>
           {known ? (
             <AppText role="note" color="onPrimary">
-              {`≈ ${Math.floor(have / 2)}–${have} verificări`}
+              {t('credits.screen.estimate', { min: Math.floor(have / 2), max: have })}
             </AppText>
           ) : null}
         </LinearGradient>
 
         <View style={styles.section}>
           <AppText role="section" accessibilityRole="header">
-            Cumpără credite
+            {t('credits.screen.buyTitle')}
           </AppText>
           <PackagePicker onBought={() => void load(undefined, true)} />
           <AppText role="caption" color="textMuted" style={styles.center}>
-            {PAYMENT_FOOTNOTE}
+            {t('credits.footnote')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText role="section" accessibilityRole="header">
-            Istoric
+            {t('credits.screen.historyTitle')}
           </AppText>
           {byDay(entries).map((g) => (
             <View key={g.day} style={styles.day}>
@@ -156,12 +157,12 @@ export default function CreditsScreen() {
           ))}
           {loading ? (
             <View style={styles.center}>
-              <Spinner accessibilityLabel="Se încarcă istoricul" />
+              <Spinner accessibilityLabel={t('credits.screen.loadingHistory')} />
             </View>
           ) : null}
           {!loading && !error && entries.length === 0 ? (
             <AppText role="note" color="textMuted">
-              Încă nu ai folosit credite.
+              {t('credits.screen.empty')}
             </AppText>
           ) : null}
           {error ? (
@@ -171,7 +172,7 @@ export default function CreditsScreen() {
           ) : null}
           {!loading && (error || more) ? (
             <Button
-              label={error && entries.length === 0 ? 'Reîncearcă' : 'Încarcă mai multe'}
+              label={error && entries.length === 0 ? t('common.retryButton') : t('credits.screen.loadMore')}
               variant="secondary"
               onPress={() => void load(error && entries.length === 0 ? undefined : last?.id)}
             />

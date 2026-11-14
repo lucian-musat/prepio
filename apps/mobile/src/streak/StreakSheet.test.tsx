@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { bucharestDay, color, weekDays, type StreakSummary } from '@prepio/shared';
 import StreakSheet from './StreakSheet';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const render = (ui: ReactElement) => rtlRender(<SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>);
@@ -129,4 +130,16 @@ it('„Setări memento” is hidden when reminders are unsupported (build withou
   mockReminderStatus = 'unsupported';
   await render(<StreakSheet visible onClose={() => {}} />);
   expect(screen.queryByText('Setări memento')).toBeNull();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy and the weekdays from the texts (overrides apply)', async () => {
+    applyOverrides({ 'streak.sheet.hint': '[override]', 'streak.weekdayLetter.thu': '[J]', 'streak.weekday.wed': '[Miercuri]' });
+    await render(<StreakSheet visible onClose={() => {}} />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[J]')).toBeTruthy();
+    expect(screen.getByLabelText('[Miercuri], azi')).toBeTruthy();
+  });
 });

@@ -36,6 +36,11 @@ export const commonTexts = {
     default: 'Închide',
     description: 'Numele citit de cititorul de ecran pentru butoanele ×, pentru imaginea mărită și pentru fundalul unui dialog (atingerea lui îl închide)',
   },
+  'common.closeWindow': {
+    group: 'common',
+    default: 'Închide fereastra',
+    description: 'Numele citit de cititorul de ecran pentru fundalul unei ferestre de jos (atingerea lui o închide): oferta, credite, seria, ora mementoului',
+  },
   'common.loading': {
     group: 'common',
     default: 'Se încarcă',

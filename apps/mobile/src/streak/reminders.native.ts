@@ -2,12 +2,12 @@
 // must keep working (reminders are then simply unsupported).
 import { planReminders, type StreakSummary } from '@prepio/shared';
 import { Platform } from 'react-native';
+import { t } from '../texts/store';
 import type { PermissionStatus, ReminderSettings } from './reminderSettings';
 
 type Notifications = typeof import('expo-notifications');
 
 export const REMINDER_CHANNEL = 'daily-reminder';
-const CHANNEL_NAME = 'Memento zilnic';
 
 let N: Notifications | null = null;
 try {
@@ -62,7 +62,7 @@ export async function requestPermission(): Promise<boolean> {
 
 async function ensureChannel(n: Notifications): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await n.setNotificationChannelAsync(REMINDER_CHANNEL, { name: CHANNEL_NAME, importance: n.AndroidImportance.DEFAULT });
+  await n.setNotificationChannelAsync(REMINDER_CHANNEL, { name: t('notifications.channelName'), importance: n.AndroidImportance.DEFAULT });
 }
 
 /**
@@ -78,7 +78,8 @@ export async function syncReminders(s: StreakSummary | null, settings: ReminderS
     await N.cancelAllScheduledNotificationsAsync();
     if (!on || !s) return;
     await ensureChannel(N);
-    for (const r of planReminders(now, settings.time, s)) {
+    // The texts are read now: an admin edit reaches the phone at its next scheduling.
+    for (const r of planReminders(now, settings.time, s, undefined, t)) {
       await N.scheduleNotificationAsync({
         content: { title: r.title, body: r.body },
         trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: r.at, channelId: REMINDER_CHANNEL },

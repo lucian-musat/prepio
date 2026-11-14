@@ -376,3 +376,13 @@ describe('purchaseCredits: server error codes become catalog texts', () => {
     await expect(purchaseCredits('p1')).rejects.toMatchObject({ message: '[failed]' });
   });
 });
+
+describe('ledgerLabel texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads the row names and the exercise type names from the texts (overrides apply)', () => {
+    applyOverrides({ 'credits.ledger.purchase': '[{credite}]', 'consolidation.type.causeEffect': '[ce]' });
+    expect(ledgerLabel(entry({ kind: 'purchase', delta: 20 }))).toBe('[20 de credite]');
+    expect(ledgerLabel(entry({ delta: -1, target: 'exercise', exercise: { type: 'cause_effect', prompt: 'p' } }))).toBe('[ce]');
+  });
+});

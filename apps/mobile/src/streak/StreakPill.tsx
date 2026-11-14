@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { color, plural, radius, space } from '@prepio/shared';
+import { color, radius, space } from '@prepio/shared';
+import { dayCount } from '../lib/counts';
+import { t } from '../texts/store';
 import { AppText } from '../ui';
 import StreakSheet from './StreakSheet';
 import { useStreak } from './StreakProvider';
@@ -19,7 +21,7 @@ export default function StreakPill({ onSolve }: { onSolve?: () => void }) {
       <Pressable
         testID="streak-pill"
         accessibilityRole="button"
-        accessibilityLabel={`Serie de ${plural(summary.current, 'zi', 'zile')}, deschide detaliile`}
+        accessibilityLabel={t('streak.pill.label', { zile: dayCount(summary.current) })}
         onPress={() => setOpen(true)}
         hitSlop={8}
         style={[styles.pill, { backgroundColor: alive ? color.accentSubtle : color.surfaceMuted }]}

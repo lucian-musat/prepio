@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, creditsLabel, feedbackText, radius, space } from '@prepio/shared';
+import { color, feedbackText, radius, space, type TextKey } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
 import { AppText, Button } from '../ui';
 import Coin from './Coin';
 import { useCredits } from './CreditsProvider';
-import PackagePicker, { PAYMENT_FOOTNOTE } from './PackagePicker';
+import PackagePicker from './PackagePicker';
+import { creditCount } from '../lib/counts';
+import { t } from '../texts/store';
 
 const DIALOG_MAX = 560;
 const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as TemplateSheet
@@ -14,22 +16,26 @@ const BACKDROP = 'rgba(15,46,40,0.45)'; // the same backdrop as TemplateSheet
 /** What the sheet is for: a consolidation check (the default) or submitting a BAC paper. */
 export type BuyCreditsVariant = 'exercise' | 'bac';
 
-const COPY: Record<BuyCreditsVariant, { action: string; back: string; lead: string; tail: string; kept: string }> = {
+/** The text keys per variant (read at render time: the overrides apply). A BAC paper has no tail after the cost. */
+const COPY: Record<BuyCreditsVariant, { action: TextKey; back: TextKey; lead: TextKey; tail: TextKey | null; kept: TextKey }> = {
   exercise: {
-    action: 'Verifică acum',
-    back: 'Înapoi la exercițiu',
-    lead: 'Verificarea cu profesorul digital costă',
-    tail: ' la acest exercițiu',
-    kept: 'Răspunsul tău rămâne salvat.',
+    action: 'credits.buy.action.exercise',
+    back: 'credits.buy.back.exercise',
+    lead: 'credits.buy.lead.exercise',
+    tail: 'credits.buy.tail.exercise',
+    kept: 'credits.buy.kept.exercise',
   },
   bac: {
-    action: 'Trimite acum',
-    back: 'Înapoi la lucrare',
-    lead: 'Corectarea lucrării costă',
-    tail: '',
-    kept: 'Răspunsurile tale rămân salvate.',
+    action: 'credits.buy.action.bac',
+    back: 'credits.buy.back.bac',
+    lead: 'credits.buy.lead.bac',
+    tail: null,
+    kept: 'credits.buy.kept.bac',
   },
 };
+
+/** „Înapoi la exercițiu” / „Înapoi la lucrare” (also the paywall's button after a purchase, from useCreditGate). */
+export const backLabel = (variant: BuyCreditsVariant = 'exercise') => t(COPY[variant].back);
 
 type Props = {
   visible: boolean;
@@ -54,7 +60,15 @@ type Props = {
  * „Verifică acum” runs the blocked check. A bottom sheet on the phone, a centred dialog from 900 px.
  */
 export default function BuyCreditsSheet({ visible, variant = 'exercise', required, cost, onClose, onSkip, skipDisabled = false, onCheckNow }: Props) {
-  const copy = COPY[variant];
+  const keys = COPY[variant];
+  const copy = {
+    action: t(keys.action),
+    back: t(keys.back),
+    lead: t(keys.lead),
+    tail: keys.tail ? ` ${t(keys.tail)}` : '',
+    kept: t(keys.kept),
+  };
+  const havePrefix = t('credits.buy.havePrefix');
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const dialog = width >= SPLIT_MIN_WIDTH;
@@ -75,7 +89,7 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
   };
   const have = balance ?? 0;
   const skip =
-    variant === 'bac' ? null : <Button label="Sari peste exercițiu" variant="secondary" disabled={buying || skipDisabled} onPress={onSkip} />;
+    variant === 'bac' ? null : <Button label={t('credits.buy.skip')} variant="secondary" disabled={buying || skipDisabled} onPress={onSkip} />;
   // A package that still leaves the balance short: back to the packages (the title says what is still missing), so
   // „Verifică acum” never runs a check the balance cannot pay for.
   const enough = have >= cost;
@@ -88,10 +102,10 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
             +{added}
           </AppText>
           <AppText role="question" accessibilityRole="header">
-            Credite adăugate!
+            {t('credits.buy.added')}
           </AppText>
           <AppText role="body" color="textMuted">
-            Acum ai {creditsLabel(have)}.
+            {t('credits.buy.have', { credite: creditCount(have) })}
           </AppText>
         </View>
         <Button label={copy.action} cost={cost} onPress={onCheckNow} />
@@ -100,12 +114,12 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
     ) : (
       <>
         <AppText role="question" accessibilityRole="header">
-          Îți mai trebuie {creditsLabel(Math.max(required - have, 1))}
+          {t('credits.buy.missing', { credite: creditCount(Math.max(required - have, 1)) })}
         </AppText>
         <AppText
           role="note"
           color="textMuted"
-          accessibilityLabel={`${copy.lead} ${creditsLabel(required)}${copy.tail}. Ai ${have}. ${copy.kept}`}
+          accessibilityLabel={`${copy.lead} ${creditCount(required)}${copy.tail}. ${havePrefix} ${have}. ${copy.kept}`}
         >
           {copy.lead}{' '}
           <View style={styles.inlineCoin}>
@@ -113,8 +127,8 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
           </View>{' '}
           <AppText role="note" style={styles.strong}>
             {required}
-          </AppText>{' '}
-          {copy.tail}. Ai <AppText role="note" style={styles.strong}>{have}</AppText>. {copy.kept}
+          </AppText>
+          {copy.tail}. {havePrefix} <AppText role="note" style={styles.strong}>{have}</AppText>. {copy.kept}
         </AppText>
         <PackagePicker onBought={(_, credits) => setAdded(credits)} onBusyChange={setBuying} />
         {skip}
@@ -124,7 +138,7 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
   return (
     <Modal visible={visible} transparent animationType={dialog ? 'fade' : 'slide'} onRequestClose={close} statusBarTranslucent>
       <View style={[styles.root, dialog && styles.rootDialog]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Închide fereastra" onPress={close} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.closeWindow')} onPress={close} style={StyleSheet.absoluteFill} />
         {visible ? (
           <View
             testID="buy-credits-sheet"
@@ -135,7 +149,7 @@ export default function BuyCreditsSheet({ visible, variant = 'exercise', require
             <ScrollView contentContainerStyle={styles.body}>
               {body}
               <AppText role="caption" color="textMuted" style={styles.footnote}>
-                {PAYMENT_FOOTNOTE}
+                {t('credits.footnote')}
               </AppText>
             </ScrollView>
           </View>

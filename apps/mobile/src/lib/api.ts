@@ -1,79 +1,29 @@
 import {
+  API_ERROR_REFUNDED_TEXT,
+  API_ERROR_TEXTS,
   MAX_ANSWER_CHARS,
-  type AccessPurchaseErrorCode,
   type AccountDeleteError,
   type AccountDeleteErrorCode,
-  type BacSubmitErrorCode,
+  type ApiEndpoint,
   type ConsolidationEvaluateError,
   type ConsolidationEvaluateErrorCode,
   type ConsolidationEvaluateRequest,
   type ConsolidationEvaluateResponse,
-  type CreditsPurchaseErrorCode,
   type TextKey,
 } from '@prepio/shared';
 import { apiUrl, AuthOutageError, getAccessToken, signOut } from './supabase';
 import { refreshRegisteredAccess, refreshRegisteredProfile } from './profileRefresh';
 import { t } from '../texts/store';
 
-/**
- * The text shown for each error `code` of the admin API, per endpoint. The server's `message` is never shown: an
- * admin can edit these texts (their defaults are the server's messages); an unknown code gets `errors.api.generic`.
- */
-const API_ERROR_TEXTS = {
-  evaluate: {
-    empty: 'errors.api.evaluate.empty',
-    too_long: 'errors.api.tooLong',
-    not_found: 'errors.api.evaluate.notFound',
-    rate_limited: 'errors.api.evaluate.rateLimited',
-    insufficient_credits: 'errors.api.evaluate.insufficientCredits',
-    ai_failed: 'errors.api.evaluate.aiFailed',
-    bad_request: 'errors.api.badRequest',
-    unauthorized: 'errors.api.unauthorized',
-    suspended: 'errors.api.suspended',
-    access_required: 'errors.api.evaluate.accessRequired',
-  } satisfies Record<ConsolidationEvaluateErrorCode, TextKey>,
-  bac: {
-    bad_request: 'errors.api.badRequest',
-    unauthorized: 'errors.api.unauthorized',
-    suspended: 'errors.api.suspended',
-    access_required: 'errors.api.bac.accessRequired',
-    not_found: 'errors.api.bac.notFound',
-    rate_limited: 'errors.api.bac.rateLimited',
-    insufficient_credits: 'errors.api.bac.insufficientCredits',
-    already_grading: 'errors.api.bac.alreadyGrading',
-    grading_failed: 'errors.api.bac.gradingFailed',
-    too_long: 'errors.api.tooLong',
-  } satisfies Record<BacSubmitErrorCode, TextKey>,
-  credits: {
-    bad_request: 'errors.api.badRequest',
-    unauthorized: 'errors.api.unauthorized',
-    package_unavailable: 'errors.api.credits.packageUnavailable',
-    suspended: 'errors.api.suspended',
-    server_error: 'errors.api.credits.serverError',
-  } satisfies Record<CreditsPurchaseErrorCode, TextKey>,
-  access: {
-    bad_request: 'errors.api.badRequest',
-    unauthorized: 'errors.api.unauthorized',
-    suspended: 'errors.api.suspended',
-    offer_changed: 'errors.api.access.offerChanged',
-    server_error: 'errors.api.access.serverError',
-  } satisfies Record<AccessPurchaseErrorCode, TextKey>,
-  accountDelete: {
-    unauthorized: 'errors.api.unauthorized',
-    forbidden: 'errors.api.accountDelete.forbidden',
-    bad_request: 'errors.api.badRequest',
-    server_error: 'errors.api.accountDelete.serverError',
-  } satisfies Record<AccountDeleteErrorCode, TextKey>,
-};
-
-export type ApiEndpoint = keyof typeof API_ERROR_TEXTS;
+// The code -> text map lives in @prepio/shared (API_ERROR_TEXTS), so the admin can test it against the server.
+export type { ApiEndpoint };
 
 /**
  * The student-facing text for an error `code` returned by `endpoint`. `refunded`: a consolidation `ai_failed` whose
  * credits were given back (the reply carries `credits`).
  */
 export function apiErrorText(endpoint: ApiEndpoint, code: string, opts: { refunded?: boolean } = {}): string {
-  if (endpoint === 'evaluate' && code === 'ai_failed' && opts.refunded) return t('errors.api.evaluate.aiFailedRefunded');
+  if (endpoint === 'evaluate' && code === 'ai_failed' && opts.refunded) return t(API_ERROR_REFUNDED_TEXT);
   const texts: Record<string, TextKey> = API_ERROR_TEXTS[endpoint];
   const key = Object.prototype.hasOwnProperty.call(texts, code) ? texts[code]! : 'errors.api.generic';
   return t(key, { max: MAX_ANSWER_CHARS });

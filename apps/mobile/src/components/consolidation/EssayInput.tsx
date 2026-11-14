@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, creditsLabel, radius, space, wordCount, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
+import { border, color, radius, space, wordCount, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
+import { creditCount } from '../../lib/counts';
 import { evaluateConsolidation } from '../../lib/api';
 import { mergeItems, essayProgress } from '../../screens/consolidation/checking';
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
@@ -165,7 +166,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                   {gate ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t('common.button.withCost', { eticheta: t('consolidation.input.essay.checkLabel', { n: i + 1 }), credite: creditsLabel(exercise.creditCost) })}
+                    accessibilityLabel={t('common.button.withCost', { eticheta: t('consolidation.input.essay.checkLabel', { n: i + 1 }), credite: creditCount(exercise.creditCost) })}
                     accessibilityState={{ disabled: disabled || !!busy[r.id] || !filled(text) }}
                     disabled={disabled || !!busy[r.id] || !filled(text)}
                     onPress={() => check(r)}

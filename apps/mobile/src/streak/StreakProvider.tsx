@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { bucharestDay, normalizeStreak, streakToast, type StreakSummary } from '@prepio/shared';
 import { useAuth } from '../auth/AuthProvider';
 import { fetchStreak, markActiveToday } from '../lib/streak';
+import { t } from '../texts/store';
 import StreakToast from './StreakToast';
 import { useReminderController, type RemindersValue } from './useReminderController';
 
@@ -55,8 +56,8 @@ export function StreakProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), TOAST_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const apply = useCallback((next: StreakSummary) => {
@@ -94,7 +95,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
       apply(marked);
       // Without a successful read we cannot know it was the first exercise of the day: no toast.
       if (fresh && marked.todayDone) {
-        setToast({ text: streakToast(marked.current), id: ++toastId.current });
+        setToast({ text: streakToast(marked.current, t), id: ++toastId.current });
         listeners.current.forEach((cb) => {
           try {
             cb();
