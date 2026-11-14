@@ -15,6 +15,7 @@ import {
 const OFFLINE = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.';
 import { fetchCreditPackages } from '../../lib/credits';
 import BacPaperScreen from './BacPaperScreen';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 jest.mock('../../lib/bac', () => ({
   ...jest.requireActual('../../lib/bac'),
@@ -365,4 +366,22 @@ it('failed shows the refund message and the paper is editable again', async () =
   const field = screen.getByLabelText('Răspunsul tău');
   expect(field.props.value).toBe('Răspuns');
   expect(field.props.editable).not.toBe(false);
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('shows the overridden navigation and hand-in texts', async () => {
+    applyOverrides({ 'bac.paper.next': '[next]', 'bac.paper.submit': '[override]' });
+    await mount();
+    expect(await screen.findByRole('button', { name: '[next] →' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: '[override]' }).length).toBeGreaterThan(0);
+  });
+
+  it('the refund banner of a failed attempt uses the grading-failed text', async () => {
+    applyOverrides({ 'errors.api.bac.gradingFailed': '[override]' });
+    mockedOpen.mockResolvedValue(attempt({ status: 'failed', answers: MOST }));
+    await mount();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+  });
 });

@@ -13,8 +13,10 @@ import {
   validateBacSubject,
   bacItemFromRow,
   DEFAULT_ESSAY_STYLE,
+  BAC_GRADE_NOTE,
 } from './bac';
 import type { BacBarem, BacItem } from './types';
+import { TEXTS } from '../texts/catalog';
 
 const S1 = 'Domnul urma să fie ales pe viață de către Adunarea electivă.';
 const S2 = 'Puterea legislativă era exercitată colectiv de domn.';
@@ -220,5 +222,11 @@ describe('bacItemFromRow', () => {
       [],
     );
     expect(it0).toMatchObject({ id: 'x', section: 2, number: 4, points: 6, creditCost: 2, type: 'argument' });
+  });
+});
+
+describe('BAC_GRADE_NOTE', () => {
+  it('matches the default of the result screen text (the Terms keep the constant)', () => {
+    expect(TEXTS['bac.result.gradeNote'].default).toBe(BAC_GRADE_NOTE);
   });
 });

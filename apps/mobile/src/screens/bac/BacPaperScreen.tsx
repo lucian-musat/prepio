@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
-  CONSOLIDATION_TYPE_LABELS,
   color,
   feedbackText,
   isShortSource,
@@ -31,6 +30,8 @@ import {
 } from '../../lib/bac';
 import { AppText, Button, ScreenLayout, Spinner, Surface } from '../../ui';
 import TemplateSheet from '../consolidation/TemplateSheet';
+import { typeLabel } from '../consolidation/status';
+import { t } from '../../texts/store';
 import BacGradingView from './BacGradingView';
 import BacItemView from './BacItemView';
 import { BacResultView, backToSubjects } from './BacResultScreen';
@@ -39,8 +40,6 @@ import { useBacDraft } from './useBacDraft';
 
 /** While a paper is being graded elsewhere (reopened, or already submitted), its state is read this often. */
 export const GRADING_POLL_MS = 5000;
-const GRADING_FAILED = 'Corectarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
-const LAST_ITEM_HINT = 'Ai ajuns la ultima cerință. Verifică ce mai ai de completat și predă lucrarea.';
 const SECTIONS: BacSection[] = [1, 2, 3];
 
 type Mode = 'paper' | 'submit' | 'grading' | 'result';
@@ -219,7 +218,7 @@ export default function BacPaperScreen() {
       }
       setMode('submit');
       if (gate.onError(e, () => void send())) return;
-      setSubmitError(e instanceof BacApiError ? e.message || GRADING_FAILED : e instanceof Error && e.message ? e.message : offlineText());
+      setSubmitError(e instanceof BacApiError ? e.message || t('errors.api.bac.gradingFailed') : e instanceof Error && e.message ? e.message : offlineText());
     } finally {
       busy.current = false;
       setSubmitting(false);
@@ -234,21 +233,21 @@ export default function BacPaperScreen() {
     setMode('paper');
   };
 
-  const title = paper?.subject.title ?? 'Subiect BAC';
+  const title = paper?.subject.title ?? t('bac.paper.titleFallback');
 
   if (paperState === 'error' || draftStatus === 'error' || paperState === 'missing') {
     const missing = paperState === 'missing';
     return (
       <ScreenLayout title={title} onBack={backToSubjects}>
         <Surface style={styles.gap}>
-          <AppText role="section">{missing ? 'Subiectul nu este disponibil' : 'Nu am putut încărca subiectul'}</AppText>
+          <AppText role="section">{missing ? t('bac.paper.missing') : t('bac.paper.loadFailed')}</AppText>
           {missing ? null : (
             <>
               <AppText role="small" color="textMuted">
-                Verifică conexiunea la internet și încearcă din nou.
+                {t('errors.checkConnection')}
               </AppText>
               <Button
-                label="Reîncearcă"
+                label={t('common.retryButton')}
                 onPress={() => {
                   setPaperKey((k) => k + 1);
                   draft.reload();
@@ -318,14 +317,14 @@ export default function BacPaperScreen() {
           <Pressable
             key={s}
             accessibilityRole="tab"
-            accessibilityLabel={`Subiectul ${ROMAN[s]}`}
+            accessibilityLabel={t('bac.paper.section', { subiect: ROMAN[s] })}
             accessibilityState={{ selected: on, disabled: !has }}
             disabled={!has}
             onPress={() => !on && go(s, 0)}
             style={[styles.tab, on && styles.tabOn]}
           >
             <AppText role="label" color={on ? 'primary' : 'textMuted'} numberOfLines={1}>
-              {compact ? ROMAN[s] : `Subiectul ${ROMAN[s]}`}
+              {compact ? ROMAN[s] : t('bac.paper.section', { subiect: ROMAN[s] })}
             </AppText>
           </Pressable>
         );
@@ -333,7 +332,8 @@ export default function BacPaperScreen() {
     </View>
   );
   // On a phone „Salvat” would push the map onto a second row; only a failure is worth the space there.
-  const saveText = draft.saveState === 'saved' && !compact ? 'Salvat' : draft.saveState === 'error' ? 'Nu s-a putut salva' : '';
+  const saveText =
+    draft.saveState === 'saved' && !compact ? t('bac.paper.saved') : draft.saveState === 'error' ? t('bac.paper.saveFailed') : '';
   const map = (
     <View style={styles.mapRow}>
       <View style={styles.map}>
@@ -345,7 +345,7 @@ export default function BacPaperScreen() {
             <Pressable
               key={it.id}
               accessibilityRole="button"
-              accessibilityLabel={`Cerința ${it.number}${done ? ', completată' : partly ? ', incompletă' : ''}`}
+              accessibilityLabel={t(done ? 'bac.paper.itemDone' : partly ? 'bac.paper.itemPartial' : 'bac.paper.item', { n: it.number })}
               accessibilityState={{ selected: here }}
               onPress={() => !here && go(position.section, i)}
               style={[styles.slot, compact && styles.slotCompact]}
@@ -381,9 +381,9 @@ export default function BacPaperScreen() {
         title={title}
         onBack={backToSubjects}
         trailing={
-          <Pressable accessibilityRole="button" accessibilityLabel="Predă lucrarea" onPress={() => setMode('submit')} style={styles.submit}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('bac.paper.submit')} onPress={() => setMode('submit')} style={styles.submit}>
             <AppText role="label" color="primary">
-              Predă lucrarea
+              {t('bac.paper.submit')}
             </AppText>
           </Pressable>
         }
@@ -398,15 +398,15 @@ export default function BacPaperScreen() {
             {/* The last item has nowhere to go but the hand-in: say so instead of a dead „Următorul”. */}
             {isLast ? (
               <AppText role="small" color="textMuted" style={styles.lastHint} accessibilityLiveRegion="polite">
-                {LAST_ITEM_HINT}
+                {t('bac.paper.lastItemHint')}
               </AppText>
             ) : null}
             <View style={styles.row}>
-              <Button flex label="← Înapoi" variant="secondary" disabled={flat <= 0} onPress={() => step(-1)} />
+              <Button flex label={`← ${t('common.back')}`} variant="secondary" disabled={flat <= 0} onPress={() => step(-1)} />
               {isLast ? (
-                <Button flex label="Predă lucrarea" onPress={() => setMode('submit')} />
+                <Button flex label={t('bac.paper.submit')} onPress={() => setMode('submit')} />
               ) : (
-                <Button flex label="Următorul →" onPress={() => step(1)} />
+                <Button flex label={`${t('bac.paper.next')} →`} onPress={() => step(1)} />
               )}
             </View>
           </View>
@@ -417,7 +417,7 @@ export default function BacPaperScreen() {
         {failed ? (
           <View style={styles.failed} accessibilityLiveRegion="polite">
             <AppText role="small" style={{ color: feedbackText.wrong }}>
-              {GRADING_FAILED}
+              {t('errors.api.bac.gradingFailed')}
             </AppText>
           </View>
         ) : null}
@@ -436,7 +436,7 @@ export default function BacPaperScreen() {
       </ScreenLayout>
       <TemplateSheet
         template={sheetTemplate}
-        typeLabel={CONSOLIDATION_TYPE_LABELS[sheetTemplate?.exerciseType ?? item?.type ?? 'essay']}
+        typeLabel={typeLabel(sheetTemplate?.exerciseType ?? item?.type ?? 'essay')}
         onClose={() => setSheet(null)}
       />
     </View>

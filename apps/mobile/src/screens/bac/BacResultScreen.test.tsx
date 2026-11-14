@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { BAC_GRADE_NOTE, type BacItemResult } from '@prepio/shared';
 import { fetchLatestGraded, fetchOpenAttempt, type BacAttemptView } from '../../lib/bac';
 import BacResultScreen from './BacResultScreen';
+import { applyOverrides, resetTexts } from '../../texts/store';
 
 jest.mock('../../lib/bac', () => ({ ...jest.requireActual('../../lib/bac'), fetchLatestGraded: jest.fn(), fetchOpenAttempt: jest.fn() }));
 jest.mock('expo-router', () => ({
@@ -120,4 +121,23 @@ it('with a paper already in progress it offers to continue it, not a new retake'
   expect(screen.queryByText('Dacă reiei subiectul, corectarea costă din nou credite.')).toBeNull();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Continuă lucrarea începută' })));
   expect(router.replace).toHaveBeenCalledWith('/bac/s1');
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('shows the overridden grade note and „De lucrat” heading', async () => {
+    applyOverrides({ 'bac.result.gradeNote': '[override]', 'bac.result.workOn': '[lucru]' });
+    mockedGraded.mockResolvedValue(graded([r(1, 5, 3, 7, 'Ai inversat cauza cu efectul.')]));
+    await mount();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[lucru]')).toBeTruthy();
+  });
+
+  it('shows the overridden empty state', async () => {
+    applyOverrides({ 'bac.result.none': '[override]' });
+    mockedGraded.mockResolvedValue(null);
+    await mount();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+  });
 });

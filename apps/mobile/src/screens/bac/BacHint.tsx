@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { color, feedbackText, markerPen, radius, space } from '@prepio/shared';
 import RichText from '../../components/cards/RichText';
 import { AppText, Icon } from '../../ui';
+import { t } from '../../texts/store';
 
 /**
  * „💡 Cum rezolv” on a BAC item: the solution template's body in a collapsible block, collapsed by default (owner,
@@ -15,12 +16,12 @@ export default function BacHint({ body }: { body: string }) {
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityHint={open ? 'Ascunde indicațiile' : 'Arată indicațiile'}
+        accessibilityHint={open ? t('bac.hint.hide') : t('bac.hint.show')}
         onPress={() => setOpen((o) => !o)}
         style={styles.head}
       >
         <AppText role="label" style={styles.title}>
-          💡 Cum rezolv
+          {t('consolidation.exercise.howTo')}
         </AppText>
         <View testID={open ? 'bac-hint-chevron-up' : 'bac-hint-chevron-down'} accessible={false}>
           <Icon name={open ? 'up' : 'down'} tint={feedbackText.almost} />
