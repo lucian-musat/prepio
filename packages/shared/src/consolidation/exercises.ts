@@ -1,3 +1,4 @@
+import { TEXTS } from '../texts/catalog';
 import type { DistributiveOmit } from '../types';
 import type {
   AiContext,
@@ -67,7 +68,12 @@ export const DEFAULT_CREDIT_COST: Record<ConsolidationType, number> = {
   essay: 1,
 };
 
-export const VERDICT_LABELS: Record<Verdict, string> = { ok: 'Corect', almost: 'Aproape', no: 'Mai lucrează' };
+/** The verdicts' catalog defaults (the student app shows `consolidation.verdict.*` through `t`, overrides applied). */
+export const VERDICT_LABELS: Record<Verdict, string> = {
+  ok: TEXTS['consolidation.verdict.ok'].default,
+  almost: TEXTS['consolidation.verdict.almost'].default,
+  no: TEXTS['consolidation.verdict.no'].default,
+};
 
 export function emptyExerciseContent(type: ConsolidationType, newId: () => string): ConsolidationContent {
   switch (type) {

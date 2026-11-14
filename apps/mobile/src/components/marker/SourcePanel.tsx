@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { isShortSource, space, type Mark, type SourceLabel } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { AppText, Surface } from '../../ui';
 import MarkableText from './MarkableText';
 import type { Pen } from './markerReducer';
@@ -179,7 +180,7 @@ function InlineSource({ item, marker }: { item: PanelSource; marker?: PanelMarke
   return (
     <Surface testID={`source-inline-${item.label}`} padding={3.5} radius="lg" style={styles.inline}>
       <AppText role="eyebrow" color="textMuted">
-        Sursa {item.label}
+        {t('consolidation.source.title', { litera: item.label })}
       </AppText>
       <MarkableText
         source={item.source}

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, creditsLabel, plural, radius, space, VERDICT_LABELS, wordCount, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
+import { border, color, creditsLabel, radius, space, wordCount, type EssayRequirement, type ExerciseFeedback } from '@prepio/shared';
 import { evaluateConsolidation } from '../../lib/api';
 import { mergeItems, essayProgress } from '../../screens/consolidation/checking';
 import { Analyzing, CheckError, Disclosure, FeedbackBox } from '../../screens/consolidation/FeedbackView';
+import { verdictLabel } from '../../screens/consolidation/status';
+import { t, tPlural } from '../../texts/store';
 import { AppText, TextArea } from '../../ui';
 import Coin from '../../credits/Coin';
 import { useMarkActive } from '../../streak/StreakProvider';
@@ -88,7 +90,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
       onFeedback(merged);
     } catch (e) {
       if (gate.onError(e, run)) return;
-      setErrors((x) => ({ ...x, [r.id]: e instanceof Error && e.message ? e.message : 'Evaluarea nu a reușit. Încearcă din nou.' }));
+      setErrors((x) => ({ ...x, [r.id]: e instanceof Error && e.message ? e.message : t('errors.api.evaluate.aiFailed') }));
     } finally {
       inFlight.current.delete(r.id);
       setBusy((b) => ({ ...b, [r.id]: false }));
@@ -100,7 +102,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
   return (
     <View style={styles.list}>
       <AppText role="note" color="textMuted">
-        {gate ? 'Scrie fiecare cerință în câmpul ei și verifică-le pe rând.' : 'Scrie fiecare cerință în câmpul ei.'}
+        {t(gate ? 'consolidation.input.essay.introCheck' : 'consolidation.input.essay.introWrite')}
       </AppText>
       {reqs.map((r, i) => {
         const text = value.parts[r.id] ?? '';
@@ -110,13 +112,15 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
         const current = stale ? undefined : item;
         const isOpen = open.has(r.id);
         const tone = current ? VERDICT_TONE[current.verdict] : null;
-        const state = current ? VERDICT_LABELS[current.verdict] : filled(text) ? (gate ? 'Neverificat' : 'Completat') : 'Necompletat';
+        const state = current
+          ? verdictLabel(current.verdict)
+          : t(filled(text) ? (gate ? 'consolidation.input.essay.state.unchecked' : 'consolidation.input.essay.state.filled') : 'consolidation.input.essay.state.empty');
         return (
           <View key={r.id} testID={`requirement-${r.id}`} style={styles.card}>
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ expanded: isOpen }}
-              accessibilityHint={isOpen ? 'Restrânge cerința' : 'Deschide cerința'}
+              accessibilityHint={t(isOpen ? 'consolidation.input.essay.collapseHint' : 'consolidation.input.essay.expandHint')}
               onPress={() => toggle(r.id)}
               style={styles.head}
             >
@@ -138,9 +142,9 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
               <View style={styles.body}>
                 <TextArea
                   value={text}
-                  onChangeText={(t) => onChange({ type: 'essay', parts: { ...value.parts, [r.id]: t } })}
-                  accessibilityLabel={`Cerința ${i + 1}`}
-                  placeholder="Scrie aici…"
+                  onChangeText={(part) => onChange({ type: 'essay', parts: { ...value.parts, [r.id]: part } })}
+                  accessibilityLabel={t('consolidation.input.essay.fieldLabel', { n: i + 1 })}
+                  placeholder={t('consolidation.input.essay.placeholder')}
                   minHeight={PART_HEIGHT}
                   maxLength={MAX_CHARS}
                   editable={!disabled}
@@ -149,10 +153,10 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                 {r.argument ? <ConnectorChips text={text} /> : null}
                 <View style={styles.row}>
                   <AppText role="caption" color="textMuted" style={styles.fill}>
-                    {text.length} caractere
+                    {t('consolidation.input.essay.chars', { n: text.length })}
                   </AppText>
                   {r.templateId && templateIds?.has(r.templateId) && onOpenTemplate ? (
-                    <Pressable accessibilityRole="button" accessibilityLabel={`Cum rezolv cerința ${i + 1}`} onPress={() => onOpenTemplate(r.templateId!)} style={styles.small}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={t('consolidation.input.essay.howToLabel', { n: i + 1 })} onPress={() => onOpenTemplate(r.templateId!)} style={styles.small}>
                       <AppText role="label" color="primary">
                         💡
                       </AppText>
@@ -161,14 +165,14 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                   {gate ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Verifică cerința ${i + 1}, costă ${creditsLabel(exercise.creditCost)}`}
+                    accessibilityLabel={t('common.button.withCost', { eticheta: t('consolidation.input.essay.checkLabel', { n: i + 1 }), credite: creditsLabel(exercise.creditCost) })}
                     accessibilityState={{ disabled: disabled || !!busy[r.id] || !filled(text) }}
                     disabled={disabled || !!busy[r.id] || !filled(text)}
                     onPress={() => check(r)}
                     style={[styles.small, styles.smallRow, (disabled || busy[r.id] || !filled(text)) && styles.off]}
                   >
                     <AppText role="label" color="primary">
-                      Verifică cerința
+                      {t('consolidation.input.essay.check')}
                     </AppText>
                     <Coin size={12} />
                     <AppText role="label" color="primary">
@@ -180,7 +184,7 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
                 {busy[r.id] ? <Analyzing /> : null}
                 {errors[r.id] ? <CheckError message={errors[r.id]!} onRetry={() => check(r)} /> : null}
                 {item && !busy[r.id] ? <FeedbackBox showVerdict={false} item={item} /> : null}
-                {item && r.modelAnswer ? <Disclosure label="Vezi un răspuns model" lines={[r.modelAnswer]} /> : null}
+                {item && r.modelAnswer ? <Disclosure label={t('consolidation.feedback.modelAnswer')} lines={[r.modelAnswer]} /> : null}
               </View>
             ) : null}
           </View>
@@ -188,8 +192,14 @@ export default function EssayInput({ exercise, value, onChange, feedback, disabl
       })}
       <AppText role="caption" color="textMuted">
         {gate
-          ? `${ok} din ${reqs.length} cerințe corecte`
-          : `${plural(reqs.reduce((n, r) => n + wordCount(value.parts[r.id] ?? ''), 0), 'cuvânt', 'cuvinte')} în total`}
+          ? t('consolidation.input.essay.progress', { corecte: ok, total: reqs.length })
+          : t('consolidation.input.essay.wordTotal', {
+              cuvinte: tPlural(
+                reqs.reduce((n, r) => n + wordCount(value.parts[r.id] ?? ''), 0),
+                'consolidation.input.essay.word.one',
+                'consolidation.input.essay.word.many',
+              ),
+            })}
       </AppText>
     </View>
   );

@@ -5,6 +5,19 @@ Last updated: 2026-11-13
 ## Where we are
 
 **Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- **Batch „consolidation” (`feat/ui-texts-consolidation`):**
+  - 227 keys in `consolidation`: screen, exercise map and legend, end screen, feedback, „Cum rezolv”, every exercise input, the marker/source reader, and the instant-check messages.
+  - The instant-check messages come from `packages/shared` and take a `text` function (default: catalog defaults; the app passes `t`). So an override changes the app's instant check, not BAC grading or feedback already saved.
+  - Strings that code matches on (connector lists, the verdict tokens the AI returns, the type labels the admin uses) stay as code constants; the app shows separate display keys.
+  - Tests: mobile 1571, shared 928, admin 536.
+  - Known, unreachable edge cases: a source with 0 paragraphs would read „0 paragrafe” (was „0 de paragrafe”); a viewpoint with 0 supports has new wording. Neither can reach a student.
+  - Browser walk (local, `[test]` student with the lesson finished, console clean):
+    - title and legend overrides
+    - a correct short answer → „Corect!” with its explanation
+    - „Cum rezolv” sheet
+    - next exercise
+    - 360 px with no horizontal scroll
+    - test rows and the student removed
 - **Batch „home and lesson” (`feat/ui-texts-home`):**
   - 127 keys in `home`, `lesson` and `cards`:
     - Home: continue card, sections, locked reasons, invite note

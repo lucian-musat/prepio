@@ -6,6 +6,7 @@ import { fetchAttempts, fetchConsolidation, fetchRun, saveAttempt, saveRun, type
 import { evaluateConsolidation, EvaluateApiError } from '../lib/api';
 import { fetchProgress } from '../lib/progress';
 import { fetchHome } from '../lib/content';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../credits/CreditsProvider', () => ({ useCredits: () => ({ balance: 5, change: null }) }));
 jest.mock('../streak/StreakProvider');
@@ -396,5 +397,23 @@ describe('navigation', () => {
     expect(await screen.findByText('Corect!')).toBeTruthy();
     await press('Continuă');
     expect((await screen.findByLabelText('Faptul istoric 1')).props.value).toBe(FACT_1);
+  });
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('the load error comes from the texts', async () => {
+    applyOverrides({ 'consolidation.loadFailed': '[override]' });
+    mocked.data.mockRejectedValue(new Error('offline'));
+    await open();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+  });
+
+  it('the end screen uses the overrides', async () => {
+    applyOverrides({ 'consolidation.end.title': '[end]' });
+    mocked.attempts.mockResolvedValue(attemptsOf(attempt('e1', 'ok'), attempt('e2', 'ok')));
+    await open();
+    expect(await screen.findByText('[end]')).toBeTruthy();
   });
 });

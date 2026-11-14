@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { border, color, feedbackText, radius, space } from '@prepio/shared';
 import { fontFamily } from '../../theme/fonts';
+import { t } from '../../texts/store';
 import { AppText } from '../../ui';
 import type { MarkerAction, MarkerConfig, MarkerState, Pen } from './markerReducer';
-import { ORDINAL, SLOT_NOUN, slotPill, slotTone } from './numbered';
+import { ordinal, slotNoun, slotPill, slotTone } from './numbered';
 
 /** The copy once every slot is filled (spec 2026-11-11). */
-export const NUM_DONE = '✓ Gata, toate informațiile marcate';
+const numDone = () => t('consolidation.marker.numbered.done');
 
 const penOf = (cfg: MarkerConfig): Pen => cfg.pens[0] ?? 'info';
 const countOf = (cfg: MarkerConfig) => Math.max(1, cfg.limits[penOf(cfg)] ?? 1);
@@ -25,15 +26,17 @@ function Pill({ pen, slot }: { pen: Pen; slot: number }) {
 /** „Informația 2 din 3 · o refaci”, „Marchezi a doua informație”. */
 function Step({ cfg, state, slot }: { cfg: MarkerConfig; state: MarkerState; slot: number }) {
   const pen = penOf(cfg);
-  const noun = SLOT_NOUN[pen === 'support' ? 'support' : 'info'];
+  const noun = slotNoun(pen === 'support' ? 'support' : 'info');
+  const nth = ordinal(slot);
+  const step = { nume: noun, n: slot + 1, total: countOf(cfg) };
   return (
     <>
       <AppText role="eyebrow" style={{ color: slotTone(slot).ink }} accessibilityLiveRegion="polite">
-        {`${noun} ${slot + 1} din ${countOf(cfg)}${filled(state, slot) ? ' · o refaci' : ''}`}
+        {t(filled(state, slot) ? 'consolidation.marker.numbered.stepRedo' : 'consolidation.marker.numbered.step', step)}
       </AppText>
       <View style={styles.headline}>
         <Pill pen={pen} slot={slot} />
-        <AppText role="bar">{`Marchezi ${ORDINAL[slot] ? `${ORDINAL[slot]} informație` : `informația ${slot + 1}`}`}</AppText>
+        <AppText role="bar">{nth ? t('consolidation.marker.numbered.marking', { ordinal: nth }) : t('consolidation.marker.numbered.markingN', { n: slot + 1 })}</AppText>
       </View>
     </>
   );
@@ -51,10 +54,10 @@ export default function NumberedBanner({ cfg, state }: { cfg: MarkerConfig; stat
       {slot === null ? (
         <>
           <AppText role="eyebrow" style={styles.doneText} accessibilityLiveRegion="polite">
-            {NUM_DONE}
+            {numDone()}
           </AppText>
           <AppText role="caption" color="textMuted">
-            Ca să schimbi o informație, atinge-i căsuța sau marcajul din text.
+            {t('consolidation.marker.numbered.doneHint')}
           </AppText>
         </>
       ) : (
@@ -65,8 +68,8 @@ export default function NumberedBanner({ cfg, state }: { cfg: MarkerConfig; stat
           <View
             key={k}
             testID={`num-progress-${k}`}
-            accessibilityLabel={`Informația ${k + 1}`}
-            accessibilityValue={{ text: filled(state, k) ? 'marcat' : 'nemarcat' }}
+            accessibilityLabel={t('consolidation.marker.numbered.progressLabel', { n: k + 1 })}
+            accessibilityValue={{ text: t(filled(state, k) ? 'consolidation.marker.marked' : 'consolidation.marker.unmarked') }}
             style={[styles.segment, filled(state, k) && { backgroundColor: slotTone(k).ink }]}
           />
         ))}
@@ -87,7 +90,7 @@ export function NumberedTrayStep({ cfg, state, dispatch }: { cfg: MarkerConfig; 
       <View style={[styles.line, slot === null ? styles.done : { borderColor: slotTone(slot).ink, backgroundColor: slotTone(slot).tint }]}>
         {slot === null ? (
           <AppText role="eyebrow" style={styles.doneText} accessibilityLiveRegion="polite">
-            {NUM_DONE}
+            {numDone()}
           </AppText>
         ) : (
           <Step cfg={cfg} state={state} slot={slot} />
@@ -102,7 +105,7 @@ export function NumberedTrayStep({ cfg, state, dispatch }: { cfg: MarkerConfig; 
               testID={`num-mini-${k}`}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
-              accessibilityHint={`Marchează informația ${k + 1}`}
+              accessibilityHint={t('consolidation.marker.numbered.miniHint', { n: k + 1 })}
               onPress={() => dispatch({ type: 'setSlot', slot: k })}
               style={[
                 styles.mini,
@@ -113,7 +116,7 @@ export function NumberedTrayStep({ cfg, state, dispatch }: { cfg: MarkerConfig; 
             >
               <Pill pen={pen} slot={k} />
               <AppText role="caption" color={filled(state, k) ? 'text' : 'textMuted'}>
-                {filled(state, k) ? '✓' : 'nemarcat'}
+                {filled(state, k) ? '✓' : t('consolidation.marker.unmarked')}
               </AppText>
             </Pressable>
           );

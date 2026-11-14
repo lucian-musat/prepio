@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { border, color, consolidationColor, radius, space, type Mark, type SourceLabel } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { AppText, useScreenViewport } from '../../ui';
 import type { DragGesture } from './MarkableText';
 import { ReadingText, SourceTabs, useScrollToMark, type PanelMarker, type PanelSource } from './SourceReader';
@@ -50,7 +51,7 @@ export default function SourceSplit({ sources, label, onLabel, marker, scrollTo,
             ) : (
               // One long source: name it, since the requirement refers to it by its letter.
               <AppText role="eyebrow" color="textMuted" style={styles.label}>
-                Sursa {current.label}
+                {t('consolidation.source.title', { litera: current.label })}
               </AppText>
             )}
             <ReadingText

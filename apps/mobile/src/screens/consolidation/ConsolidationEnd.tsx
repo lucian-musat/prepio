@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, CONSOLIDATION_TYPE_LABELS, plural, radius, space, type ConsolidationExercise } from '@prepio/shared';
+import { border, color, radius, space, type ConsolidationExercise } from '@prepio/shared';
 import type { Attempt } from '../../lib/consolidation';
 import { AppText, Button, Enter, Icon, ScreenLayout, Surface, TextButton } from '../../ui';
-import { exerciseStatus } from './status';
+import { t, tPlural } from '../../texts/store';
+import { exerciseStatus, requirementCount, typeLabel } from './status';
 
 type Props = {
   exercises: ConsolidationExercise[];
@@ -18,7 +19,7 @@ type Props = {
 
 /** One summary row's label: the type; an essay also says how many requirements it has. */
 function labelOf(ex: ConsolidationExercise) {
-  return ex.type === 'essay' ? `Eseu (${ex.requirements.length} ${ex.requirements.length === 1 ? 'cerință' : 'cerințe'})` : CONSOLIDATION_TYPE_LABELS[ex.type];
+  return ex.type === 'essay' ? t('consolidation.end.essayLabel', { cerinte: requirementCount(ex.requirements.length) }) : typeLabel(ex.type);
 }
 
 /**
@@ -30,24 +31,24 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
   const left = exercises.filter((ex) => attempts.get(ex.id)?.verdict !== 'ok').length;
   const summary =
     left === 0
-      ? 'Toate exercițiile sunt corecte. 🎉'
-      : `Mai ai ${plural(left, 'exercițiu', 'exerciții')} de lucrat.`;
+      ? t('consolidation.end.allCorrect')
+      : t('consolidation.end.left', { exercitii: tPlural(left, 'lesson.exerciseCount.one', 'lesson.exerciseCount.many') });
   return (
     <ScreenLayout
-      title="Consolidare"
+      title={t('consolidation.screenTitle')}
       onBack={onBack}
       actions={
         <View style={styles.stack}>
           {onRestartWrong ? (
             <>
-              <Button label="Reia doar ce nu a fost corect" onPress={onRestartWrong} />
+              <Button label={t('consolidation.end.restartWrong')} onPress={onRestartWrong} />
               <Button label={next.label} variant="secondary" onPress={next.onPress} />
-              <TextButton label="Reia consolidarea" onPress={onRestart} />
+              <TextButton label={t('consolidation.end.restart')} onPress={onRestart} />
             </>
           ) : (
             <>
               <Button label={next.label} onPress={next.onPress} />
-              <Button label="Reia consolidarea" variant="secondary" onPress={onRestart} />
+              <Button label={t('consolidation.end.restart')} variant="secondary" onPress={onRestart} />
             </>
           )}
         </View>
@@ -55,7 +56,7 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
     >
       <Enter index={0} style={styles.head}>
         <AppText role="celebrate" accessibilityRole="header" style={styles.centre}>
-          Ai terminat consolidarea
+          {t('consolidation.end.title')}
         </AppText>
         <AppText role="lead" color="textMuted" style={styles.centre}>
           {summary}
@@ -71,8 +72,8 @@ export default function ConsolidationEnd({ exercises, attempts, onBack, onRestar
                 key={ex.id}
                 testID={`summary-${ex.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Exercițiul ${i + 1}, ${label}, ${chip}`}
-                accessibilityHint="Deschide exercițiul"
+                accessibilityLabel={t('consolidation.end.rowLabel', { n: i + 1, tip: label, stare: chip })}
+                accessibilityHint={t('consolidation.end.rowHint')}
                 onPress={() => onOpen(ex.id)}
                 style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && styles.pressed]}
               >

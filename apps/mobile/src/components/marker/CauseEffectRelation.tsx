@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { border, color, layout, markerInk, markerTint, radius, space, VERDICT_LABELS, type Verdict } from '@prepio/shared';
+import { border, color, layout, markerInk, markerTint, radius, space, type Verdict } from '@prepio/shared';
+import { verdictLabel } from '../../screens/consolidation/status';
+import { t } from '../../texts/store';
 import { AppText, Icon } from '../../ui';
 import { VERDICT_TONE } from '../consolidation/verdictTone';
 import { ROLE, relationSentence, type Role } from './causeEffect';
@@ -38,7 +40,7 @@ export default function CauseEffectRelation({ state, textOf, onRemove, onSwap, d
           testID={`ce-gap-${r}`}
           accessibilityRole="button"
           accessibilityState={{ selected: on }}
-          accessibilityHint={mark ? 'Deschide sursa la acest marcaj' : 'Deschide sursa ca să marchezi'}
+          accessibilityHint={t(mark ? 'consolidation.marker.slot.openMarked' : 'consolidation.marker.slot.openEmpty')}
           onPress={() => panel?.open(r, mark ? index : null)}
           style={[styles.gap, { borderColor: markerInk[r] }, mark ? { backgroundColor: markerTint[r] } : styles.empty, on && styles.on]}
         >
@@ -47,13 +49,13 @@ export default function CauseEffectRelation({ state, textOf, onRemove, onSwap, d
               {ROLE[r].gap}
             </AppText>
             <AppText role="note" color={mark ? 'text' : 'textMuted'}>
-              {mark ? `„${textOf(mark)}”` : 'Atinge ca să marchezi'}
+              {mark ? `„${textOf(mark)}”` : t('consolidation.causeEffect.tapToMark')}
             </AppText>
           </View>
           {verdict ? (
-            <View accessibilityLabel={`Verdict: ${VERDICT_LABELS[verdict]}`} style={[styles.verdict, { backgroundColor: VERDICT_TONE[verdict].bg }]}>
+            <View accessibilityLabel={t('consolidation.marker.verdictLabel', { verdict: verdictLabel(verdict) })} style={[styles.verdict, { backgroundColor: VERDICT_TONE[verdict].bg }]}>
               <AppText role="badge" style={{ color: VERDICT_TONE[verdict].fg }}>
-                {VERDICT_LABELS[verdict]}
+                {verdictLabel(verdict)}
               </AppText>
             </View>
           ) : null}
@@ -62,7 +64,7 @@ export default function CauseEffectRelation({ state, textOf, onRemove, onSwap, d
         {mark && !disabled ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Șterge ${ROLE[r].name.toLowerCase()}`}
+            accessibilityLabel={t('consolidation.marker.removeLabel', { nume: ROLE[r].name.toLowerCase() })}
             onPress={() => onRemove(index)}
             hitSlop={{ top: REMOVE_SLOP, bottom: REMOVE_SLOP, left: REMOVE_SLOP, right: REMOVE_SLOP }}
             style={styles.remove}
@@ -80,22 +82,22 @@ export default function CauseEffectRelation({ state, textOf, onRemove, onSwap, d
     <View style={styles.list}>
       {gap('cause')}
       <AppText role="label" color="primary" style={styles.arrow}>
-        ↓ a dus la
+        {t('consolidation.causeEffect.ledTo')}
       </AppText>
       {gap('effect')}
       {cause && effect && !disabled ? (
         <View testID="ce-check" style={styles.check}>
           <AppText role="note">
-            Citește-o cu voce tare: <AppText role="note" style={styles.sentence}>{relationSentence(textOf(cause), textOf(effect))}</AppText>
+            {t('consolidation.causeEffect.readAloud')} <AppText role="note" style={styles.sentence}>{relationSentence(textOf(cause), textOf(effect))}</AppText>
           </AppText>
           <View style={styles.checkRow}>
-            <AppText role="label">Are sens?</AppText>
+            <AppText role="label">{t('consolidation.causeEffect.makesSense')}</AppText>
             <AppText role="note" color="textMuted">
-              Dacă nu,
+              {t('consolidation.causeEffect.ifNot')}
             </AppText>
             <Pressable accessibilityRole="button" onPress={onSwap} style={styles.swap}>
               <AppText role="label" color="primary">
-                ⇅ Inversează
+                {t('consolidation.causeEffect.swap')}
               </AppText>
             </Pressable>
           </View>

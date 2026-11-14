@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { space } from '@prepio/shared';
+import { t } from '../../texts/store';
 import { TextArea } from '../../ui';
 import { Field, MAX_CHARS, verdictOf, type InputProps } from './inputKit';
 
@@ -8,16 +9,16 @@ const FACT_HEIGHT = 110;
 
 /** Prezentare fapte: one field per fact, each coloured from that fact's feedback. */
 export default function FactsInput({ exercise, value, onChange, feedback, disabled }: InputProps<'facts'>) {
-  const set = (i: number, text: string) => onChange({ type: 'facts', texts: value.texts.map((t, k) => (k === i ? text : t)) });
+  const set = (i: number, text: string) => onChange({ type: 'facts', texts: value.texts.map((old, k) => (k === i ? text : old)) });
   return (
     <View style={styles.list}>
       {Array.from({ length: exercise.count }, (_, i) => (
-        <Field key={i} label={`Faptul istoric ${i + 1}`}>
+        <Field key={i} label={t('consolidation.input.facts.label', { n: i + 1 })}>
           <TextArea
             value={value.texts[i] ?? ''}
-            onChangeText={(t) => set(i, t)}
-            accessibilityLabel={`Faptul istoric ${i + 1}`}
-            placeholder="Ce s-a întâmplat, când, cine…"
+            onChangeText={(text) => set(i, text)}
+            accessibilityLabel={t('consolidation.input.facts.label', { n: i + 1 })}
+            placeholder={t('consolidation.input.facts.placeholder')}
             minHeight={FACT_HEIGHT}
             maxLength={MAX_CHARS}
             editable={!disabled}
