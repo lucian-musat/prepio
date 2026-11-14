@@ -26,7 +26,6 @@ describe.skipIf(!url || !serviceKey)('updateAiSettings (integration)', () => {
   });
 
   it('plans without writing, then replaces only the AI rules, and is idempotent', async () => {
-    await client.from('settings').update({ welcome_message: 'old welcome' }).eq('id', 1);
     await client.from('ai_settings').update({ rules: 'Acordă o notă de la 1 la 10.', model: 'custom-model' }).eq('id', 1);
     const before = await read();
 
@@ -41,8 +40,6 @@ describe.skipIf(!url || !serviceKey)('updateAiSettings (integration)', () => {
     expect(await read()).toEqual({ ...before, rules: aiDefaults.rules });
 
     const again = await updateAiSettings(client, { apply: false });
-    const { data: s } = await client.from('settings').select('welcome_message').eq('id', 1).single();
-    expect(s?.welcome_message).toBe('old welcome');
     expect(again.changes.every((c) => !c.changed)).toBe(true);
   });
 });

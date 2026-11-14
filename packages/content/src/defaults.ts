@@ -1,8 +1,6 @@
 import { TEXTS } from '@prepio/shared';
 import type { AiDefaults } from './types';
 
-/** Legacy `settings.welcome_message` (the shipped APK still reads it); the live text is the `home.hero.welcome` catalog entry. */
-export const welcomeMessage: string = TEXTS['home.hero.welcome'].default;
 
 // Type-independent rules only: what each kind of exercise asks for lives in the AI templates (`aiTemplates.ts`).
 const rules = `Ești profesor de istorie și verifici răspunsurile elevilor de clasa a XII-a care se pregătesc pentru examenul de Bacalaureat din România (proba E.c). Primești enunțul, contextul profesorului și răspunsul scris de elev.

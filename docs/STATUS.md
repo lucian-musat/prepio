@@ -472,7 +472,7 @@ Local stack (Supabase + student web :8081), headless Playwright Chromium in WSL,
 
 ## Backlog (known follow-ups, prioritised)
 
-- [ ] **Drop `settings.welcome_message`** (column, admin field, content default) after the next APK is in use: the welcome text now lives in `ui_texts` (`home.hero.welcome`).
+- [x] **Drop the legacy `settings` table** (2026-11-14, migration `20261114165502_drop_settings`): its only data column was `welcome_message`, replaced by the `ui_texts` row `home.hero.welcome`; the table, its policies, the seed write and the `welcomeMessage` content default are gone. Push the migration before merging (`pnpm db:cloud:push`). An old APK that still reads `settings` cannot load Home until it is updated.
 - [ ] **Editable UI texts: checks on the phone with the next APK** (new start-up path, JS only): on a fresh install the splash stays until the texts are ready (airplane mode: at most ~1.5 s, then defaults); the cache survives an app restart; an edit in admin → Texte shows on the second opening; the evening reminder notification shows its catalog title and body (and an edited one after the next scheduling); a few screens (Home, a lesson, consolidation, Profil, „Invită colegi”, /recomandari) read correctly on the device.
 
 ### Owner actions

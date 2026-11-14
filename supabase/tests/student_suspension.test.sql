@@ -30,7 +30,7 @@ select is(
     where schemaname = 'public' and permissive = 'RESTRICTIVE' and policyname like '%not_suspended'),
   array['bac_attempts', 'bac_item_sources', 'bac_items', 'bac_sources', 'bac_subjects',
         'cards', 'consolidation_attempts', 'consolidation_exercise_sources', 'consolidation_exercises',
-        'consolidation_runs', 'credit_packages', 'lesson_progress', 'lessons', 'nodes', 'questions', 'settings',
+        'consolidation_runs', 'credit_packages', 'lesson_progress', 'lessons', 'nodes', 'questions',
         'solution_templates', 'sources'],
   'every student-facing content table has a restrictive not-suspended policy');
 select throws_ok(

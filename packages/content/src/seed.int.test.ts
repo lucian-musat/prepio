@@ -18,7 +18,7 @@ import { AI_TEMPLATES } from './aiTemplates';
 import { ISTORIE_2026_V3 } from './bacSubjects';
 import { DEFAULT_BAC_RULES } from './defaults';
 import { aiTemplateTypes, loadConsolidation } from './consolidation.testutil';
-import { aiDefaults, lessons, tree, welcomeMessage, type SeedCard } from './index';
+import { aiDefaults, lessons, tree, type SeedCard } from './index';
 import { check as checkResult, seed } from './seed';
 import { TEMPLATES } from './templates';
 
@@ -178,10 +178,8 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
     const before = await snapshot();
     const { data: idsBefore } = await client.from('lessons').select('id').order('id');
 
-    // Missing settings rows and a missing image must still be restored without reset.
-    const { data: settingsRow } = await client.from('settings').select('*').eq('id', 1).single();
+    // A missing ai_settings row and a missing image must still be restored without reset.
     const { data: aiRow } = await client.from('ai_settings').select('*').eq('id', 1).single();
-    expect((await client.from('settings').delete().eq('id', 1)).error).toBeNull();
     expect((await client.from('ai_settings').delete().eq('id', 1)).error).toBeNull();
     expect((await client.storage.from('images').remove(['seed/cuza.jpg'])).error).toBeNull();
 
@@ -195,8 +193,6 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       const { data: owner } = await client.from('lessons').select('title').eq('id', lesson.data.id).single();
       expect(owner?.title).toBe('[test] owner lesson');
 
-      const { data: s } = await client.from('settings').select('welcome_message').eq('id', 1).single();
-      expect(s?.welcome_message).toBe(welcomeMessage);
       const { data: ai } = await client.from('ai_settings').select('model').eq('id', 1).single();
       expect(ai?.model).toBe(aiDefaults.model);
       const img = await client.storage.from('images').download('seed/cuza.jpg');
@@ -204,23 +200,14 @@ describe.skipIf(!url || !serviceKey)('seed (integration)', () => {
       expect(await isListedAdmin(ADMIN2.adminEmail)).toBe(true);
     } finally {
       await client.from('nodes').delete().eq('id', node.data.id);
-      if (settingsRow) await client.from('settings').upsert(settingsRow);
       if (aiRow) await client.from('ai_settings').upsert(aiRow);
     }
     expect(await snapshot()).toEqual(EXPECTED);
   });
 
-  it('sets settings and ai_settings without overwriting existing values', async () => {
-    const { data: s } = await client.from('settings').select('*').eq('id', 1).single();
-    expect(s?.welcome_message).toBe(welcomeMessage);
+  it('sets ai_settings without overwriting existing values', async () => {
     const { data: ai } = await client.from('ai_settings').select('*').eq('id', 1).single();
     expect(ai).toMatchObject({ rules: aiDefaults.rules, model: aiDefaults.model });
-
-    await client.from('settings').update({ welcome_message: 'Mesaj editat' }).eq('id', 1);
-    await seed(client, { reset: true });
-    const { data: after } = await client.from('settings').select('*').eq('id', 1).single();
-    expect(after?.welcome_message).toBe('Mesaj editat');
-    await client.from('settings').update({ welcome_message: welcomeMessage }).eq('id', 1);
   });
 
   it('stores every card so that it reads back equal to the source (image paths under seed/)', async () => {

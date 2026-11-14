@@ -217,7 +217,7 @@ Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, how-to `do
 1. Foundation PR: push the `*_ui_texts` migration **before** merging: `pnpm db:cloud:push:dry` (must list only it) → `pnpm db:cloud:push`. The new web reads `ui_texts` at start-up, so the table must exist first. Safe before the code: it only adds a table and carries the old welcome message over.
 2. Merge the PR (Vercel deploys admin and web). A new APK is needed for the texts to apply on the phone; an old APK keeps its built-in texts.
 3. Later batch PRs (moving more screens into the catalog) need no migration: just merge.
-4. After the next APK is in use, drop `settings.welcome_message` (see the STATUS backlog).
+4. Drop the legacy `settings` table (migration `*_drop_settings`, done 2026-11-14): `pnpm db:cloud:push:dry` (must list only it) → `pnpm db:cloud:push` **before** merging. An old APK that still reads `settings` cannot load Home until it is updated to the new APK.
 
 ## Local APK builds
 

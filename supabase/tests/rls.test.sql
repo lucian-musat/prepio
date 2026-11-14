@@ -17,8 +17,6 @@ insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000b1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000b2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
 
-insert into settings (id, welcome_message) values (1, 'Bun venit')
-  on conflict (id) do update set welcome_message = excluded.welcome_message;
 insert into ai_settings (id, rules) values (1, 'rules')
   on conflict (id) do update set rules = excluded.rules;
 
@@ -33,14 +31,13 @@ set local role anon;
 select is(
   (select (select count(*) from nodes
             where id in ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2'))
-        + (select count(*) from settings where id = 1)
         + (select count(*) from lessons
             where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
         + (select count(*) from cards
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2'))
         + (select count(*) from questions
             where lesson_id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2')))::int,
-  0, 'anon sees no nodes, settings, lessons, cards or questions');
+  0, 'anon sees no nodes, lessons, cards or questions');
 select is((select count(*)::int from ai_settings), 0, 'anon cannot read ai_settings');
 select throws_ok(
   $$ insert into lessons (node_id, title) values ('00000000-0000-0000-0000-0000000000a2', 'x') $$,

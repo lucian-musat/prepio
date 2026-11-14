@@ -1,5 +1,5 @@
 begin;
-select plan(46);
+select plan(42);
 
 -- Fixtures (as postgres). Every assertion is scoped to these ids so the suite also passes on a seeded DB.
 -- Users: d1 = student, d2 = admin (also in admins).
@@ -20,8 +20,6 @@ insert into cards (lesson_id, content) values
 insert into questions (lesson_id, type, prompt, difficulty, options) values
   ('00000000-0000-0000-0000-0000000000e1', 'single_choice', 'pub q', 'easy', '[{"id":"a","text":"x","correct":true}]'),
   ('00000000-0000-0000-0000-0000000000e2', 'single_choice', 'draft q', 'easy', '[{"id":"a","text":"x","correct":true}]');
-insert into settings (id, welcome_message) values (1, 'Bun venit')
-  on conflict (id) do update set welcome_message = excluded.welcome_message;
 insert into ai_settings (id, rules) values (1, 'rules')
   on conflict (id) do update set rules = excluded.rules;
 
@@ -40,7 +38,6 @@ select is((select count(*)::int from cards
 select is((select count(*)::int from questions
             where lesson_id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2')),
           0, 'anon sees no questions');
-select is((select count(*)::int from settings where id = 1), 0, 'anon sees no settings');
 
 -- ---------------------------------------------------------------- student (authenticated, not in admins)
 reset role;
@@ -51,7 +48,6 @@ select is(public.is_admin(), false, 'student: is_admin() is false');
 select is((select count(*)::int from nodes
             where id in ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000c2')),
           2, 'student sees fixture nodes');
-select is((select welcome_message from settings where id = 1), 'Bun venit', 'student sees settings row 1');
 select results_eq(
   $$ select title from lessons
       where id in ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2') $$,
@@ -72,8 +68,6 @@ select throws_ok($$ select count(*) from admins $$, '42501', null, 'student cann
 select throws_ok(
   $$ insert into lessons (node_id, title) values ('00000000-0000-0000-0000-0000000000c2', 'x') $$,
   '42501', null, 'student cannot insert lessons');
-select lives_ok($$ update settings set welcome_message = 'hacked' where id = 1 $$, 'student settings update runs');
-select is((select welcome_message from settings where id = 1), 'Bun venit', 'student settings update affects 0 rows');
 select lives_ok($$ delete from lessons where id = '00000000-0000-0000-0000-0000000000e1' $$, 'student lesson delete runs');
 select is((select count(*)::int from lessons where id = '00000000-0000-0000-0000-0000000000e1'),
           1, 'student lesson delete affects 0 rows');
