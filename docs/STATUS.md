@@ -6,12 +6,15 @@ Last updated: 2026-11-13
 
 **Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
 - **Batch „account” (`feat/ui-texts-account`):**
-  - 222 keys in six new groups: `access` 58 (plan page, Home banner, paywall), `credits` 65 (pill, „Creditele mele”, packages, „Îți mai trebuie”, ledger rows), `invite` 41, `profile` 26 (with the account-deletion confirmation), `streak` 27 (pill, sheet, toast, weekdays), `notifications` 5 (the Android reminder). Plus `common.closeWindow`.
+  - 220 keys in six new groups: `access` 58 (plan page, Home banner, paywall), `credits` 65 (pill, „Creditele mele”, packages, „Îți mai trebuie”, ledger rows), `invite` 39, `profile` 26 (with the account-deletion confirmation), `streak` 27 (pill, sheet, toast, weekdays), `notifications` 5 (the Android reminder). Plus `common.closeWindow`.
   - Plurals: the nouns for credits, days, months and colleagues are texts (`src/lib/counts.ts`); the button cost label and the essay check also use them now.
   - The streak toast and the reminder texts come from `packages/shared` and take a `text` function, like the instant check. A reminder text is read when the reminders are scheduled, so an edit reaches a phone at its next scheduling.
   - Error texts: the access purchase's „offer changed” and the account deletion fallback now use the catalog texts. The code → text map moved to `@prepio/shared` (`API_ERROR_TEXTS`). An admin test (`errorTexts.test.ts`) keeps every server error message equal to the default of the text the app shows. The routes' Origin / Content-Type guard messages are the listed exceptions.
   - Amounts and dates keep their formatters (`formatLei`, `pricePerCredit`, `formatAccessDate`).
   - Tests: mobile 1597, shared 1210, admin 571.
+  - One visible change, on purpose: the credits sheet's sentence lost a double space („…credite  la acest exercițiu” → single space) and the BAC variant reads „15. Ai” instead of „15 . Ai”.
+  - Browser walk (local, `[test]` trial student, console clean): profile with two overrides; credits („20 de credite”, packages, history); access; the streak sheet („0 zile la rând”); 360 px with no horizontal scroll. Test rows and the student were removed. Not walked: the invite screen, because recommendations are off locally and `/invita` goes to Home.
+  - **Native (next APK):** the reminder's title, body and Android channel name come from the catalog when the reminders are scheduled.
 - **Batch „BAC” (`feat/ui-texts-bac`):**
   - 56 keys in `bac`: list, paper, hints, hand-in summary, grading view and result.
   - Reuses the existing consolidation type labels, requirement counts and BAC API errors.
