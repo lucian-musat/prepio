@@ -26,7 +26,7 @@ A deliberate literal (a developer error message, a technical value) is allowed w
 
 ## Server error messages
 
-The admin API routes (`/api/consolidation/evaluate`, `/api/bac/submit`, `/api/credits/purchase`, `/api/access/purchase`, `/api/account/delete`) still send a Romanian `message`, but the app never shows it: `apiErrorText(endpoint, code)` in `apps/mobile/src/lib/api.ts` maps the response's `code` to an `errors.api.*` text (defaults = the server's messages), and an unknown code shows `errors.api.generic`. A new error code on the server needs its `errors.api.*` entry and a line in that map (the map is typed against the shared error-code types, so a missing one fails the typecheck).
+The admin API routes (`/api/consolidation/evaluate`, `/api/bac/submit`, `/api/credits/purchase`, `/api/access/purchase`, `/api/account/delete`) still send a Romanian `message`, but the app never shows it: `apiErrorText(endpoint, code)` in `apps/mobile/src/lib/api.ts` maps the response's `code` to an `errors.api.*` text (defaults = the server's messages) through `API_ERROR_TEXTS` in `packages/shared/src/texts/apiErrors.ts`, and an unknown code shows `errors.api.generic`. A new error code on the server needs its `errors.api.*` entry and a line in that map (the map is typed against the shared error-code types, so a missing one fails the typecheck). `apps/admin/src/lib/errorTexts.test.ts` checks that every server message equals the default of the text the app shows for its code; the routes' Origin / Content-Type guards („Cerere nepermisă.”, „Cerere invalidă.”) are the deliberate exceptions.
 
 ## Optional texts
 

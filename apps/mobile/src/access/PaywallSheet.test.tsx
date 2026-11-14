@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { extendAccessUntil, formatAccessDate } from '@prepio/shared';
 import { AccessApiError, purchaseAccess } from '../lib/access';
-import { PAYMENT_FOOTNOTE } from '../credits/PackagePicker';
 import PaywallSheet from './PaywallSheet';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn() }));
 jest.mock('../credits/CreditsProvider');
@@ -48,7 +48,7 @@ it('shows the offer from useAccess with the copy of the mockup', async () => {
   expect(screen.getByText('plată unică · nu se reînnoiește automat')).toBeTruthy();
   expect(unlock()).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Mai târziu' })).toBeTruthy();
-  expect(screen.getByText(PAYMENT_FOOTNOTE)).toBeTruthy();
+  expect(screen.getByText('Plățile nu sunt active încă, așa că pachetul ți se adaugă gratuit.')).toBeTruthy();
 });
 
 it('without a lesson or a count: no lesson line, „Toate lecțiile”', async () => {
@@ -153,4 +153,16 @@ it('a failure shows its message; „Mai târziu” closes', async () => {
 it('renders nothing when not visible', async () => {
   await mount({ visible: false });
   expect(screen.queryByTestId('paywall-sheet')).toBeNull();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy, the month nouns and the footnote from the texts (overrides apply)', async () => {
+    applyOverrides({ 'access.paywall.titleUnlock': '[override]', 'access.month.many': '[luni]', 'credits.footnote': '[footnote]' });
+    await mount();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText(/^📅 Acces 3 \[luni\], până la /)).toBeTruthy();
+    expect(screen.getByText('[footnote]')).toBeTruthy();
+  });
 });

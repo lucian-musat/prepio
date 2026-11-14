@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatAccessDate } from '@prepio/shared';
 import AccessBanner, { BANNER_DISMISS_KEY, bucharestDay } from './AccessBanner';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../credits/CreditsProvider');
 jest.mock('./AccessProvider');
@@ -102,4 +103,15 @@ it('one day left reads „1 zi”; no bonus leaves the credits out', async () =>
 it('bucharestDay uses the Bucharest calendar day', () => {
   expect(bucharestDay(new Date('2026-11-08T22:30:00Z'))).toBe('2026-11-09'); // 00:30 in Bucharest (UTC+2)
   expect(bucharestDay(new Date('2026-11-08T21:30:00Z'))).toBe('2026-11-08');
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy from the texts (overrides apply)', async () => {
+    applyOverrides({ 'access.banner.trialBold': '[bold]', 'access.banner.seeOffer': '[{pret}]' });
+    await mount();
+    expect(screen.getByText(/^\[bold\] Acum ai deschisă/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[150 lei]' })).toBeTruthy();
+  });
 });

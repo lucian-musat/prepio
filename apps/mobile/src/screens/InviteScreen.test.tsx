@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fetchMyReferrals, fetchReferralSummary, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { router } from 'expo-router';
 import InviteScreen from './InviteScreen';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../lib/referrals', () => ({
   ...jest.requireActual('../lib/referrals'),
@@ -289,4 +290,15 @@ it('links to the explainer page', async () => {
   await mount();
   await fireEvent.press(await screen.findByText('Toate regulile ›'));
   expect(router.push).toHaveBeenCalledWith('/recomandari');
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy and the plurals from the texts (overrides apply)', async () => {
+    applyOverrides({ 'invite.how.title': '[override]', 'invite.colleague.many': '[colegi]' });
+    await mount();
+    expect(await screen.findByText('[override]')).toBeTruthy();
+    expect(screen.getByText(/^Mai ai nevoie de 3 \[colegi\] care/)).toBeTruthy();
+  });
 });

@@ -9,6 +9,7 @@ import {
   weekDays,
   type StreakSummary,
 } from './streak';
+import type { TextFn } from './texts/catalog';
 
 const NEW_SERIES = 'Hai să începem o serie nouă 🔥';
 const ALIVE_BODY = 'Un exercițiu de 2 minute e de ajuns ca s-o păstrezi.';
@@ -177,5 +178,22 @@ describe('normalizeStreak', () => {
 
   it('empties the week of an old summary from a previous week', () => {
     expect(normalizeStreak(s(), '2026-11-09', '2026-11-17').week).toEqual([]);
+  });
+});
+
+describe('streak texts from a text function', () => {
+  const text: TextFn = (key, vars) => `[${key}${vars?.zile !== undefined ? ` ${vars.zile}` : ''}]`;
+
+  it('streakToast reads its texts (and the day nouns) through text', () => {
+    expect(streakToast(1, text)).toBe('[streak.toast.first]');
+    expect(streakToast(6, text)).toBe('[streak.toast.continued 6 [streak.day.many]]');
+  });
+
+  it('planReminders reads the notification texts through text', () => {
+    const at = new Date(2026, 10, 13, 10, 0);
+    const [alive] = planReminders(at, DEFAULT_REMINDER, base, 1, text);
+    expect(alive).toMatchObject({ title: '[notifications.reminder.aliveTitle 5 [streak.day.many]]', body: '[notifications.reminder.aliveBody]' });
+    const [fresh] = planReminders(at, DEFAULT_REMINDER, { ...base, current: 0 }, 1, text);
+    expect(fresh).toMatchObject({ title: '[notifications.reminder.newTitle]', body: '[notifications.reminder.newBody]' });
   });
 });

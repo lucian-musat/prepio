@@ -1,28 +1,40 @@
 import type { TextEntry } from './types';
 import { formatText } from './format';
+import { accessTexts } from './groups/access';
 import { authTexts } from './groups/auth';
 import { bacTexts } from './groups/bac';
 import { cardsTexts } from './groups/cards';
 import { commonTexts } from './groups/common';
 import { consolidationTexts } from './groups/consolidation';
+import { creditsTexts } from './groups/credits';
 import { errorsTexts } from './groups/errors';
 import { homeTexts } from './groups/home';
+import { inviteTexts } from './groups/invite';
 import { lessonTexts } from './groups/lesson';
 import { metaTexts } from './groups/meta';
+import { notificationsTexts } from './groups/notifications';
 import { onboardingTexts } from './groups/onboarding';
+import { profileTexts } from './groups/profile';
+import { streakTexts } from './groups/streak';
 import { suspendedTexts } from './groups/suspended';
 
 export const TEXTS = {
+  ...accessTexts,
   ...authTexts,
   ...bacTexts,
   ...cardsTexts,
   ...commonTexts,
   ...consolidationTexts,
+  ...creditsTexts,
   ...errorsTexts,
   ...homeTexts,
+  ...inviteTexts,
   ...lessonTexts,
   ...metaTexts,
+  ...notificationsTexts,
   ...onboardingTexts,
+  ...profileTexts,
+  ...streakTexts,
   ...suspendedTexts,
 }as const satisfies Record<string, TextEntry>;
 

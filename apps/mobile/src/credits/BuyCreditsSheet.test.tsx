@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { CreditsApiError, fetchCreditPackages, purchaseCredits } from '../lib/credits';
 import BuyCreditsSheet from './BuyCreditsSheet';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('./CreditsProvider');
 const { mockBalance, mockResetCredits } = jest.requireMock<typeof import('./__mocks__/CreditsProvider')>('./CreditsProvider');
@@ -151,4 +152,15 @@ it('packages that fail to load: the message with „Reîncearcă”, skip still 
   expect(h.onSkip).toHaveBeenCalled();
   await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Reîncearcă' })));
   expect(await screen.findByText('CEL MAI POPULAR')).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy, the package texts and the credit nouns from the texts (overrides apply)', async () => {
+    applyOverrides({ 'credits.buy.missing': '[{credite}]', 'credits.count.one': '[credit]', 'credits.packages.featured': '[featured]' });
+    await mount();
+    expect(screen.getByText('[1 [credit]]')).toBeTruthy();
+    expect(await screen.findByText('[featured]')).toBeTruthy();
+  });
 });

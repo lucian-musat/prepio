@@ -2,6 +2,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, radius, space, type ReminderTime } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
+import { t } from '../texts/store';
 import { AppText } from '../ui';
 
 const DIALOG_MAX = 560;
@@ -29,7 +30,7 @@ export default function ReminderTimeSheet({ visible, current, onSelect, onClose 
   return (
     <Modal visible={visible} transparent animationType={dialog ? 'fade' : 'slide'} onRequestClose={onClose} statusBarTranslucent>
       <View style={[styles.root, dialog && styles.rootDialog]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Închide fereastra" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.closeWindow')} onPress={onClose} style={StyleSheet.absoluteFill} />
         {visible ? (
           <View
             testID="reminder-time-sheet"
@@ -39,13 +40,13 @@ export default function ReminderTimeSheet({ visible, current, onSelect, onClose 
             {dialog ? null : <View style={styles.grab} />}
             <View style={styles.head}>
               <AppText role="question" accessibilityRole="header">
-                Ora mementoului
+                {t('streak.reminderTime.title')}
               </AppText>
             </View>
             <ScrollView>
-              {REMINDER_TIMES.map((t) => {
-                const label = formatTime(t);
-                const selected = t.hour === current.hour && t.minute === current.minute;
+              {REMINDER_TIMES.map((time) => {
+                const label = formatTime(time);
+                const selected = time.hour === current.hour && time.minute === current.minute;
                 return (
                   <Pressable
                     key={label}
@@ -53,7 +54,7 @@ export default function ReminderTimeSheet({ visible, current, onSelect, onClose 
                     accessibilityLabel={label}
                     accessibilityState={{ selected }}
                     onPress={() => {
-                      onSelect(t);
+                      onSelect(time);
                       onClose();
                     }}
                     style={({ pressed }) => [styles.row, selected && styles.rowSelected, pressed && styles.pressed]}

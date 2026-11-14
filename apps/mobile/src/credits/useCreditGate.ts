@@ -2,7 +2,7 @@ import { Fragment, createElement, useCallback, useRef, useState, type ReactEleme
 import PaywallSheet from '../access/PaywallSheet';
 import { EvaluateApiError } from '../lib/api';
 import { BacApiError } from '../lib/bac';
-import BuyCreditsSheet, { type BuyCreditsVariant } from './BuyCreditsSheet';
+import BuyCreditsSheet, { backLabel, type BuyCreditsVariant } from './BuyCreditsSheet';
 import { useCredits } from './CreditsProvider';
 
 /** What a digital-teacher check asks of the credits before and after it runs. */
@@ -99,7 +99,7 @@ export function useCreditGate(
   // Mounted only while open: screens that never hit a locked lesson need no AccessProvider around the gate.
   // After a purchase „Înapoi la exercițiu” closes it; the student checks again (that check costs credits).
   const paywallSheet = paywall
-    ? createElement(PaywallSheet, { visible: true, doneLabel: opts.variant === 'bac' ? 'Înapoi la lucrare' : 'Înapoi la exercițiu', onClose: closePaywall, onUnlocked: closePaywall })
+    ? createElement(PaywallSheet, { visible: true, doneLabel: backLabel(opts.variant), onClose: closePaywall, onUnlocked: closePaywall })
     : null;
   const sheet = createElement(Fragment, null, buySheet, paywallSheet);
 

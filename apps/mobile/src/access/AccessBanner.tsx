@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { color, creditsLabel, formatAccessDate, formatLei, hasFullAccess, plural, planTone, radius, space } from '@prepio/shared';
+import { color, formatAccessDate, formatLei, hasFullAccess, planTone, radius, space } from '@prepio/shared';
 import { useCredits } from '../credits/CreditsProvider';
+import { creditCount, dayCount, monthCount } from '../lib/counts';
+import { t } from '../texts/store';
 import { AppText } from '../ui';
 import { useAccess } from './AccessProvider';
 
@@ -18,9 +20,9 @@ export function bucharestDay(d: Date): string {
 
 /** „Progresul și cele 18 credite rămân ale tale.” — the credits are not lost when access ends. */
 function keptLine(balance: number | null): string {
-  if (balance !== null && balance > 1) return `Progresul și cele ${creditsLabel(balance)} rămân ale tale.`;
-  if (balance === 1) return 'Progresul și creditul tău rămân ale tale.';
-  return 'Progresul tău rămâne salvat.';
+  if (balance !== null && balance > 1) return t('access.banner.keptMany', { credite: creditCount(balance) });
+  if (balance === 1) return t('access.banner.keptOne');
+  return t('access.banner.keptNone');
 }
 
 /**
@@ -56,7 +58,7 @@ export default function AccessBanner({ onOffer }: { onOffer: () => void }) {
   if (expiring && (dismissed === undefined || dismissed === bucharestDay(new Date()))) return null;
 
   const price = formatLei(offer.priceBani);
-  const months = plural(offer.durationMonths, 'lună', 'luni');
+  const months = monthCount(offer.durationMonths);
   const bonus = offer.bonusCredits;
 
   const close = () => {
@@ -70,22 +72,27 @@ export default function AccessBanner({ onOffer }: { onOffer: () => void }) {
   };
 
   if (expiring && hasFullAccess(status)) {
-    const added = offer.durationMonths === 1 ? 'adăugată' : 'adăugate';
+    const vars = {
+      zile: dayCount(status.daysLeft),
+      data: formatAccessDate(status.until),
+      luni: months,
+      adaugate: offer.durationMonths === 1 ? t('access.banner.addedOne') : t('access.banner.addedMany'),
+    };
     return (
       <View testID="access-banner" style={[styles.banner, styles.warn]}>
         <View style={styles.row}>
           <AppText role="small" style={[styles.text, { color: planTone.expiring.fg }]}>
-            {`Accesul tău expiră în ${plural(status.daysLeft, 'zi', 'zile')} (${formatAccessDate(status.until)}). Reînnoiește acum: primești încă ${months}, ${added} la zilele rămase${bonus > 0 ? `, și +${creditsLabel(bonus)}` : ''}.`}
+            {bonus > 0 ? t('access.banner.expiringBonus', { ...vars, credite: creditCount(bonus) }) : t('access.banner.expiring', vars)}
           </AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ascunde până mâine" hitSlop={12} onPress={close} style={styles.close}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('access.banner.hide')} hitSlop={12} onPress={close} style={styles.close}>
             <AppText role="label" style={{ color: planTone.expiring.fg }}>
               ✕
             </AppText>
           </Pressable>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Reînnoiește · ${price}`} onPress={onOffer} style={[styles.cta, styles.ctaWarn]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('access.banner.renew', { pret: price })} onPress={onOffer} style={[styles.cta, styles.ctaWarn]}>
           <AppText role="label" style={styles.ctaWarnText}>
-            Reînnoiește · {price}
+            {t('access.banner.renew', { pret: price })}
           </AppText>
         </Pressable>
       </View>
@@ -93,19 +100,20 @@ export default function AccessBanner({ onOffer }: { onOffer: () => void }) {
   }
 
   const trial = status.plan === 'trial';
-  const label = trial ? `Vezi oferta · ${price}` : `Reînnoiește · ${price}`;
+  const label = trial ? t('access.banner.seeOffer', { pret: price }) : t('access.banner.renew', { pret: price });
   return (
     <View testID="access-banner" style={[styles.banner, styles.offer]}>
       {trial ? (
         <AppText role="small" style={[styles.text, styles.onOffer]}>
           <AppText role="small" style={[styles.onOffer, styles.strong]}>
-            Ești în perioada de probă.
+            {t('access.banner.trialBold')}
           </AppText>
-          {` Acum ai deschisă doar prima lecție. Deschide-le pe toate pentru ${months}${bonus > 0 ? `, plus ${creditsLabel(bonus)}` : ''}.`}
+          {' '}
+          {bonus > 0 ? t('access.banner.trialRestBonus', { luni: months, credite: creditCount(bonus) }) : t('access.banner.trialRest', { luni: months })}
         </AppText>
       ) : status.plan === 'expired' ? (
         <AppText role="small" style={[styles.text, styles.onOffer]}>
-          {`Accesul tău a expirat pe ${formatAccessDate(status.until)}. ${keptLine(balance)} Reînnoiește ca să redeschizi toate lecțiile.`}
+          {t('access.banner.expired', { data: formatAccessDate(status.until), pastrat: keptLine(balance) })}
         </AppText>
       ) : null}
       <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onOffer} style={[styles.cta, styles.ctaOffer]}>

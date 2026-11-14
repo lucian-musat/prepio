@@ -2,36 +2,34 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, feedbackText, formatAccessDate, gradient, plural, radius, space } from '@prepio/shared';
+import { color, feedbackText, formatAccessDate, gradient, radius, space } from '@prepio/shared';
 import { AppText, Button, ProgressBar, ScreenLayout, Spinner, Surface, goBackOrHome } from '../ui';
 import { fetchMyReferrals, fetchReferralSummary, inviteUrl, monthsText, type ReferralRow, type ReferralSummary } from '../lib/referrals';
+import { colleagueCount, creditCount } from '../lib/counts';
 import { copyText, shareText } from '../lib/share';
+import { t } from '../texts/store';
 
-const LOAD_FAILED = 'Nu am putut încărca invitațiile.';
-const COPIED = 'Copiat ✓';
-const COPY_FAILED = 'Nu am putut copia.';
 const FEEDBACK_MS = 2500;
-const CAP_REACHED = 'Ai ajuns la numărul maxim de colegi pentru care primești recompense. Îi poți invita în continuare, dar fără recompensă.';
 /** Below this width the two copy buttons stack, so their labels fit. */
 const STACK_BELOW = 420;
 
-const shareMessage = (link: string) => `Învăț pentru BAC cu Prepio. Dacă vrei să încerci și tu, fă-ți cont cu linkul meu: ${link}`;
+const shareMessage = (link: string) => t('invite.shareMessage', { link });
 
 /** What a referral row says about itself, in the student's words. */
 export function referralStatus(r: ReferralRow): string {
   switch (r.state) {
     case 'registered':
-      return 'Și-a făcut cont, încă fără acces';
+      return t('invite.status.registered');
     case 'pending':
-      return 'Are acces · se numără pentru accesul tău gratuit';
+      return t('invite.status.pending');
     case 'consumed_access':
-      return 'Are acces · a contat pentru accesul tău gratuit';
+      return t('invite.status.consumedAccess');
     case 'converted_credits':
-      return `Are acces · +${plural(r.rewardCredits, 'credit', 'credite')}`;
+      return t('invite.status.convertedCredits', { credite: creditCount(r.rewardCredits) });
     case 'over_cap':
-      return 'Are acces · fără recompensă (ai atins limita)';
+      return t('invite.status.overCap');
     default:
-      return 'Are acces · fără recompensă';
+      return t('invite.status.noReward');
   }
 }
 
@@ -40,14 +38,14 @@ const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, a
 /** The three steps, with the reward that applies to this student right now. */
 function HowItWorks({ summary }: { summary: ReferralSummary }) {
   const reward = summary.hasAccess
-    ? `Pentru fiecare coleg care își cumpără acces primești ${plural(summary.creditsPerInvitee, 'credit', 'credite')}.`
-    : `Când ${summary.threshold} dintre ei își cumpără acces, primești ${monthsText(summary.durationMonths)} gratis.`;
+    ? t('invite.how.rewardCredits', { credite: creditCount(summary.creditsPerInvitee) })
+    : t('invite.how.rewardFree', { prag: summary.threshold, durata: monthsText(summary.durationMonths) });
   // Over the cap new invitees bring nothing: the summary below says so, the steps promise nothing.
-  const steps = ['Trimiți linkul tău colegilor.', 'Își fac cont cu el.', ...(summary.capReached ? [] : [reward])];
+  const steps = [t('invite.how.step1'), t('invite.how.step2'), ...(summary.capReached ? [] : [reward])];
   return (
     <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.hero}>
       <AppText role="eyebrow" color="onPrimary" accessibilityRole="header">
-        Cum funcționează
+        {t('invite.how.title')}
       </AppText>
       {steps.map((s, i) => (
         <View key={i} style={styles.step}>
@@ -69,7 +67,7 @@ function HowItWorks({ summary }: { summary: ReferralSummary }) {
 function CapNote() {
   return (
     <AppText role="small" color="textMuted">
-      {CAP_REACHED}
+      {t('invite.capReached')}
     </AppText>
   );
 }
@@ -83,14 +81,14 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
           <CapNote />
         ) : (
           <AppText role="bodyStrong">
-            {`Mai ai nevoie de ${plural(left, 'coleg', 'colegi')} care să-și cumpere acces și primești ${monthsText(summary.durationMonths)} gratis`}
+            {t('invite.summary.needMore', { colegi: colleagueCount(left), durata: monthsText(summary.durationMonths) })}
           </AppText>
         )}
         <ProgressBar
           value={summary.threshold > 0 ? summary.pendingCount / summary.threshold : 0}
-          accessibilityLabel="Progres spre accesul gratuit"
+          accessibilityLabel={t('invite.summary.progressLabel')}
         />
-        <AppText role="caption" color="textMuted">{`${summary.pendingCount} din ${summary.threshold}`}</AppText>
+        <AppText role="caption" color="textMuted">{t('invite.summary.progress', { n: summary.pendingCount, total: summary.threshold })}</AppText>
       </Surface>
     );
   }
@@ -98,18 +96,18 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
   const earned = summary.creditsEarned;
   const periods = summary.freePeriodsEarned;
   const totals = [
-    `${plural(subscribed, 'coleg', 'colegi')} cu acces`,
-    ...(earned > 0 ? [`${plural(earned, 'credit', 'credite')} ${earned === 1 ? 'câștigat' : 'câștigate'}`] : []),
-    ...(periods > 0
-      ? [periods === 1 ? 'o perioadă de acces gratuit câștigată' : `${periods} perioade de acces gratuit câștigate`]
+    t('invite.summary.withAccess', { colegi: colleagueCount(subscribed) }),
+    ...(earned > 0
+      ? [t(earned === 1 ? 'invite.summary.creditsEarnedOne' : 'invite.summary.creditsEarnedMany', { credite: creditCount(earned) })]
       : []),
+    ...(periods > 0 ? [periods === 1 ? t('invite.summary.periodOne') : t('invite.summary.periodMany', { n: periods })] : []),
   ];
   return (
     <Surface style={styles.stack}>
       {/* The steps above state the reward; here only the cap note and the totals. */}
       {summary.capReached ? <CapNote /> : null}
       <AppText role="body">
-        {`Până acum: ${totals.join(' · ')}`}
+        {t('invite.summary.soFar', { totaluri: totals.join(' · ') })}
       </AppText>
     </Surface>
   );
@@ -117,15 +115,15 @@ function SummaryBlock({ summary, rows }: { summary: ReferralSummary; rows: Refer
 
 /** „Cont creat pe 10 noiembrie 2026 · acces din 11 noiembrie 2026” (Bucharest dates), as the explainer promises. */
 export function inviteeDates(r: ReferralRow): string {
-  const registered = `Cont creat pe ${formatAccessDate(new Date(r.createdAt))}`;
-  return r.firstPaidAt ? `${registered} · acces din ${formatAccessDate(new Date(r.firstPaidAt))}` : registered;
+  const registered = t('invite.list.registered', { data: formatAccessDate(new Date(r.createdAt)) });
+  return r.firstPaidAt ? `${registered} · ${t('invite.list.paid', { data: formatAccessDate(new Date(r.firstPaidAt)) })}` : registered;
 }
 
 function InviteeRow({ r }: { r: ReferralRow }) {
-  const first = r.firstName?.trim() || 'Coleg';
+  const first = r.firstName?.trim() || t('invite.list.anonymous');
   return (
     <View style={styles.row}>
-      <AppText role="bodyStrong">{r.accountDeleted ? `${first} · cont șters` : first}</AppText>
+      <AppText role="bodyStrong">{r.accountDeleted ? t('invite.list.deleted', { nume: first }) : first}</AppText>
       {!r.accountDeleted && r.email ? (
         <AppText role="caption" color="textMuted">
           {r.email}
@@ -177,7 +175,7 @@ export default function InviteScreen() {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => mounted.current && setFeedback(''), FEEDBACK_MS);
   };
-  const copy = async (text: string) => say((await copyText(text)) ? COPIED : COPY_FAILED);
+  const copy = async (text: string) => say((await copyText(text)) ? t('invite.copied') : t('invite.copyFailed'));
 
   if (data && (!data.summary.enabled || !data.summary.code)) return <Redirect href="/" />;
 
@@ -187,22 +185,22 @@ export default function InviteScreen() {
 
   const send = async () => {
     const r = await shareText(shareMessage(link));
-    if (r === 'copied') say(COPIED);
-    else if (r === 'failed') say(COPY_FAILED);
+    if (r === 'copied') say(t('invite.copied'));
+    else if (r === 'failed') say(t('invite.copyFailed'));
   };
 
   return (
-    <ScreenLayout title="Invită colegi" onBack={goBackOrHome}>
+    <ScreenLayout title={t('invite.screen.title')} onBack={goBackOrHome}>
       {error ? (
         <View style={styles.stack}>
           <AppText role="note" accessibilityRole="alert" style={styles.error}>
-            {LOAD_FAILED}
+            {t('invite.loadFailed')}
           </AppText>
-          <Button label="Reîncearcă" variant="secondary" onPress={() => void load()} />
+          <Button label={t('common.retryButton')} variant="secondary" onPress={() => void load()} />
         </View>
       ) : !data ? (
         <View style={styles.center}>
-          <Spinner accessibilityLabel="Se încarcă" />
+          <Spinner accessibilityLabel={t('common.loading')} />
         </View>
       ) : (
         <View style={styles.page}>
@@ -211,18 +209,18 @@ export default function InviteScreen() {
 
           <Surface style={styles.stack}>
             <AppText role="caption" color="textMuted">
-              Codul tău
+              {t('invite.code.label')}
             </AppText>
             <AppText role="section" selectable style={styles.code}>
               {code}
             </AppText>
-            <Button label="Trimite linkul" onPress={() => void send()} />
+            <Button label={t('invite.code.sendLink')} onPress={() => void send()} />
             <View style={stacked ? styles.stack : styles.pair} testID="invite-copy-buttons">
-              <Button label="Copiază linkul" variant="secondary" flex={!stacked} onPress={() => void copy(link)} />
-              <Button label={web ? 'Copiază codul' : 'Trimite codul'} variant="secondary" flex={!stacked} onPress={() => void copy(code)} />
+              <Button label={t('invite.code.copyLink')} variant="secondary" flex={!stacked} onPress={() => void copy(link)} />
+              <Button label={web ? t('invite.code.copyCode') : t('invite.code.sendCode')} variant="secondary" flex={!stacked} onPress={() => void copy(code)} />
             </View>
             {feedback ? (
-              <AppText role="small" accessibilityRole="alert" style={feedback === COPIED ? styles.ok : styles.error}>
+              <AppText role="small" accessibilityRole="alert" style={feedback === t('invite.copied') ? styles.ok : styles.error}>
                 {feedback}
               </AppText>
             ) : null}
@@ -230,11 +228,11 @@ export default function InviteScreen() {
 
           <View style={styles.stack}>
             <AppText role="section" accessibilityRole="header">
-              Colegii invitați
+              {t('invite.list.title')}
             </AppText>
             {data.rows.length === 0 ? (
               <AppText role="note" color="textMuted">
-                Încă nu ai invitat pe nimeni. Trimite linkul de mai sus.
+                {t('invite.list.empty')}
               </AppText>
             ) : (
               data.rows.map((r) => <InviteeRow key={r.id} r={r} />)
@@ -242,7 +240,7 @@ export default function InviteScreen() {
           </View>
 
           <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => router.push('/recomandari')} style={styles.link}>
-            Toate regulile ›
+            {t('invite.rules')}
           </AppText>
         </View>
       )}

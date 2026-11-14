@@ -2,6 +2,7 @@ import { fireEvent, render as rtlRender, screen } from '@testing-library/react-n
 import type { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ReminderTimeSheet from './ReminderTimeSheet';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const render = (ui: ReactElement) => rtlRender(<SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>);
@@ -26,4 +27,14 @@ it('choosing a time reports it and closes', async () => {
   await fireEvent.press(screen.getByLabelText('20:30'));
   expect(onSelect).toHaveBeenCalledWith({ hour: 20, minute: 30 });
   expect(onClose).toHaveBeenCalled();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its title from the texts (overrides apply)', async () => {
+    applyOverrides({ 'streak.reminderTime.title': '[override]' });
+    await render(<ReminderTimeSheet visible current={{ hour: 19, minute: 0 }} onSelect={() => {}} onClose={() => {}} />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+  });
 });

@@ -15,12 +15,7 @@ import { useAccess } from '../access/AccessProvider';
 import { useReminders } from '../streak/StreakProvider';
 import ReminderTimeSheet, { formatTime } from '../streak/ReminderTimeSheet';
 import { progressBadge, useReferralSummary } from '../referrals/useReferralSummary';
-
-const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
-const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
-const MODE_SAVED = 'Modul a fost salvat.';
-// Saved in the database, but the app still holds the old profile (the refresh failed).
-const MODE_SAVED_STALE = 'Modul a fost salvat. Reîncarcă aplicația dacă nu vezi schimbarea.';
+import { t } from '../texts/store';
 
 // Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
 const messageOf = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
@@ -32,7 +27,12 @@ export default function ProfileScreen() {
   const { status } = useAccess();
   const referral = useReferralSummary();
   const badge = referral ? progressBadge(referral) : null;
-  const planLabel = status.plan === 'trial' ? 'Perioadă de probă' : status.plan === 'expired' ? 'Expirat' : `Activ până la ${formatAccessDate(status.until)}`;
+  const planLabel =
+    status.plan === 'trial'
+      ? t('access.trial.title')
+      : status.plan === 'expired'
+        ? t('profile.plan.expired')
+        : t('access.full.until', { data: formatAccessDate(status.until) });
   const [name, setName] = useState(profile?.displayName ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -53,7 +53,9 @@ export default function ProfileScreen() {
   const unchanged = name.trim() === (profile?.displayName ?? '').trim();
   const email = session?.user.email;
   const provider = (session?.user as { app_metadata?: { provider?: string } } | undefined)?.app_metadata?.provider;
-  const account = email ? `${email} · ${provider === 'google' ? 'Google' : 'cod pe email'}` : null;
+  const account = email
+    ? t('profile.account.line', { email, metoda: provider === 'google' ? t('profile.account.google') : t('profile.account.emailCode') })
+    : null;
 
   // Saves right away (no button); on failure the picker goes back to the stored mode.
   const changeMode = async (next: LearningMode) => {
@@ -72,10 +74,11 @@ export default function ProfileScreen() {
       await updateLearningMode(userId, next);
       // The refresh never throws; the picker keeps the saved mode either way (the database has it).
       const fresh = await refreshProfile();
-      setModeSaved(fresh?.learningMode === next ? MODE_SAVED : MODE_SAVED_STALE);
+      // Saved in the database, but the app may still hold the old profile (the refresh failed).
+      setModeSaved(fresh?.learningMode === next ? t('profile.mode.saved') : t('profile.mode.savedStale'));
     } catch (e) {
       setMode(previous);
-      setModeError(ownMessage(e, MODE_SAVE_FAILED));
+      setModeError(ownMessage(e, t('onboarding.mode.saveFailed')));
     } finally {
       setModeSaving(false);
     }
@@ -101,28 +104,28 @@ export default function ProfileScreen() {
       await refreshProfile();
       setSaved(true);
     } catch (e) {
-      setNameError(messageOf(e, SAVE_FAILED));
+      setNameError(messageOf(e, t('onboarding.name.saveFailed')));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ScreenLayout title="Profilul tău" onBack={goBackOrHome}>
+    <ScreenLayout title={t('profile.title')} onBack={goBackOrHome}>
       <View style={styles.stack}>
         <View style={styles.field}>
           <AppText role="small" color="textMuted">
-            Nume
+            {t('profile.name.label')}
           </AppText>
           <TextField
             value={name}
-            onChangeText={(t) => {
-              setName(t);
+            onChangeText={(value) => {
+              setName(value);
               setNameError(null);
               setSaved(false);
             }}
-            accessibilityLabel="Nume"
-            placeholder="Prenumele tău"
+            accessibilityLabel={t('profile.name.label')}
+            placeholder={t('onboarding.name.placeholder')}
             autoComplete="given-name"
             textContentType="givenName"
             autoCapitalize="words"
@@ -135,19 +138,19 @@ export default function ProfileScreen() {
               {nameError}
             </AppText>
           ) : null}
-          {saved ? <AppText role="small" color="success">Numele a fost salvat.</AppText> : null}
-          <AppText role="caption" color="textMuted">{`Cel mult ${MAX_DISPLAY_NAME_CHARS} de caractere.`}</AppText>
+          {saved ? <AppText role="small" color="success">{t('profile.name.saved')}</AppText> : null}
+          <AppText role="caption" color="textMuted">{t('onboarding.name.limit', { max: MAX_DISPLAY_NAME_CHARS })}</AppText>
           {account ? (
             <AppText role="caption" color="textMuted">
               {account}
             </AppText>
           ) : null}
         </View>
-        <Button label="Salvează" onPress={save} loading={saving} disabled={deleting || unchanged} />
+        <Button label={t('profile.save')} onPress={save} loading={saving} disabled={deleting || unchanged} />
 
         <View style={styles.field}>
           <AppText role="small" color="textMuted">
-            Mod de învățare
+            {t('profile.mode.label')}
           </AppText>
           <LearningModePicker value={mode} onChange={changeMode} disabled={modeSaving || deleting} />
           {modeError ? (
@@ -159,12 +162,12 @@ export default function ProfileScreen() {
         </View>
 
         <Surface radius="lg" style={styles.group}>
-          <SettingsRow label="Acces la lecții" value={planLabel} onPress={() => router.push('/abonament')} disabled={busy} />
-          <SettingsRow label="Creditele mele" value={String(balance ?? 0)} onPress={() => router.push('/credits')} disabled={busy} divider />
+          <SettingsRow label={t('access.screen.title')} value={planLabel} onPress={() => router.push('/abonament')} disabled={busy} />
+          <SettingsRow label={t('credits.screen.title')} value={String(balance ?? 0)} onPress={() => router.push('/credits')} disabled={busy} divider />
           {referral ? (
             <SettingsRow
-              label="Invită colegi"
-              accessibilityLabel={badge ? `Invită colegi, ${badge}` : 'Invită colegi'}
+              label={t('invite.screen.title')}
+              accessibilityLabel={badge ? t('profile.inviteWithProgress', { progres: badge }) : t('invite.screen.title')}
               badge={badge ? <Chip label={badge} fg={color.primaryStrong} bg={color.primarySubtle} size="badge" /> : null}
               onPress={() => router.push('/invita')}
               disabled={busy}
@@ -176,17 +179,17 @@ export default function ProfileScreen() {
         {showReminders ? (
           <View style={styles.field}>
             <AppText role="caption" color="textMuted" style={styles.eyebrow}>
-              Memento zilnic
+              {t('profile.reminder.title')}
             </AppText>
             <Surface radius="lg" style={styles.group}>
               <View style={styles.switchRow}>
                 <AppText role="bodyStrong" style={styles.switchLabel}>
-                  Notificare seara
+                  {t('profile.reminder.switch')}
                 </AppText>
                 <Switch
                   accessible
                   accessibilityRole="switch"
-                  accessibilityLabel="Notificare seara"
+                  accessibilityLabel={t('profile.reminder.switch')}
                   value={switchOn}
                   accessibilityState={{ checked: switchOn, disabled: busy }}
                   onValueChange={(on) => void reminders.setEnabled(on)}
@@ -194,36 +197,36 @@ export default function ProfileScreen() {
                   disabled={busy}
                 />
               </View>
-              <SettingsRow label="Ora" value={formatTime(reminders.settings.time)} onPress={() => setTimeOpen(true)} disabled={busy} divider />
+              <SettingsRow label={t('profile.reminder.time')} value={formatTime(reminders.settings.time)} onPress={() => setTimeOpen(true)} disabled={busy} divider />
             </Surface>
             {reminderBlocked ? (
               <>
                 <AppText role="small" color="textMuted">
-                  Notificările sunt oprite din setările telefonului.
+                  {t('profile.reminder.blocked')}
                 </AppText>
                 <AppText role="small" color="primaryStrong" accessibilityRole="link" onPress={() => void Linking.openSettings()} style={styles.link}>
-                  Deschide setările
+                  {t('profile.reminder.openSettings')}
                 </AppText>
               </>
             ) : null}
             <AppText role="caption" color="textMuted">
-              Primești notificarea doar în zilele în care n-ai rezolvat încă niciun exercițiu.
+              {t('profile.reminder.note')}
             </AppText>
             <ReminderTimeSheet
               visible={timeOpen}
               current={reminders.settings.time}
-              onSelect={(t) => void reminders.setTime(t)}
+              onSelect={(time) => void reminders.setTime(time)}
               onClose={() => setTimeOpen(false)}
             />
           </View>
         ) : null}
 
-        <Button label="Ieși din cont" variant="secondary" onPress={signOut} disabled={busy} />
+        <Button label={t('auth.signOut')} variant="secondary" onPress={signOut} disabled={busy} />
 
         {deletion.confirming ? (
           <DeleteAccountConfirm deletion={deletion} />
         ) : (
-          <Button label="Șterge contul" variant="secondary" tone="danger" onPress={deletion.ask} disabled={busy} />
+          <Button label={t('profile.deleteAccount')} variant="secondary" tone="danger" onPress={deletion.ask} disabled={busy} />
         )}
 
         <AppText
@@ -233,7 +236,7 @@ export default function ProfileScreen() {
           onPress={() => router.push('/confidentialitate')}
           style={styles.link}
         >
-          Politica de confidențialitate
+          {t('profile.privacyLink')}
         </AppText>
 
         <AppText
@@ -243,7 +246,7 @@ export default function ProfileScreen() {
           onPress={() => router.push('/termeni')}
           style={styles.link}
         >
-          Termeni de utilizare
+          {t('profile.termsLink')}
         </AppText>
       </View>
     </ScreenLayout>

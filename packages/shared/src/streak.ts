@@ -1,4 +1,5 @@
 import { plural } from './plural';
+import { defaultText, type TextFn } from './texts/catalog';
 
 export type StreakSummary = { current: number; record: number; todayDone: boolean; week: string[] };
 
@@ -62,26 +63,31 @@ export function normalizeStreak(s: StreakSummary, asOf: string, today: string): 
   return { ...s, current: 0, todayDone: false, week };
 }
 
-export function streakToast(current: number): string {
-  if (current <= 1) return '🔥 Ai început o serie nouă! Ne vedem mâine.';
-  return `🔥 Seria continuă: ${plural(current, 'zi', 'zile')}! Ne vedem mâine.`;
+/** „5 zile”, the nouns from the texts. */
+const days = (n: number, text: TextFn) => plural(n, text('streak.day.one'), text('streak.day.many'));
+
+/** The first-exercise-of-the-day message. `text`: the app passes its `t` (admin overrides applied). */
+export function streakToast(current: number, text: TextFn = defaultText): string {
+  if (current <= 1) return text('streak.toast.first');
+  return text('streak.toast.continued', { zile: days(current, text) });
 }
 
 export type ReminderTime = { hour: number; minute: number };
 export const DEFAULT_REMINDER: ReminderTime = { hour: 19, minute: 0 };
 export type PlannedReminder = { at: Date; title: string; body: string };
 
-/** Local evening reminders for the next `days` calendar days (starting today). */
+/** Local evening reminders for the next `count` calendar days (starting today); `text` as in `streakToast`. */
 export function planReminders(
   now: Date,
   time: ReminderTime,
   s: StreakSummary,
-  days = 7,
+  count = 7,
+  text: TextFn = defaultText,
 ): PlannedReminder[] {
   const today = bucharestDay(now);
   const lastWorked = s.todayDone ? today : s.current > 0 ? addDays(today, -1) : null;
   const out: PlannedReminder[] = [];
-  for (let i = 0; i < days; i++) {
+  for (let i = 0; i < count; i++) {
     const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, time.hour, time.minute);
     if (at.getTime() <= now.getTime()) continue;
     const day = bucharestDay(at);
@@ -91,10 +97,10 @@ export function planReminders(
       alive
         ? {
             at,
-            title: `🔥 Seria ta de ${plural(s.current, 'zi', 'zile')} te așteaptă`,
-            body: 'Un exercițiu de 2 minute e de ajuns ca s-o păstrezi.',
+            title: text('notifications.reminder.aliveTitle', { zile: days(s.current, text) }),
+            body: text('notifications.reminder.aliveBody'),
           }
-        : { at, title: 'Hai să începem o serie nouă 🔥', body: 'Rezolvă un exercițiu azi.' },
+        : { at, title: text('notifications.reminder.newTitle'), body: text('notifications.reminder.newBody') },
     );
   }
   return out;

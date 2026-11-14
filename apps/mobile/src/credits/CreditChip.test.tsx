@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { color, feedbackText, planTone } from '@prepio/shared';
 import CreditChip from './CreditChip';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('./CreditsProvider');
@@ -92,4 +93,15 @@ it('prefixes a gain with +', async () => {
   await render(<CreditChip />);
   await act(async () => setBalance(112));
   expect(screen.getByText('+100')).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads the plan words from the texts (overrides apply)', async () => {
+    applyOverrides({ 'credits.chip.trial': '[override]', 'credits.chip.label': '[{plan} · {credite}]' });
+    await render(<CreditChip />);
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '[Perioadă de probă · 12 credite]' })).toBeTruthy();
+  });
 });

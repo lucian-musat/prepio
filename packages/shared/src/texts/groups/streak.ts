@@ -1,0 +1,37 @@
+import type { TextEntry } from '../types';
+
+/** The daily streak: the top-bar pill, the details sheet, the first-of-the-day toast and the reminder time sheet. */
+export const streakTexts = {
+  'streak.day.one': { group: 'streak', default: 'zi', description: 'Forma de singular din „1 zi” (seria, zilele rămase de acces)' },
+  'streak.day.many': { group: 'streak', default: 'zile', description: 'Forma de plural din „5 zile”, „20 de zile”' },
+  'streak.pill.label': { group: 'streak', default: 'Serie de {zile}, deschide detaliile', vars: ['zile'], description: 'Pentru cititorul de ecran: butonul 🔥 din bara de sus' },
+  'streak.toast.first': { group: 'streak', default: '🔥 Ai început o serie nouă! Ne vedem mâine.', description: 'Mesajul după primul exercițiu al zilei, la o serie nouă' },
+  'streak.toast.continued': {
+    group: 'streak',
+    default: '🔥 Seria continuă: {zile}! Ne vedem mâine.',
+    vars: ['zile'],
+    description: 'Mesajul după primul exercițiu al zilei; {zile} este de forma „6 zile”',
+  },
+  'streak.sheet.title': { group: 'streak', default: '🔥 {zile} la rând', vars: ['zile'], description: 'Titlul ferestrei cu seria' },
+  'streak.sheet.record': { group: 'streak', default: 'Recordul tău: {zile}', vars: ['zile'] },
+  'streak.sheet.hint': { group: 'streak', default: 'Azi încă n-ai lucrat. Un singur exercițiu păstrează seria.' },
+  'streak.sheet.solve': { group: 'streak', default: 'Rezolvă un exercițiu' },
+  'streak.sheet.settings': { group: 'streak', default: 'Setări memento', description: 'Deschide profilul (doar în aplicația de telefon)' },
+  'streak.sheet.today': { group: 'streak', default: 'azi', description: 'Pentru cititorul de ecran: „Vineri, azi”' },
+  'streak.sheet.worked': { group: 'streak', default: 'ai lucrat', description: 'Pentru cititorul de ecran: „Luni, ai lucrat”' },
+  'streak.weekday.mon': { group: 'streak', default: 'Luni', description: 'Pentru cititorul de ecran: ziua din săptămâna seriei' },
+  'streak.weekday.tue': { group: 'streak', default: 'Marți' },
+  'streak.weekday.wed': { group: 'streak', default: 'Miercuri' },
+  'streak.weekday.thu': { group: 'streak', default: 'Joi' },
+  'streak.weekday.fri': { group: 'streak', default: 'Vineri' },
+  'streak.weekday.sat': { group: 'streak', default: 'Sâmbătă' },
+  'streak.weekday.sun': { group: 'streak', default: 'Duminică' },
+  'streak.weekdayLetter.mon': { group: 'streak', default: 'L', description: 'Inițiala zilei, sub cercul din săptămâna seriei' },
+  'streak.weekdayLetter.tue': { group: 'streak', default: 'M' },
+  'streak.weekdayLetter.wed': { group: 'streak', default: 'M' },
+  'streak.weekdayLetter.thu': { group: 'streak', default: 'J' },
+  'streak.weekdayLetter.fri': { group: 'streak', default: 'V' },
+  'streak.weekdayLetter.sat': { group: 'streak', default: 'S' },
+  'streak.weekdayLetter.sun': { group: 'streak', default: 'D' },
+  'streak.reminderTime.title': { group: 'streak', default: 'Ora mementoului', description: 'Titlul listei de ore (doar în aplicația de telefon)' },
+} as const satisfies Record<string, TextEntry>;

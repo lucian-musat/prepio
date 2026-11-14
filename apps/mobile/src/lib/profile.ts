@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 import type { LearningMode } from './learningMode';
+import { t } from '../texts/store';
 
 export type Profile = {
   id: string;
@@ -18,16 +19,11 @@ export type Profile = {
 /** Same limit as the database check on `profiles.display_name` (trimmed, 1–60 characters). */
 export const MAX_DISPLAY_NAME_CHARS = 60;
 
-const EMPTY = 'Scrie-ți numele.';
-const TOO_LONG = `Numele poate avea cel mult ${MAX_DISPLAY_NAME_CHARS} de caractere.`;
-const SAVE_FAILED = 'Numele nu a putut fi salvat. Încearcă din nou.';
-const MODE_SAVE_FAILED = 'Modul nu a putut fi salvat. Încearcă din nou.';
-
 export function validateDisplayName(raw: string): { ok: true; value: string } | { ok: false; message: string } {
   const value = raw.trim();
-  if (!value) return { ok: false, message: EMPTY };
+  if (!value) return { ok: false, message: t('profile.name.empty') };
   // Code points, like Postgres char_length (an emoji or a letter with diacritics counts once).
-  if ([...value].length > MAX_DISPLAY_NAME_CHARS) return { ok: false, message: TOO_LONG };
+  if ([...value].length > MAX_DISPLAY_NAME_CHARS) return { ok: false, message: t('profile.name.tooLong', { max: MAX_DISPLAY_NAME_CHARS }) };
   return { ok: true, value };
 }
 
@@ -62,7 +58,7 @@ export async function updateDisplayName(
     .select('id');
   if (error) throw error;
   // RLS filters out rows the student may not touch without an error: no row means nothing was saved.
-  if (!data?.length) throw new Error(SAVE_FAILED);
+  if (!data?.length) throw new Error(t('onboarding.name.saveFailed'));
 }
 
 /** Saves the chosen learning mode on the student's own row; throws when nothing was saved. */
@@ -74,5 +70,5 @@ export async function updateLearningMode(
   const { data, error } = await client.from('profiles').update({ learning_mode: mode }).eq('id', userId).select('id');
   if (error) throw error;
   // Same as updateDisplayName: RLS hides foreign rows silently, so no row means nothing was saved.
-  if (!data?.length) throw new Error(MODE_SAVE_FAILED);
+  if (!data?.length) throw new Error(t('onboarding.mode.saveFailed'));
 }

@@ -6,6 +6,7 @@ import { updateDisplayName, updateLearningMode } from '../lib/profile';
 import { deleteAccount } from '../lib/api';
 import { fetchReferralSummary } from '../lib/referrals';
 import { router } from 'expo-router';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const mockRefresh = jest.fn();
 const mockSignOut = jest.fn();
@@ -369,3 +370,14 @@ describe('daily reminder settings', () => {
   });
 });
 
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy and the deletion confirmation from the texts (overrides apply)', async () => {
+    applyOverrides({ 'profile.deleteAccount': '[delete]', 'profile.delete.confirm': '[confirm]', 'profile.mode.label': '[mode]' });
+    await renderScreen();
+    expect(screen.getByText('[mode]')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: '[delete]' }));
+    expect(screen.getByText('[confirm]')).toBeTruthy();
+  });
+});

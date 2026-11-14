@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { border, color, creditsLabel, elevation, feedbackText, motion, opacity, radius, space } from '@prepio/shared';
+import { border, color, elevation, feedbackText, motion, opacity, radius, space } from '@prepio/shared';
+import { creditCount } from '../lib/counts';
 import AppText from './AppText';
 import { Icon, type IconName } from './IconButton';
 import Spinner from './Spinner';
@@ -83,7 +84,7 @@ export default function Button({
   );
 
   const base = accessibilityLabel ?? label;
-  const name = cost !== undefined && base ? t('common.button.withCost', { eticheta: base, credite: creditsLabel(cost) }) : base;
+  const name = cost !== undefined && base ? t('common.button.withCost', { eticheta: base, credite: creditCount(cost) }) : base;
 
   const y = useSharedValue(0);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));

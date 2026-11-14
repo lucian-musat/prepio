@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fetchCreditPackages, fetchLedger, purchaseCredits, type StudentLedgerEntry } from '../lib/credits';
 import CreditsScreen from './CreditsScreen';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../credits/CreditsProvider');
 const { mockResetCredits, refresh } = jest.requireMock<typeof import('../credits/__mocks__/CreditsProvider')>('../credits/CreditsProvider');
@@ -109,4 +110,16 @@ it('groups the history by day', async () => {
   await mount();
   expect(await screen.findByText('5 noiembrie 2026')).toBeTruthy();
   expect(screen.getByText('3 noiembrie 2026')).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy and the ledger row names from the texts (overrides apply)', async () => {
+    applyOverrides({ 'credits.screen.buyTitle': '[override]', 'credits.ledger.welcome': '[welcome]' });
+    mockedLedger.mockResolvedValue([entry(1, { kind: 'welcome', delta: 5, exercise: null })]);
+    await mount();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(await screen.findByText('[welcome]')).toBeTruthy();
+  });
 });

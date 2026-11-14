@@ -10,10 +10,12 @@ import {
   getPendingCode,
   inviteUrl,
   lookupReferralCode,
+  monthsText,
   normalizeCode,
   storePendingCode,
 } from './referrals';
 import { getSupabase } from './supabase';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('./supabase', () => ({ getSupabase: jest.fn() }));
 
@@ -140,5 +142,15 @@ describe('student reads', () => {
     expect(await fetchMyReferrals()).toEqual([]);
     rpc.mockResolvedValue({ data: null, error: new Error('down') });
     await expect(fetchMyReferrals()).rejects.toThrow('down');
+  });
+});
+
+describe('monthsText texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads the month words from the texts (overrides apply)', () => {
+    applyOverrides({ 'invite.duration.oneMonth': '[o lună]', 'access.month.many': '[luni]' });
+    expect(monthsText(1)).toBe('[o lună]');
+    expect(monthsText(3)).toBe('3 [luni]');
   });
 });

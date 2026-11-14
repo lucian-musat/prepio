@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { StreakSummary } from '@prepio/shared';
 import { fetchStreak, markActiveToday } from '../lib/streak';
 import { StreakProvider, useMarkActive, useStreak } from './StreakProvider';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 let mockUser = 'u1';
 jest.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: mockUser } }) }));
@@ -226,4 +227,17 @@ it('useStreak throws outside the provider', async () => {
   }
   await expect(render(<Bad />)).rejects.toThrow(/StreakProvider/);
   err.mockRestore();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('the first-of-the-day toast reads its text from the texts (overrides apply)', async () => {
+    applyOverrides({ 'streak.toast.continued': '[{zile}]' });
+    (markActiveToday as jest.Mock).mockResolvedValue(sum({ current: 6, todayDone: true }));
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('5'));
+    await fireEvent.press(screen.getByText('mark'));
+    expect(await screen.findByText('[6 zile]')).toBeTruthy();
+  });
 });

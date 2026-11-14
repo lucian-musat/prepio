@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { color, creditsLabel, feedbackText, formatLei, palette, pricePerCredit, radius, space, type CreditPackage } from '@prepio/shared';
+import { color, feedbackText, formatLei, palette, pricePerCredit, radius, space, type CreditPackage } from '@prepio/shared';
+import { creditCount } from '../lib/counts';
 import { CreditsApiError, fetchCreditPackages, purchaseCredits } from '../lib/credits';
 import { t } from '../texts/store';
 import { AppText, Button, Spinner } from '../ui';
 import Coin from './Coin';
 import { useCredits } from './CreditsProvider';
-
-export const PAYMENT_FOOTNOTE = 'Plățile nu sunt active încă, așa că pachetul ți se adaugă gratuit.';
 
 type Phase = 'loading' | 'loadFailed' | 'choose' | 'buying';
 
@@ -90,18 +89,18 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
     <View style={styles.root}>
       {phase === 'loading' ? (
         <View style={styles.status}>
-          <Spinner accessibilityLabel="Se încarcă pachetele" />
+          <Spinner accessibilityLabel={t('credits.packages.loading')} />
         </View>
       ) : phase === 'loadFailed' ? (
         <View style={styles.status}>
           <AppText role="note" style={styles.error}>
-            Nu am putut încărca pachetele.
+            {t('credits.packages.loadFailed')}
           </AppText>
-          <Button label="Reîncearcă" variant="secondary" compact onPress={() => void load(true)} />
+          <Button label={t('common.retryButton')} variant="secondary" compact onPress={() => void load(true)} />
         </View>
       ) : packages.length === 0 ? (
         <AppText role="note" color="textMuted" style={styles.statusText}>
-          Nu sunt pachete disponibile acum.
+          {t('credits.packages.empty')}
         </AppText>
       ) : (
         <View accessibilityRole="radiogroup" style={styles.packages}>
@@ -113,7 +112,11 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
                 key={p.id}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on, disabled: buying }}
-                accessibilityLabel={`${creditsLabel(p.credits)}, ${formatLei(p.priceBani)}, ${per}${p.featured ? ', cel mai ales' : ''}`}
+                accessibilityLabel={t(p.featured ? 'credits.packages.optionFeatured' : 'credits.packages.option', {
+                  credite: creditCount(p.credits),
+                  pret: formatLei(p.priceBani),
+                  pretCredit: per,
+                })}
                 disabled={buying}
                 onPress={() => setSelected(p.id)}
                 style={[styles.pkg, on && styles.pkgOn]}
@@ -121,13 +124,13 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
                 {p.featured ? (
                   <View style={styles.badge}>
                     <AppText role="badge" style={styles.badgeText}>
-                      CEL MAI POPULAR
+                      {t('credits.packages.featured')}
                     </AppText>
                   </View>
                 ) : null}
                 <Coin size={16} />
                 <AppText role="bodyStrong" style={styles.fill}>
-                  {creditsLabel(p.credits)}
+                  {creditCount(p.credits)}
                 </AppText>
                 <View style={styles.price}>
                   <AppText role="bodyStrong">{formatLei(p.priceBani)}</AppText>
@@ -147,7 +150,7 @@ export default function PackagePicker({ onBought, onBusyChange }: Props) {
       ) : null}
       {phase === 'choose' || phase === 'buying' ? (
         <Button
-          label={pkg ? `Cumpără ${creditsLabel(pkg.credits)} · ${formatLei(pkg.priceBani)}` : 'Cumpără'}
+          label={pkg ? t('credits.packages.buy', { credite: creditCount(pkg.credits), pret: formatLei(pkg.priceBani) }) : t('credits.packages.buyNone')}
           disabled={!pkg}
           loading={buying}
           onPress={buy}

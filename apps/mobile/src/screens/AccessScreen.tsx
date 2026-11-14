@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { color, creditsLabel, feedbackText, formatAccessDate, formatLei, gradient, plural, radius, space } from '@prepio/shared';
+import { color, feedbackText, formatAccessDate, formatLei, gradient, radius, space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, Spinner, goBackOrHome } from '../ui';
 import { useAccess } from '../access/AccessProvider';
 import { useAccessPurchase } from '../access/useAccessPurchase';
@@ -10,17 +10,22 @@ import { useAuth } from '../auth/AuthProvider';
 import Coin from '../credits/Coin';
 import { useCredits } from '../credits/CreditsProvider';
 import { fetchAccessHistory, type AccessHistoryEntry } from '../lib/access';
+import { creditCount, dayCount, monthCount } from '../lib/counts';
+import { t } from '../texts/store';
 
 const DAYS_PER_MONTH = 30;
 const HERO_POINTS = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }; // 135deg, as the credits card
 
 /** One history row, read like a credit row: what happened, the date under it, the amount on the right. */
 function historyRow(h: AccessHistoryEntry): { title: string; amount: string | null } {
-  const months = h.months !== null ? plural(h.months, 'lună', 'luni') : null;
-  if (h.kind === 'purchase') return { title: months ? `Acces ${months}` : 'Acces', amount: h.priceBani !== null ? formatLei(h.priceBani) : null };
-  if (h.kind === 'referral_reward') return { title: 'Acces gratuit din recomandări', amount: months ? `+${months}` : null };
-  if (h.kind === 'admin_grant') return { title: 'Acces acordat', amount: months ? `+${months}` : null };
-  return { title: 'Acces retras', amount: null };
+  const months = h.months !== null ? monthCount(h.months) : null;
+  if (h.kind === 'purchase') {
+    const title = months ? t('access.history.purchase', { luni: months }) : t('access.history.purchaseNoMonths');
+    return { title, amount: h.priceBani !== null ? formatLei(h.priceBani) : null };
+  }
+  if (h.kind === 'referral_reward') return { title: t('access.history.referralReward'), amount: months ? `+${months}` : null };
+  if (h.kind === 'admin_grant') return { title: t('access.history.adminGrant'), amount: months ? `+${months}` : null };
+  return { title: t('access.history.adminRevoke'), amount: null };
 }
 
 /** „Acces la lecții” (paid-access mockup, step 3): the plan, what it includes, renewing and the access history. */
@@ -58,7 +63,7 @@ export default function AccessScreen() {
   // The period start isn't stored: the bar is the days left over the length of one offer period, clamped to 0..1.
   const fraction = full ? Math.min(1, Math.max(0, status.daysLeft / (months * DAYS_PER_MONTH))) : 0;
   const until = status.plan === 'trial' ? null : formatAccessDate(status.until);
-  const verb = trial ? 'Deblochează' : status.plan === 'expired' ? 'Reînnoiește' : `Prelungește cu ${plural(months, 'lună', 'luni')}`;
+  const verb = trial ? t('access.cta.unlock') : status.plan === 'expired' ? t('access.cta.renew') : t('access.cta.extend', { luni: monthCount(months) });
 
   const buy = async () => {
     setBought(false); // a new attempt must not keep showing the previous success
@@ -66,25 +71,25 @@ export default function AccessScreen() {
   };
 
   const includes = [
-    'Toate lecțiile',
-    offer && offer.bonusCredits > 0 ? `+${plural(offer.bonusCredits, 'credit', 'credite')} la fiecare plată` : null,
-    plural(months, 'lună', 'luni'),
+    t('access.includes.allLessons'),
+    offer && offer.bonusCredits > 0 ? t('access.includes.bonus', { credite: creditCount(offer.bonusCredits) }) : null,
+    monthCount(months),
   ]
     .filter(Boolean)
     .join(' · ');
 
   return (
-    <ScreenLayout title="Acces la lecții" onBack={goBackOrHome}>
+    <ScreenLayout title={t('access.screen.title')} onBack={goBackOrHome}>
       <View style={styles.stack}>
         {full ? (
           <LinearGradient colors={[...gradient.hero.colors]} locations={[...gradient.hero.locations]} {...HERO_POINTS} style={styles.hero}>
             <AppText role="eyebrow" color="onPrimary">
-              Acces
+              {t('access.eyebrow')}
             </AppText>
             <AppText role="section" color="onPrimary">
-              ★ Acces complet
+              {t('access.full.title')}
             </AppText>
-            <AppText role="body" color="onPrimary">{`Activ până la ${until}`}</AppText>
+            <AppText role="body" color="onPrimary">{t('access.full.until', { data: until ?? '' })}</AppText>
             <View
               accessible
               accessibilityRole="progressbar"
@@ -93,24 +98,24 @@ export default function AccessScreen() {
             >
               <View style={[styles.fill, { width: `${fraction * 100}%` }]} />
             </View>
-            <AppText role="caption" color="onPrimary">{`mai ai ${plural(status.daysLeft, 'zi', 'zile')}`}</AppText>
+            <AppText role="caption" color="onPrimary">{t('access.full.daysLeft', { zile: dayCount(status.daysLeft) })}</AppText>
           </LinearGradient>
         ) : (
           <View style={styles.card}>
             <AppText role="eyebrow" color="textMuted">
-              Acces
+              {t('access.eyebrow')}
             </AppText>
             {trial ? (
               <>
-                <AppText role="section">Perioadă de probă</AppText>
+                <AppText role="section">{t('access.trial.title')}</AppText>
                 <AppText role="body" color="textMuted">
-                  Acum ai deschisă doar lecția gratuită. Cu accesul complet le deschizi pe toate.
+                  {t('access.trial.body')}
                 </AppText>
               </>
             ) : (
               <>
-                <AppText role="section">Acces expirat</AppText>
-                <AppText role="body" color="textMuted">{`Accesul tău a expirat pe ${until}. Lecțiile terminate rămân bifate, dar nu le mai poți deschide.`}</AppText>
+                <AppText role="section">{t('access.expired.title')}</AppText>
+                <AppText role="body" color="textMuted">{t('access.expired.body', { data: until ?? '' })}</AppText>
               </>
             )}
           </View>
@@ -118,14 +123,14 @@ export default function AccessScreen() {
 
         <View style={styles.card}>
           <AppText role="section" accessibilityRole="header">
-            Ce include
+            {t('access.includes.title')}
           </AppText>
           <AppText role="body">{includes}</AppText>
         </View>
 
         {bought ? (
           <AppText role="bodyStrong" accessibilityLiveRegion="polite" style={styles.good}>
-            Ai acces complet!
+            {t('access.purchased')}
           </AppText>
         ) : null}
         {error ? (
@@ -138,35 +143,35 @@ export default function AccessScreen() {
             <Button label={`${verb} · ${price}`} loading={pending} onPress={buy} />
             {full && until ? (
               <AppText role="caption" color="textMuted" style={styles.center}>
-                {`Lunile noi se adaugă după ${until}.`}
+                {t('access.newMonthsAfter', { data: until })}
               </AppText>
             ) : null}
           </View>
         ) : (
           <View style={styles.center}>
-            <Spinner accessibilityLabel="Se încarcă oferta" />
+            <Spinner accessibilityLabel={t('access.loadingOffer')} />
           </View>
         )}
 
         <Pressable
           accessibilityRole="link"
-          accessibilityLabel={`${balance !== null ? creditsLabel(balance) : 'Credite'} · Creditele mele`}
+          accessibilityLabel={t('access.balance.label', { sold: balance !== null ? creditCount(balance) : t('access.balance.unknown') })}
           onPress={() => router.push('/credits')}
           style={styles.balance}
         >
           <Coin size={22} />
           <AppText role="bodyStrong" style={styles.grow}>
-            {balance !== null ? creditsLabel(balance) : '—'}
+            {balance !== null ? creditCount(balance) : '—'}
           </AppText>
           <AppText role="small" color="primaryStrong">
-            Creditele mele ›
+            {t('access.balance.link')}
           </AppText>
         </Pressable>
 
         {history.length > 0 ? (
           <View style={styles.section}>
             <AppText role="section" accessibilityRole="header">
-              Istoric
+              {t('access.history.title')}
             </AppText>
             {history.map((h, i) => {
               const row = historyRow(h);

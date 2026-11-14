@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { AccessApiError, purchaseAccess } from '../lib/access';
-import { useAccessPurchase, OFFER_CHANGED } from './useAccessPurchase';
+import { applyOverrides, resetTexts } from '../texts/store';
+import { useAccessPurchase } from './useAccessPurchase';
 
 jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn() }));
 jest.mock('../credits/CreditsProvider');
@@ -10,6 +11,8 @@ const { mockResetAccess, applyPurchase, applyOffer, MOCK_OFFER } = jest.requireM
 const mockedPurchase = purchaseAccess as jest.Mock;
 
 const OK = { orderId: 'o1', accessUntil: new Date(Date.now() + 90 * 86400000).toISOString(), bonus: 100, balance: 112 };
+
+afterEach(() => resetTexts());
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -60,9 +63,16 @@ it('offer_changed shows the new offer and asks again', async () => {
   expect(ok).toBe(false);
   expect(applyOffer).toHaveBeenCalledWith(fresh);
   expect(result.current.offerChanged).toBe(true);
-  expect(result.current.error).toBe(OFFER_CHANGED);
-  expect(OFFER_CHANGED).toBe('Oferta s-a schimbat. Verifică noul preț.');
+  expect(result.current.error).toBe('Oferta s-a schimbat. Verifică noul preț.');
   expect(applyPurchase).not.toHaveBeenCalled();
+});
+
+it('offer_changed shows the overridden catalog text, not the server message', async () => {
+  applyOverrides({ 'errors.api.access.offerChanged': '[override]' });
+  mockedPurchase.mockRejectedValue(new AccessApiError('offer_changed', 'x', { priceBani: 1, bonusCredits: 0, durationMonths: 1 }));
+  const { result } = await renderHook(() => useAccessPurchase());
+  await act(async () => void (await result.current.purchase()));
+  expect(result.current.error).toBe('[override]');
 });
 
 it('any other failure shows its message', async () => {

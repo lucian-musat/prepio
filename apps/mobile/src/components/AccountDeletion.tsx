@@ -4,11 +4,10 @@ import { space } from '@prepio/shared';
 import { AppText, Button, Surface } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import { deleteAccount, offlineText } from '../lib/api';
+import { t } from '../texts/store';
 
-const DELETE_FAILED = 'Contul nu a putut fi șters. Încearcă din nou.';
-
-// Plain Errors carry our Romanian messages; anything else (PostgREST/network objects) gets the generic one.
-const messageOf = (e: unknown) => (e instanceof Error && e.message ? e.message : DELETE_FAILED);
+// Plain Errors carry our catalog messages; anything else (PostgREST/network objects) gets the server-error one.
+const messageOf = (e: unknown) => (e instanceof Error && e.message ? e.message : t('errors.api.accountDelete.serverError'));
 
 export type AccountDeletion = {
   confirming: boolean;
@@ -66,15 +65,15 @@ export function DeleteAccountConfirm({ deletion }: { deletion: AccountDeletion }
   return (
     <Surface style={styles.confirm}>
       <AppText accessibilityRole="alert">
-        Ștergi contul definitiv? Se șterg numele, emailul, progresul, creditele și accesul, și nu le mai poți recupera.
+        {t('profile.delete.confirm')}
       </AppText>
       {deletion.error ? (
         <AppText role="small" color="danger" accessibilityRole="alert">
           {deletion.error}
         </AppText>
       ) : null}
-      <Button label="Da, șterge contul" tone="danger" onPress={deletion.confirm} loading={deletion.deleting} />
-      <Button label="Renunță" variant="secondary" onPress={deletion.cancel} disabled={deletion.deleting} />
+      <Button label={t('profile.delete.yes')} tone="danger" onPress={deletion.confirm} loading={deletion.deleting} />
+      <Button label={t('profile.delete.cancel')} variant="secondary" onPress={deletion.cancel} disabled={deletion.deleting} />
     </Surface>
   );
 }

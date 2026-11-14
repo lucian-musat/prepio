@@ -1,5 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { color, creditsLabel, radius, space } from '@prepio/shared';
+import { color, radius, space } from '@prepio/shared';
+import { creditCount } from '../lib/counts';
+import { t } from '../texts/store';
 import { AppText } from '../ui';
 import Coin from './Coin';
 
@@ -8,11 +10,11 @@ export default function CostTag({ cost, perRequirement = false }: { cost: number
   return (
     <View
       accessible
-      accessibilityLabel={`Profesorul digital, costă ${creditsLabel(cost)}${perRequirement ? ' pe cerință' : ''}`}
+      accessibilityLabel={t(perRequirement ? 'credits.costTag.labelPerRequirement' : 'credits.costTag.label', { credite: creditCount(cost) })}
       style={styles.tag}
     >
       <AppText role="eyebrow" color="textMuted" accessible={false}>
-        ✦ Profesorul digital ·
+        {t('credits.costTag.text')}
       </AppText>
       <Coin size={12} />
       <AppText role="eyebrow" color="textMuted" accessible={false}>
@@ -20,7 +22,7 @@ export default function CostTag({ cost, perRequirement = false }: { cost: number
       </AppText>
       {perRequirement ? (
         <AppText role="eyebrow" color="textMuted" accessible={false}>
-          / cerință
+          {t('credits.costTag.perRequirement')}
         </AppText>
       ) : null}
     </View>

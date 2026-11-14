@@ -3,19 +3,18 @@ import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   color,
-  creditsLabel,
   extendAccessUntil,
   feedbackText,
   formatAccessDate,
   formatLei,
-  plural,
   radius,
   space,
   type AccessStatus,
 } from '@prepio/shared';
 import { SPLIT_MIN_WIDTH } from '../components/marker/SourcePanel';
-import { PAYMENT_FOOTNOTE } from '../credits/PackagePicker';
+import { creditCount, monthCount } from '../lib/counts';
 import { lessonCount as lessonsLabel } from '../lib/lessonCount';
+import { t } from '../texts/store';
 import { AppText, Button, Spinner, TextButton } from '../ui';
 import { useAccess } from './AccessProvider';
 import { useAccessPurchase } from './useAccessPurchase';
@@ -73,22 +72,22 @@ function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true
             </AppText>
           ) : null}
           <AppText role="question" accessibilityRole="header" style={styles.center}>
-            Ai acces complet!
+            {t('access.purchased')}
           </AppText>
           <AppText role="body" color="textMuted" style={styles.center}>
             {/* The end date the server stored (applyPurchase), not a local estimate. */}
-            {status.plan === 'trial' ? 'Toate lecțiile sunt deschise.' : `Toate lecțiile sunt deschise până la ${formatAccessDate(status.until)}.`}
+            {status.plan === 'trial' ? t('access.paywall.allOpen') : t('access.paywall.allOpenUntil', { data: formatAccessDate(status.until) })}
           </AppText>
         </View>
         {stayHome ? (
           <>
-            <Button label="Înapoi la lecții" onPress={onClose} />
+            <Button label={t('access.paywall.backToLessons')} onPress={onClose} />
             <AppText role="small" color="textMuted" style={styles.center}>
-              Lecțiile se deschid în ordine, pe traseul ghidat.
+              {t('access.paywall.guidedNote')}
             </AppText>
           </>
         ) : (
-          <Button label={doneLabel ?? (lessonTitle ? 'Deschide lecția' : 'Continuă')} onPress={onUnlocked} />
+          <Button label={doneLabel ?? (lessonTitle ? t('access.paywall.openLesson') : t('common.continue'))} onPress={onUnlocked} />
         )}
       </>
     );
@@ -109,21 +108,23 @@ function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true
     if (await purchase()) setDone({ bonus });
   };
   const benefits = [
-    `📚 ${lessonCount !== undefined && lessonCount > 1 ? `Toate cele ${lessonsLabel(lessonCount)}` : 'Toate lecțiile'}, în orice mod de învățare`,
-    offer.bonusCredits > 0 ? `🪙 +${creditsLabel(offer.bonusCredits)} pentru profesorul digital` : null,
-    `📅 Acces ${plural(offer.durationMonths, 'lună', 'luni')}, până la ${end}`,
-    '🎁 Îți păstrezi creditele pe care le ai deja',
+    lessonCount !== undefined && lessonCount > 1
+      ? t('access.paywall.benefitLessonsCount', { lectii: lessonsLabel(lessonCount) })
+      : t('access.paywall.benefitLessonsAll'),
+    offer.bonusCredits > 0 ? t('access.paywall.benefitCredits', { credite: creditCount(offer.bonusCredits) }) : null,
+    t('access.paywall.benefitDuration', { luni: monthCount(offer.durationMonths), data: end }),
+    t('access.paywall.benefitKeep'),
   ].filter((b): b is string => b !== null);
 
   return (
     <>
       <View style={styles.head}>
         <AppText role="question" accessibilityRole="header">
-          {trial ? 'Deblochează toate lecțiile' : 'Reînnoiește accesul'}
+          {trial ? t('access.paywall.titleUnlock') : t('access.paywall.titleRenew')}
         </AppText>
         {lessonTitle ? (
           <AppText role="small" color="textMuted">
-            „{lessonTitle}” face parte din accesul complet.
+            {t('access.paywall.lessonIncluded', { titlu: lessonTitle })}
           </AppText>
         ) : null}
       </View>
@@ -137,7 +138,7 @@ function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true
       <View style={styles.price}>
         <AppText role="title">{price}</AppText>
         <AppText role="small" color="textMuted" style={styles.priceNote}>
-          plată unică · nu se reînnoiește automat
+          {t('access.paywall.priceNote')}
         </AppText>
       </View>
       {error ? (
@@ -145,8 +146,8 @@ function Body({ lessonTitle, lessonCount, doneLabel, canOpenAfterPurchase = true
           {error}
         </AppText>
       ) : null}
-      <Button label={`${trial ? 'Deblochează' : 'Reînnoiește'} · ${price}`} loading={pending} onPress={buy} />
-      <TextButton label="Mai târziu" disabled={pending} onPress={onClose} />
+      <Button label={`${trial ? t('access.cta.unlock') : t('access.cta.renew')} · ${price}`} loading={pending} onPress={buy} />
+      <TextButton label={t('access.paywall.later')} disabled={pending} onPress={onClose} />
     </>
   );
 }
@@ -176,7 +177,7 @@ export default function PaywallSheet({ visible, onClose, ...rest }: Props) {
   return (
     <Modal visible={visible} transparent animationType={dialog ? 'fade' : 'slide'} onRequestClose={close} statusBarTranslucent>
       <View style={[styles.root, dialog && styles.rootDialog]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Închide fereastra" onPress={close} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.closeWindow')} onPress={close} style={StyleSheet.absoluteFill} />
         {visible ? (
           <View
             testID="paywall-sheet"
@@ -188,7 +189,7 @@ export default function PaywallSheet({ visible, onClose, ...rest }: Props) {
               {/* Mounted per opening: each one starts on the offer, with no old error. */}
               <Body {...rest} onClose={close} onPending={onPending} />
               <AppText role="caption" color="textMuted" style={styles.center}>
-                {PAYMENT_FOOTNOTE}
+                {t('credits.footnote')}
               </AppText>
             </ScrollView>
           </View>

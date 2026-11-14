@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
-import { color, creditsLabel, feedbackText, palette, planTone, plural, radius, space } from '@prepio/shared';
+import { color, feedbackText, palette, planTone, radius, space } from '@prepio/shared';
 import { useAccess } from '../access/AccessProvider';
+import { creditCount, dayCount } from '../lib/counts';
+import { t } from '../texts/store';
 import { AppText } from '../ui';
 import { easing, timing } from '../ui/motion';
 import Coin from './Coin';
@@ -35,13 +37,13 @@ type Plan = { tone: keyof typeof planTone; text: string; label: string };
 /** The plan half of the pill, always a word: „Probă”, „★ Acces”, the last 7 days „⏳ n zile”, „Expirat”. */
 function usePlan(): Plan {
   const { status, isAdmin } = useAccess();
-  if (isAdmin || status.plan === 'full') return { tone: 'full', text: '★ Acces ·', label: 'Acces complet' };
+  if (isAdmin || status.plan === 'full') return { tone: 'full', text: t('credits.chip.full'), label: t('credits.chip.fullLabel') };
   if (status.plan === 'expiring') {
-    const days = plural(status.daysLeft, 'zi', 'zile');
-    return { tone: 'expiring', text: `⏳ ${days} ·`, label: `Acces complet încă ${days}` };
+    const zile = dayCount(status.daysLeft);
+    return { tone: 'expiring', text: t('credits.chip.expiring', { zile }), label: t('credits.chip.expiringLabel', { zile }) };
   }
-  if (status.plan === 'expired') return { tone: 'expiring', text: 'Expirat ·', label: 'Acces expirat' };
-  return { tone: 'trial', text: 'Probă ·', label: 'Perioadă de probă' };
+  if (status.plan === 'expired') return { tone: 'expiring', text: t('credits.chip.expired'), label: t('credits.chip.expiredLabel') };
+  return { tone: 'trial', text: t('credits.chip.trial'), label: t('credits.chip.trialLabel') };
 }
 
 /**
@@ -71,7 +73,7 @@ export default function CreditChip({ need }: { need?: number }) {
       <Pressable
         testID="credit-chip"
         accessibilityRole="button"
-        accessibilityLabel={`${plan.label}, ${creditsLabel(balance)}, deschide accesul`}
+        accessibilityLabel={t('credits.chip.label', { plan: plan.label, credite: creditCount(balance) })}
         onPress={() => router.push('/abonament')}
         hitSlop={8}
         style={[styles.chip, low ? styles.low : { backgroundColor: tone.bg, borderColor: tone.border }]}

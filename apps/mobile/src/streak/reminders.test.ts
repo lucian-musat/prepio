@@ -2,6 +2,7 @@ import * as N from 'expo-notifications';
 import { planReminders, type StreakSummary } from '@prepio/shared';
 // Jest runs with the native platform, so './reminders' resolves to reminders.native.ts.
 import { canAskAgain, onReminderTap, permission, remindersSupported, requestPermission, syncReminders } from './reminders';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const mock = N as unknown as Record<string, jest.Mock>;
 const sum = (over: Partial<StreakSummary> = {}): StreakSummary => ({ current: 5, record: 9, todayDone: false, week: [], ...over });
@@ -139,5 +140,15 @@ describe('canAskAgain', () => {
     expect(await canAskAgain()).toBe(true);
     mock.getPermissionsAsync.mockResolvedValue({ status: 'denied' });
     expect(await canAskAgain()).toBe(true);
+  });
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('schedules the reminders with the texts in force (overrides apply)', async () => {
+    applyOverrides({ 'notifications.reminder.aliveTitle': '[{zile}]', 'notifications.reminder.aliveBody': '[body]' });
+    await syncReminders(sum(), on, now);
+    expect(mock.scheduleNotificationAsync.mock.calls[0][0].content).toEqual({ title: '[5 zile]', body: '[body]' });
   });
 });

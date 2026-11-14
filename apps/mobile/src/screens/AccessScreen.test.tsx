@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { formatAccessDate } from '@prepio/shared';
 import { fetchAccessHistory, purchaseAccess, type AccessHistoryEntry } from '../lib/access';
 import AccessScreen from './AccessScreen';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../lib/access', () => ({ ...jest.requireActual('../lib/access'), purchaseAccess: jest.fn(), fetchAccessHistory: jest.fn() }));
 jest.mock('../credits/CreditsProvider');
@@ -129,4 +130,15 @@ it('hides the history when empty or failing', async () => {
   await mount();
   await screen.findByText('Ce include');
   expect(screen.queryByText('Istoric')).toBeNull();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its copy from the texts (overrides apply)', async () => {
+    applyOverrides({ 'access.trial.title': '[override]', 'access.includes.title': '[includes]' });
+    await mount();
+    expect(screen.getByText('[override]')).toBeTruthy();
+    expect(screen.getByText('[includes]')).toBeTruthy();
+  });
 });

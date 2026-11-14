@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { color, type StreakSummary } from '@prepio/shared';
 import StreakPill from './StreakPill';
 import HeaderPills from './HeaderPills';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 const metrics = { frame: { x: 0, y: 0, width: 360, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } };
 const render = (ui: ReactElement) => rtlRender(<SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>);
@@ -52,4 +53,15 @@ it('HeaderPills lays the pills out in a row', async () => {
   expect(style.flexDirection).toBe('row');
   expect(style.alignItems).toBe('center');
   expect(screen.getByTestId('streak-pill')).toBeTruthy();
+});
+
+describe('texts', () => {
+  afterEach(() => resetTexts());
+
+  it('reads its label and the day nouns from the texts (overrides apply)', async () => {
+    applyOverrides({ 'streak.pill.label': '[{zile}]', 'streak.day.many': '[zile]' });
+    mockSummary = summary(5);
+    await render(<StreakPill />);
+    expect(screen.getByRole('button', { name: '[5 [zile]]' })).toBeTruthy();
+  });
 });

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { plural } from '@prepio/shared';
+import { t } from '../texts/store';
+import { monthCount } from './counts';
 import { getSupabase } from './supabase';
 
 /**
@@ -207,5 +208,5 @@ export async function fetchMyReferrals(client: SupabaseClient = getSupabase()): 
 
 /** „o lună”, „3 luni”, „12 luni”: a duration in months, in Romanian. */
 export function monthsText(n: number): string {
-  return n === 1 ? 'o lună' : plural(n, 'lună', 'luni');
+  return n === 1 ? t('invite.duration.oneMonth') : monthCount(n);
 }

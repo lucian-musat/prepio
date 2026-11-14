@@ -37,7 +37,7 @@ const ERRORS: Record<ConsolidationEvaluateErrorCode, { status: number; message: 
   access_required: { status: 403, message: 'Lecția face parte din accesul complet.' },
 };
 /** `ai_failed` once the spent credits were given back. */
-const REFUNDED_MESSAGE = 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
+export const REFUNDED_MESSAGE = 'Verificarea nu a reușit. Nu ți-am luat niciun credit. Încearcă din nou.';
 
 export function errorResult(code: ConsolidationEvaluateErrorCode): HandlerResult {
   const { status, message } = ERRORS[code];
