@@ -1,10 +1,16 @@
 # Project status
 
-Last updated: 2026-11-13
+Last updated: 2026-11-14
 
 ## Where we are
 
-**Editable UI texts (2026-11-13, in progress; foundation #23, batches `feat/ui-texts-<batch>`).** Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+**Editable UI texts (2026-11-13 → 2026-11-14, done; foundation #23, batches `feat/ui-texts-<batch>`).** Every student-app text is now in the catalog and editable in admin → Texte. What stays non-editable, and why, is listed in `docs/ui-texts.md` („What the catalog does not cover”). Spec `docs/superpowers/specs/2026-11-13-editable-ui-texts-design.md`, plan `docs/superpowers/plans/2026-11-13-editable-ui-texts.md`, how-to `docs/ui-texts.md`, rollout `docs/deploy.md` „Editable UI texts rollout”.
+- **Batch „pages” and closing (`feat/ui-texts-pages`):**
+  - 102 keys in the new `pages` group: „Cum funcționează recomandările” (81, with the live numbers as `{colegi}` / `{credite}` / `{durata}`) and „Ștergerea contului” (21). The sentences with or without bonus credits are separate keys, not a fragment.
+  - The Terms and Privacy bodies stay out of the catalog; `legal/LegalSection.tsx` stays excluded (its operator details serve only those pages). `lib/legal.ts` is unchanged: the two pages only use the contact email from it.
+  - The guard has no pending list any more: every file under `app/` and `src/` except the legal pages must use `t()`.
+  - Cleanups from earlier reviews: the invite feedback colour follows the outcome, not the text; the `consolidation.check.*` descriptions say an edit changes only the app's instant check; drift tests keep the card type, difficulty and consolidation type labels equal to their constants; dead `countLabel` and `CALLOUT_LABELS` removed; small fixes (`requirementCount` in the BAC summary, list keys, splash promise errors caught).
+  - Tests: mobile 1597, shared 1330, admin 571; typecheck clean.
 - **Batch „account” (`feat/ui-texts-account`):**
   - 220 keys in six new groups: `access` 58 (plan page, Home banner, paywall), `credits` 65 (pill, „Creditele mele”, packages, „Îți mai trebuie”, ledger rows), `invite` 39, `profile` 26 (with the account-deletion confirmation), `streak` 27 (pill, sheet, toast, weekdays), `notifications` 5 (the Android reminder). Plus `common.closeWindow`.
   - Plurals: the nouns for credits, days, months and colleagues are texts (`src/lib/counts.ts`); the button cost label and the essay check also use them now.
@@ -68,7 +74,7 @@ Last updated: 2026-11-13
     - 360 px with no horizontal scroll
     - test rows and the `[test]` student removed
 - Foundation done: a text catalog in `@prepio/shared` (`TEXTS`, `{vars}` formatting, validation), the `ui_texts` table (public read, admin write, RLS + pgTAP), the student text store (`t`, `tPlural`, cached start-up, web boot loader, the app waits for the texts) and admin → „Texte” (edit, reset, optional texts). The Home welcome paragraph moved from Setări to the catalog (`home.hero.welcome`, empty = hidden) and the returning-student greeting is editable.
-- Guard: `apps/mobile/src/texts/noLiterals.test.ts` fails on literal UI copy outside the catalog; `PENDING_FILES` lists the files not migrated yet (each batch PR removes its files). The Terms and Privacy pages are excluded for good.
+- Guard: `apps/mobile/src/texts/noLiterals.test.ts` fails on literal UI copy outside the catalog; it covers every file except the Terms and Privacy pages, which are excluded for good.
 - An edit shows on the second opening (cache); a fresh install waits at most ~1.5 s, then uses the defaults.
 - Admin „Texte” checks admin rights (`is_admin`) before it looks up editor emails; a whitespace-only optional text counts as empty (hidden).
 - Tests: mobile 1449, shared 422, admin unit 536 + int 140, content 88, db 942, e2e `texts.spec`; typecheck clean.
@@ -466,9 +472,8 @@ Local stack (Supabase + student web :8081), headless Playwright Chromium in WSL,
 
 ## Backlog (known follow-ups, prioritised)
 
-- [ ] **Editable UI texts, batches 2–7** (plan Tasks 7–13, one PR each, `feat/ui-texts-<batch>`): move the remaining screens' literals into the catalog and remove their files from `PENDING_FILES`; the last batch leaves it empty.
 - [ ] **Drop `settings.welcome_message`** (column, admin field, content default) after the next APK is in use: the welcome text now lives in `ui_texts` (`home.hero.welcome`).
-- [ ] **Editable UI texts: checks on the phone with the next APK** (new start-up path, JS only): on a fresh install the splash stays until the texts are ready (airplane mode: at most ~1.5 s, then defaults); the cache survives an app restart; an edit in admin → Texte shows on the second opening.
+- [ ] **Editable UI texts: checks on the phone with the next APK** (new start-up path, JS only): on a fresh install the splash stays until the texts are ready (airplane mode: at most ~1.5 s, then defaults); the cache survives an app restart; an edit in admin → Texte shows on the second opening; the evening reminder notification shows its catalog title and body (and an edited one after the next scheduling); a few screens (Home, a lesson, consolidation, Profil, „Invită colegi”, /recomandari) read correctly on the device.
 
 ### Owner actions
 - [ ] **Daily streak: checks on the phone with the next APK** (mandatory APK: new native module `expo-notifications`): after the first exercise of the day the permission prompt appears (not at launch); the reminder arrives at the chosen time and not on a day already worked; changing the time and turning the switch off take effect; refusing then turning the switch on asks again (or shows „Deschide setările” when Android no longer prompts, and that link opens the app's settings); tapping the notification opens Home, also when the app was closed; reminders survive a phone reboot; the notification icon (monochrome P, teal) and the text with diacritics and 🔥; the toast position under the top bar and the bottom sheet over the safe area; the streak day is right near midnight (Bucharest); after signing out no reminder arrives; TalkBack on the switch and the week dots.

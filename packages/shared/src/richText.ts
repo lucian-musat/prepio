@@ -9,12 +9,6 @@ export type RichBlock =
   | { kind: 'list'; ordered: boolean; items: RichSpan[][] }
   | { kind: 'callout'; variant: CalloutVariant; blocks: RichBlock[] };
 
-export const CALLOUT_LABELS: Record<CalloutVariant, string> = {
-  retine: 'De reținut',
-  atentie: 'Atenție',
-  exemplu: 'Exemplu',
-};
-
 const OPENERS: Record<string, CalloutVariant> = {
   ':::retine': 'retine',
   ':::atentie': 'atentie',

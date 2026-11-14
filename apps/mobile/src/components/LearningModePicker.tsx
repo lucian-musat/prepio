@@ -35,8 +35,8 @@ export default function LearningModePicker({ value, onChange, disabled = false }
             ) : null}
             <AppText role="bodyStrong">{`${info.icon} ${info.name}`}</AppText>
             <View style={styles.points}>
-              {info.points.map((p) => (
-                <View key={p} style={styles.point}>
+              {info.points.map((p, i) => (
+                <View key={i} style={styles.point}>
                   <AppText role="small" color="textMuted">
                     •
                   </AppText>

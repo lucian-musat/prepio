@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CALLOUT_LABELS, parseRichText } from './richText';
+import { parseRichText } from './richText';
 
 describe('parseRichText', () => {
   it('returns [] for empty input', () => {
@@ -77,9 +77,5 @@ describe('parseRichText', () => {
         blocks: [{ kind: 'paragraph', spans: [{ text: ':::exemplu\nx' }] }],
       },
     ]);
-  });
-
-  it('exposes Romanian callout labels', () => {
-    expect(CALLOUT_LABELS).toEqual({ retine: 'De reținut', atentie: 'Atenție', exemplu: 'Exemplu' });
   });
 });

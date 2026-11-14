@@ -19,13 +19,13 @@ import { t } from '../src/texts/store';
 // Before anything renders, so start-up errors are reported too. Off (returns false) without a DSN.
 const sentryEnabled = initSentry();
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /** Root error boundary: renders above the providers, so ErrorScreen uses no auth. */
 export function ErrorBoundary(props: ErrorBoundaryProps) {
   // A start-up error must not stay hidden behind the splash / web boot loader.
   useEffect(() => {
-    SplashScreen.hideAsync();
+    SplashScreen.hideAsync().catch(() => {});
     hideBootLoader();
   }, []);
   return <ErrorScreen {...props} />;
@@ -47,7 +47,7 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!ready) return;
-    SplashScreen.hideAsync();
+    SplashScreen.hideAsync().catch(() => {});
     hideBootLoader();
   }, [ready]);
 
