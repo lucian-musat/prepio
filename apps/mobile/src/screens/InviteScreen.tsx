@@ -143,7 +143,7 @@ function InviteeRow({ r }: { r: ReferralRow }) {
 export default function InviteScreen() {
   const [data, setData] = useState<{ summary: ReferralSummary; rows: ReferralRow[] } | null>(null);
   const [error, setError] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState<{ kind: 'ok' | 'failed'; text: string } | null>(null);
   const mounted = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stacked = useWindowDimensions().width < STACK_BELOW;
@@ -170,12 +170,13 @@ export default function InviteScreen() {
     };
   }, [load]);
 
-  const say = (text: string) => {
-    setFeedback(text);
+  /** Shows the outcome of a copy / share for a moment; the colour follows the kind, never the (editable) text. */
+  const say = (kind: 'ok' | 'failed') => {
+    setFeedback({ kind, text: kind === 'ok' ? t('invite.copied') : t('invite.copyFailed') });
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => mounted.current && setFeedback(''), FEEDBACK_MS);
+    timer.current = setTimeout(() => mounted.current && setFeedback(null), FEEDBACK_MS);
   };
-  const copy = async (text: string) => say((await copyText(text)) ? t('invite.copied') : t('invite.copyFailed'));
+  const copy = async (text: string) => say((await copyText(text)) ? 'ok' : 'failed');
 
   if (data && (!data.summary.enabled || !data.summary.code)) return <Redirect href="/" />;
 
@@ -185,8 +186,8 @@ export default function InviteScreen() {
 
   const send = async () => {
     const r = await shareText(shareMessage(link));
-    if (r === 'copied') say(t('invite.copied'));
-    else if (r === 'failed') say(t('invite.copyFailed'));
+    if (r === 'copied') say('ok');
+    else if (r === 'failed') say('failed');
   };
 
   return (
@@ -220,8 +221,8 @@ export default function InviteScreen() {
               <Button label={web ? t('invite.code.copyCode') : t('invite.code.sendCode')} variant="secondary" flex={!stacked} onPress={() => void copy(code)} />
             </View>
             {feedback ? (
-              <AppText role="small" accessibilityRole="alert" style={feedback === t('invite.copied') ? styles.ok : styles.error}>
-                {feedback}
+              <AppText role="small" accessibilityRole="alert" style={feedback.kind === 'ok' ? styles.ok : styles.error}>
+                {feedback.text}
               </AppText>
             ) : null}
           </Surface>

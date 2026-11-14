@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ReferralsInfoScreen from './ReferralsInfoScreen';
 import { CONTACT_EMAIL } from '../lib/legal';
 import { fetchReferralPublicSettings, type ReferralPublicSettings } from '../lib/referrals';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 jest.mock('../lib/referrals', () => ({
   ...jest.requireActual('../lib/referrals'),
@@ -63,6 +64,25 @@ beforeEach(() => {
   jest.clearAllMocks();
   mocked.mockResolvedValue(settings());
   jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+afterEach(() => resetTexts());
+
+it('shows the admin overrides of its texts (with the live numbers filled in)', async () => {
+  applyOverrides({
+    'pages.referrals.short.title': '[override] title',
+    'pages.referrals.short.active': '[override] {credite}',
+  });
+  await mount();
+  expect(await screen.findByText('[override] title')).toBeTruthy();
+  expect(screen.getByText('[override] 40 de credite')).toBeTruthy();
+});
+
+it('shows the override of a fallback phrase when the settings cannot be read', async () => {
+  mocked.mockRejectedValue(new Error('offline'));
+  applyOverrides({ 'pages.referrals.fallback.colleagues': '[override]' });
+  await mount();
+  await screen.findByText('Pe scurt');
+  expect(all(/\[override\]/)).toBe(true);
 });
 
 it('shows a spinner while the numbers load, then the page', async () => {

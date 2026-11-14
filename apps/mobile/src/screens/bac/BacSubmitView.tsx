@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { color, feedbackText, radius, space, type BacAnswers, type BacItem } from '@prepio/shared';
 import { answeredCount } from '../../lib/bac';
 import { AppText, Button, Surface } from '../../ui';
-import { t, tPlural } from '../../texts/store';
+import { t } from '../../texts/store';
+import { requirementCount } from '../consolidation/status';
 
 export const ROMAN = ['', 'I', 'II', 'III'] as const;
 const filled = (s: string | undefined) => !!s && s.trim() !== '';
@@ -75,7 +76,7 @@ export default function BacSubmitView({ items, answers, cost, error, sending, on
         <AppText role="section" accessibilityRole="header">
           {t('bac.submit.answered', {
             n: answered,
-            cerinte: tPlural(total, 'consolidation.requirementCount.one', 'consolidation.requirementCount.many'),
+            cerinte: requirementCount(total),
           })}
         </AppText>
         <ItemList heading={t('bac.submit.partialHeading')} kind={t('bac.submit.partialKind')} items={partial} labels={emptyLabels(partial, answers)} onJump={onJump} />

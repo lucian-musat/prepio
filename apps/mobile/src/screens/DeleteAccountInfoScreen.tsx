@@ -5,6 +5,7 @@ import { space } from '@prepio/shared';
 import { AppText, Button, ScreenLayout, goBackOrHome } from '../ui';
 import { useAuth } from '../auth/AuthProvider';
 import EmailLink from '../components/EmailLink';
+import { t } from '../texts/store';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -41,52 +42,50 @@ export default function DeleteAccountInfoScreen() {
 
   return (
     <ScreenLayout
-      title="Ștergerea contului"
+      title={t('pages.deleteAccount.title')}
       onBack={goBackOrHome}
       actions={
         signedOut ? (
-          <Button label="Intră în cont" flex onPress={() => router.push('/')} />
+          <Button label={t('pages.deleteAccount.signIn')} flex onPress={() => router.push('/')} />
         ) : ready ? (
-          <Button label="Mergi la profil" flex onPress={() => router.push('/profile')} />
+          <Button label={t('pages.deleteAccount.goToProfile')} flex onPress={() => router.push('/profile')} />
         ) : (
-          <Button label="Continuă" flex onPress={() => router.push('/')} />
+          <Button label={t('common.continue')} flex onPress={() => router.push('/')} />
         )
       }
     >
       <View style={styles.stack}>
         <AppText role="lead" color="textMuted">
-          Poți să îți ștergi contul Prepio oricând. Ștergerea este definitivă: după ce contul este șters, nu mai poate fi recuperat.
+          {t('pages.deleteAccount.lead')}
         </AppText>
 
-        <Section title="Ce se șterge">
-          <Item>Numele și adresa de email din cont.</Item>
-          <Item>Contul de autentificare, fie cel Google, fie cel cu cod trimis pe email.</Item>
-          <Item>Progresul la lecții, exercițiile de consolidare și lucrările BAC, cu notele lor.</Item>
-          <Item>Creditele și accesul rămase. Banii pentru ele nu se returnează.</Item>
-          <Item>Istoricul creditelor și al plăților.</Item>
-          <Item>Codul tău de invitație. Colegii pe care i-ai invitat își păstrează conturile.</Item>
+        <Section title={t('pages.deleteAccount.removed.title')}>
+          <Item>{t('pages.deleteAccount.removed.name')}</Item>
+          <Item>{t('pages.deleteAccount.removed.login')}</Item>
+          <Item>{t('pages.deleteAccount.removed.progress')}</Item>
+          <Item>{t('pages.deleteAccount.removed.credits')}</Item>
+          <Item>{t('pages.deleteAccount.removed.history')}</Item>
+          <Item>{t('pages.deleteAccount.removed.inviteCode')}</Item>
         </Section>
 
-        <Section title="Ce nu se șterge">
-          <AppText role="body">Lecțiile și exercițiile sunt conținutul Prepio, nu datele tale, așa că rămân.</AppText>
-          <AppText role="body">
-            Păstrăm doar o amprentă ireversibilă a adresei de email, ca să știm că ai primit deja creditele de bun venit. Din ea nu se poate afla adresa.
-          </AppText>
-          <AppText role="body">
-            Dacă ți-ai făcut cont cu linkul unui coleg și ți-ai cumpărat acces, colegul îți vede în continuare prenumele în lista lui, cu
-            mențiunea „cont șters”.
-          </AppText>
+        <Section title={t('pages.deleteAccount.kept.title')}>
+          <AppText role="body">{t('pages.deleteAccount.kept.content')}</AppText>
+          <AppText role="body">{t('pages.deleteAccount.kept.fingerprint')}</AppText>
+          <AppText role="body">{t('pages.deleteAccount.kept.referral')}</AppText>
         </Section>
 
-        <Section title="Cum îl ștergi">
-          {signedOut ? (
-            <AppText role="body">După ce intri, mergi la Profil → Șterge contul.</AppText>
-          ) : ready ? (
-            <AppText role="body">Din Profil alegi Șterge contul și confirmi ștergerea.</AppText>
-          ) : (
-            <AppText role="body">După ce completezi numele, mergi la Profil → Șterge contul.</AppText>
-          )}
-          <AppText role="body">{`Sau scrie-ne la `}<EmailLink />{`.`}</AppText>
+        <Section title={t('pages.deleteAccount.how.title')}>
+          <AppText role="body">
+            {signedOut
+              ? t('pages.deleteAccount.how.signedOut')
+              : ready
+                ? t('pages.deleteAccount.how.ready')
+                : t('pages.deleteAccount.how.needsName')}
+          </AppText>
+          <AppText role="body">
+            {t('pages.deleteAccount.contact.prefix')} <EmailLink />
+            {t('pages.deleteAccount.contact.suffix')}
+          </AppText>
         </Section>
       </View>
     </ScreenLayout>

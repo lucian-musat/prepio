@@ -467,9 +467,18 @@ export const consolidationTexts = {
   'consolidation.points.one': { group: 'consolidation', default: 'punct', description: 'Forma de singular din „· 1 punct” (după enunțul unui item BAC)' },
   'consolidation.points.many': { group: 'consolidation', default: 'puncte', description: 'Forma de plural din „· 2 puncte” (după enunțul unui item BAC)' },
 
-  // Instant check feedback (checkExercise): titles and lines
-  'consolidation.check.correct': { group: 'consolidation', default: 'Corect!', description: 'Titlul feedbackului pentru un răspuns corect' },
-  'consolidation.check.mismatch': { group: 'consolidation', default: 'Răspunsul nu se potrivește cu exercițiul.' },
+  // Instant check feedback (checkExercise): titles and lines. Only the app's instant check reads these; BAC grading
+  // and feedback already saved on the server keep their own text.
+  'consolidation.check.correct': {
+    group: 'consolidation',
+    default: 'Corect!',
+    description: 'Titlul feedbackului pentru un răspuns corect. Schimbarea se vede doar în verificarea imediată din aplicație; nu schimbă notarea BAC și nici feedbackul deja salvat.',
+  },
+  'consolidation.check.mismatch': {
+    group: 'consolidation',
+    default: 'Răspunsul nu se potrivește cu exercițiul.',
+    description: 'Răspunsul trimis nu corespunde tipului de exercițiu. Schimbarea se vede doar în verificarea imediată din aplicație; nu schimbă notarea BAC și nici feedbackul deja salvat.',
+  },
   'consolidation.check.info.ok': { group: 'consolidation', default: 'Ai găsit o informație completă.' },
   'consolidation.check.info.long': {
     group: 'consolidation',

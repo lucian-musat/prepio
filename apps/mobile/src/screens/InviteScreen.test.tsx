@@ -3,6 +3,7 @@ import { Dimensions, Platform, Share, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fetchMyReferrals, fetchReferralSummary, type ReferralRow, type ReferralSummary } from '../lib/referrals';
 import { router } from 'expo-router';
+import { feedbackText } from '@prepio/shared';
 import InviteScreen from './InviteScreen';
 import { applyOverrides, resetTexts } from '../texts/store';
 
@@ -300,5 +301,18 @@ describe('texts', () => {
     await mount();
     expect(await screen.findByText('[override]')).toBeTruthy();
     expect(screen.getByText(/^Mai ai nevoie de 3 \[colegi\] care/)).toBeTruthy();
+  });
+
+  it('colours the copy feedback by its outcome, not by its (editable) text', async () => {
+    applyOverrides({ 'invite.copied': '[same]', 'invite.copyFailed': '[same]' });
+    Platform.OS = 'web';
+    nav.navigator = {};
+    await mount();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Copiază codul' }));
+    const failed = await screen.findByText('[same]');
+    expect(StyleSheet.flatten(failed.props.style).color).toBe(feedbackText.wrong);
+    nav.navigator = { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } };
+    await fireEvent.press(screen.getByRole('button', { name: 'Copiază codul' }));
+    await waitFor(() => expect(StyleSheet.flatten(screen.getByText('[same]').props.style).color).toBe(feedbackText.good));
   });
 });

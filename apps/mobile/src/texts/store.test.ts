@@ -51,7 +51,17 @@ it('replaces the previous overrides on each apply', () => {
   expect(t('home.hero.welcome')).toBe(TEXTS['home.hero.welcome'].default);
 });
 
-it('tPlural combines the two texts with the Romanian count rule', () => {
-  applyOverrides({ 'home.hero.welcome': 'lecție' });
-  expect(tPlural(1, 'home.hero.welcome', 'home.hero.welcome')).toBe('1 lecție');
+it('tPlural takes the singular from the first key and the plural from the second, with the „de” rule', () => {
+  applyOverrides({ 'lesson.count.one': '[unu]', 'lesson.count.many': '[multe]' });
+  expect(tPlural(1, 'lesson.count.one', 'lesson.count.many')).toBe('1 [unu]');
+  expect(tPlural(2, 'lesson.count.one', 'lesson.count.many')).toBe('2 [multe]');
+  expect(tPlural(19, 'lesson.count.one', 'lesson.count.many')).toBe('19 [multe]');
+  expect(tPlural(20, 'lesson.count.one', 'lesson.count.many')).toBe('20 de [multe]');
+  expect(tPlural(101, 'lesson.count.one', 'lesson.count.many')).toBe('101 [multe]');
+  expect(tPlural(120, 'lesson.count.one', 'lesson.count.many')).toBe('120 de [multe]');
+});
+
+it('tPlural uses the catalog defaults without overrides', () => {
+  expect(tPlural(1, 'lesson.count.one', 'lesson.count.many')).toBe(`1 ${TEXTS['lesson.count.one'].default}`);
+  expect(tPlural(20, 'lesson.count.one', 'lesson.count.many')).toBe(`20 de ${TEXTS['lesson.count.many'].default}`);
 });

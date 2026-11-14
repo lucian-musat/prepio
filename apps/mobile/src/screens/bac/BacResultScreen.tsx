@@ -29,7 +29,7 @@ export function subtotals(results: BacItemResult[]): string[] {
   return ([1, 2, 3] as const).flatMap((s) => {
     const rows = results.filter((r) => r.section === s);
     if (!rows.length) return [];
-    const sum = (k: 'points' | 'max') => rows.reduce((t, r) => t + r[k], 0);
+    const sum = (k: 'points' | 'max') => rows.reduce((acc, r) => acc + r[k], 0);
     return [t('bac.result.subtotal', { subiect: ROMAN[s], puncte: sum('points'), max: sum('max') })];
   });
 }

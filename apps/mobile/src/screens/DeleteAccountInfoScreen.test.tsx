@@ -5,6 +5,7 @@ import DeleteAccountInfoScreen from './DeleteAccountInfoScreen';
 import { CONTACT_EMAIL } from '../lib/legal';
 import { getSupabase } from '../lib/supabase';
 import type { AuthStatus } from '../auth/AuthProvider';
+import { applyOverrides, resetTexts } from '../texts/store';
 
 let mockStatus: AuthStatus = 'signedOut';
 jest.mock('../auth/AuthProvider', () => ({
@@ -26,6 +27,14 @@ const SIGN_IN_HINT = 'După ce intri, mergi la Profil → Șterge contul.';
 beforeEach(() => {
   jest.clearAllMocks();
   mockStatus = 'signedOut';
+});
+afterEach(() => resetTexts());
+
+it('shows the admin overrides of its texts', async () => {
+  applyOverrides({ 'pages.deleteAccount.removed.title': '[override]', 'pages.deleteAccount.signIn': '[override] button' });
+  await renderScreen();
+  expect(screen.getByText('[override]')).toBeTruthy();
+  expect(screen.getByText('[override] button')).toBeTruthy();
 });
 
 it('renders without querying Supabase and shows the contact address', async () => {
